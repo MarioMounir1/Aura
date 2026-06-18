@@ -1,0 +1,71 @@
+// ============================================================
+//  Autonomous AI Nutrition Engine — Prisma Schema
+//  Architecture: Demand-Driven / Self-Populating Cache
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Restaurant {
+  id        String           @id @default(uuid())
+  name      String           @unique
+  category  String
+  rating    Float            @default(4.6)
+  items     CachedMenuItem[]
+  addOns    CachedAddOn[]
+  createdAt DateTime         @default(now())
+}
+
+model CachedMenuItem {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  itemName     String
+
+  caloriesMin  Int
+  caloriesMax  Int
+  proteinMin   Int
+  proteinMax   Int
+  carbsMin     Int
+  carbsMax     Int
+  fatsMin      Int
+  fatsMax      Int
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([restaurantId, itemName])
+}
+
+model CachedAddOn {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  addOnName    String
+  calories     Int
+  protein      Int
+  carbs        Int
+  fats         Int
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([restaurantId, addOnName])
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  apiKey    String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([apiKey])
+}
+

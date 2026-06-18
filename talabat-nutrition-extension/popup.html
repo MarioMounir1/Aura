@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elmenus Macro Calculator</title>
+  <!-- Load Premium Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ============================================================
+     * DESIGN SYSTEM & VARIABLES
+     * ============================================================ */
+    :root {
+      --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --bg-gradient: linear-gradient(135deg, #0f0f12 0%, #1e1105 50%, #291000 100%);
+      --brand-color: #ffa133;
+      --brand-glow: rgba(255, 161, 51, 0.4);
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-border: rgba(255, 255, 255, 0.06);
+      --glass-border-hover: rgba(255, 161, 51, 0.2);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+
+    /* ============================================================
+     * BASE RESET
+     * ============================================================ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 340px;
+      font-family: var(--font-family);
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      overflow-x: hidden;
+      padding: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+     * HEADER
+     * ============================================================ */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-emoji {
+      font-size: 24px;
+      filter: drop-shadow(0 0 10px var(--brand-glow));
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    .header h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 30%, #ffd49f 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px var(--brand-glow)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 0 16px rgba(255, 161, 51, 0.6)); }
+    }
+
+    /* ============================================================
+     * STATUS CARD
+     * ============================================================ */
+    .status-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--brand-color);
+      box-shadow: 0 0 8px var(--brand-glow);
+    }
+
+    .status-info {
+      flex: 1;
+    }
+
+    .status-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      display: block;
+    }
+
+    .status-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ============================================================
+     * INSTRUCTIONS / FEATURES CARD
+     * ============================================================ */
+    .features-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .features-card h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--brand-color);
+      margin-bottom: 12px;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      align-items: flex-start;
+    }
+
+    .feature-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .feature-icon {
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--brand-color);
+    }
+
+    .feature-text {
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+
+    .feature-text span {
+      display: block;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 1px;
+    }
+
+    /* ============================================================
+     * ACTIONS
+     * ============================================================ */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-family: var(--font-family);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary {
+      background: var(--brand-color);
+      color: #0f0f12;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 161, 51, 0.35);
+      background: #ffae4a;
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary:active {
+      transform: translateY(0);
+    }
+
+    /* ============================================================
+     * FOOTER
+     * ============================================================ */
+    .footer {
+      text-align: center;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 20px;
+      opacity: 0.8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .footer-heart {
+      color: #ef4444;
+      animation: heartbeat 1.5s infinite ease-in-out;
+    }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-logo">
+        <span class="logo-emoji">🥗</span>
+        <h1>Macro Calculator</h1>
+      </div>
+    </div>
+
+    <!-- Active Status Card -->
+    <div class="status-card" id="statusCard">
+      <div class="status-info">
+        <span class="status-label">Extension Status</span>
+        <span class="status-value" id="statusText">Checking page integration...</span>
+      </div>
+    </div>
+
+    <!-- How it works Card -->
+    <div class="features-card">
+      <h3>Instructions</h3>
+      <div class="feature-item">
+        <span class="feature-icon">1</span>
+        <div class="feature-text">
+          Open elmenus.com
+          <span>Navigate to any restaurant menu page</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">2</span>
+        <div class="feature-text">
+          Click any Menu Item
+          <span>The extension detects the item modal instantly</span>
+        </div>
+      </div>
+      <div class="feature-item">
+        <span class="feature-icon">3</span>
+        <div class="feature-text">
+          Configure Customizations
+          <span>Select sizes & add-ons to see updated macros</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="actions">
+      <button class="btn btn-primary" id="openSiteBtn">
+        Open elmenus.com ⚡
+      </button>
+      <button class="btn btn-secondary" id="clearCacheBtn">
+        Clear Local Cache 🧹
+      </button>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Powered by AI • Made with <span class="footer-heart">♥</span> in Egypt
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

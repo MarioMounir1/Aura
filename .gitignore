@@ -1,0 +1,28 @@
+# ── Dependencies ─────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ─────────────────────────────────────────────────────
+dist/
+
+# ── Environment (NEVER commit secrets) ───────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Prisma generated client ───────────────────────────────────────────
+# Uncomment if you want to exclude generated files:
+# node_modules/.prisma/
+
+# ── Logs ─────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+
+# ── OS / Editor ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# ── Misc ─────────────────────────────────────────────────────────────
+*.tsbuildinfo
+coverage/
