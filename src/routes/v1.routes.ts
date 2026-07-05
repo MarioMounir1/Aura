@@ -10,6 +10,7 @@ import { analyzeMealHandler } from "../controllers/meal.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
 import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
+import { searchFoods, getFoodById, getFoodCategories } from "../controllers/food.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -65,6 +66,30 @@ router.put("/users/profile", requireAuth, updateProfile);
  * @access  Private (JWT required)
  */
 router.get("/users/tdee", requireAuth, getTdee);
+
+// ── Food Database Routes ───────────────────────────────────
+
+/**
+ * @route   GET /api/v1/foods/search
+ * @desc    Search Egyptian food database by name (Arabic or English)
+ * @access  Private (JWT required)
+ * @query   q (required), lang? (en|ar), category?, limit?, page?
+ */
+router.get("/foods/search", requireAuth, searchFoods);
+
+/**
+ * @route   GET /api/v1/foods/categories
+ * @desc    List all food categories with bilingual labels and item counts
+ * @access  Private (JWT required)
+ */
+router.get("/foods/categories", requireAuth, getFoodCategories);
+
+/**
+ * @route   GET /api/v1/foods/:id
+ * @desc    Get a single food item by ID with full nutritional details
+ * @access  Private (JWT required)
+ */
+router.get("/foods/:id", requireAuth, getFoodById);
 
 // ── Meal Analysis Routes ───────────────────────────────────
 
