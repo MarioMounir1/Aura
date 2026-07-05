@@ -35,6 +35,14 @@ import 'features/profile/presentation/bloc/profile_event.dart';
 import 'features/profile/presentation/bloc/profile_state.dart';
 import 'features/profile/presentation/onboarding_screen.dart';
 
+import 'features/calorie_tracker/domain/repositories/tracker_repository.dart';
+import 'features/calorie_tracker/data/repositories/tracker_repository_impl.dart';
+import 'features/calorie_tracker/presentation/bloc/dashboard_bloc.dart';
+import 'features/calorie_tracker/presentation/home_shell_screen.dart';
+import 'features/calorie_tracker/presentation/settings_screen.dart';
+import 'features/calorie_tracker/presentation/food_search_screen.dart';
+import 'features/calorie_tracker/presentation/weight_progress_screen.dart';
+
 // ── Language Cubit ────────────────────────────────────────────
 // Simple cubit to hold and switch the app locale.
 // Screens call context.read<LanguageCubit>().setLanguage('ar') to switch.
@@ -102,12 +110,14 @@ class TeneenApp extends StatelessWidget {
     final MealRepository  mealRepository = MealRepositoryImpl(apiClient);
     final AuthRepository  authRepository = AuthRepositoryImpl(apiClient);
     final ProfileRepository profileRepository = ProfileRepositoryImpl(apiClient);
+    final TrackerRepository trackerRepository = TrackerRepositoryImpl(apiClient);
 
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<MealRepository>.value(value: mealRepository),
         RepositoryProvider<AuthRepository>.value(value: authRepository),
         RepositoryProvider<ProfileRepository>.value(value: profileRepository),
+        RepositoryProvider<TrackerRepository>.value(value: trackerRepository),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -125,6 +135,12 @@ class TeneenApp extends StatelessWidget {
           BlocProvider<ProfileBloc>(
             create: (ctx) => ProfileBloc(
               repository: ctx.read<ProfileRepository>(),
+            ),
+          ),
+          // Dashboard
+          BlocProvider<DashboardBloc>(
+            create: (ctx) => DashboardBloc(
+              repository: ctx.read<TrackerRepository>(),
             ),
           ),
           // Meal tracker
@@ -174,6 +190,10 @@ class TeneenApp extends StatelessWidget {
                 '/':        (_) => const AuthWrapper(),
                 '/login':   (_) => const LoginScreen(),
                 '/history': (_) => const HistoryScreen(),
+                '/settings': (_) => const SettingsScreen(),
+                '/foods/search': (_) => const FoodSearchScreen(),
+                '/weight/progress': (_) => const WeightProgressScreen(),
+                '/meals/analyze': (_) => const AnalyzeMealScreen(),
               },
             );
           },
@@ -218,7 +238,7 @@ class AuthWrapper extends StatelessWidget {
               }
               if (profileState is ProfileLoaded) {
                 if (profileState.isOnboardingCompleted) {
-                  return const AnalyzeMealScreen();
+                  return const HomeShellScreen();
                 } else {
                   return const OnboardingScreen();
                 }
