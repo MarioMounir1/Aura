@@ -76,24 +76,26 @@ class CalorieTrackerBloc
       date: event.dateFilter,
     );
 
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         // If network failed, try cache
         if (failure is NetworkFailure) {
-          _loadFromCache(emit);
+          await _loadFromCache(emit);
         } else {
           emit(_failureToState(failure));
         }
       },
-      (logs) => emit(
-        CalorieTrackerHistoryLoaded(
-          logs: logs,
-          currentPage: event.page,
-          totalPages: 1,
-          hasMore: logs.length >= 20,
-          isOffline: false,
-        ),
-      ),
+      (logs) async {
+        emit(
+          CalorieTrackerHistoryLoaded(
+            logs: logs,
+            currentPage: event.page,
+            totalPages: 1,
+            hasMore: logs.length >= 20,
+            isOffline: false,
+          ),
+        );
+      },
     );
   }
 
