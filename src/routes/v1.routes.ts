@@ -12,6 +12,7 @@ import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
 import { searchFoods, getFoodById, getFoodCategories } from "../controllers/food.controller";
 import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-log.controller";
+import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -116,6 +117,31 @@ router.get("/food-logs/today", requireAuth, getTodayFoodLogs);
  * @access  Private (JWT required, ownership enforced)
  */
 router.delete("/food-logs/:id", requireAuth, deleteFoodLog);
+
+// ── Water Tracking Routes ──────────────────────────────────
+
+/**
+ * @route   POST /api/v1/water
+ * @desc    Log water intake (in ml)
+ * @access  Private (JWT required)
+ * @body    { amountMl, loggedAt? }
+ */
+router.post("/water", requireAuth, logWater);
+
+/**
+ * @route   GET /api/v1/water/today
+ * @desc    Get today's water intake total, progress vs goal, and hourly breakdown
+ * @access  Private (JWT required)
+ * @query   date? (YYYY-MM-DD, defaults to today)
+ */
+router.get("/water/today", requireAuth, getTodayWater);
+
+/**
+ * @route   DELETE /api/v1/water/:id
+ * @desc    Delete a specific water log entry
+ * @access  Private (JWT required, ownership enforced)
+ */
+router.delete("/water/:id", requireAuth, deleteWaterLog);
 
 // ── Meal Analysis Routes ───────────────────────────────────
 
