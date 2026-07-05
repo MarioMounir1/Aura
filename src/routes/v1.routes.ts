@@ -13,6 +13,7 @@ import { updateProfile, getTdee } from "../controllers/profile.controller";
 import { searchFoods, getFoodById, getFoodCategories } from "../controllers/food.controller";
 import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-log.controller";
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
+import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -142,6 +143,31 @@ router.get("/water/today", requireAuth, getTodayWater);
  * @access  Private (JWT required, ownership enforced)
  */
 router.delete("/water/:id", requireAuth, deleteWaterLog);
+
+// ── Weight Tracking Routes ──────────────────────────────────
+
+/**
+ * @route   POST /api/v1/weight
+ * @desc    Log today's weight (also updates user profile for TDEE accuracy)
+ * @access  Private (JWT required)
+ * @body    { weightKg, loggedAt? }
+ */
+router.post("/weight", requireAuth, logWeight);
+
+/**
+ * @route   GET /api/v1/weight/history
+ * @desc    Get weight history with stats (delta, trend, min/max/avg)
+ * @access  Private (JWT required)
+ * @query   days? (7–365, default 30)
+ */
+router.get("/weight/history", requireAuth, getWeightHistory);
+
+/**
+ * @route   DELETE /api/v1/weight/:id
+ * @desc    Delete a specific weight log entry
+ * @access  Private (JWT required, ownership enforced)
+ */
+router.delete("/weight/:id", requireAuth, deleteWeightLog);
 
 // ── Meal Analysis Routes ───────────────────────────────────
 
