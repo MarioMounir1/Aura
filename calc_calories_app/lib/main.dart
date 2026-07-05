@@ -45,6 +45,7 @@ import 'features/calorie_tracker/presentation/food_search_screen.dart';
 import 'features/calorie_tracker/presentation/weight_progress_screen.dart';
 import 'features/calorie_tracker/presentation/bloc/water_bloc.dart';
 import 'features/calorie_tracker/presentation/water_tracking_screen.dart';
+import 'features/calorie_tracker/presentation/bloc/weight_bloc.dart';
 
 // ── Language Cubit ────────────────────────────────────────────
 // Simple cubit to hold and switch the app locale.
@@ -162,6 +163,12 @@ class TeneenApp extends StatelessWidget {
           // Water tracking
           BlocProvider<WaterBloc>(
             create: (ctx) => WaterBloc(
+              repository: ctx.read<TrackerRepository>(),
+            ),
+          ),
+          // Weight tracking
+          BlocProvider<WeightBloc>(
+            create: (ctx) => WeightBloc(
               repository: ctx.read<TrackerRepository>(),
             ),
           ),
