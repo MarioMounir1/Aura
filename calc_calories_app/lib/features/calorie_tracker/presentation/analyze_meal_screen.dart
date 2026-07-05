@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/widgets/admob_mock.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/constants.dart';
 import '../../auth/presentation/bloc/auth_bloc.dart';

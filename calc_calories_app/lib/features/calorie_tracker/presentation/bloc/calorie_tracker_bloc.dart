@@ -2,7 +2,7 @@
 // Calc-Calories — BLoC (pure business logic, no UI dependencies)
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../../../../core/widgets/admob_mock.dart';
 import '../../../../core/error/failures.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../domain/repositories/meal_repository.dart';
