@@ -29,7 +29,9 @@ class AuthRepositoryImpl implements AuthRepository {
       );
 
       final token = response.data['data']['token'] as String;
+      final isPremium = response.data['data']['user']['isPremium'] as bool? ?? false;
       await _apiClient.saveToken(token);
+      await _apiClient.saveIsPremium(isPremium);
 
       return Right(token);
     } on DioException catch (e) {
@@ -54,7 +56,9 @@ class AuthRepositoryImpl implements AuthRepository {
       );
 
       final token = response.data['data']['token'] as String;
+      final isPremium = response.data['data']['user']['isPremium'] as bool? ?? false;
       await _apiClient.saveToken(token);
+      await _apiClient.saveIsPremium(isPremium);
 
       return Right(token);
     } on DioException catch (e) {
@@ -72,6 +76,11 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<bool> checkAuthStatus() async {
     return await _apiClient.isAuthenticated();
+  }
+
+  @override
+  Future<bool> isUserPremium() async {
+    return await _apiClient.getIsPremium();
   }
 
   Failure _handleDioError(DioException e) {

@@ -23,4 +23,7 @@ abstract class AuthRepository {
 
   /// Check if user is currently logged in
   Future<bool> checkAuthStatus();
+
+  /// Check if the authenticated user is premium
+  Future<bool> isUserPremium();
 }

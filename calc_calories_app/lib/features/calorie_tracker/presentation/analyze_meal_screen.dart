@@ -5,9 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/constants.dart';
+import '../../auth/presentation/bloc/auth_bloc.dart';
+import '../../auth/presentation/bloc/auth_state.dart';
+import '../domain/repositories/meal_repository.dart';
 import 'bloc/calorie_tracker_bloc.dart';
 import 'bloc/calorie_tracker_event.dart';
 import 'bloc/calorie_tracker_state.dart';
@@ -30,6 +35,13 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
   late AnimationController _inputAnimController;
   late Animation<double> _inputFadeAnim;
 
+  // AdMob and Marketplace Recommendations states
+  BannerAd? _bannerAd;
+  bool _isAdLoaded = false;
+  List<dynamic> _suggestions = [];
+  Map<String, dynamic> _deficit = {};
+  bool _isLoadingSuggestions = false;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +54,59 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
       curve: Curves.easeOut,
     );
     _inputAnimController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authState = context.read<AuthBloc>().state;
+      final isPremium = authState is Authenticated ? authState.isPremium : false;
+      if (!isPremium) {
+        _loadBannerAd();
+        _fetchSuggestions();
+      }
+    });
+  }
+
+  void _loadBannerAd() {
+    _bannerAd = BannerAd(
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Google's official test ad unit ID
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          setState(() {
+            _isAdLoaded = true;
+          });
+        },
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+        },
+      ),
+    )..load();
+  }
+
+  Future<void> _fetchSuggestions() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingSuggestions = true;
+    });
+    final result = await RepositoryProvider.of<MealRepository>(context).getSuggestions();
+    result.fold(
+      (failure) {
+        if (mounted) {
+          setState(() {
+            _isLoadingSuggestions = false;
+          });
+        }
+      },
+      (data) {
+        if (mounted) {
+          setState(() {
+            _deficit = data['deficit'] as Map<String, dynamic>? ?? {};
+            _suggestions = data['recommendations'] as List<dynamic>? ?? [];
+            _isLoadingSuggestions = false;
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -49,6 +114,7 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
     _restaurantController.dispose();
     _mealController.dispose();
     _inputAnimController.dispose();
+    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -163,6 +229,9 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final isPremium = authState is Authenticated ? authState.isPremium : false;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -200,6 +269,16 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
           ),
         ],
       ),
+      bottomNavigationBar: (!isPremium && _isAdLoaded && _bannerAd != null)
+          ? SafeArea(
+              child: Container(
+                alignment: Alignment.center,
+                width: _bannerAd!.size.width.toDouble(),
+                height: _bannerAd!.size.height.toDouble(),
+                child: AdWidget(ad: _bannerAd!),
+              ),
+            )
+          : null,
       body: BlocConsumer<CalorieTrackerBloc, CalorieTrackerState>(
         listener: (context, state) {
           if (state is CalorieTrackerFailure) {
@@ -215,7 +294,9 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
             );
           }
           if (state is CalorieTrackerAnalysisSuccess) {
-            // Scroll to result if needed
+            if (!isPremium) {
+              _fetchSuggestions();
+            }
           }
         },
         builder: (context, state) {
@@ -533,9 +614,213 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
           ),
           const SizedBox(height: 16),
           MacroRingCard(meal: state.mealLog),
+          
+          if (_suggestions.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Smart Fuel Suggestions',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ..._suggestions.map((prod) => TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 800),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    return Transform.translate(
+                      offset: Offset(0.0, 50 * (1 - value)),
+                      child: Opacity(
+                        opacity: value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    elevation: 4,
+                    shadowColor: Colors.black.withOpacity(0.3),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(
+                        color: AppColors.primary.withOpacity(0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.surface,
+                            AppColors.surfaceVariant.withOpacity(0.5),
+                          ],
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Product Image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              width: 80,
+                              height: 80,
+                              child: Image.network(
+                                prod['imageUrl'] ?? '',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: AppColors.border,
+                                    child: const Icon(
+                                      Icons.fitness_center_rounded,
+                                      color: AppColors.primary,
+                                      size: 32,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          // Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  prod['name'] ?? 'Protein Bar',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                // Deficit Badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.amber.withOpacity(0.4),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.bolt_rounded,
+                                        color: Colors.amber,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Fills ${prod['proteinContent']}g of your deficit',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.amber,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                // Promo Code & Buy Button
+                                Row(
+                                  children: [
+                                    // Promo badge
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primary.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: AppColors.primary.withOpacity(0.5),
+                                          width: 1,
+                                          style: BorderStyle.solid,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Code: ${prod['promoCode'] ?? 'TENEEN'}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    // Buy Now Button
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        final url = prod['purchaseUrl'] as String?;
+                                        if (url != null && url.isNotEmpty) {
+                                          _launchURL(url);
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 8,
+                                        ),
+                                        minimumSize: Size.zero,
+                                        backgroundColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Buy Now',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final url = Uri.parse(urlString);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      // Graceful fallback for environments without custom browser schemes
+    }
   }
 }
 

@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:calc_calories/core/error/failures.dart';
+import 'package:calc_calories/features/auth/domain/repositories/auth_repository.dart';
 import 'package:calc_calories/features/calorie_tracker/domain/entities/meal_log_entity.dart';
 import 'package:calc_calories/features/calorie_tracker/domain/repositories/meal_repository.dart';
 import 'package:calc_calories/features/calorie_tracker/presentation/bloc/calorie_tracker_bloc.dart';
@@ -13,6 +14,7 @@ import 'package:calc_calories/features/calorie_tracker/presentation/bloc/calorie
 import 'package:calc_calories/features/calorie_tracker/presentation/bloc/calorie_tracker_state.dart';
 
 class MockMealRepository extends Mock implements MealRepository {}
+class MockAuthRepository extends Mock implements AuthRepository {}
 
 final tMealLog = MealLogEntity(
   id: 'test-id-1',
@@ -35,6 +37,7 @@ final tMealLog = MealLogEntity(
 void main() {
   late CalorieTrackerBloc bloc;
   late MockMealRepository mockRepository;
+  late MockAuthRepository mockAuthRepository;
 
   setUpAll(() {
     registerFallbackValue(tMealLog);
@@ -42,7 +45,15 @@ void main() {
 
   setUp(() {
     mockRepository = MockMealRepository();
-    bloc = CalorieTrackerBloc(repository: mockRepository);
+    mockAuthRepository = MockAuthRepository();
+    
+    // Default mock behavior
+    when(() => mockAuthRepository.isUserPremium()).thenAnswer((_) async => true);
+    
+    bloc = CalorieTrackerBloc(
+      repository: mockRepository,
+      authRepository: mockAuthRepository,
+    );
   });
 
   tearDown(() => bloc.close());

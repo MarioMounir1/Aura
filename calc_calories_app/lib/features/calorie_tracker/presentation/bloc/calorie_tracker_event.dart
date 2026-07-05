@@ -77,3 +77,8 @@ class DeleteMealLog extends CalorieTrackerEvent {
 class ResetCalorieTracker extends CalorieTrackerEvent {
   const ResetCalorieTracker();
 }
+
+/// Initialize Google Mobile Ads AdMob Banner layout
+class InitializeAds extends CalorieTrackerEvent {
+  const InitializeAds();
+}

@@ -24,7 +24,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final isAuthenticated = await _authRepository.checkAuthStatus();
     if (isAuthenticated) {
-      emit(const Authenticated(''));
+      final isPremium = await _authRepository.isUserPremium();
+      emit(Authenticated(token: '', isPremium: isPremium));
     } else {
       emit(Unauthenticated());
     }
@@ -40,9 +41,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       password: event.password,
     );
 
-    result.fold(
-      (failure) => emit(AuthFailure(failure.message)),
-      (token) => emit(Authenticated(token)),
+    await result.fold(
+      (failure) async => emit(AuthFailure(failure.message)),
+      (token) async {
+        final isPremium = await _authRepository.isUserPremium();
+        emit(Authenticated(token: token, isPremium: isPremium));
+      },
     );
   }
 
@@ -57,9 +61,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       password: event.password,
     );
 
-    result.fold(
-      (failure) => emit(AuthFailure(failure.message)),
-      (token) => emit(Authenticated(token)),
+    await result.fold(
+      (failure) async => emit(AuthFailure(failure.message)),
+      (token) async {
+        final isPremium = await _authRepository.isUserPremium();
+        emit(Authenticated(token: token, isPremium: isPremium));
+      },
     );
   }
 

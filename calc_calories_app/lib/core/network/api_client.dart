@@ -79,11 +79,23 @@ class ApiClient {
   Future<void> clearAuth() async {
     await _secureStorage.delete(key: AppConstants.tokenKey);
     await _secureStorage.delete(key: AppConstants.userIdKey);
+    await _secureStorage.delete(key: 'is_premium');
   }
 
   /// Check if user is authenticated
   Future<bool> isAuthenticated() async {
     final token = await _secureStorage.read(key: AppConstants.tokenKey);
     return token != null && token.isNotEmpty;
+  }
+
+  /// Save isPremium to secure storage
+  Future<void> saveIsPremium(bool isPremium) async {
+    await _secureStorage.write(key: 'is_premium', value: isPremium ? 'true' : 'false');
+  }
+
+  /// Get isPremium status from secure storage
+  Future<bool> getIsPremium() async {
+    final val = await _secureStorage.read(key: 'is_premium');
+    return val == 'true';
   }
 }

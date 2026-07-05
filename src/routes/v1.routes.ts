@@ -8,6 +8,7 @@ import { Router } from "express";
 import { register, login, getMe, updateGoals } from "../controllers/user.controller";
 import { analyzeMealHandler } from "../controllers/meal.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
+import { getSuggestions } from "../controllers/suggestion.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -67,6 +68,13 @@ router.post("/meals/analyze", requireAuth, analyzeMealLimiter, analyzeMealHandle
  * @query   page?, limit?, date? (YYYY-MM-DD)
  */
 router.get("/meals/history", requireAuth, getMealHistory);
+
+/**
+ * @route   GET /api/v1/meals/suggestions
+ * @desc    Get macro suggestions and recommended protein products
+ * @access  Private (JWT required)
+ */
+router.get("/meals/suggestions", requireAuth, getSuggestions);
 
 /**
  * @route   DELETE /api/v1/meals/:id

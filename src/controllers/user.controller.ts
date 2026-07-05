@@ -47,12 +47,14 @@ function userPublicProfile(user: {
   proteinGoal: number;
   carbsGoal: number;
   fatsGoal: number;
+  isPremium: boolean;
   createdAt: Date;
 }) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
+    isPremium: user.isPremium,
     goals: {
       dailyCalories: user.dailyCalorieGoal,
       protein: user.proteinGoal,
@@ -107,6 +109,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         proteinGoal: true,
         carbsGoal: true,
         fatsGoal: true,
+        isPremium: true,
         createdAt: true,
       },
     });
@@ -158,6 +161,7 @@ export async function login(req: Request, res: Response): Promise<void> {
         proteinGoal: true,
         carbsGoal: true,
         fatsGoal: true,
+        isPremium: true,
         createdAt: true,
       },
     });
@@ -223,6 +227,7 @@ export async function getMe(req: Request, res: Response): Promise<void> {
           proteinGoal: true,
           carbsGoal: true,
           fatsGoal: true,
+          isPremium: true,
           createdAt: true,
         },
       }),
@@ -306,6 +311,7 @@ export async function updateGoals(req: Request, res: Response): Promise<void> {
         proteinGoal: true,
         carbsGoal: true,
         fatsGoal: true,
+        isPremium: true,
         createdAt: true,
       },
     });

@@ -84,6 +84,7 @@ class CalcCaloriesApp extends StatelessWidget {
           BlocProvider<CalorieTrackerBloc>(
             create: (ctx) => CalorieTrackerBloc(
               repository: ctx.read<MealRepository>(),
+              authRepository: ctx.read<AuthRepository>(),
             ),
           ),
         ],

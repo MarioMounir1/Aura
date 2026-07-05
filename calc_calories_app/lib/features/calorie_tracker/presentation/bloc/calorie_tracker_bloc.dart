@@ -2,7 +2,9 @@
 // Calc-Calories — BLoC (pure business logic, no UI dependencies)
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/error/failures.dart';
+import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../domain/repositories/meal_repository.dart';
 import 'calorie_tracker_event.dart';
 import 'calorie_tracker_state.dart';
@@ -10,15 +12,22 @@ import 'calorie_tracker_state.dart';
 class CalorieTrackerBloc
     extends Bloc<CalorieTrackerEvent, CalorieTrackerState> {
   final MealRepository _repository;
+  final AuthRepository _authRepository;
 
-  CalorieTrackerBloc({required MealRepository repository})
-      : _repository = repository,
+  CalorieTrackerBloc({
+    required MealRepository repository,
+    required AuthRepository authRepository,
+  })  : _repository = repository,
+        _authRepository = authRepository,
         super(const CalorieTrackerInitial()) {
     on<AnalyzeTextMealSubmitted>(_onAnalyzeTextMeal);
     on<ImageSelected>(_onImageSelected);
     on<FetchMealHistory>(_onFetchHistory);
     on<DeleteMealLog>(_onDeleteMealLog);
     on<ResetCalorieTracker>(_onReset);
+    on<InitializeAds>(_onInitializeAds);
+
+    _checkPremiumAndInit();
   }
 
   // ── Analyze Text Meal ──────────────────────────────────
@@ -158,5 +167,25 @@ class CalorieTrackerBloc
       message: failure.message,
       code: failure.code,
     );
+  }
+
+  // ── Ads Helper Methods ─────────────────────────────────
+
+  Future<void> _checkPremiumAndInit() async {
+    final isPremium = await _authRepository.isUserPremium();
+    if (!isPremium) {
+      add(const InitializeAds());
+    }
+  }
+
+  Future<void> _onInitializeAds(
+    InitializeAds event,
+    Emitter<CalorieTrackerState> emit,
+  ) async {
+    try {
+      await MobileAds.instance.initialize();
+    } catch (_) {
+      // Gracefully catch any AdMob initialization issues on test platforms
+    }
   }
 }

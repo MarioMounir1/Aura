@@ -83,6 +83,7 @@ model User {
   proteinGoal       Int       @default(150)
   carbsGoal         Int       @default(200)
   fatsGoal          Int       @default(65)
+  isPremium         Boolean   @default(false)
   isActive          Boolean   @default(true)
   mealLogs          MealLog[]
   createdAt         DateTime  @default(now())
@@ -113,4 +114,24 @@ model MealLog {
 
   @@index([userId, createdAt])
   @@index([userId])
+}
+
+model SponsorProduct {
+  id             String   @id @default(uuid())
+  name           String
+  imageUrl       String
+  proteinContent Float
+  calorieContent Float
+  purchaseUrl    String
+  promoCode      String
+  createdAt      DateTime @default(now())
+}
+
+model Store {
+  id                  String   @id @default(uuid())
+  storeName           String
+  locationCoordinates String
+  isOnline            Boolean  @default(false)
+  affiliateLink       String
+  createdAt           DateTime @default(now())
 }

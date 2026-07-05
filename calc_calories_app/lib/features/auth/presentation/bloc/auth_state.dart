@@ -16,11 +16,12 @@ class AuthLoading extends AuthState {}
 
 class Authenticated extends AuthState {
   final String token;
+  final bool isPremium;
 
-  const Authenticated(this.token);
+  const Authenticated({required this.token, required this.isPremium});
 
   @override
-  List<Object?> get props => [token];
+  List<Object?> get props => [token, isPremium];
 }
 
 class Unauthenticated extends AuthState {}

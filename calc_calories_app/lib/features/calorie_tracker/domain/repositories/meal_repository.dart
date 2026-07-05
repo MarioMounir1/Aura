@@ -35,4 +35,7 @@ abstract class MealRepository {
 
   /// Save a meal log to local Hive cache.
   Future<Either<Failure, void>> cacheMealLog(MealLogEntity mealLog);
+
+  /// Get macro suggestions and sponsored product recommendations.
+  Future<Either<Failure, Map<String, dynamic>>> getSuggestions();
 }

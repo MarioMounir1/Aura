@@ -246,4 +246,16 @@ class MealRepositoryImpl implements MealRepository {
       code: statusCode?.toString(),
     );
   }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getSuggestions() async {
+    try {
+      final response = await _apiClient.dio.get('/meals/suggestions');
+      return Right(response.data['data'] as Map<String, dynamic>);
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
 }
