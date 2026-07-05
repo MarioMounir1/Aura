@@ -17,6 +17,13 @@ import 'features/calorie_tracker/presentation/analyze_meal_screen.dart';
 import 'features/calorie_tracker/presentation/bloc/calorie_tracker_bloc.dart';
 import 'features/calorie_tracker/presentation/history_screen.dart';
 
+import 'features/auth/data/repositories/auth_repository_impl.dart';
+import 'features/auth/domain/repositories/auth_repository.dart';
+import 'features/auth/presentation/login_screen.dart';
+import 'features/auth/presentation/bloc/auth_bloc.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
+import 'features/auth/presentation/bloc/auth_state.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -59,13 +66,20 @@ class CalcCaloriesApp extends StatelessWidget {
       secureStorage: const FlutterSecureStorage(),
     );
     final MealRepository mealRepository = MealRepositoryImpl(apiClient);
+    final AuthRepository authRepository = AuthRepositoryImpl(apiClient);
 
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<MealRepository>.value(value: mealRepository),
+        RepositoryProvider<AuthRepository>.value(value: authRepository),
       ],
       child: MultiBlocProvider(
         providers: [
+          BlocProvider<AuthBloc>(
+            create: (ctx) => AuthBloc(
+              authRepository: ctx.read<AuthRepository>(),
+            )..add(AppStarted()),
+          ),
           BlocProvider<CalorieTrackerBloc>(
             create: (ctx) => CalorieTrackerBloc(
               repository: ctx.read<MealRepository>(),
@@ -78,11 +92,39 @@ class CalcCaloriesApp extends StatelessWidget {
           theme: AppTheme.darkTheme,
           initialRoute: '/',
           routes: {
-            '/': (_) => const AnalyzeMealScreen(),
+            '/': (_) => const AuthWrapper(),
+            '/login': (_) => const LoginScreen(),
             '/history': (_) => const HistoryScreen(),
           },
         ),
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is Authenticated) {
+          return const AnalyzeMealScreen();
+        }
+        if (state is Unauthenticated || state is AuthFailure) {
+          return const LoginScreen();
+        }
+        // Splash / Loading state
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+        );
+      },
     );
   }
 }
