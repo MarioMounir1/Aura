@@ -1,0 +1,248 @@
+{
+  "@@locale": "en",
+
+  "appName": "The Teneen",
+  "@appName": { "description": "App name" },
+
+  "continueButton": "Continue",
+  "saveButton": "Save",
+  "cancelButton": "Cancel",
+  "deleteButton": "Delete",
+  "editButton": "Edit",
+  "doneButton": "Done",
+  "retryButton": "Retry",
+  "skipButton": "Skip",
+  "nextButton": "Next",
+  "backButton": "Back",
+  "yesButton": "Yes",
+  "noButton": "No",
+  "confirmButton": "Confirm",
+  "addButton": "Add",
+
+  "loading": "Loading...",
+  "errorGeneric": "Something went wrong. Please try again.",
+  "errorNetwork": "No internet connection.",
+  "errorUnauthorized": "Session expired. Please log in again.",
+  "noDataYet": "No data yet",
+
+  "onboardingWelcomeTitle": "Welcome to The Teneen",
+  "onboardingWelcomeSubtitle": "Your Egyptian nutrition companion",
+  "onboardingLanguageTitle": "Choose your language",
+  "onboardingLanguageSubtitle": "You can change this later in settings",
+  "onboardingProfileTitle": "Tell us about yourself",
+  "onboardingProfileSubtitle": "We use this to calculate your daily goals",
+  "onboardingBodyTitle": "Your measurements",
+  "onboardingBodySubtitle": "Helps us calculate your calorie needs accurately",
+  "onboardingGoalTitle": "What is your goal?",
+  "onboardingGoalSubtitle": "We'll set your calorie target accordingly",
+  "onboardingGoalLose": "Lose weight",
+  "onboardingGoalMaintain": "Stay the same",
+  "onboardingGoalGain": "Gain weight",
+  "onboardingActivityTitle": "How active are you?",
+  "onboardingActivitySedentary": "Sedentary",
+  "onboardingActivitySedentaryDesc": "Little or no exercise",
+  "onboardingActivityLight": "Lightly active",
+  "onboardingActivityLightDesc": "Light exercise 1–3 days/week",
+  "onboardingActivityModerate": "Moderately active",
+  "onboardingActivityModerateDesc": "Moderate exercise 3–5 days/week",
+  "onboardingActivityVeryActive": "Very active",
+  "onboardingActivityVeryActiveDesc": "Hard exercise 6–7 days/week",
+  "onboardingAllSet": "You're all set!",
+  "onboardingAllSetSubtitle": "Your daily calorie goal is ready",
+
+  "navHome": "Home",
+  "navSearch": "Search",
+  "navScan": "Scan",
+  "navPlans": "Plans",
+  "navProfile": "Profile",
+
+  "homeGreetingMorning": "Good morning",
+  "homeGreetingAfternoon": "Good afternoon",
+  "homeGreetingEvening": "Good evening",
+  "homeCaloriesLeft": "Calories left",
+  "homeCaloriesConsumed": "Consumed",
+  "homeCaloriesBurned": "Burned",
+  "homeGoal": "Goal",
+  "homeMacros": "Macros",
+  "homeProtein": "Protein",
+  "homeCarbs": "Carbs",
+  "homeFats": "Fats",
+  "homeFiber": "Fiber",
+  "homeWater": "Water",
+  "homeWaterGoal": "{consumed}ml of {goal}ml",
+  "@homeWaterGoal": {
+    "placeholders": {
+      "consumed": { "type": "int" },
+      "goal":     { "type": "int" }
+    }
+  },
+  "homeTodaysPlan": "Today's meal plan",
+  "homeNoMealPlan": "No meal plan yet",
+  "homeGeneratePlan": "Generate a plan",
+  "homeLogMeal": "Log a meal",
+  "homeRecentMeals": "Recent meals",
+  "homeNoMealsLogged": "No meals logged today",
+  "homeAddWater": "Add water",
+
+  "foodSearchTitle": "Search foods",
+  "foodSearchHint": "Search in Arabic or English...",
+  "foodSearchNoResults": "No results for \"{query}\"",
+  "@foodSearchNoResults": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+  "foodSearchCategories": "Categories",
+  "foodServingSize": "Serving: {size}{unit}",
+  "@foodServingSize": {
+    "placeholders": {
+      "size": { "type": "double" },
+      "unit": { "type": "String" }
+    }
+  },
+  "foodCaloriesPer": "{cal} kcal",
+  "@foodCaloriesPer": {
+    "placeholders": {
+      "cal": { "type": "double" }
+    }
+  },
+  "foodLogButton": "Log this food",
+  "foodLoggedSuccess": "Food logged successfully!",
+  "foodSelectServings": "How many servings?",
+
+  "categoryBreakfast": "Breakfast",
+  "categoryLunch": "Lunch",
+  "categoryDinner": "Dinner",
+  "categorySnack": "Snacks",
+  "categoryDrink": "Drinks",
+  "categoryGrain": "Grains",
+  "categoryProtein": "Proteins",
+  "categoryVegetable": "Vegetables",
+  "categoryFruit": "Fruits",
+  "categoryCondiment": "Condiments",
+
+  "mealTypeBreakfast": "Breakfast",
+  "mealTypeLunch": "Lunch",
+  "mealTypeDinner": "Dinner",
+  "mealTypeSnack": "Snack",
+  "mealTypeOther": "Other",
+
+  "waterTitle": "Water intake",
+  "waterToday": "Today",
+  "waterGoalReached": "Daily goal reached! 🎉",
+  "waterRemainingMl": "{ml}ml remaining",
+  "@waterRemainingMl": {
+    "placeholders": {
+      "ml": { "type": "int" }
+    }
+  },
+  "waterAddCustom": "Custom amount",
+  "waterDeleteConfirm": "Remove this water entry?",
+
+  "weightTitle": "Weight progress",
+  "weightLogToday": "Log today's weight",
+  "weightKg": "{kg} kg",
+  "@weightKg": {
+    "placeholders": {
+      "kg": { "type": "double" }
+    }
+  },
+  "weightDeltaLost": "Lost {kg}kg",
+  "@weightDeltaLost": {
+    "placeholders": {
+      "kg": { "type": "double" }
+    }
+  },
+  "weightDeltaGained": "Gained {kg}kg",
+  "@weightDeltaGained": {
+    "placeholders": {
+      "kg": { "type": "double" }
+    }
+  },
+  "weightStable": "Stable",
+  "weightTrendLosing": "Losing",
+  "weightTrendGaining": "Gaining",
+  "weightTrendStable": "Stable",
+  "weightLast30Days": "Last 30 days",
+  "weightNoHistory": "No weight logged yet",
+
+  "mealPlanTitle": "Meal plan",
+  "mealPlanThisWeek": "This week",
+  "mealPlanGenerate": "Generate plan",
+  "mealPlanGenerating": "Generating your plan...",
+  "mealPlanGenerated": "Plan generated!",
+  "mealPlanNoPlan": "No plan yet",
+  "mealPlanMarkEaten": "Mark as eaten",
+  "mealPlanMarkNotEaten": "Mark as not eaten",
+  "mealPlanEaten": "Eaten ✓",
+
+  "scanTitle": "Analyze meal",
+  "scanTextTab": "Describe meal",
+  "scanImageTab": "Take photo",
+  "scanHint": "e.g. KFC Zinger Medium with Pepsi",
+  "scanRestaurantHint": "Restaurant name (optional)",
+  "scanAnalyzing": "Analyzing your meal...",
+  "scanResult": "Meal analysis",
+  "scanLogMeal": "Log this meal",
+  "scanLoggedSuccess": "Meal logged!",
+
+  "profileTitle": "Profile",
+  "profilePersonalInfo": "Personal info",
+  "profileName": "Name",
+  "profileEmail": "Email",
+  "profileAge": "Age",
+  "profileGender": "Gender",
+  "profileGenderMale": "Male",
+  "profileGenderFemale": "Female",
+  "profileWeight": "Weight (kg)",
+  "profileHeight": "Height (cm)",
+  "profileGoal": "Goal",
+  "profileActivity": "Activity level",
+  "profileLanguage": "Language",
+  "profileCalorieGoal": "Daily calorie goal",
+  "profileWaterGoal": "Daily water goal (ml)",
+  "profileSaved": "Profile saved!",
+  "profileTdee": "Your TDEE",
+  "profileTdeeDesc": "Total Daily Energy Expenditure",
+  "profileBmr": "BMR",
+  "profileLogout": "Log out",
+  "profileLogoutConfirm": "Are you sure you want to log out?",
+
+  "authLogin": "Log in",
+  "authRegister": "Create account",
+  "authEmail": "Email address",
+  "authPassword": "Password",
+  "authName": "Your name",
+  "authForgotPassword": "Forgot password?",
+  "authNoAccount": "Don't have an account?",
+  "authHaveAccount": "Already have an account?",
+  "authLoginSuccess": "Welcome back!",
+  "authRegisterSuccess": "Account created!",
+  "authInvalidCredentials": "Invalid email or password",
+
+  "suggestionsTitle": "Suggestions",
+  "suggestionsProteinLow": "You're {grams}g of protein short today",
+  "@suggestionsProteinLow": {
+    "placeholders": {
+      "grams": { "type": "int" }
+    }
+  },
+  "suggestionsGetFrom": "Get it from",
+
+  "unitG":     "g",
+  "unitMl":    "ml",
+  "unitPiece": "piece",
+  "unitCup":   "cup",
+  "unitTbsp":  "tbsp",
+  "unitKcal":  "kcal",
+
+  "dayMonday":    "Monday",
+  "dayTuesday":   "Tuesday",
+  "dayWednesday": "Wednesday",
+  "dayThursday":  "Thursday",
+  "dayFriday":    "Friday",
+  "daySaturday":  "Saturday",
+  "daySunday":    "Sunday",
+  "dayToday":     "Today",
+  "dayYesterday": "Yesterday"
+}

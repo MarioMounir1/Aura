@@ -1,0 +1,247 @@
+{
+  "@@locale": "ar",
+
+  "appName": "التنين",
+
+  "continueButton": "متابعة",
+  "saveButton": "حفظ",
+  "cancelButton": "إلغاء",
+  "deleteButton": "حذف",
+  "editButton": "تعديل",
+  "doneButton": "تم",
+  "retryButton": "إعادة المحاولة",
+  "skipButton": "تخطي",
+  "nextButton": "التالي",
+  "backButton": "رجوع",
+  "yesButton": "نعم",
+  "noButton": "لا",
+  "confirmButton": "تأكيد",
+  "addButton": "إضافة",
+
+  "loading": "جاري التحميل...",
+  "errorGeneric": "حدث خطأ ما. حاول مرة أخرى.",
+  "errorNetwork": "لا يوجد اتصال بالإنترنت.",
+  "errorUnauthorized": "انتهت الجلسة. من فضلك سجل دخولك مجددًا.",
+  "noDataYet": "لا توجد بيانات بعد",
+
+  "onboardingWelcomeTitle": "أهلاً بك في التنين",
+  "onboardingWelcomeSubtitle": "رفيقك المصري للتغذية الصحية",
+  "onboardingLanguageTitle": "اختر لغتك",
+  "onboardingLanguageSubtitle": "يمكنك تغييرها لاحقًا من الإعدادات",
+  "onboardingProfileTitle": "أخبرنا عن نفسك",
+  "onboardingProfileSubtitle": "نستخدم هذه المعلومات لحساب أهدافك اليومية",
+  "onboardingBodyTitle": "مقاساتك",
+  "onboardingBodySubtitle": "تساعدنا على حساب احتياجاتك من السعرات بدقة",
+  "onboardingGoalTitle": "ما هو هدفك؟",
+  "onboardingGoalSubtitle": "سنحدد هدفك من السعرات وفقًا لذلك",
+  "onboardingGoalLose": "إنقاص الوزن",
+  "onboardingGoalMaintain": "الحفاظ على الوزن",
+  "onboardingGoalGain": "زيادة الوزن",
+  "onboardingActivityTitle": "ما مستوى نشاطك؟",
+  "onboardingActivitySedentary": "خامل",
+  "onboardingActivitySedentaryDesc": "لا يوجد تمرين أو نادرًا",
+  "onboardingActivityLight": "نشاط خفيف",
+  "onboardingActivityLightDesc": "تمرين خفيف 1–3 أيام في الأسبوع",
+  "onboardingActivityModerate": "نشاط متوسط",
+  "onboardingActivityModerateDesc": "تمرين متوسط 3–5 أيام في الأسبوع",
+  "onboardingActivityVeryActive": "نشاط عالي",
+  "onboardingActivityVeryActiveDesc": "تمرين مكثف 6–7 أيام في الأسبوع",
+  "onboardingAllSet": "كل شيء جاهز!",
+  "onboardingAllSetSubtitle": "هدفك اليومي من السعرات الحرارية جاهز",
+
+  "navHome": "الرئيسية",
+  "navSearch": "بحث",
+  "navScan": "تحليل",
+  "navPlans": "خطط",
+  "navProfile": "الملف الشخصي",
+
+  "homeGreetingMorning": "صباح الخير",
+  "homeGreetingAfternoon": "مساء الخير",
+  "homeGreetingEvening": "مساء النور",
+  "homeCaloriesLeft": "سعرات متبقية",
+  "homeCaloriesConsumed": "المستهلك",
+  "homeCaloriesBurned": "المحروق",
+  "homeGoal": "الهدف",
+  "homeMacros": "المغذيات",
+  "homeProtein": "بروتين",
+  "homeCarbs": "كربوهيدرات",
+  "homeFats": "دهون",
+  "homeFiber": "ألياف",
+  "homeWater": "الماء",
+  "homeWaterGoal": "{consumed}مل من {goal}مل",
+  "@homeWaterGoal": {
+    "placeholders": {
+      "consumed": { "type": "int" },
+      "goal":     { "type": "int" }
+    }
+  },
+  "homeTodaysPlan": "خطة وجباتك اليوم",
+  "homeNoMealPlan": "لا توجد خطة وجبات بعد",
+  "homeGeneratePlan": "إنشاء خطة",
+  "homeLogMeal": "تسجيل وجبة",
+  "homeRecentMeals": "آخر الوجبات",
+  "homeNoMealsLogged": "لم يتم تسجيل وجبات اليوم",
+  "homeAddWater": "إضافة ماء",
+
+  "foodSearchTitle": "ابحث عن أكل",
+  "foodSearchHint": "ابحث بالعربي أو الإنجليزي...",
+  "foodSearchNoResults": "لا توجد نتائج لـ \"{query}\"",
+  "@foodSearchNoResults": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+  "foodSearchCategories": "التصنيفات",
+  "foodServingSize": "الحصة: {size}{unit}",
+  "@foodServingSize": {
+    "placeholders": {
+      "size": { "type": "double" },
+      "unit": { "type": "String" }
+    }
+  },
+  "foodCaloriesPer": "{cal} سعرة",
+  "@foodCaloriesPer": {
+    "placeholders": {
+      "cal": { "type": "double" }
+    }
+  },
+  "foodLogButton": "تسجيل هذا الأكل",
+  "foodLoggedSuccess": "تم تسجيل الأكل!",
+  "foodSelectServings": "كم حصة؟",
+
+  "categoryBreakfast": "فطور",
+  "categoryLunch": "غداء",
+  "categoryDinner": "عشاء",
+  "categorySnack": "وجبات خفيفة",
+  "categoryDrink": "مشروبات",
+  "categoryGrain": "حبوب ونشويات",
+  "categoryProtein": "بروتينات",
+  "categoryVegetable": "خضروات",
+  "categoryFruit": "فواكه",
+  "categoryCondiment": "توابل وزيوت",
+
+  "mealTypeBreakfast": "فطور",
+  "mealTypeLunch": "غداء",
+  "mealTypeDinner": "عشاء",
+  "mealTypeSnack": "خفيفة",
+  "mealTypeOther": "أخرى",
+
+  "waterTitle": "شرب الماء",
+  "waterToday": "اليوم",
+  "waterGoalReached": "وصلت لهدفك اليومي! 🎉",
+  "waterRemainingMl": "متبقي {ml}مل",
+  "@waterRemainingMl": {
+    "placeholders": {
+      "ml": { "type": "int" }
+    }
+  },
+  "waterAddCustom": "كمية مخصصة",
+  "waterDeleteConfirm": "هل تريد حذف هذا الإدخال؟",
+
+  "weightTitle": "تتبع الوزن",
+  "weightLogToday": "سجّل وزنك اليوم",
+  "weightKg": "{kg} كجم",
+  "@weightKg": {
+    "placeholders": {
+      "kg": { "type": "double" }
+    }
+  },
+  "weightDeltaLost": "فقدت {kg}كجم",
+  "@weightDeltaLost": {
+    "placeholders": {
+      "kg": { "type": "double" }
+    }
+  },
+  "weightDeltaGained": "اكتسبت {kg}كجم",
+  "@weightDeltaGained": {
+    "placeholders": {
+      "kg": { "type": "double" }
+    }
+  },
+  "weightStable": "مستقر",
+  "weightTrendLosing": "في تراجع",
+  "weightTrendGaining": "في ارتفاع",
+  "weightTrendStable": "مستقر",
+  "weightLast30Days": "آخر 30 يوم",
+  "weightNoHistory": "لم يتم تسجيل وزن بعد",
+
+  "mealPlanTitle": "خطة الوجبات",
+  "mealPlanThisWeek": "هذا الأسبوع",
+  "mealPlanGenerate": "إنشاء خطة",
+  "mealPlanGenerating": "جاري إنشاء خطتك...",
+  "mealPlanGenerated": "تم إنشاء الخطة!",
+  "mealPlanNoPlan": "لا توجد خطة بعد",
+  "mealPlanMarkEaten": "تم تناوله",
+  "mealPlanMarkNotEaten": "لم يتم تناوله",
+  "mealPlanEaten": "تم ✓",
+
+  "scanTitle": "تحليل الوجبة",
+  "scanTextTab": "وصف الوجبة",
+  "scanImageTab": "التقاط صورة",
+  "scanHint": "مثال: كنتاكي زنجر ميديوم مع بيبسي",
+  "scanRestaurantHint": "اسم المطعم (اختياري)",
+  "scanAnalyzing": "جاري تحليل وجبتك...",
+  "scanResult": "نتيجة التحليل",
+  "scanLogMeal": "تسجيل هذه الوجبة",
+  "scanLoggedSuccess": "تم تسجيل الوجبة!",
+
+  "profileTitle": "الملف الشخصي",
+  "profilePersonalInfo": "المعلومات الشخصية",
+  "profileName": "الاسم",
+  "profileEmail": "البريد الإلكتروني",
+  "profileAge": "العمر",
+  "profileGender": "الجنس",
+  "profileGenderMale": "ذكر",
+  "profileGenderFemale": "أنثى",
+  "profileWeight": "الوزن (كجم)",
+  "profileHeight": "الطول (سم)",
+  "profileGoal": "الهدف",
+  "profileActivity": "مستوى النشاط",
+  "profileLanguage": "اللغة",
+  "profileCalorieGoal": "هدف السعرات اليومي",
+  "profileWaterGoal": "هدف الماء اليومي (مل)",
+  "profileSaved": "تم حفظ الملف الشخصي!",
+  "profileTdee": "معدل حرق السعرات",
+  "profileTdeeDesc": "إجمالي استهلاك الطاقة اليومي",
+  "profileBmr": "معدل الأيض الأساسي",
+  "profileLogout": "تسجيل الخروج",
+  "profileLogoutConfirm": "هل أنت متأكد من تسجيل الخروج؟",
+
+  "authLogin": "تسجيل الدخول",
+  "authRegister": "إنشاء حساب",
+  "authEmail": "البريد الإلكتروني",
+  "authPassword": "كلمة المرور",
+  "authName": "اسمك",
+  "authForgotPassword": "نسيت كلمة المرور؟",
+  "authNoAccount": "ليس لديك حساب؟",
+  "authHaveAccount": "لديك حساب بالفعل؟",
+  "authLoginSuccess": "مرحبًا بعودتك!",
+  "authRegisterSuccess": "تم إنشاء الحساب!",
+  "authInvalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+
+  "suggestionsTitle": "اقتراحات",
+  "suggestionsProteinLow": "تحتاج {grams}جم بروتين إضافي اليوم",
+  "@suggestionsProteinLow": {
+    "placeholders": {
+      "grams": { "type": "int" }
+    }
+  },
+  "suggestionsGetFrom": "يمكنك الحصول عليه من",
+
+  "unitG":     "جم",
+  "unitMl":    "مل",
+  "unitPiece": "حبة",
+  "unitCup":   "كوب",
+  "unitTbsp":  "ملعقة",
+  "unitKcal":  "سعرة",
+
+  "dayMonday":    "الاثنين",
+  "dayTuesday":   "الثلاثاء",
+  "dayWednesday": "الأربعاء",
+  "dayThursday":  "الخميس",
+  "dayFriday":    "الجمعة",
+  "daySaturday":  "السبت",
+  "daySunday":    "الأحد",
+  "dayToday":     "اليوم",
+  "dayYesterday": "أمس"
+}
