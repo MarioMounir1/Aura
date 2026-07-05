@@ -92,7 +92,7 @@ class AppTheme {
       ),
 
       // Cards
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
