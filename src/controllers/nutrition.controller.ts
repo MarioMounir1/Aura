@@ -70,7 +70,12 @@ export async function calculateNutrition(
       addOns || []
     );
 
-    const result = await job.waitUntilFinished(queueEvents);
+    if (!job || !queueEvents) {
+      res.status(503).json({ success: false, error: "Queue service unavailable." });
+      return;
+    }
+
+    const result = await job.waitUntilFinished(queueEvents!);
 
     if (result.source === "cache") {
       console.log(

@@ -36,11 +36,17 @@ export async function calculateB2B(req: Request, res: Response): Promise<void> {
       restaurantName,
       undefined,
       item_name,
+      "",
       customizations || []
     );
 
+    if (!job || !queueEvents) {
+      res.status(503).json({ success: false, error: "Queue service unavailable." });
+      return;
+    }
+
     // 2. Wait for the job to complete
-    const result = (await job.waitUntilFinished(queueEvents)) as CalculateNutritionResponse;
+    const result = (await job.waitUntilFinished(queueEvents!)) as CalculateNutritionResponse;
 
     // 3. Return a clean, formatted macro/calories JSON object
     res.json({

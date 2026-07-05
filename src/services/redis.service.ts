@@ -1,6 +1,6 @@
 // ============================================================
 //  src/services/redis.service.ts
-//  Redis Client Singleton with Connection Event Logging & Fail-Safe Checks
+//  Redis Client Singleton — gracefully optional (no-op when offline)
 // ============================================================
 
 import Redis from "ioredis";
@@ -10,45 +10,42 @@ const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
 console.log(`🔌 Initializing Redis Client targeting: ${redisUrl}`);
 
 const redis = new Redis(redisUrl, {
-  // Set connection attempt limits to prevent endless hanging under downtime
-  maxRetriesPerRequest: 3,
-  connectTimeout: 5000, // 5s connection timeout
-  // Fallback retry strategy for reconnection
+  // Connect lazily — don't attempt connection at module load time
+  lazyConnect: true,
+  // Limit retries so Redis being offline doesn't flood the console
+  maxRetriesPerRequest: 1,
+  connectTimeout: 3000,
+  // Return null (no retry) so the process keeps running when Redis is down
   retryStrategy(times) {
-    const delay = Math.min(times * 100, 3000);
-    return delay;
+    if (times > 3) {
+      console.warn("⚠️  [Redis] Max retries reached — Redis is offline. API continues without caching.");
+      return null; // stop retrying
+    }
+    return Math.min(times * 500, 2000);
   },
 });
 
-// Event listeners for robust logging and connection monitoring
-redis.on("connect", () => {
-  console.log("🟢 Redis: Connecting to server...");
+// Event listeners for connection monitoring
+redis.on("connect",     () => console.log("🟢 Redis: Connecting to server..."));
+redis.on("ready",       () => console.log("🟢 Redis: Connection ready."));
+redis.on("error",       (err: unknown) => {
+  // Suppress repeated ECONNREFUSED noise — log once at warn level
+  const msg = err instanceof Error ? err.message : String(err);
+  if (!msg.includes("ECONNREFUSED")) {
+    console.error("🔴 Redis Error:", msg);
+  }
 });
+redis.on("close",       () => console.warn("🟡 Redis: Connection closed."));
+redis.on("reconnecting",() => console.warn("🟡 Redis: Reconnecting..."));
+redis.on("end",         () => console.warn("⚠️  Redis: Connection ended permanently. Caching disabled."));
 
-redis.on("ready", () => {
-  console.log("🟢 Redis: Connection ready and client initialized.");
-});
-
-redis.on("error", (err: unknown) => {
-  const errMsg = err instanceof Error ? err.message : String(err);
-  console.error("🔴 Redis Error:", errMsg);
-});
-
-redis.on("close", () => {
-  console.warn("🟡 Redis: Connection closed.");
-});
-
-redis.on("reconnecting", () => {
-  console.warn("🟡 Redis: Reconnecting to server...");
-});
-
-redis.on("end", () => {
-  console.error("🔴 Redis: Reconnection attempts exhausted, connection closed permanently.");
+// Attempt connection in background — server starts regardless
+redis.connect().catch(() => {
+  console.warn("⚠️  [Redis] Could not connect. Redis caching is disabled; core API still works.");
 });
 
 /**
  * Checks if Redis is currently connected and ready to process commands.
- * This is used for instantaneous fail-safe bypass without command queuing overhead.
  */
 export function isRedisReady(): boolean {
   return redis.status === "ready";

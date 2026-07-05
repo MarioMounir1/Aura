@@ -1,6 +1,7 @@
 // ============================================================
-//  Autonomous AI Nutrition Engine — Prisma Schema
-//  Architecture: Demand-Driven / Self-Populating Cache
+//  Prisma Schema — The Teneen (Extended from Clac-Calories)
+//  Adds: User, MealLog for mobile app layer
+//  Preserves: Restaurant, CachedMenuItem, CachedAddOn, Company
 // ============================================================
 
 generator client {
@@ -10,6 +11,8 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ── Existing Models (Preserved) ─────────────────────────────
 
 model Restaurant {
   id        String           @id @default(uuid())
@@ -69,3 +72,45 @@ model Company {
   @@index([apiKey])
 }
 
+// ── New Models for The Teneen Mobile App ────────────────────
+
+model User {
+  id                String    @id @default(uuid())
+  name              String
+  email             String    @unique
+  passwordHash      String
+  dailyCalorieGoal  Int       @default(2000)
+  proteinGoal       Int       @default(150)
+  carbsGoal         Int       @default(200)
+  fatsGoal          Int       @default(65)
+  isActive          Boolean   @default(true)
+  mealLogs          MealLog[]
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([email])
+}
+
+model MealLog {
+  id                   String   @id @default(uuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  restaurantName       String
+  mealName             String
+  imageUrl             String?
+
+  calories             Float
+  protein              Float
+  carbs                Float
+  fats                 Float
+
+  ingredientsBreakdown Json     // Array of { ingredient: string, estimatedWeightGrams: number }
+  rawAiResponse        Json?    // Full Gemini response stored for auditing
+
+  source               String   @default("text") // "text" | "image"
+  createdAt            DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId])
+}

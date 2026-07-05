@@ -1,0 +1,89 @@
+# ============================================================
+#  docker-compose.yml — Calc-Calories Full Stack
+#  Services: api, postgres, redis
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  # ── PostgreSQL Database ──────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: calc_calories_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-calcuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-calcpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-calc_calories}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-calcuser} -d ${POSTGRES_DB:-calc_calories}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Redis Cache ──────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: calc_calories_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Node.js API ──────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: calc_calories_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-calcuser}:${POSTGRES_PASSWORD:-calcpassword}@postgres:5432/${POSTGRES_DB:-calc_calories}?schema=public
+      REDIS_URL: redis://redis:6379
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      UPLOAD_MAX_SIZE_MB: ${UPLOAD_MAX_SIZE_MB:-10}
+      RATE_LIMIT_RPM: ${RATE_LIMIT_RPM:-30}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./prisma:/app/prisma:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: calc_calories_network

@@ -1,3 +1,8 @@
+// ============================================================
+//  src/services/queue.ts
+//  BullMQ Queue — gracefully optional (no-op when Redis is offline)
+// ============================================================
+
 import { Queue, QueueEvents, ConnectionOptions } from "bullmq";
 import { URL } from "url";
 import { generateCacheKey } from "../middleware/redis-cache";
@@ -13,39 +18,44 @@ export const queueConnectionOptions: ConnectionOptions = {
   port: parsedUrl.port ? parseInt(parsedUrl.port, 10) : 6379,
   username: parsedUrl.username || undefined,
   password: parsedUrl.password || undefined,
-  db: parsedUrl.pathname && parsedUrl.pathname !== "/"
-    ? parseInt(parsedUrl.pathname.substring(1), 10) || 0
-    : 0,
+  db:
+    parsedUrl.pathname && parsedUrl.pathname !== "/"
+      ? parseInt(parsedUrl.pathname.substring(1), 10) || 0
+      : 0,
   maxRetriesPerRequest: null,
   connectTimeout: 5000,
+  // Don't retry forever when Redis is offline — fail fast
+  enableOfflineQueue: false,
 };
 
 const QUEUE_NAME = "food-processing";
 
-// Create the Queue instance
-export const foodQueue = new Queue(QUEUE_NAME, {
-  connection: queueConnectionOptions,
-  defaultJobOptions: {
-    removeOnComplete: {
-      age: 3600, // keep for 1 hour
-      count: 1000,
-    },
-    removeOnFail: {
-      age: 24 * 3600, // keep for 24 hours
-      count: 5000,
-    },
-  },
-});
+// Queue and QueueEvents are lazy — they don't connect until first use.
+export let foodQueue: Queue | null = null;
+export let queueEvents: QueueEvents | null = null;
 
-// Create QueueEvents instance to track job progress and listen to completion
-export const queueEvents = new QueueEvents(QUEUE_NAME, {
-  connection: queueConnectionOptions,
-});
+try {
+  foodQueue = new Queue(QUEUE_NAME, {
+    connection: queueConnectionOptions,
+    defaultJobOptions: {
+      removeOnComplete: { age: 3600, count: 1000 },
+      removeOnFail: { age: 24 * 3600, count: 5000 },
+    },
+  });
+
+  queueEvents = new QueueEvents(QUEUE_NAME, {
+    connection: queueConnectionOptions,
+  });
+
+  console.log(`✅ [Queue] BullMQ Queue "${QUEUE_NAME}" initialized.`);
+} catch (err: any) {
+  console.warn(`⚠️  [Queue] BullMQ Queue failed to initialize (Redis likely offline): ${err?.message ?? err}`);
+  console.warn(`⚠️  [Queue] Background queue processing is disabled. Core API is still fully operational.`);
+}
 
 /**
  * Pushes a food processing task to the BullMQ queue.
- * Leverages the deterministic cache key as the jobId to perform automatic
- * de-duplication of concurrent, identical requests.
+ * Returns null gracefully if Redis/queue is unavailable.
  */
 export async function addFoodToQueue(
   companyId: string,
@@ -55,25 +65,26 @@ export async function addFoodToQueue(
   itemDescription: string,
   addOns: string[]
 ) {
+  if (!foodQueue) {
+    console.warn("⚠️  [Queue] Cannot enqueue job — Redis is offline.");
+    return null;
+  }
+
   const cacheKey = generateCacheKey(companyId, restaurantName, itemName, addOns);
-  // BullMQ prohibits using colons (:) in job IDs. Replace all colons with double underscores.
+  // BullMQ prohibits using colons (:) in job IDs.
   const jobId = cacheKey.replace(/:/g, "__");
 
   console.log(`📥 Adding job to "${QUEUE_NAME}" queue. Job ID: ${jobId}`);
 
-  // Clean up stale completed/failed jobs with the same ID to allow retries
+  // Clean up stale completed/failed jobs to allow retries
   const existingJob = await foodQueue.getJob(jobId);
   if (existingJob) {
     const state = await existingJob.getState();
     if (state === "failed" || state === "completed") {
-      try {
-        await existingJob.remove();
-      } catch (_) {}
+      try { await existingJob.remove(); } catch (_) {}
     }
   }
 
-  // Adding the job. If the jobId already exists and is active/delayed/waiting,
-  // BullMQ will reuse the existing job and NOT add a duplicate.
   const job = await foodQueue.add(
     "process-food",
     {
@@ -84,9 +95,7 @@ export async function addFoodToQueue(
       itemDescription,
       addOns,
     },
-    {
-      jobId,
-    }
+    { jobId }
   );
 
   return job;
