@@ -85,16 +85,15 @@ const RESPONSE_SCHEMA = {
 
 const SYSTEM_INSTRUCTION = `You are an expert Egyptian sports nutritionist and food analyst specializing in Egyptian and international restaurant cuisine.
 
-Your task: Analyze the provided meal (either a text description or a screenshot/photo of food) and return precise nutritional macros.
+Your task: Analyze the provided meal text description or screenshot and return precise nutritional macros.
 
-CRITICAL RULES:
-1. Be realistic about Egyptian restaurant portion sizes. Egyptian restaurants serve standard portions.
-2. For burgers/sandwiches: Account for the full meal (bun + patty + toppings + included sides).
-3. For combos/meals: Deconstruct ALL components and SUM their macros.
-4. Return calories as kcal (a single realistic integer).
-5. All macro values (protein, carbs, fats) must be in grams as realistic integers.
-6. The ingredientsBreakdown must list every major component with a realistic estimated weight.
-7. Egyptian-specific dishes: Koshary (500-700 kcal), Falafel sandwich (350-450 kcal), Shawarma (450-600 kcal), Ful medames (300-400 kcal).
+CRITICAL RULES FOR NUTRITIONAL ESTIMATION:
+1. PORTION ESTIMATION: Be highly realistic about restaurant portion sizes. If the description mentions a pizza, burger, or wrap, calculate based on standard ingredients and weights.
+2. MULTI-ITEM ANALYSIS: If the description contains multiple separate items (e.g. 'large chicken ranch AND a small smokey burger AND 7 diet colas'), you MUST deconstruct EACH item separately. Do not merge them into a single food object. List all their ingredients in the ingredientsBreakdown (e.g. chicken, dough/cheese for the first item, and patty, bun/cheese for the second item).
+3. SIZE MULTIPLIERS: Respect size indicators strictly. A 'large' item should have roughly 1.35x standard macros/weights, while a 'small' or 'mini' item should have 0.75x or 0.5x standard macros. A 'double' patty means double the meat weight and protein.
+4. BEVERAGES: Diet sodas (e.g., 'diet cola', 'coke zero', '7up diet') contain 0 calories and 0 macros. Regular sodas are highly dense in carbs (sugar).
+5. INGREDIENTS BREAKDOWN: List all major ingredients with realistic weights in grams. The weights of the ingredients should reasonably correspond to the estimated macros (e.g., 100g cooked beef patty has ~25g protein and ~20g fat).
+6. MACRO MATH CONSISTENCY: Your calories and macros must be mathematically aligned: Calories = (Protein * 4) + (Carbs * 4) + (Fats * 9). Adjust your estimates so this equation holds true.
 
 Always return a valid JSON object matching this structure:
 {
@@ -252,13 +251,20 @@ function parseAndValidateResponse(parsed: any): MealAnalysisResult {
     }
   }
 
+  const protein = Math.round(Number(parsed.protein));
+  const carbs = Math.round(Number(parsed.carbs));
+  const fats = Math.round(Number(parsed.fats));
+  
+  // Calculate consistent calories based on standard macro energy densities
+  const calculatedCalories = (protein * 4) + (carbs * 4) + (fats * 9);
+
   return {
     mealName: String(parsed.mealName),
     restaurantName: String(parsed.restaurantName),
-    calories: Number(parsed.calories),
-    protein: Number(parsed.protein),
-    carbs: Number(parsed.carbs),
-    fats: Number(parsed.fats),
+    calories: calculatedCalories > 0 ? calculatedCalories : Math.round(Number(parsed.calories)),
+    protein,
+    carbs,
+    fats,
     ingredientsBreakdown: Array.isArray(parsed.ingredientsBreakdown)
       ? parsed.ingredientsBreakdown.map((item: any) => ({
           ingredient: String(item.ingredient ?? ""),
