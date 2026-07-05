@@ -11,6 +11,7 @@ import { getMealHistory, deleteMealLog } from "../controllers/history.controller
 import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
 import { searchFoods, getFoodById, getFoodCategories } from "../controllers/food.controller";
+import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-log.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -90,6 +91,31 @@ router.get("/foods/categories", requireAuth, getFoodCategories);
  * @access  Private (JWT required)
  */
 router.get("/foods/:id", requireAuth, getFoodById);
+
+// ── Food Log Routes ─────────────────────────────────────────
+
+/**
+ * @route   POST /api/v1/food-logs
+ * @desc    Log a food item from the database for today
+ * @access  Private (JWT required)
+ * @body    { foodItemId, servings?, mealType?, loggedAt? }
+ */
+router.post("/food-logs", requireAuth, logFood);
+
+/**
+ * @route   GET /api/v1/food-logs/today
+ * @desc    Get today's combined food log summary (DB entries + AI scans) with totals vs goals
+ * @access  Private (JWT required)
+ * @query   date? (YYYY-MM-DD, defaults to today)
+ */
+router.get("/food-logs/today", requireAuth, getTodayFoodLogs);
+
+/**
+ * @route   DELETE /api/v1/food-logs/:id
+ * @desc    Delete a specific food log entry
+ * @access  Private (JWT required, ownership enforced)
+ */
+router.delete("/food-logs/:id", requireAuth, deleteFoodLog);
 
 // ── Meal Analysis Routes ───────────────────────────────────
 
