@@ -9,6 +9,7 @@ import { register, login, getMe, updateGoals } from "../controllers/user.control
 import { analyzeMealHandler } from "../controllers/meal.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
 import { getSuggestions } from "../controllers/suggestion.controller";
+import { updateProfile, getTdee } from "../controllers/profile.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -48,6 +49,22 @@ router.get("/users/me", requireAuth, getMe);
  * @body    { dailyCalorieGoal?, proteinGoal?, carbsGoal?, fatsGoal? }
  */
 router.put("/users/me/goals", requireAuth, updateGoals);
+
+/**
+ * @route   PUT /api/v1/users/profile
+ * @desc    Update user physical profile (age, weight, height, gender, goal, language)
+ *          Automatically recalculates daily calorie + macro goals via TDEE
+ * @access  Private (JWT required)
+ * @body    { name?, age?, weightKg?, heightCm?, gender?, activityLevel?, goal?, language? }
+ */
+router.put("/users/profile", requireAuth, updateProfile);
+
+/**
+ * @route   GET /api/v1/users/tdee
+ * @desc    Calculate and return TDEE breakdown using Mifflin-St Jeor formula
+ * @access  Private (JWT required)
+ */
+router.get("/users/tdee", requireAuth, getTdee);
 
 // ── Meal Analysis Routes ───────────────────────────────────
 
