@@ -266,7 +266,7 @@ export async function manualLogMealHandler(req: Request, res: Response): Promise
       carbs,
       fats,
       ingredientsBreakdown: [],
-      rawAiResponse: null,
+      rawAiResponse: null as any,
       source: "text",
     },
     select: { id: true },

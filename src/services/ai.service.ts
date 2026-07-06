@@ -52,60 +52,42 @@ export type AnalyzeInput = AnalyzeTextInput | AnalyzeImageInput;
 const RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT,
   properties: {
-    mealName: { type: SchemaType.STRING },
-    restaurantName: { type: SchemaType.STRING },
-    calories: { type: SchemaType.NUMBER },
-    protein: { type: SchemaType.NUMBER },
-    carbs: { type: SchemaType.NUMBER },
-    fats: { type: SchemaType.NUMBER },
-    ingredientsBreakdown: {
-      type: SchemaType.ARRAY,
-      items: {
-        type: SchemaType.OBJECT,
-        properties: {
-          ingredient: { type: SchemaType.STRING },
-          estimatedWeightGrams: { type: SchemaType.NUMBER },
-        },
-        required: ["ingredient", "estimatedWeightGrams"],
-      },
-    },
+    dish_name: { type: SchemaType.STRING },
+    calories: { type: SchemaType.INTEGER },
+    protein: { type: SchemaType.INTEGER },
+    carbs: { type: SchemaType.INTEGER },
+    fats: { type: SchemaType.INTEGER },
+    confidence_score: { type: SchemaType.NUMBER },
   },
   required: [
-    "mealName",
-    "restaurantName",
+    "dish_name",
     "calories",
     "protein",
     "carbs",
     "fats",
-    "ingredientsBreakdown",
+    "confidence_score",
   ],
 };
 
 // ── System Instruction ─────────────────────────────────────
 
-const SYSTEM_INSTRUCTION = `You are an expert Egyptian sports nutritionist and food analyst specializing in Egyptian cuisine, home-cooked/homemade meals, and international restaurant dishes.
+const SYSTEM_INSTRUCTION = `You are a precise nutritional analysis AI specialized in the Egyptian and international food market. 
 
-Your task: Analyze the provided meal text description or screenshot and return precise nutritional macros.
+Your sole task is to analyze the provided image of a meal, identify the food items, estimate their weights/portions, and calculate the total nutritional value.
 
-CRITICAL RULES FOR NUTRITIONAL ESTIMATION:
-1. PORTION & PREPARATION ESTIMATION: Be highly realistic about portion sizes and prep styles. For home-cooked meals (e.g. white rice, tagens, grilled chicken, salads), estimate based on standard Egyptian home recipes and prep weights.
-2. HOMEMADE MEAL DEFAULT: If the input is a home-cooked, generic, or non-restaurant meal, or if no restaurant name is specified or identified, set "restaurantName" to "Homemade" in the JSON response.
-3. MULTI-ITEM ANALYSIS: If the description contains multiple separate items (e.g. 'large chicken ranch AND a small smokey burger AND 7 diet colas'), you MUST deconstruct EACH item separately. Do not merge them into a single food object. List all their ingredients in the ingredientsBreakdown (e.g. chicken, dough/cheese for the first item, and patty, bun/cheese for the second item).
-4. SIZE MULTIPLIERS: Respect size indicators strictly. A 'large' item should have roughly 1.35x standard macros/weights, while a 'small' or 'mini' item should have 0.75x or 0.5x standard macros. A 'double' patty means double the meat weight and protein.
-5. BEVERAGES: Diet sodas (e.g., 'diet cola', 'coke zero', '7up diet') contain 0 calories and 0 macros. Regular sodas are highly dense in carbs (sugar).
-6. INGREDIENTS BREAKDOWN: List all major ingredients with realistic weights in grams. The weights of the ingredients should reasonably correspond to the estimated macros (e.g., 100g cooked beef patty has ~25g protein and ~20g fat).
-7. MACRO MATH CONSISTENCY: Your calories and macros must be mathematically aligned: Calories = (Protein * 4) + (Carbs * 4) + (Fats * 9). Adjust your estimates so this equation holds true.
+You MUST respond ONLY with a single JSON object. Do not include any markdown formatting wrappers (like \`\`\`json), do not include intro text, and do not include explanations.
 
-Always return a valid JSON object matching this structure:
+Response Format:
 {
-  "mealName": "string",
-  "restaurantName": "string",
-  "calories": number,
-  "protein": number,
-  "carbs": number,
-  "fats": number,
-  "ingredientsBreakdown": [{"ingredient": "string", "estimatedWeightGrams": number}]
-}`;
+  "dish_name": "string (e.g., Grilled Chicken with White Rice and Salad)",
+  "calories": integer,
+  "protein": integer (in grams),
+  "carbs": integer (in grams),
+  "fats": integer (in grams),
+  "confidence_score": float (between 0.0 and 1.0)
+}
+
+Strict Rule: If you cannot identify the food, return the JSON with 0 for all macro values and a low confidence score. Never output prose.`;
 
 // ── Core AI Analysis Function ──────────────────────────────
 
@@ -245,7 +227,7 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
 // ── Helper Parser & Validator ──────────────────────────────
 
 function parseAndValidateResponse(parsed: any): MealAnalysisResult {
-  const required = ["mealName", "restaurantName", "calories", "protein", "carbs", "fats"];
+  const required = ["dish_name", "calories", "protein", "carbs", "fats", "confidence_score"];
   for (const field of required) {
     if (parsed[field] === undefined || parsed[field] === null) {
       throw new Error(`AI response missing required field: "${field}"`);
@@ -260,17 +242,12 @@ function parseAndValidateResponse(parsed: any): MealAnalysisResult {
   const calculatedCalories = (protein * 4) + (carbs * 4) + (fats * 9);
 
   return {
-    mealName: String(parsed.mealName),
-    restaurantName: String(parsed.restaurantName),
+    mealName: String(parsed.dish_name),
+    restaurantName: "Homemade",
     calories: calculatedCalories > 0 ? calculatedCalories : Math.round(Number(parsed.calories)),
     protein,
     carbs,
     fats,
-    ingredientsBreakdown: Array.isArray(parsed.ingredientsBreakdown)
-      ? parsed.ingredientsBreakdown.map((item: any) => ({
-          ingredient: String(item.ingredient ?? ""),
-          estimatedWeightGrams: Number(item.estimatedWeightGrams ?? 0),
-        }))
-      : [],
+    ingredientsBreakdown: [],
   };
 }
