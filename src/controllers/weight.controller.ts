@@ -29,7 +29,7 @@ const HistoryQuerySchema = z.object({
 
 export async function logWeight(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const parsed = LogWeightSchema.safeParse(req.body);
@@ -86,7 +86,7 @@ export async function logWeight(req: Request, res: Response): Promise<void> {
 
 export async function getWeightHistory(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const parsed = HistoryQuerySchema.safeParse(req.query);
@@ -176,7 +176,7 @@ export async function getWeightHistory(req: Request, res: Response): Promise<voi
 
 export async function deleteWeightLog(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const { id } = req.params;

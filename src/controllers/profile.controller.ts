@@ -88,7 +88,7 @@ function calculateTDEE(
 
 export async function updateProfile(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
@@ -190,7 +190,7 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
 
 export async function getTdee(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) {
       res.status(401).json({ error: "Unauthorized" });
       return;

@@ -53,7 +53,7 @@ function calcNutrition(
 
 export async function logFood(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const parsed = LogFoodSchema.safeParse(req.body);
@@ -115,7 +115,7 @@ export async function logFood(req: Request, res: Response): Promise<void> {
 
 export async function getTodayFoodLogs(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const date = req.query.date as string | undefined;
@@ -276,7 +276,7 @@ export async function getTodayFoodLogs(req: Request, res: Response): Promise<voi
 
 export async function deleteFoodLog(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const { id } = req.params;

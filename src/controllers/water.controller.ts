@@ -36,7 +36,7 @@ function getDayBounds(dateStr?: string): { start: Date; end: Date } {
 
 export async function logWater(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const parsed = LogWaterSchema.safeParse(req.body);
@@ -105,7 +105,7 @@ export async function logWater(req: Request, res: Response): Promise<void> {
 
 export async function getTodayWater(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const date = req.query.date as string | undefined;
@@ -159,7 +159,7 @@ export async function getTodayWater(req: Request, res: Response): Promise<void> 
 
 export async function deleteWaterLog(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).userId as string;
+    const userId = req.user?.id;
     if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
     const { id } = req.params;
