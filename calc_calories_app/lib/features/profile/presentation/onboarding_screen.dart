@@ -93,6 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final height = double.tryParse(_heightController.text.trim()) ?? 170.0;
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
+    context.read<ProfileBloc>().add(CompleteOnboardingEvent());
     context.read<ProfileBloc>().add(
           UpdateProfileEvent(
             name: name,
@@ -116,8 +117,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       backgroundColor: AppColors.background,
       body: BlocListener<ProfileBloc, ProfileState>(
         listener: (context, state) {
-          if (state is ProfileUpdateSuccess) {
-            context.read<ProfileBloc>().add(CompleteOnboardingEvent());
+          if (state is ProfileLoaded && state.isOnboardingCompleted) {
             Navigator.pushReplacementNamed(context, '/');
           } else if (state is ProfileFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
