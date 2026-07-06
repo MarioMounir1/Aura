@@ -12,8 +12,15 @@ import 'bloc/dashboard_event.dart';
 import 'bloc/dashboard_state.dart';
 import '../domain/repositories/tracker_repository.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  DashboardLoaded? _lastLoadedState;
 
   @override
   Widget build(BuildContext context) {
@@ -37,16 +44,38 @@ class DashboardScreen extends StatelessWidget {
         },
         child: BlocBuilder<DashboardBloc, DashboardState>(
           builder: (context, state) {
-            if (state is DashboardInitial) {
+            if (state is DashboardLoaded) {
+              _lastLoadedState = state;
+            }
+
+            if (state is DashboardInitial && _lastLoadedState == null) {
               context.read<DashboardBloc>().add(const LoadDashboard());
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is DashboardLoading) {
+
+            if (state is DashboardLoading && _lastLoadedState == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is DashboardLoaded) {
-              return _buildContent(context, state, l10n, isArabic);
+
+            if (_lastLoadedState != null) {
+              return Stack(
+                children: [
+                  _buildContent(context, _lastLoadedState!, l10n, isArabic),
+                  if (state is DashboardLoading)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LinearProgressIndicator(
+                        minHeight: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
+                ],
+              );
             }
+
             if (state is DashboardFailure) {
               return Center(
                 child: Column(

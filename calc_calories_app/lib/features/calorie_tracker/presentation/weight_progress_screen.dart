@@ -23,6 +23,7 @@ class WeightProgressScreen extends StatefulWidget {
 
 class _WeightProgressScreenState extends State<WeightProgressScreen> {
   final _weightInputController = TextEditingController();
+  WeightLoaded? _lastLoadedState;
 
   @override
   void dispose() {
@@ -57,16 +58,38 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
         },
         child: BlocBuilder<WeightBloc, WeightState>(
           builder: (context, state) {
-            if (state is WeightInitial) {
+            if (state is WeightLoaded) {
+              _lastLoadedState = state;
+            }
+
+            if (state is WeightInitial && _lastLoadedState == null) {
               context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is WeightLoading && state is! WeightLoaded) {
+
+            if (state is WeightLoading && _lastLoadedState == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is WeightLoaded) {
-              return _buildContent(context, state, l10n);
+
+            if (_lastLoadedState != null) {
+              return Stack(
+                children: [
+                  _buildContent(context, _lastLoadedState!, l10n),
+                  if (state is WeightLoading)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LinearProgressIndicator(
+                        minHeight: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
+                ],
+              );
             }
+
             if (state is WeightFailure) {
               return Center(
                 child: Column(

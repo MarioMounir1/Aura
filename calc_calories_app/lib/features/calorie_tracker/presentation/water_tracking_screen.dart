@@ -20,6 +20,7 @@ class WaterTrackingScreen extends StatefulWidget {
 
 class _WaterTrackingScreenState extends State<WaterTrackingScreen> {
   final _customAmountController = TextEditingController();
+  WaterLoaded? _lastLoadedState;
 
   @override
   void dispose() {
@@ -53,16 +54,38 @@ class _WaterTrackingScreenState extends State<WaterTrackingScreen> {
         },
         child: BlocBuilder<WaterBloc, WaterState>(
           builder: (context, state) {
-            if (state is WaterInitial) {
+            if (state is WaterLoaded) {
+              _lastLoadedState = state;
+            }
+
+            if (state is WaterInitial && _lastLoadedState == null) {
               context.read<WaterBloc>().add(const LoadWaterToday());
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is WaterLoading && state is! WaterLoaded) {
+
+            if (state is WaterLoading && _lastLoadedState == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is WaterLoaded) {
-              return _buildContent(context, state, l10n);
+
+            if (_lastLoadedState != null) {
+              return Stack(
+                children: [
+                  _buildContent(context, _lastLoadedState!, l10n),
+                  if (state is WaterLoading)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LinearProgressIndicator(
+                        minHeight: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
+                ],
+              );
             }
+
             if (state is WaterFailure) {
               return Center(
                 child: Column(

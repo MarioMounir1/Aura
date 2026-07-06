@@ -20,6 +20,7 @@ class MealPlansScreen extends StatefulWidget {
 
 class _MealPlansScreenState extends State<MealPlansScreen> {
   int _selectedDayOfWeek = 6; // Starts on Saturday (Dow 6 in Egyptian week)
+  MealPlanLoaded? _lastLoadedState;
 
   @override
   Widget build(BuildContext context) {
@@ -48,16 +49,38 @@ class _MealPlansScreenState extends State<MealPlansScreen> {
         },
         child: BlocBuilder<MealPlanBloc, MealPlanState>(
           builder: (context, state) {
-            if (state is MealPlanInitial) {
+            if (state is MealPlanLoaded) {
+              _lastLoadedState = state;
+            }
+
+            if (state is MealPlanInitial && _lastLoadedState == null) {
               context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is MealPlanLoading && state is! MealPlanLoaded) {
+
+            if (state is MealPlanLoading && _lastLoadedState == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            if (state is MealPlanLoaded) {
-              return _buildContent(context, state, l10n, isArabic);
+
+            if (_lastLoadedState != null) {
+              return Stack(
+                children: [
+                  _buildContent(context, _lastLoadedState!, l10n, isArabic),
+                  if (state is MealPlanLoading)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: LinearProgressIndicator(
+                        minHeight: 3,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
+                ],
+              );
             }
+
             if (state is MealPlanFailure) {
               return Center(
                 child: Column(
