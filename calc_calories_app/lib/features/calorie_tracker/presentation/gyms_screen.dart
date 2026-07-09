@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/gyms_screen.dart
-// The Teneen — Gyms Exploration & Check-In screen
+// The Teneen — Minimalist Gyms Exploration & Check-In screen
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,25 +12,8 @@ class GymsScreen extends StatefulWidget {
   State<GymsScreen> createState() => _GymsScreenState();
 }
 
-class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateMixin {
+class _GymsScreenState extends State<GymsScreen> {
   int _activeCategoryIndex = 0;
-  late AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    // Pulse animation for the green location indicator and the QR code check-in button glow
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +28,7 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
           children: [
             // ── Header Zone ──────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -58,51 +41,35 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
                       letterSpacing: -0.5,
                     ),
                   ),
-                  _buildLocationIndicator(isArabic),
+                  _buildCairoTag(isArabic),
                 ],
               ),
             ),
 
-            // ── Scrollable Body Area ──────────────────────────────────
+            // ── Minimal Smart Check-In Alert (No Large Box) ─────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: _buildCheckInAlert(isArabic),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Micro-Filter Tabs ────────────────────────────────────
+            _buildMicroFilters(isArabic),
+
+            const SizedBox(height: 20),
+
+            // ── Gym Cards List (Compact Minimalist Grid) ──────────────
             Expanded(
-              child: ListView(
+              child: ListView.separated(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 90), // Spacing for custom bottom nav
-                children: [
-                  // Check-In Hero Widget
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: _buildCheckInHeroCard(isArabic),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Gym Categories (Filters)
-                  _buildCategoriesSection(isArabic),
-
-                  const SizedBox(height: 20),
-
-                  // Section Title
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
-                      isArabic ? 'الصالات المتاحة بالقرب منك' : 'Gyms Nearby',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Gym Cards List
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildGymCardsList(isArabic),
-                  ),
-                ],
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 90), // Spacing for bottom nav
+                itemCount: _getGymDataForCategory(_activeCategoryIndex, isArabic).length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final gym = _getGymDataForCategory(_activeCategoryIndex, isArabic)[index];
+                  return _buildMinimalistGymCard(gym, isArabic);
+                },
               ),
             ),
           ],
@@ -111,164 +78,61 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
     );
   }
 
-  // ── Header: Location Indicator ────────────────────────────────────
-  Widget _buildLocationIndicator(bool isArabic) {
+  // ── Header: Cairo Capsule Tag ─────────────────────────────────────
+  Widget _buildCairoTag(bool isArabic) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border, width: 1),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              return Opacity(
-                opacity: 0.5 + (_pulseController.value * 0.5),
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.greenAccent,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.greenAccent,
-                        blurRadius: 4,
-                        spreadRadius: 1,
-                      )
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-          Text(
-            isArabic ? 'القاهرة، مصر' : 'Cairo, Egypt',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
+      child: Text(
+        isArabic ? 'القاهرة' : 'Cairo',
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textSecondary,
+        ),
       ),
     );
   }
 
-  // ── Check-In Hero Widget ──────────────────────────────────────────
-  Widget _buildCheckInHeroCard(bool isArabic) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.45), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            blurRadius: 20,
-            spreadRadius: 2,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.fitness_center_rounded,
-                  color: AppColors.primary,
-                  size: 22,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    isArabic
-                        ? 'أنت بالقرب من صالة H2O الرياضية! 🏋️‍♂️'
-                        : 'You are near H2O Gym & Spa! 🏋️‍♂️',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                    textAlign: isArabic ? TextAlign.right : TextAlign.left,
-                  ),
-                ),
-              ],
+  // ── Minimal Smart Check-In Alert ──────────────────────────────────
+  Widget _buildCheckInAlert(bool isArabic) {
+    return InkWell(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.surface,
+            content: Text(
+              isArabic ? 'جاري التحقق من الموقع لتسجيل الحضور...' : 'Verifying location for check-in...',
+              style: const TextStyle(color: AppColors.textPrimary),
             ),
-            const SizedBox(height: 16),
-
-            // Large glowing scan QR button
-            AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                final double glowVal = _pulseController.value;
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.2 + (glowVal * 0.2)),
-                        blurRadius: 12 + (glowVal * 6),
-                        spreadRadius: 1 + (glowVal * 2),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Trigger scan callback mock
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: AppColors.surface,
-                          content: Text(
-                            isArabic ? 'جاري فتح الكاميرا للمسح...' : 'Opening camera to scan...',
-                            style: const TextStyle(color: AppColors.textPrimary),
-                          ),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.black,
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.qr_code_scanner_rounded,
-                          color: Colors.black,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          isArabic
-                              ? 'امسح الرمز لتسجيل الحضور (+٢٠ نقطة)'
-                              : 'Scan QR to Check-In (+20 Pts)',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.flash_on_rounded,
+              color: AppColors.primary,
+              size: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isArabic
+                    ? '✨ بالقرب من H2O Gym! اضغط لتسجيل الحضور (+٢٠ ن)'
+                    : '✨ Near H2O Gym! Tap to Check-In (+20 Pts)',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
             ),
           ],
         ),
@@ -276,13 +140,12 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
     );
   }
 
-  // ── Categories Filters Pill list ──────────────────────────────────
-  Widget _buildCategoriesSection(bool isArabic) {
+  // ── Micro-Filter Tabs ─────────────────────────────────────────────
+  Widget _buildMicroFilters(bool isArabic) {
     final List<Map<String, String>> categories = [
       {'en': 'Premium', 'ar': 'ممتازة'},
-      {'en': 'Ladies Only', 'ar': 'سيدات فقط'},
+      {'en': 'Ladies', 'ar': 'سيدات'},
       {'en': 'CrossFit', 'ar': 'كروس فت'},
-      {'en': 'Powerlifting Friendly', 'ar': 'رفع أثقال'},
     ];
 
     return SingleChildScrollView(
@@ -299,23 +162,23 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
             child: GestureDetector(
               onTap: () => setState(() => _activeCategoryIndex = index),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
+                duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : AppColors.surface,
-                  borderRadius: BorderRadius.circular(30),
+                  color: isSelected ? Colors.transparent : AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? AppColors.primary : AppColors.border,
+                    color: isSelected ? AppColors.primary : AppColors.border.withValues(alpha: 0.5),
                     width: 1,
                   ),
                 ),
                 child: Text(
                   label,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? Colors.black : AppColors.textSecondary,
+                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
                   ),
                 ),
               ),
@@ -326,162 +189,115 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
     );
   }
 
-  // ── Gym Cards list builder ────────────────────────────────────────
-  Widget _buildGymCardsList(bool isArabic) {
-    final List<Map<String, dynamic>> gyms = _getGymDataForCategory(_activeCategoryIndex, isArabic);
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: gyms.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final gym = gyms[index];
-        return _buildGymCard(gym, isArabic);
-      },
-    );
-  }
-
-  // ── Single Gym Card Builder ───────────────────────────────────────
-  Widget _buildGymCard(Map<String, dynamic> gym, bool isArabic) {
+  // ── Compact Minimalist Gym Card Builder ───────────────────────────
+  Widget _buildMinimalistGymCard(Map<String, dynamic> gym, bool isArabic) {
     return Container(
       width: double.infinity,
+      height: 90,
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border, width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        border: Border.fromBorderSide(BorderSide(color: AppColors.border.withValues(alpha: 0.5), width: 1)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Graphic header image area
-          Container(
-            height: 140,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.surfaceVariant,
-                  AppColors.surface,
-                  AppColors.surfaceVariant,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(15)),
+        child: Stack(
+          children: [
+            // Dark graphic layout background representing a blurred gym photo
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.85),
+                      AppColors.surface.withValues(alpha: 0.95),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Background vector weights icon decoration
+            Positioned(
+              right: isArabic ? null : 16,
+              left: isArabic ? 16 : null,
+              top: 0,
+              bottom: 0,
+              child: Opacity(
+                opacity: 0.08,
+                child: Icon(
+                  Icons.fitness_center_rounded,
+                  size: 48,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+
+            // Card Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Top Line: Gym Name left, distance right
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        gym['name'] as String,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        '${gym['distance']} km',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Bottom Line: Price left, teal discount badge right
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        gym['price'] as String,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1),
+                        ),
+                        child: Text(
+                          gym['badge'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            child: Stack(
-              children: [
-                // Gym themed icon graphic representation
-                Center(
-                  child: Icon(
-                    Icons.store_mall_directory_rounded,
-                    color: AppColors.primary.withValues(alpha: 0.35),
-                    size: 60,
-                  ),
-                ),
-
-                // Sponsored / Distance badge
-                Positioned(
-                  top: 12,
-                  left: isArabic ? null : 12,
-                  right: isArabic ? 12 : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border, width: 1),
-                    ),
-                    child: Text(
-                      '${gym['distance']} km',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Special Deal Badge overlay
-                Positioned(
-                  bottom: 12,
-                  left: isArabic ? null : 12,
-                  right: isArabic ? 12 : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                        )
-                      ],
-                    ),
-                    child: Text(
-                      gym['badge'] as String,
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Details info
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      gym['name'] as String,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isArabic ? 'صالة لياقة بدنية ممتازة' : 'High Performance Fitness',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  gym['price'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -494,14 +310,14 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
         {
           'name': 'H2O Gym & Spa',
           'distance': 0.5,
-          'badge': isArabic ? 'خصم ١٠٪ عبر التنين' : '10% OFF Memberships via Teneen',
-          'price': isArabic ? '١,٢٠٠ ج.م/شهرياً' : 'EGP 1,200/Month',
+          'badge': '10% OFF',
+          'price': isArabic ? '١,٢٠٠ ج.م/شهرياً' : 'EGP 1,200/mo',
         },
         {
           'name': 'Gold’s Gym Cairo',
           'distance': 1.8,
-          'badge': isArabic ? 'حصة تجريبية مجانية' : 'Free Trial Pass via Teneen',
-          'price': isArabic ? '١,٨٠٠ ج.م/شهرياً' : 'EGP 1,800/Month',
+          'badge': 'FREE PASS',
+          'price': isArabic ? '١,٨٠٠ ج.م/شهرياً' : 'EGP 1,800/mo',
         },
       ];
     } else if (categoryIndex == 1) {
@@ -510,28 +326,18 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
         {
           'name': 'Hers Fitness Studio',
           'distance': 0.9,
-          'badge': isArabic ? 'ساعة مجانية استشارة' : 'Free 1h Consultation',
-          'price': isArabic ? '١,١٠٠ ج.م/شهرياً' : 'EGP 1,100/Month',
+          'badge': '15% OFF',
+          'price': isArabic ? '١,١٠٠ ج.م/شهرياً' : 'EGP 1,100/mo',
         },
       ];
-    } else if (categoryIndex == 2) {
+    } else {
       // CrossFit
       return [
         {
           'name': 'BeFit 360 Box',
           'distance': 2.4,
-          'badge': isArabic ? 'تحدي تمرين مجاني' : '1 Free Challenge Access',
-          'price': isArabic ? '١,٤٠0 ج.م/شهرياً' : 'EGP 1,400/Month',
-        },
-      ];
-    } else {
-      // Powerlifting Friendly
-      return [
-        {
-          'name': 'Iron House Gym',
-          'distance': 1.2,
-          'badge': isArabic ? 'تذكرة يومية: ١٥٠ ج.م' : 'Teneen Day Pass: EGP 150',
-          'price': isArabic ? '١٥٠ ج.م/يومياً' : 'EGP 150/Day',
+          'badge': '1 FREE SESSION',
+          'price': isArabic ? '١,٤٠0 ج.م/شهرياً' : 'EGP 1,400/mo',
         },
       ];
     }
