@@ -365,8 +365,8 @@ class _GymsScreenState extends State<GymsScreen> with SingleTickerProviderStateM
           Container(
             height: 140,
             width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            decoration: const BoxDecoration(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
