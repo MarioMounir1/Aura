@@ -81,7 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               _showSmartSuggestion = false;
                             });
                           },
-                          child: ui.BackdropFilter(
+                          child: BackdropFilter(
                             filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                             child: Container(
                               color: Colors.black.withOpacity(0.65),
@@ -688,9 +688,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _showSmartSuggestion = true;
-        });
+        Navigator.pushNamed(context, '/meals/ai-suggestion');
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),

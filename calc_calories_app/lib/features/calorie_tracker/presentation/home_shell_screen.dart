@@ -7,7 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import 'dashboard_screen.dart';
 import 'analyze_meal_screen.dart';
 import 'food_search_screen.dart';
-import 'meal_plans_screen.dart';
+import 'market_screen.dart';
 import 'settings_screen.dart';
 import 'widgets/quick_log_bottom_sheet.dart';
 
@@ -25,7 +25,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
     const DashboardScreen(),
     const FoodSearchScreen(),
     const AnalyzeMealScreen(),
-    const MealPlansScreen(),
+    const MarketScreen(),
     const SettingsScreen(),
   ];
 
@@ -78,7 +78,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
               _buildNavItem(Icons.home_rounded, 0, true),
               _buildNavItem(Icons.search_rounded, 1, false),
               _buildNavItem(Icons.camera_enhance_rounded, 2, false),
-              _buildNavItem(Icons.calendar_month_rounded, 3, false),
+              _buildNavItem(Icons.shopping_bag_rounded, 3, true),
               _buildNavItem(Icons.person_rounded, 4, false),
             ],
           ),
