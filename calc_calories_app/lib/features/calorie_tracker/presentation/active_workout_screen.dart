@@ -242,10 +242,10 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
     return Container(
       width: double.infinity,
       height: 160,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border, width: 1.2),
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+        border: Border.fromBorderSide(BorderSide(color: AppColors.border, width: 1.2)),
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -259,7 +259,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
         alignment: Alignment.center,
         children: [
           // Graphic form vectors
-          Opacity(
+          const Opacity(
             opacity: 0.25,
             child: Icon(
               Icons.fitness_center_rounded,
