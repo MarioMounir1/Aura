@@ -170,6 +170,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // ── Weight Progress ──────────────────────────────────────────
           _buildWeightCard(currentWeight),
+          const SizedBox(height: 16),
+
+          // ── AI Workout Tracker Banner ────────────────────────────────
+          _buildWorkoutTrackerBanner(context, isArabic),
           const SizedBox(height: 24),
 
           // ── Today's Insights (Carousel) ─────────────────────────────
@@ -1062,6 +1066,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: const Text('Awesome!', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkoutTrackerBanner(BuildContext context, bool isArabic) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.fitness_center_rounded,
+              color: AppColors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isArabic ? 'متتبع التمارين بالذكاء الاصطناعي' : 'AI Workout Tracker',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isArabic
+                      ? 'ابدأ تمارين الدفع واكسب +٣٠ نقطة'
+                      : 'Start Push Day & Earn +30 Pts',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              isArabic ? Icons.arrow_back_ios_new_rounded : Icons.arrow_forward_ios_rounded,
+              color: AppColors.primary,
+              size: 16,
+            ),
+            onPressed: () => Navigator.pushNamed(context, '/workout/active'),
           ),
         ],
       ),
