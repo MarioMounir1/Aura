@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../domain/entities/meal_log_entity.dart';
+import '../domain/entities/meal_log_entity.dart'; // Imports IngredientBreakdown
 
 // Elite fitness aesthetic palette constants
 class DashboardThemeColors {
@@ -19,6 +19,46 @@ class DashboardThemeColors {
   static const Color textSecondary = Color(0xFF9CA3AF);    // Slate-400
   static const Color textMuted = Color(0xFF6B7280);        // Slate-500
   static const Color trackBackground = Color(0xFF1F2937);  // Slate-800
+}
+
+class MealWarning {
+  final String warningText;
+  final bool isSevere;
+
+  const MealWarning({
+    required this.warningText,
+    required this.isSevere,
+  });
+}
+
+class MealEntry {
+  final String id;
+  final String foodName;
+  final String restaurantName;
+  final double protein;
+  final double carbs;
+  final double fat;
+  final double calories;
+  final List<MealWarning> warnings;
+  final bool isHighlyNutritious;
+  final DateTime createdAt;
+  final String source; // "text" | "image"
+  final List<IngredientBreakdown> ingredientsBreakdown;
+
+  const MealEntry({
+    required this.id,
+    required this.foodName,
+    required this.restaurantName,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    required this.calories,
+    required this.warnings,
+    required this.isHighlyNutritious,
+    required this.createdAt,
+    required this.source,
+    required this.ingredientsBreakdown,
+  });
 }
 
 class MealsDashboard extends StatefulWidget {
@@ -36,7 +76,6 @@ class MealsDashboard extends StatefulWidget {
 }
 
 class _MealsDashboardState extends State<MealsDashboard> {
-  // Mock fallback data to ensure visual excellence and standalone execution
   late double caloriesConsumed;
   late double caloriesTarget;
   late double proteinConsumed;
@@ -46,7 +85,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
   late double fatsConsumed;
   late double fatsTarget;
 
-  late List<MealLogEntity> logs;
+  late List<MealEntry> logs;
 
   @override
   void initState() {
@@ -55,37 +94,71 @@ class _MealsDashboardState extends State<MealsDashboard> {
   }
 
   void _initializeData() {
-    // Totals and goals mapping
-    final totals = widget.foodSummary?['totals'] as Map<String, dynamic>? ?? {};
-    final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ?? {};
+    // Check if the parent passed logs and map them, else fallback to mock defaults
+    if (widget.mealLogs != null && widget.mealLogs!.isNotEmpty) {
+      logs = widget.mealLogs!.map((entity) {
+        final isNutritious = entity.protein > 25 && entity.calories < 400;
+        final List<MealWarning> warnings = [];
+        if (entity.carbs > 80) {
+          warnings.add(const MealWarning(warningText: 'High carb load detected', isSevere: false));
+        }
+        if (entity.fats > 20) {
+          warnings.add(const MealWarning(warningText: 'High saturated fat warning', isSevere: false));
+        }
+        if (entity.calories > 700) {
+          warnings.add(const MealWarning(warningText: 'Sodium & saturated fat spike detected', isSevere: true));
+        }
 
-    caloriesConsumed = (totals['calories'] as num?)?.toDouble() ?? 1780.0;
-    caloriesTarget = (goals['calories'] as num?)?.toDouble() ?? 2400.0;
-
-    proteinConsumed = (totals['protein'] as num?)?.toDouble() ?? 135.0;
-    proteinTarget = (goals['protein'] as num?)?.toDouble() ?? 170.0;
-
-    carbsConsumed = (totals['carbs'] as num?)?.toDouble() ?? 180.0;
-    carbsTarget = (goals['carbs'] as num?)?.toDouble() ?? 250.0;
-
-    fatsConsumed = (totals['fats'] as num?)?.toDouble() ?? 52.0;
-    fatsTarget = (goals['fats'] as num?)?.toDouble() ?? 80.0;
-
-    // Use default meal logs if none are provided
-    logs = widget.mealLogs ?? _generateMockMeals();
+        return MealEntry(
+          id: entity.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          foodName: entity.mealName,
+          restaurantName: entity.restaurantName,
+          protein: entity.protein,
+          carbs: entity.carbs,
+          fat: entity.fats,
+          calories: entity.calories,
+          warnings: warnings,
+          isHighlyNutritious: isNutritious,
+          createdAt: entity.createdAt,
+          source: entity.source,
+          ingredientsBreakdown: entity.ingredientsBreakdown,
+        );
+      }).toList();
+    } else {
+      logs = _generateMockMeals();
+    }
+    _recalculateTotals();
   }
 
-  List<MealLogEntity> _generateMockMeals() {
+  void _recalculateTotals() {
+    final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ?? {};
+
+    caloriesTarget = (goals['calories'] as num?)?.toDouble() ?? 2400.0;
+    proteinTarget = (goals['protein'] as num?)?.toDouble() ?? 170.0;
+    carbsTarget = (goals['carbs'] as num?)?.toDouble() ?? 250.0;
+    fatsTarget = (goals['fats'] as num?)?.toDouble() ?? 80.0;
+
+    caloriesConsumed = logs.fold(0.0, (sum, item) => sum + item.calories);
+    proteinConsumed = logs.fold(0.0, (sum, item) => sum + item.protein);
+    carbsConsumed = logs.fold(0.0, (sum, item) => sum + item.carbs);
+    fatsConsumed = logs.fold(0.0, (sum, item) => sum + item.fat);
+  }
+
+  List<MealEntry> _generateMockMeals() {
     final now = DateTime.now();
     return [
-      MealLogEntity(
+      MealEntry(
         id: '1',
         restaurantName: 'Abo Tareq Koshary',
-        mealName: 'Koshary Plate (Medium)',
+        foodName: 'Koshary Plate (Medium)',
         calories: 680,
         protein: 18,
         carbs: 110,
-        fats: 16,
+        fat: 16,
+        warnings: const [
+          MealWarning(warningText: 'High carb load detected', isSevere: false),
+        ],
+        isHighlyNutritious: false,
         ingredientsBreakdown: const [
           IngredientBreakdown(ingredient: 'Pasta & Rice Mix', estimatedWeightGrams: 220),
           IngredientBreakdown(ingredient: 'Lentils & Chickpeas', estimatedWeightGrams: 80),
@@ -94,14 +167,18 @@ class _MealsDashboardState extends State<MealsDashboard> {
         source: 'text',
         createdAt: now.subtract(const Duration(hours: 6)),
       ),
-      MealLogEntity(
+      MealEntry(
         id: '2',
         restaurantName: 'Buffalo Burger',
-        mealName: 'Old School 200g (No Mayo)',
+        foodName: 'Old School 200g (No Mayo)',
         calories: 820,
         protein: 48,
         carbs: 58,
-        fats: 28,
+        fat: 28,
+        warnings: const [
+          MealWarning(warningText: 'Sodium & saturated fat spike detected', isSevere: true),
+        ],
+        isHighlyNutritious: false,
         ingredientsBreakdown: const [
           IngredientBreakdown(ingredient: 'Grilled Beef Patty', estimatedWeightGrams: 200),
           IngredientBreakdown(ingredient: 'Cheddar Cheese Slice', estimatedWeightGrams: 25),
@@ -110,14 +187,16 @@ class _MealsDashboardState extends State<MealsDashboard> {
         source: 'image',
         createdAt: now.subtract(const Duration(hours: 2)),
       ),
-      MealLogEntity(
+      MealEntry(
         id: '3',
         restaurantName: 'El Ezba Grill',
-        mealName: 'Shish Tawook Wrap',
+        foodName: 'Shish Tawook Wrap',
         calories: 280,
         protein: 29,
         carbs: 12,
-        fats: 8,
+        fat: 8,
+        warnings: const [],
+        isHighlyNutritious: true,
         ingredientsBreakdown: const [
           IngredientBreakdown(ingredient: 'Grilled Chicken Breast', estimatedWeightGrams: 120),
           IngredientBreakdown(ingredient: 'Bell Peppers & Onion', estimatedWeightGrams: 40),
@@ -127,6 +206,380 @@ class _MealsDashboardState extends State<MealsDashboard> {
         createdAt: now.subtract(const Duration(minutes: 45)),
       ),
     ];
+  }
+
+  // Interactive AI Meal Snap Bottom Sheet
+  void _showAiMealSnapBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            final textController = TextEditingController();
+            String? selectedPhotoName;
+            bool isAnalyzing = false;
+
+            return Container(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+              ),
+              decoration: const BoxDecoration(
+                color: DashboardThemeColors.cardBackground,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border(
+                  top: BorderSide(color: DashboardThemeColors.trackBackground, width: 1.5),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: DashboardThemeColors.trackBackground,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.auto_awesome_outlined,
+                          color: DashboardThemeColors.accentEmerald,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'AI Meal Snap',
+                          style: GoogleFonts.outfit(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: DashboardThemeColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Snap a photo or describe your meal. Our AI reverse-engineers macros instantly.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: DashboardThemeColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      '1. DESCRIBE YOUR MEAL',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                        color: DashboardThemeColors.accentLime,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: textController,
+                      style: GoogleFonts.inter(color: DashboardThemeColors.textPrimary),
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'e.g. 250g grilled chicken breast with basmati rice',
+                        hintStyle: GoogleFonts.inter(color: DashboardThemeColors.textMuted, fontSize: 13),
+                        filled: true,
+                        fillColor: DashboardThemeColors.background,
+                        contentPadding: const EdgeInsets.all(14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: DashboardThemeColors.trackBackground),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: DashboardThemeColors.trackBackground),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: DashboardThemeColors.accentEmerald),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '2. MEAL PHOTO (OPTIONAL)',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                        color: DashboardThemeColors.accentLime,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            // ignore: dead_code
+                            onPressed: isAnalyzing
+                                ? null
+                                : () {
+                                    setSheetState(() {
+                                      selectedPhotoName = 'snap_camera_${DateTime.now().millisecond}.jpg';
+                                    });
+                                  },
+                            icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                            label: const Text('Camera'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: DashboardThemeColors.background,
+                              foregroundColor: DashboardThemeColors.textPrimary,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: const BorderSide(color: DashboardThemeColors.trackBackground),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            // ignore: dead_code
+                            onPressed: isAnalyzing
+                                ? null
+                                : () {
+                                    setSheetState(() {
+                                      selectedPhotoName = 'gallery_pick_${DateTime.now().millisecond}.jpg';
+                                    });
+                                  },
+                            icon: const Icon(Icons.image_outlined, size: 18),
+                            label: const Text('Gallery'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: DashboardThemeColors.background,
+                              foregroundColor: DashboardThemeColors.textPrimary,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: const BorderSide(color: DashboardThemeColors.trackBackground),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (selectedPhotoName != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_outline, color: DashboardThemeColors.accentEmerald, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                selectedPhotoName!,
+                                style: GoogleFonts.inter(
+                                  color: DashboardThemeColors.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 16, color: DashboardThemeColors.textSecondary),
+                              onPressed: () {
+                                setSheetState(() {
+                                  selectedPhotoName = null;
+                                });
+                              },
+                            )
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        // ignore: dead_code
+                        onPressed: isAnalyzing
+                            ? null
+                            : () async {
+                                final desc = textController.text.trim();
+                                if (desc.isEmpty && selectedPhotoName == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please describe your meal or select a photo.')),
+                                  );
+                                  return;
+                                }
+
+                                setSheetState(() {
+                                  isAnalyzing = true;
+                                });
+
+                                // Simulate AI computing delay (1.5 seconds)
+                                await Future.delayed(const Duration(milliseconds: 1500));
+
+                                final lowerDesc = desc.toLowerCase();
+                                final isImage = selectedPhotoName != null;
+                                final now = DateTime.now();
+
+                                MealEntry newEntry;
+
+                                if (lowerDesc.contains('burger') ||
+                                    lowerDesc.contains('pizza') ||
+                                    lowerDesc.contains('fries') ||
+                                    lowerDesc.contains('waffle') ||
+                                    lowerDesc.contains('fat') ||
+                                    lowerDesc.contains('crepe')) {
+                                  newEntry = MealEntry(
+                                    id: now.millisecondsSinceEpoch.toString(),
+                                    foodName: desc.isNotEmpty ? desc : 'Double Pepperoni Cheat Meal',
+                                    restaurantName: 'AI Snap Analyzer',
+                                    protein: 26,
+                                    carbs: 88,
+                                    fat: 36,
+                                    calories: 780,
+                                    warnings: const [
+                                      MealWarning(warningText: 'Severe saturated fat spike detected', isSevere: true),
+                                      MealWarning(warningText: 'High sodium load (+1600mg)', isSevere: true),
+                                    ],
+                                    isHighlyNutritious: false,
+                                    ingredientsBreakdown: const [
+                                      IngredientBreakdown(ingredient: 'Refined Dough & Cheese', estimatedWeightGrams: 280),
+                                      IngredientBreakdown(ingredient: 'Processed Pepperoni', estimatedWeightGrams: 60),
+                                    ],
+                                    source: isImage ? 'image' : 'text',
+                                    createdAt: now,
+                                  );
+                                } else if (lowerDesc.contains('salad') ||
+                                    lowerDesc.contains('chicken') ||
+                                    lowerDesc.contains('salmon') ||
+                                    lowerDesc.contains('fish') ||
+                                    lowerDesc.contains('tuna') ||
+                                    lowerDesc.contains('egg') ||
+                                    lowerDesc.contains('protein') ||
+                                    lowerDesc.contains('clean')) {
+                                  newEntry = MealEntry(
+                                    id: now.millisecondsSinceEpoch.toString(),
+                                    foodName: desc.isNotEmpty ? desc : 'Grilled Chicken Protein Salad',
+                                    restaurantName: 'AI Snap Analyzer',
+                                    protein: 42,
+                                    carbs: 12,
+                                    fat: 8,
+                                    calories: 290,
+                                    warnings: const [],
+                                    isHighlyNutritious: true,
+                                    ingredientsBreakdown: const [
+                                      IngredientBreakdown(ingredient: 'Skinless Chicken Breast', estimatedWeightGrams: 150),
+                                      IngredientBreakdown(ingredient: 'Mixed Green Veggies', estimatedWeightGrams: 100),
+                                      IngredientBreakdown(ingredient: 'Olive Oil Drizzle', estimatedWeightGrams: 5),
+                                    ],
+                                    source: isImage ? 'image' : 'text',
+                                    createdAt: now,
+                                  );
+                                } else {
+                                  newEntry = MealEntry(
+                                    id: now.millisecondsSinceEpoch.toString(),
+                                    foodName: desc.isNotEmpty ? desc : 'Custom Meal Entry',
+                                    restaurantName: 'AI Snap Analyzer',
+                                    protein: 20,
+                                    carbs: 45,
+                                    fat: 14,
+                                    calories: 386,
+                                    warnings: const [
+                                      MealWarning(warningText: 'Moderate fat/sodium content', isSevere: false),
+                                    ],
+                                    isHighlyNutritious: false,
+                                    ingredientsBreakdown: const [
+                                      IngredientBreakdown(ingredient: 'Starch & Protein Base', estimatedWeightGrams: 200),
+                                    ],
+                                    source: isImage ? 'image' : 'text',
+                                    createdAt: now,
+                                  );
+                                }
+
+                                if (mounted) {
+                                  setState(() {
+                                    logs.insert(0, newEntry);
+                                    _recalculateTotals();
+                                  });
+                                }
+
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: DashboardThemeColors.accentEmerald,
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.auto_awesome, color: Colors.black),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            'Processed successfully: +${newEntry.calories.round()} kcal!',
+                                            style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: DashboardThemeColors.accentEmerald,
+                          foregroundColor: DashboardThemeColors.background,
+                          disabledBackgroundColor: DashboardThemeColors.trackBackground,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: isAnalyzing
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(DashboardThemeColors.background),
+                                ),
+                              )
+                            : Text(
+                                'Analyze & Log Meal',
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -266,7 +719,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '${((caloriesConsumed / caloriesTarget) * 100).round()}% Target',
+                  '${caloriesTarget > 0 ? ((caloriesConsumed / caloriesTarget) * 100).round() : 0}% Target',
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -446,7 +899,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
               ],
             ),
             TextButton.icon(
-              onPressed: () {},
+              onPressed: () => _showAiMealSnapBottomSheet(context),
               icon: const Icon(Icons.add_rounded, size: 16, color: DashboardThemeColors.accentLime),
               label: Text(
                 'Add Log',
@@ -483,8 +936,21 @@ class _MealsDashboardState extends State<MealsDashboard> {
     );
   }
 
-  Widget _buildMealLogCard(MealLogEntity meal) {
+  Widget _buildMealLogCard(MealEntry meal) {
     final mealTime = DateFormat('h:mm a').format(meal.createdAt.toLocal());
+    final hasSevere = meal.warnings.any((w) => w.isSevere);
+    final hasWarnings = meal.warnings.isNotEmpty;
+
+    // Card border color logic
+    Color borderColor = DashboardThemeColors.trackBackground;
+    if (hasSevere) {
+      borderColor = Colors.red;
+    } else if (hasWarnings) {
+      borderColor = Colors.amber;
+    } else if (meal.isHighlyNutritious) {
+      borderColor = DashboardThemeColors.accentEmerald;
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -492,13 +958,46 @@ class _MealsDashboardState extends State<MealsDashboard> {
         color: DashboardThemeColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: DashboardThemeColors.trackBackground,
-          width: 1,
+          color: borderColor,
+          width: meal.isHighlyNutritious || hasWarnings ? 1.5 : 1.0,
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (hasWarnings) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: (hasSevere ? Colors.red : Colors.amber).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: (hasSevere ? Colors.red : Colors.amber).withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    hasSevere ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
+                    color: hasSevere ? Colors.red : Colors.amber,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      meal.warnings.map((w) => w.warningText).join(", "),
+                      style: GoogleFonts.inter(
+                        color: hasSevere ? Colors.red[300] : Colors.amber[300],
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -512,7 +1011,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   meal.source == 'image'
                       ? Icons.camera_alt_outlined
                       : Icons.restaurant_outlined,
-                  color: DashboardThemeColors.accentLime,
+                  color: meal.isHighlyNutritious
+                      ? DashboardThemeColors.accentEmerald
+                      : (hasSevere ? Colors.red : DashboardThemeColors.accentLime),
                   size: 20,
                 ),
               ),
@@ -521,18 +1022,40 @@ class _MealsDashboardState extends State<MealsDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      meal.restaurantName.toUpperCase(),
-                      style: GoogleFonts.outfit(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: DashboardThemeColors.accentEmerald,
-                        letterSpacing: 1.0,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          meal.restaurantName.toUpperCase(),
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: DashboardThemeColors.accentEmerald,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        if (meal.isHighlyNutritious) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '🌿 NUTRITIOUS',
+                              style: GoogleFonts.inter(
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                color: DashboardThemeColors.accentEmerald,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      meal.mealName,
+                      meal.foodName,
                       style: GoogleFonts.outfit(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -593,7 +1116,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             children: [
               _buildMacroLabel('Protein', '${meal.protein.round()}g', DashboardThemeColors.accentEmerald),
               _buildMacroLabel('Carbs', '${meal.carbs.round()}g', const Color(0xFF60A5FA)),
-              _buildMacroLabel('Fats', '${meal.fats.round()}g', const Color(0xFFF87171)),
+              _buildMacroLabel('Fats', '${meal.fat.round()}g', const Color(0xFFF87171)),
             ],
           ),
           if (meal.ingredientsBreakdown.isNotEmpty) ...[
