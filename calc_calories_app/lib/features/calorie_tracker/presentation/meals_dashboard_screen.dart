@@ -29,6 +29,20 @@ class MealWarning {
     required this.warningText,
     required this.isSevere,
   });
+
+  factory MealWarning.fromJson(Map<String, dynamic> json) {
+    return MealWarning(
+      warningText: json['warningText'] as String? ?? '',
+      isSevere: json['isSevere'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'warningText': warningText,
+      'isSevere': isSevere,
+    };
+  }
 }
 
 class MealEntry {
@@ -59,6 +73,132 @@ class MealEntry {
     required this.source,
     required this.ingredientsBreakdown,
   });
+
+  factory MealEntry.fromJson(Map<String, dynamic> json) {
+    final macros = json['macros'] as Map<String, dynamic>? ?? {};
+    final warningsList = json['warnings'] as List<dynamic>? ?? [];
+
+    final protein = (macros['protein'] as num?)?.toDouble() ?? 0.0;
+    final carbs = (macros['carbs'] as num?)?.toDouble() ?? 0.0;
+    final fat = (macros['fat'] as num?)?.toDouble() ?? 0.0;
+    final calories = (json['calories'] as num?)?.toDouble() ?? 0.0;
+
+    final isNutritious = protein > 25 && calories < 450;
+
+    return MealEntry(
+      id: json['id'] as String? ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      foodName: json['foodName'] as String? ?? 'Unknown Meal',
+      restaurantName: json['restaurantName'] as String? ?? 'AI Snap Analyzer',
+      protein: protein,
+      carbs: carbs,
+      fat: fat,
+      calories: calories,
+      warnings: warningsList.map((w) => MealWarning.fromJson(w as Map<String, dynamic>)).toList(),
+      isHighlyNutritious: isNutritious,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      source: json['source'] as String? ?? 'text',
+      ingredientsBreakdown: const [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'foodName': foodName,
+      'restaurantName': restaurantName,
+      'calories': calories.round(),
+      'macros': {
+        'protein': protein.round(),
+        'carbs': carbs.round(),
+        'fat': fat.round(),
+      },
+      'warnings': warnings.map((w) => w.toJson()).toList(),
+      'isHighlyNutritious': isHighlyNutritious,
+      'createdAt': createdAt.toIso8601String(),
+      'source': source,
+    };
+  }
+}
+
+// Clean asynchronous fetch methods using a mock HTTP service
+class MealApiService {
+  Future<MealEntry> analyzeMeal(String query, {String? image}) async {
+    try {
+      // Simulate network call latency
+      await Future.delayed(const Duration(milliseconds: 1200));
+
+      // Attempt hypothetical call to /api/meals/analyze
+      // Since this is currently simulated or if backend is offline, we force a fallback exception.
+      throw Exception('Real API endpoint /api/meals/analyze unavailable');
+    } catch (e) {
+      // High-fidelity fallback dummy data matching the JSON structure contract
+      final lowerQuery = query.toLowerCase();
+      final now = DateTime.now();
+
+      final Map<String, dynamic> mockJson = {
+        'id': now.millisecondsSinceEpoch.toString(),
+        'restaurantName': 'AI Snap Analyzer',
+        'createdAt': now.toIso8601String(),
+        'source': image != null ? 'image' : 'text',
+      };
+
+      if (lowerQuery.contains('burger') ||
+          lowerQuery.contains('pizza') ||
+          lowerQuery.contains('fries') ||
+          lowerQuery.contains('waffle') ||
+          lowerQuery.contains('fat') ||
+          lowerQuery.contains('crepe')) {
+        mockJson.addAll({
+          'foodName': query.isNotEmpty ? query : 'Double Pepperoni Cheat Meal',
+          'calories': 780,
+          'macros': {
+            'protein': 26,
+            'carbs': 88,
+            'fat': 36,
+          },
+          'warnings': [
+            {'warningText': 'Severe saturated fat spike detected', 'isSevere': true},
+            {'warningText': 'High sodium load (+1600mg)', 'isSevere': true},
+          ],
+        });
+      } else if (lowerQuery.contains('salad') ||
+          lowerQuery.contains('chicken') ||
+          lowerQuery.contains('salmon') ||
+          lowerQuery.contains('fish') ||
+          lowerQuery.contains('tuna') ||
+          lowerQuery.contains('egg') ||
+          lowerQuery.contains('protein') ||
+          lowerQuery.contains('clean')) {
+        mockJson.addAll({
+          'foodName': query.isNotEmpty ? query : 'Grilled Chicken Protein Salad',
+          'calories': 290,
+          'macros': {
+            'protein': 42,
+            'carbs': 12,
+            'fat': 8,
+          },
+          'warnings': [],
+        });
+      } else {
+        mockJson.addAll({
+          'foodName': query.isNotEmpty ? query : 'Custom Meal Entry',
+          'calories': 386,
+          'macros': {
+            'protein': 20,
+            'carbs': 45,
+            'fat': 14,
+          },
+          'warnings': [
+            {'warningText': 'Moderate fat/sodium content', 'isSevere': false},
+          ],
+        });
+      }
+
+      return MealEntry.fromJson(mockJson);
+    }
+  }
 }
 
 class MealsDashboard extends StatefulWidget {
@@ -94,7 +234,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
   }
 
   void _initializeData() {
-    // Check if the parent passed logs and map them, else fallback to mock defaults
     if (widget.mealLogs != null && widget.mealLogs!.isNotEmpty) {
       logs = widget.mealLogs!.map((entity) {
         final isNutritious = entity.protein > 25 && entity.calories < 400;
@@ -433,87 +572,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
                                   isAnalyzing = true;
                                 });
 
-                                // Simulate AI computing delay (1.5 seconds)
-                                await Future.delayed(const Duration(milliseconds: 1500));
-
-                                final lowerDesc = desc.toLowerCase();
-                                final isImage = selectedPhotoName != null;
-                                final now = DateTime.now();
-
-                                MealEntry newEntry;
-
-                                if (lowerDesc.contains('burger') ||
-                                    lowerDesc.contains('pizza') ||
-                                    lowerDesc.contains('fries') ||
-                                    lowerDesc.contains('waffle') ||
-                                    lowerDesc.contains('fat') ||
-                                    lowerDesc.contains('crepe')) {
-                                  newEntry = MealEntry(
-                                    id: now.millisecondsSinceEpoch.toString(),
-                                    foodName: desc.isNotEmpty ? desc : 'Double Pepperoni Cheat Meal',
-                                    restaurantName: 'AI Snap Analyzer',
-                                    protein: 26,
-                                    carbs: 88,
-                                    fat: 36,
-                                    calories: 780,
-                                    warnings: const [
-                                      MealWarning(warningText: 'Severe saturated fat spike detected', isSevere: true),
-                                      MealWarning(warningText: 'High sodium load (+1600mg)', isSevere: true),
-                                    ],
-                                    isHighlyNutritious: false,
-                                    ingredientsBreakdown: const [
-                                      IngredientBreakdown(ingredient: 'Refined Dough & Cheese', estimatedWeightGrams: 280),
-                                      IngredientBreakdown(ingredient: 'Processed Pepperoni', estimatedWeightGrams: 60),
-                                    ],
-                                    source: isImage ? 'image' : 'text',
-                                    createdAt: now,
-                                  );
-                                } else if (lowerDesc.contains('salad') ||
-                                    lowerDesc.contains('chicken') ||
-                                    lowerDesc.contains('salmon') ||
-                                    lowerDesc.contains('fish') ||
-                                    lowerDesc.contains('tuna') ||
-                                    lowerDesc.contains('egg') ||
-                                    lowerDesc.contains('protein') ||
-                                    lowerDesc.contains('clean')) {
-                                  newEntry = MealEntry(
-                                    id: now.millisecondsSinceEpoch.toString(),
-                                    foodName: desc.isNotEmpty ? desc : 'Grilled Chicken Protein Salad',
-                                    restaurantName: 'AI Snap Analyzer',
-                                    protein: 42,
-                                    carbs: 12,
-                                    fat: 8,
-                                    calories: 290,
-                                    warnings: const [],
-                                    isHighlyNutritious: true,
-                                    ingredientsBreakdown: const [
-                                      IngredientBreakdown(ingredient: 'Skinless Chicken Breast', estimatedWeightGrams: 150),
-                                      IngredientBreakdown(ingredient: 'Mixed Green Veggies', estimatedWeightGrams: 100),
-                                      IngredientBreakdown(ingredient: 'Olive Oil Drizzle', estimatedWeightGrams: 5),
-                                    ],
-                                    source: isImage ? 'image' : 'text',
-                                    createdAt: now,
-                                  );
-                                } else {
-                                  newEntry = MealEntry(
-                                    id: now.millisecondsSinceEpoch.toString(),
-                                    foodName: desc.isNotEmpty ? desc : 'Custom Meal Entry',
-                                    restaurantName: 'AI Snap Analyzer',
-                                    protein: 20,
-                                    carbs: 45,
-                                    fat: 14,
-                                    calories: 386,
-                                    warnings: const [
-                                      MealWarning(warningText: 'Moderate fat/sodium content', isSevere: false),
-                                    ],
-                                    isHighlyNutritious: false,
-                                    ingredientsBreakdown: const [
-                                      IngredientBreakdown(ingredient: 'Starch & Protein Base', estimatedWeightGrams: 200),
-                                    ],
-                                    source: isImage ? 'image' : 'text',
-                                    createdAt: now,
-                                  );
-                                }
+                                // Call the clean asynchronous mock API service
+                                final apiService = MealApiService();
+                                final newEntry = await apiService.analyzeMeal(
+                                  desc,
+                                  image: selectedPhotoName,
+                                );
 
                                 if (mounted) {
                                   setState(() {
@@ -1119,33 +1183,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
               _buildMacroLabel('Fats', '${meal.fat.round()}g', const Color(0xFFF87171)),
             ],
           ),
-          if (meal.ingredientsBreakdown.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Divider(color: DashboardThemeColors.trackBackground, height: 1),
-            ),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: meal.ingredientsBreakdown.map((ing) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.background,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${ing.ingredient} (${ing.estimatedWeightGrams.round()}g)',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      color: DashboardThemeColors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
         ],
       ),
     );
