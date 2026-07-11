@@ -4,12 +4,81 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
-import 'dashboard_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'bloc/dashboard_bloc.dart';
+import 'bloc/dashboard_state.dart';
+import 'bloc/dashboard_event.dart';
+import 'meals_dashboard_screen.dart';
 import 'gyms_screen.dart';
 import 'market_screen.dart';
 import 'workout_screen.dart';
 import 'settings_screen.dart';
 import 'widgets/quick_log_bottom_sheet.dart';
+
+class DashboardTabWrapper extends StatelessWidget {
+  const DashboardTabWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        if (state is DashboardInitial) {
+          context.read<DashboardBloc>().add(const LoadDashboard());
+          return const Scaffold(
+            backgroundColor: Color(0xFF030712),
+            body: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+              ),
+            ),
+          );
+        }
+        if (state is DashboardLoading) {
+          return const Scaffold(
+            backgroundColor: Color(0xFF030712),
+            body: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+              ),
+            ),
+          );
+        }
+        if (state is DashboardLoaded) {
+          return MealsDashboard(
+            foodSummary: state.foodSummary,
+            mealLogs: null,
+          );
+        }
+        if (state is DashboardFailure) {
+          return Scaffold(
+            backgroundColor: const Color(0xFF030712),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(state.message, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.read<DashboardBloc>().add(const LoadDashboard()),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return const Scaffold(
+          backgroundColor: Color(0xFF030712),
+          body: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
 
 class HomeShellScreen extends StatefulWidget {
   const HomeShellScreen({super.key});
@@ -22,7 +91,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    const DashboardScreen(),
+    const DashboardTabWrapper(),
     const WorkoutScreen(),
     const MarketScreen(),
     const GymsScreen(),
