@@ -30,6 +30,7 @@ const router = Router();
  * @body    { name, email, password, dailyCalorieGoal? }
  */
 router.post("/auth/register", authLimiter, register);
+router.post("/auth/signup", authLimiter, register);
 
 /**
  * @route   POST /api/v1/auth/login
