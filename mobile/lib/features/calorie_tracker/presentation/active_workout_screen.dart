@@ -1,10 +1,15 @@
 // lib/features/calorie_tracker/presentation/active_workout_screen.dart
-// The Teneen — Active AI Workout Tracker logging screen
+// Calc-Calories — Ultra-Fast Weight & Set Tracker logging screen
+//
+// Architecture: StatefulWidget driven by WorkoutLog and ExerciseSet models.
+// Features a clean set-logging table with numeric inputs and lock buttons.
+// Rest timer popup starts automatically on set logged.
 
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../data/models/workout_models.dart';
 
 class ActiveWorkoutScreen extends StatefulWidget {
   const ActiveWorkoutScreen({super.key});
@@ -13,28 +18,54 @@ class ActiveWorkoutScreen extends StatefulWidget {
   State<ActiveWorkoutScreen> createState() => _ActiveWorkoutScreenState();
 }
 
-class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerProviderStateMixin {
+class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
+  // ── Active Session State ─────────────────────────────────────
+  late final WorkoutLog _workoutLog;
+  final List<TextEditingController> _weightControllers = [];
+  final List<TextEditingController> _repsControllers = [];
+
   // Stopwatch timer state
   late Timer _stopwatchTimer;
-  int _secondsElapsed = 1455; // start at 00:24:15
+  int _secondsElapsed = 1455; // starts at 00:24:15
 
   // Rest timer state
   bool _showRestTimer = false;
-  int _restSecondsLeft = 105; // 1:45rest time
+  int _restSecondsLeft = 105; // 1:45 rest time
   Timer? _restTimer;
 
-  // Set inputs logging values
-  final TextEditingController _set1Weight = TextEditingController(text: '100');
-  final TextEditingController _set1Reps = TextEditingController(text: '5');
-  bool _set1Checked = true;
-
-  final TextEditingController _set2Weight = TextEditingController(text: '90');
-  final TextEditingController _set2Reps = TextEditingController();
-  bool _set2Checked = false;
+  // Design tokens aligned with dashboard colors
+  static const Color bgColor = Color(0xFF030712);
+  static const Color cardColor = Color(0xFF0D1117);
+  static const Color cardElevColor = Color(0xFF111827);
+  static const Color borderDimColor = Color(0xFF1F2937);
+  static const Color borderMidColor = Color(0xFF374151);
+  static const Color cyanColor = Color(0xFF00B4D8);
+  static const Color textPriColor = Color(0xFFF9FAFB);
+  static const Color textSecColor = Color(0xFF9CA3AF);
+  static const Color textMutedColor = Color(0xFF6B7280);
 
   @override
   void initState() {
     super.initState();
+    // Initialize our WorkoutLog model
+    _workoutLog = WorkoutLog.defaultPushDay();
+
+    // Initialize controllers for each set
+    for (var setItem in _workoutLog.sets) {
+      _weightControllers.add(
+        TextEditingController(
+          text: setItem.loggedWeightKg != null
+              ? setItem.loggedWeightKg!.toStringAsFixed(0)
+              : '',
+        ),
+      );
+      _repsControllers.add(
+        TextEditingController(
+          text: setItem.loggedReps != null ? setItem.loggedReps.toString() : '',
+        ),
+      );
+    }
+
     // Start active workout stopwatch timer
     _stopwatchTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
@@ -47,10 +78,12 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
   void dispose() {
     _stopwatchTimer.cancel();
     _restTimer?.cancel();
-    _set1Weight.dispose();
-    _set1Reps.dispose();
-    _set2Weight.dispose();
-    _set2Reps.dispose();
+    for (var controller in _weightControllers) {
+      controller.dispose();
+    }
+    for (var controller in _repsControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -74,15 +107,50 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
     });
   }
 
+  void _logSet(int index) {
+    final setItem = _workoutLog.sets[index];
+    final weightText = _weightControllers[index].text.trim();
+    final repsText = _repsControllers[index].text.trim();
+
+    final double? weight = double.tryParse(weightText);
+    final int? reps = int.tryParse(repsText);
+
+    if (weight == null || reps == null) {
+      // Local error boundary handling
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please enter valid weight and reps values.',
+            style: GoogleFonts.inter(color: Colors.white),
+          ),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      setItem.loggedWeightKg = weight;
+      setItem.loggedReps = reps;
+      setItem.isLogged = !setItem.isLogged;
+      setItem.loggedAt = setItem.isLogged ? DateTime.now() : null;
+
+      if (setItem.isLogged) {
+        _startRestTimer();
+      }
+    });
+  }
+
   String _formatStopwatch(int totalSeconds) {
     final int hours = totalSeconds ~/ 3600;
     final int minutes = (totalSeconds % 3600) ~/ 60;
     final int seconds = totalSeconds % 60;
-    
+
     final String hStr = hours.toString().padLeft(2, '0');
     final String mStr = minutes.toString().padLeft(2, '0');
     final String sStr = seconds.toString().padLeft(2, '0');
-    
+
     return '$hStr:$mStr:$sStr';
   }
 
@@ -98,20 +166,20 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: bgColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back_rounded, color: textPriColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          isArabic ? 'اليوم ١: دفع (أسلوب RPT)' : 'Day 1: Push Day (RPT Style)',
+          isArabic ? 'اليوم ١: دفع (RPT)' : 'Day 1: Push Day (RPT)',
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: textPriColor,
           ),
         ),
         actions: [
@@ -120,14 +188,14 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
             child: Center(
               child: Row(
                 children: [
-                  const Icon(Icons.timer_outlined, color: AppColors.primary, size: 16),
+                  const Icon(Icons.timer_outlined, color: cyanColor, size: 16),
                   const SizedBox(width: 6),
                   Text(
                     _formatStopwatch(_secondsElapsed),
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.primary,
+                      color: cyanColor,
                     ),
                   ),
                 ],
@@ -140,78 +208,82 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
         children: [
           ListView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 120),
             children: [
-              // Exercise Title
+              // Exercise Title Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isArabic ? 'بنش برس بالبار' : 'Barbell Bench Press',
+                    isArabic ? 'بنش برس بالبار' : _workoutLog.exerciseName,
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: textPriColor,
                     ),
                   ),
-                  Text(
-                    isArabic ? 'الصدر / الكتف' : 'Chest / Shoulders',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: cardElevColor,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: borderDimColor, width: 1),
+                    ),
+                    child: Text(
+                      isArabic ? 'الصدر / الأكتاف' : _workoutLog.muscleGroup,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: textSecColor,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
 
-              // Exercise Form Video/Media Card Graphic
+              // Last week performance badge shown directly below exercise title
+              if (_workoutLog.lastWeekTopPerformance != null)
+                Row(
+                  children: [
+                    const Icon(Icons.history_rounded, size: 14, color: textMutedColor),
+                    const SizedBox(width: 6),
+                    Text(
+                      isArabic
+                          ? 'أفضل أداء للأسبوع الماضي: ${_workoutLog.lastWeekTopPerformance}'
+                          : "Last week's top performance: ${_workoutLog.lastWeekTopPerformance}",
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: textMutedColor,
+                      ),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+
+              // Exercise Form Demo Card Graphic
               _buildFormPreviewCard(isArabic),
-
               const SizedBox(height: 24),
 
               // RPT logging table header
               _buildTableHeader(isArabic),
-
               const SizedBox(height: 8),
 
-              // Set 1 (Top Set)
-              _buildSetRow(
-                setIndex: 1,
-                targetText: isArabic ? 'الهدف: ٤-٦ عدات' : 'Target: 4-6 Reps',
-                weightController: _set1Weight,
-                repsController: _set1Reps,
-                isChecked: _set1Checked,
-                hasGoldStar: true,
-                onCheckedChange: (val) {
-                  setState(() {
-                    _set1Checked = val ?? false;
-                    if (_set1Checked) _startRestTimer();
-                  });
+              // Set rows
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _workoutLog.sets.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final setItem = _workoutLog.sets[index];
+                  return _buildSetItemRow(
+                    index: index,
+                    setItem: setItem,
+                    isArabic: isArabic,
+                  );
                 },
-                isArabic: isArabic,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Set 2 (Back-off Set)
-              _buildSetRow(
-                setIndex: 2,
-                targetText: isArabic
-                    ? 'الهدف: ٩٠ كجم | ٦-٨ عدات'
-                    : 'Target: 90 kg | 6-8 Reps',
-                weightController: _set2Weight,
-                repsController: _set2Reps,
-                isChecked: _set2Checked,
-                hasGoldStar: false,
-                onCheckedChange: (val) {
-                  setState(() {
-                    _set2Checked = val ?? false;
-                    if (_set2Checked) _startRestTimer();
-                  });
-                },
-                isArabic: isArabic,
               ),
             ],
           ),
@@ -219,7 +291,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
           // Floating rest timer widget
           if (_showRestTimer)
             Positioned(
-              bottom: 84,
+              bottom: 94,
               left: 20,
               right: 20,
               child: _buildRestTimerPopup(isArabic),
@@ -227,7 +299,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
 
           // Bottom CTA button fixed
           Positioned(
-            bottom: 16,
+            bottom: 20,
             left: 20,
             right: 20,
             child: _buildFinishWorkoutButton(isArabic),
@@ -237,37 +309,32 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
     );
   }
 
-  // ── Exercise Preview Mock ──────────────────────────────────────────
+  // ── Exercise Preview Card ──────────────────────────────────────────
   Widget _buildFormPreviewCard(bool isArabic) {
     return Container(
       width: double.infinity,
-      height: 160,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.all(Radius.circular(20)),
-        border: Border.fromBorderSide(BorderSide(color: AppColors.border, width: 1.2)),
-        gradient: LinearGradient(
+      height: 140,
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderDimColor, width: 1.2),
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            AppColors.surfaceVariant,
-            AppColors.surface,
-          ],
+          colors: [cardElevColor, cardColor],
         ),
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Graphic form vectors
-          const Opacity(
-            opacity: 0.25,
+          Opacity(
+            opacity: 0.15,
             child: Icon(
               Icons.fitness_center_rounded,
-              size: 80,
-              color: AppColors.primary,
+              size: 70,
+              color: cyanColor,
             ),
           ),
-          // Loop playback labels
           Positioned(
             bottom: 12,
             right: isArabic ? null : 12,
@@ -275,20 +342,20 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.65),
+                color: Colors.black.withOpacity(0.65),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.loop_rounded, color: AppColors.primary, size: 12),
+                  const Icon(Icons.loop_rounded, color: cyanColor, size: 12),
                   const SizedBox(width: 6),
                   Text(
                     isArabic ? 'دليل الأداء الحي' : 'FORM DEMO LOOP',
                     style: GoogleFonts.inter(
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: textPriColor,
                     ),
                   ),
                 ],
@@ -307,97 +374,96 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
       child: Row(
         children: [
           Expanded(
-            flex: 3,
+            flex: 4,
             child: Text(
               isArabic ? 'المجموعة والهدف' : 'SET & TARGET',
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
+                color: textMutedColor,
               ),
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Text(
-              isArabic ? 'الوزن (كجم)' : 'WEIGHT',
+              isArabic ? 'الوزن (كجم)' : 'WEIGHT (kg)',
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
+                color: textMutedColor,
               ),
               textAlign: TextAlign.center,
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Text(
               isArabic ? 'العدات' : 'REPS',
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: AppColors.textMuted,
+                color: textMutedColor,
               ),
               textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(width: 48), // Space for checkbox
+          const SizedBox(width: 48), // Space matching the lock checkmark
         ],
       ),
     );
   }
 
   // ── Set Logging Row Widget ──────────────────────────────────────────
-  Widget _buildSetRow({
-    required int setIndex,
-    required String targetText,
-    required TextEditingController weightController,
-    required TextEditingController repsController,
-    required bool isChecked,
-    required bool hasGoldStar,
-    required ValueChanged<bool?> onCheckedChange,
+  Widget _buildSetItemRow({
+    required int index,
+    required ExerciseSet setItem,
     required bool isArabic,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    final bool isChecked = setItem.isLogged;
+    final bool hasGoldStar = setItem.label == 'Top Set';
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isChecked ? AppColors.surfaceVariant : AppColors.surface,
+        color: isChecked ? cyanColor.withOpacity(0.08) : cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isChecked ? AppColors.primary.withValues(alpha: 0.6) : AppColors.border,
-          width: 1.2,
+          color: isChecked ? cyanColor : borderDimColor,
+          width: isChecked ? 1.6 : 1.2,
         ),
       ),
       child: Row(
         children: [
           // Set description & target
           Expanded(
-            flex: 3,
+            flex: 4,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     if (hasGoldStar) ...[
-                      const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
                       const SizedBox(width: 4),
                     ],
                     Text(
-                      isArabic ? 'مجموعة $setIndex' : 'Set $setIndex',
+                      isArabic ? 'مجموعة ${setItem.setIndex}' : 'Set ${setItem.setIndex}',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: hasGoldStar ? Colors.amber : AppColors.textPrimary,
+                        color: hasGoldStar ? Colors.amber : textPriColor,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  targetText,
+                  setItem.targetDisplayLabel,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                    color: textSecColor,
                   ),
                 ),
               ],
@@ -406,20 +472,33 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
 
           // Weight Input Field
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: SizedBox(
                 height: 38,
                 child: TextField(
-                  controller: weightController,
-                  keyboardType: TextInputType.number,
+                  controller: _weightControllers[index],
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                  enabled: !isChecked,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: isChecked ? textSecColor : textPriColor,
+                  ),
                   decoration: InputDecoration(
                     contentPadding: EdgeInsets.zero,
-                    fillColor: AppColors.background,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    filled: true,
+                    fillColor: isChecked ? bgColor.withOpacity(0.5) : bgColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: borderMidColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: cyanColor),
+                    ),
                   ),
                 ),
               ),
@@ -428,35 +507,49 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
 
           // Reps Input Field
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: SizedBox(
                 height: 38,
                 child: TextField(
-                  controller: repsController,
+                  controller: _repsControllers[index],
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                  enabled: !isChecked,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: isChecked ? textSecColor : textPriColor,
+                  ),
                   decoration: InputDecoration(
                     contentPadding: EdgeInsets.zero,
-                    fillColor: AppColors.background,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    filled: true,
+                    fillColor: isChecked ? bgColor.withOpacity(0.5) : bgColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: borderMidColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: cyanColor),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
 
-          // Checkbox status log
+          // Checkmark Lock/Unlock Button
           SizedBox(
             width: 48,
-            child: Checkbox(
-              value: isChecked,
-              onChanged: onCheckedChange,
-              activeColor: AppColors.primary,
-              checkColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            child: IconButton(
+              icon: Icon(
+                isChecked ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
+                color: isChecked ? cyanColor : textMutedColor,
+                size: 24,
+              ),
+              onPressed: () => _logSet(index),
             ),
           ),
         ],
@@ -471,12 +564,12 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cardColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 1.2),
+        border: Border.all(color: cyanColor.withOpacity(0.5), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
+            color: Colors.black.withOpacity(0.35),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -485,7 +578,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Timer title & progress ring
           Row(
             children: [
               SizedBox(
@@ -494,8 +586,8 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
                 child: CircularProgressIndicator(
                   value: pct,
                   strokeWidth: 3,
-                  backgroundColor: AppColors.surfaceVariant,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  backgroundColor: cardElevColor,
+                  valueColor: const AlwaysStoppedAnimation<Color>(cyanColor),
                 ),
               ),
               const SizedBox(width: 14),
@@ -508,7 +600,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: textPriColor,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -518,19 +610,17 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
                         : 'Remaining: ${_formatRestTimer(_restSecondsLeft)}',
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: AppColors.textSecondary,
+                      color: textSecColor,
                     ),
                   ),
                 ],
               ),
             ],
           ),
-
-          // Timer controls
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.skip_next_rounded, color: AppColors.primary, size: 22),
+                icon: const Icon(Icons.skip_next_rounded, color: cyanColor, size: 22),
                 onPressed: () {
                   setState(() {
                     _showRestTimer = false;
@@ -561,7 +651,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
+            color: cyanColor.withOpacity(0.25),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -569,31 +659,30 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
       ),
       child: ElevatedButton(
         onPressed: () {
-          // Success action reward dialog
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: AppColors.surface,
+              backgroundColor: cardColor,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: Text(
                 isArabic ? 'أحسنت يا بطل! 🚀' : 'Great Job! 🚀',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: textPriColor),
               ),
               content: Text(
                 isArabic
                     ? 'تم تسجيل تمرينك بنجاح وكسبت +٣٠ نقطة مكافأة.'
                     : 'Workout successfully logged. You earned +30 reward points.',
-                style: GoogleFonts.inter(color: AppColors.textSecondary),
+                style: GoogleFonts.inter(color: textSecColor),
               ),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Pop workout screen back to dashboard
+                    Navigator.pop(context); // Return to dashboard
                   },
                   child: Text(
                     isArabic ? 'حسناً' : 'Awesome',
-                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                    style: const TextStyle(color: cyanColor, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -601,7 +690,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with TickerPr
           );
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          backgroundColor: cyanColor,
           foregroundColor: Colors.black,
           minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
