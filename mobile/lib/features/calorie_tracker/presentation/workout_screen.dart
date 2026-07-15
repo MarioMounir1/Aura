@@ -17,7 +17,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/network/api_client.dart';
-import '../../../core/theme/app_colors.dart';
 import '../data/models/workout_models.dart';
 
 // ── State Machine ─────────────────────────────────────────────
@@ -57,6 +56,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ── State ──────────────────────────────────────────────────
   WorkoutHubState _state = WorkoutHubState.loading;
   RoutineSuggestion? _activeRoutine;
+  CurrentSession? _currentSession;          // ← live session data from backend
   int _activeDays = 0;
   String? _errorMessage;
 
@@ -65,9 +65,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   // ── Streak (mock — replace with backend data) ──────────────
   final int _streakDays = 5;
-
-  // ── Questionnaire ──────────────────────────────────────────
-  int? _selectedFreq;
 
   // ── Dio ───────────────────────────────────────────────────
   late final Dio _dio;
@@ -85,6 +82,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     try {
       final resp = await _dio.get('/workouts/routine');
       final data = resp.data['data']['routine'];
+      final sessionData = resp.data['data']['currentSession'];
       if (data != null) {
         // Backend returned a saved routine
         final splitType = data['splitType'] as String;
@@ -105,6 +103,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           .toList() ??
                       [],
                 );
+          _currentSession = sessionData != null
+              ? CurrentSession.fromJson(sessionData as Map<String, dynamic>)
+              : null;
           _state = WorkoutHubState.ready;
         });
       } else {
@@ -129,14 +130,18 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   Future<void> _submitRoutine(int days, RoutineSuggestion split) async {
     setState(() => _state = WorkoutHubState.loading);
     try {
-      await _dio.post('/workouts/setup', data: {
+      final resp = await _dio.post('/workouts/setup', data: {
         'daysPerWeek': days,
         'splitType':   split.splitType,
         'splitName':   split.name,
       });
+      final sessionData = resp.data['data']?['currentSession'];
       setState(() {
         _activeDays    = days;
         _activeRoutine = split;
+        _currentSession = sessionData != null
+            ? CurrentSession.fromJson(sessionData as Map<String, dynamic>)
+            : null;
         _state         = WorkoutHubState.ready;
       });
       if (mounted) {
@@ -176,7 +181,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   // ── Launch Setup Sheet ─────────────────────────────────────
   void _openSetupSheet() {
-    _selectedFreq = null;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -193,8 +197,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ── Launch Active Workout ──────────────────────────────────
   void _startWorkout() {
     if (_activeRoutine == null) return;
+    final log = _currentSession != null
+        ? WorkoutLog.fromSession(_currentSession!)
+        : WorkoutLog.defaultPushDay();
     setState(() {
-      _activeLog = WorkoutLog.defaultPushDay();
+      _activeLog = log;
       _state     = WorkoutHubState.activeWorkout;
     });
   }
@@ -496,12 +503,18 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   Widget _buildTodayCard(bool isArabic) {
     final routine = _activeRoutine!;
-    // Calculate today's session from schedule (use weekday index, 0=Mon)
-    final todayIndex = DateTime.now().weekday - 1; // 0–6
-    final schedule   = routine.breakdown;
-    final todayLabel = schedule.isNotEmpty
-        ? schedule[todayIndex % schedule.length]
-        : 'Training Day';
+    final session = _currentSession;
+
+    // Derive today label from session (authoritative) or local schedule fallback
+    final todayLabel = session?.todayDayName
+        ?? (() {
+          final idx = DateTime.now().weekday - 1;
+          final sched = routine.breakdown;
+          return sched.isNotEmpty ? sched[idx % sched.length] : 'Training Day';
+        })();
+
+    final exercises = session?.exercises ?? [];
+    final isRestDay = exercises.isEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -517,12 +530,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _C.cyan.withOpacity(0.12),
+              color: _C.cyan.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _C.cyan.withOpacity(0.3), width: 1),
+              border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 1),
             ),
             child: Text(
-              isArabic ? "جلسة اليوم" : "TODAY'S SESSION",
+              isArabic ? 'جلسة اليوم' : "TODAY'S SESSION",
               style: GoogleFonts.inter(
                   fontSize: 10, fontWeight: FontWeight.w800,
                   color: _C.cyan, letterSpacing: 0.8),
@@ -530,56 +543,133 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           ),
           const SizedBox(height: 10),
 
-          // Routine name
+          // Routine name + today label
           Text(
-            routine.name,
+            '${routine.name} — $todayLabel',
             style: GoogleFonts.inter(
-                fontSize: 20, fontWeight: FontWeight.w900,
+                fontSize: 18, fontWeight: FontWeight.w900,
                 color: _C.textPri, letterSpacing: -0.3),
           ),
-          const SizedBox(height: 4),
-
-          // Today label
-          Row(children: [
-            const Icon(Icons.calendar_today_rounded, size: 13, color: _C.textMut),
-            const SizedBox(width: 6),
-            Text(todayLabel,
-                style: GoogleFonts.inter(fontSize: 13, color: _C.textSec)),
-          ]),
-          const SizedBox(height: 4),
-
-          // Tagline
-          Row(children: [
-            const Icon(Icons.info_outline_rounded, size: 13, color: _C.textMut),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(routine.tagline,
-                  style: GoogleFonts.inter(fontSize: 12, color: _C.textMut, height: 1.4)),
-            ),
-          ]),
-          const SizedBox(height: 18),
-          Divider(color: _C.border, height: 1),
           const SizedBox(height: 16),
+          Divider(color: _C.border, height: 1),
+          const SizedBox(height: 14),
+
+          // ── Exercise List ──────────────────────────────
+          if (isRestDay)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(children: [
+                const Icon(Icons.hotel_rounded, color: _C.textMut, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  isArabic ? 'يوم راحة — استرح واستعد' : 'Rest Day — Recover & recharge',
+                  style: GoogleFonts.inter(fontSize: 13, color: _C.textMut),
+                ),
+              ]),
+            )
+          else
+            ...List.generate(exercises.length, (i) {
+              final ex = exercises[i];
+              final isFirst = i == 0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Index badge
+                    Container(
+                      width: 26, height: 26,
+                      decoration: BoxDecoration(
+                        color: isFirst
+                            ? _C.cyan.withValues(alpha: 0.15)
+                            : _C.cardElev,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isFirst ? _C.cyan : _C.borderMid,
+                          width: 1.2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${i + 1}',
+                          style: GoogleFonts.inter(
+                            fontSize: 11, fontWeight: FontWeight.w800,
+                            color: isFirst ? _C.cyan : _C.textMut,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Exercise name + muscle group
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            ex.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: isFirst ? FontWeight.w700 : FontWeight.w600,
+                              color: isFirst ? _C.textPri : _C.textSec,
+                            ),
+                          ),
+                          Text(
+                            ex.muscleGroup,
+                            style: GoogleFonts.inter(fontSize: 10, color: _C.textMut),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Sets badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _C.cardElev,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: _C.border),
+                      ),
+                      child: Text(
+                        '${ex.targetSets} sets',
+                        style: GoogleFonts.inter(
+                            fontSize: 10, fontWeight: FontWeight.w600, color: _C.textMut),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+          const SizedBox(height: 16),
+          Divider(color: _C.border, height: 1),
+          const SizedBox(height: 14),
 
           // Start Workout CTA
           SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _startWorkout,
+              onPressed: isRestDay ? null : _startWorkout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _C.cyan,
+                disabledBackgroundColor: _C.cardElev,
                 foregroundColor: Colors.black,
+                disabledForegroundColor: _C.textMut,
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.play_arrow_rounded, size: 22),
+                  Icon(isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded, size: 22),
                   const SizedBox(width: 8),
-                  Text(isArabic ? 'ابدأ التمرين الآن' : 'Start Workout',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text(
+                    isRestDay
+                        ? (isArabic ? 'يوم راحة' : 'Rest Day')
+                        : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
                 ],
               ),
             ),
@@ -590,6 +680,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   Widget _buildPerformanceBadge(bool isArabic) {
+    // Contextually reads from the FIRST exercise in today's session
+    final top = _currentSession?.topHistoricalSet;
+    final label = top?.displayLabel ?? '— No data yet';
+    final delta = top?.progressionDelta ?? '';
+    final hasData = top != null && top.weight > 0;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
@@ -602,28 +698,38 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           Container(
             width: 30, height: 30,
             decoration: BoxDecoration(
-              color: _C.cyan.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+              color: _C.cyan.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8)),
             child: const Icon(Icons.bolt_rounded, color: _C.cyan, size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(isArabic ? 'أفضل أداء الأسبوع الماضي' : 'Last week top performance',
-                  style: GoogleFonts.inter(fontSize: 11, color: _C.textMut)),
+              Text(
+                isArabic ? 'أفضل أداء الأسبوع الماضي' : 'Last week top performance',
+                style: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
+              ),
               const SizedBox(height: 2),
-              Text('Bench Press: 100kg × 5 reps',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w700, color: _C.textPri)),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: _C.textPri),
+              ),
             ]),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: _C.success.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
-            child: Text('↑ 2.5 kg',
+          if (hasData && delta.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: _C.success.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '↑ $delta',
                 style: GoogleFonts.inter(
-                    fontSize: 11, fontWeight: FontWeight.w700, color: _C.success)),
-          ),
+                    fontSize: 11, fontWeight: FontWeight.w700, color: _C.success),
+              ),
+            ),
         ],
       ),
     );
