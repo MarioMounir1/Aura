@@ -25,20 +25,20 @@ class DashboardTabWrapper extends StatelessWidget {
         if (state is DashboardInitial) {
           context.read<DashboardBloc>().add(const LoadDashboard());
           return const Scaffold(
-            backgroundColor: Color(0xFF030712),
+            backgroundColor: AppColors.background,
             body: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
           );
         }
         if (state is DashboardLoading) {
           return const Scaffold(
-            backgroundColor: Color(0xFF030712),
+            backgroundColor: AppColors.background,
             body: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
           );
@@ -51,7 +51,7 @@ class DashboardTabWrapper extends StatelessWidget {
         }
         if (state is DashboardFailure) {
           return Scaffold(
-            backgroundColor: const Color(0xFF030712),
+            backgroundColor: AppColors.background,
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -68,10 +68,10 @@ class DashboardTabWrapper extends StatelessWidget {
           );
         }
         return const Scaffold(
-          backgroundColor: Color(0xFF030712),
+          backgroundColor: AppColors.background,
           body: Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
             ),
           ),
         );
@@ -120,62 +120,32 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   }
 
   Widget _buildCustomNavBar() {
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      clipBehavior: Clip.none,
-      children: [
-        // Background Bar
-        Container(
-          height: 70,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(24),
-              topRight: Radius.circular(24),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildNavItem(Icons.home_rounded, 0, false),
-              _buildNavItem(Icons.fitness_center_rounded, 1, true),
-              _buildNavItem(Icons.shopping_bag_rounded, 2, false),
-              _buildNavItem(Icons.location_on_rounded, 3, false),
-              _buildNavItem(Icons.person_rounded, 4, false),
-            ],
-          ),
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
-        // Floating Action Button (above center)
-        Positioned(
-          top: -30,
-          child: GestureDetector(
-            onTap: () => showQuickLogSheet(context),
-            child: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.add_rounded, color: Colors.black, size: 28),
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildNavItem(Icons.home_rounded, 0, false),
+          _buildNavItem(Icons.fitness_center_rounded, 1, true),
+          _buildNavItem(Icons.shopping_bag_rounded, 2, false),
+          _buildNavItem(Icons.location_on_rounded, 3, false),
+          _buildNavItem(Icons.person_rounded, 4, false),
+        ],
+      ),
     );
   }
 
