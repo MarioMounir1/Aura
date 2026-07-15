@@ -257,4 +257,21 @@ router.get("/meals/suggestions", requireAuth, getSuggestions);
  */
 router.delete("/meals/:id", requireAuth, deleteMealLog);
 
+// ── Workout Routes ──────────────────────────────────────────
+
+/**
+ * @route   POST /api/v1/workouts/setup
+ * @desc    Save the user's chosen training split configuration
+ * @access  Private (JWT required)
+ * @body    { daysPerWeek, splitType, splitName }
+ */
+router.post("/workouts/setup", requireAuth, setupWorkoutRoutine);
+
+/**
+ * @route   GET /api/v1/workouts/routine
+ * @desc    Get the user's active workout routine config
+ * @access  Private (JWT required)
+ */
+router.get("/workouts/routine", requireAuth, getWorkoutRoutine);
+
 export default router;
