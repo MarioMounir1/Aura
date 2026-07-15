@@ -20,16 +20,16 @@ enum WorkoutHubState { hub, questionnaire }
 
 class _C {
   _C._();
-  static const Color bg         = Color(0xFF030712);
-  static const Color card       = Color(0xFF0D1117);
-  static const Color cardElev   = Color(0xFF111827);
-  static const Color borderDim  = Color(0xFF1F2937);
+  static const Color bg         = Color(0xFF090C15);
+  static const Color card       = Color(0xFF121824);
+  static const Color cardElev   = Color(0xFF1B2232);
+  static const Color borderDim  = Color(0xFF222B3F);
   static const Color borderMid  = Color(0xFF374151);
-  static const Color cyan       = Color(0xFF00B4D8);
-  static const Color cyanGlow   = Color(0xFF0EA5E9);
-  static const Color textPri    = Color(0xFFF9FAFB);
-  static const Color textSec    = Color(0xFF9CA3AF);
-  static const Color textMuted  = Color(0xFF6B7280);
+  static const Color cyan       = Color(0xFF00BCD4);
+  static const Color cyanGlow   = Color(0xFF00BCD4);
+  static const Color textPri    = Color(0xFFFFFFFF);
+  static const Color textSec    = Color(0xFF8E929C);
+  static const Color textMuted  = Color(0xFF5D616B);
   static const Color amber      = Color(0xFFFBBF24);
 }
 
