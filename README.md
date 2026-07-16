@@ -1,5 +1,9 @@
 # 🥗 Aura
 
+<p align="center">
+  <img src="mobile/assets/images/logo.png" width="180" alt="Aura Logo" />
+</p>
+
 > **A premium, full-stack AI-powered nutrition & fitness ecosystem. Track calories, analyze meals with Google Gemini or a local Llama vision model, log water & weight, plan workouts, and get AI-powered macro suggestions — all from one beautiful dark-mode mobile app.**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
