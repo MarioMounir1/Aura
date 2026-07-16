@@ -1,4 +1,4 @@
-# 🥗 Aura
+# Aura
 
 <p align="center">
   <img src="mobile/assets/images/logo.png" width="180" alt="Aura Logo" />
