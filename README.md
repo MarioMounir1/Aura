@@ -1,4 +1,4 @@
-# 🥗 Calc-Calories (The Teneen | التنين)
+# 🥗 Aura
 
 > **A premium, full-stack AI-powered nutrition & fitness ecosystem. Track calories, analyze meals with Google Gemini or a local Llama vision model, log water & weight, plan workouts, and get AI-powered macro suggestions — all from one beautiful dark-mode mobile app.**
 
@@ -13,7 +13,7 @@
 
 ## 📖 Overview
 
-**Calc-Calories** is an elite, hybrid-AI fitness suite designed to solve the challenge of tracking calories and macros in the Egyptian and international food markets. The ecosystem is composed of two primary pillars:
+**Aura** is an elite, hybrid-AI fitness suite designed to solve the challenge of tracking calories and macros in the Egyptian and international food markets. The ecosystem is composed of two primary pillars:
 
 1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) with full RTL layout support. Features include an active workout tracker, water & weight logging, a food search database, weekly meal plans, AI meal analysis, and a dedicated Local AI Meal Scan interface.
 2. **Multimodal REST Backend (`backend/`)** — A production-grade Express API (v2.0.0) built with TypeScript and Prisma. Orchestrates queries to Google Gemini and local Ollama inference models, manages user authentication (JWT), tracks all user data in PostgreSQL, and enforces rate limiting via Redis.
