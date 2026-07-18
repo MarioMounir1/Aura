@@ -1,6 +1,7 @@
 // lib/features/auth/presentation/login_screen.dart
 // Calc-Calories — Login Screen (Rebuilt for Unified Design System)
 
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -250,6 +251,88 @@ class _LoginScreenState extends State<LoginScreen> {
                                       ),
                               ),
                             ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    'OR',
+                                    style: GoogleFonts.inter(
+                                      color: AppColors.textMuted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                onPressed: isLoading
+                                    ? null
+                                    : () {
+                                        context.read<AuthBloc>().add(GoogleSignInSubmitted());
+                                      },
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.border, width: 1.2),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  foregroundColor: Colors.white,
+                                ),
+                                icon: Image.asset(
+                                  'assets/icons/google.png',
+                                  height: 20,
+                                  width: 20,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(Icons.g_mobiledata_rounded, color: Colors.white, size: 24);
+                                  },
+                                ),
+                                label: Text(
+                                  'Continue with Google',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (Platform.isIOS) ...[
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 52,
+                                child: ElevatedButton.icon(
+                                  onPressed: isLoading
+                                      ? null
+                                      : () {
+                                          context.read<AuthBloc>().add(AppleSignInSubmitted());
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  icon: const Icon(Icons.apple_rounded, color: Colors.black, size: 22),
+                                  label: Text(
+                                    'Continue with Apple',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
