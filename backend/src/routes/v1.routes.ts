@@ -5,7 +5,7 @@
 // ============================================================
 
 import { Router } from "express";
-import { register, login, getMe, updateGoals } from "../controllers/user.controller";
+import { register, login, getMe, updateGoals, googleLogin, appleLogin } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler } from "../controllers/meal.controller";
 import { scanLocalHandler } from "../controllers/local-llama.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
@@ -40,6 +40,8 @@ router.post("/auth/signup", authLimiter, register);
  * @body    { email, password }
  */
 router.post("/auth/login", authLimiter, login);
+router.post("/auth/google", authLimiter, googleLogin);
+router.post("/auth/apple", authLimiter, appleLogin);
 
 // ── User Routes ────────────────────────────────────────────
 
