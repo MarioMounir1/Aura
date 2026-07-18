@@ -248,18 +248,22 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: AppColors.primaryGradient,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFB74D), Color(0xFFFF5722)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
-                Icons.restaurant_rounded,
+                Icons.local_fire_department_rounded,
                 color: Colors.black,
                 size: 18,
               ),
             ),
             const SizedBox(width: 10),
             Text(
-              'Calc Calories',
+              'AURA',
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
