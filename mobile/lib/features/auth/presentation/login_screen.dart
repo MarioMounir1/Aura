@@ -200,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen>
                             Text('AURA', style: _Styles.brandTitle),
                             const SizedBox(height: 8),
                             Text(
-                              'Diet Planner',
+                              'Track Your Progress',
                               style: _Styles.brandSub,
                             ),
                           ],
