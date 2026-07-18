@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/register_screen.dart
-// Calc-Calories — Register Screen (Rebuilt for Unified Design System)
+// Calc-Calories — Register Screen (Performance-Optimised)
 
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
@@ -11,6 +11,71 @@ import 'bloc/auth_bloc.dart';
 import 'bloc/auth_event.dart';
 import 'bloc/auth_state.dart';
 
+// ── Pre-cached text styles (created once, not on every build) ─────────────
+class _RS {
+  _RS._();
+
+  static final TextStyle pageTitle = GoogleFonts.inter(
+    fontSize: 32,
+    fontWeight: FontWeight.w900,
+    color: AppColors.textPrimary,
+    letterSpacing: -0.8,
+  );
+
+  static final TextStyle pageSub = GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textSecondary,
+  );
+
+  static final TextStyle label = GoogleFonts.inter(
+    fontSize: 13,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textSecondary,
+  );
+
+  static final TextStyle input = GoogleFonts.inter(
+    color: AppColors.textPrimary,
+    fontWeight: FontWeight.w600,
+  );
+
+  static final TextStyle hint = GoogleFonts.inter(color: AppColors.textMuted);
+
+  static final TextStyle buttonText = GoogleFonts.inter(
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -0.2,
+  );
+
+  static final TextStyle orLabel = GoogleFonts.inter(
+    color: AppColors.textMuted,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+  );
+
+  static final TextStyle socialBtnLabel = GoogleFonts.inter(
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+  );
+
+  static final TextStyle footerMuted = GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textSecondary,
+  );
+
+  static final TextStyle footerLink = GoogleFonts.inter(
+    fontSize: 14,
+    fontWeight: FontWeight.w800,
+    color: AppColors.primary,
+  );
+
+  static final TextStyle snackText = GoogleFonts.inter(
+    color: Colors.white,
+    fontWeight: FontWeight.w600,
+  );
+}
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -18,18 +83,31 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
+  late final AnimationController _btnAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _btnAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _btnAnim.dispose();
     super.dispose();
   }
 
@@ -45,10 +123,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
   }
 
+  void _toggleObscure() => setState(() => _obscurePassword = !_obscurePassword);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // Enforces 0xFF090C15
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -58,36 +138,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
+        listenWhen: (_, cur) => cur is AuthFailure || cur is Authenticated,
         listener: (context, state) {
           if (state is AuthFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.message,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
+            ScaffoldMessenger.of(context)
+              ..clearSnackBars()
+              ..showSnackBar(
+                SnackBar(
+                  content: Text(state.message, style: _RS.snackText),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            );
+              );
           }
           if (state is Authenticated) {
-            // Remove back stack (login, register) and go to Home
             Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
           }
         },
+        buildWhen: (prev, cur) => (prev is AuthLoading) != (cur is AuthLoading),
         builder: (context, state) {
           final isLoading = state is AuthLoading;
+
+          isLoading ? _btnAnim.forward() : _btnAnim.reverse();
 
           return SafeArea(
             child: Center(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 child: Form(
                   key: _formKey,
@@ -96,23 +176,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Header title
-                      Text(
-                        'Create Account',
-                        style: GoogleFonts.inter(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.textPrimary, // Enforces 0xFFFFFFFF
-                          letterSpacing: -0.8,
-                        ),
-                      ),
+                      Text('Create Account', style: _RS.pageTitle),
                       const SizedBox(height: 8),
                       Text(
                         'Join Calc Calories and start tracking macros',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary, // Enforces 0xFF8E929C
-                        ),
+                        style: _RS.pageSub,
                       ),
                       const SizedBox(height: 36),
 
@@ -120,7 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppColors.surface, // Enforces 0xFF121824
+                          color: AppColors.surface,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: AppColors.border,
@@ -131,22 +199,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // ── Name Input ──────────────────────────
-                            Text(
-                              'Full Name',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
+                            Text('Full Name', style: _RS.label),
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _nameController,
-                              enabled: !isLoading,
-                              style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                              style: _RS.input,
+                              textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
                                 hintText: 'e.g. Ahmed Ali',
-                                hintStyle: GoogleFonts.inter(color: AppColors.textMuted),
+                                hintStyle: _RS.hint,
                                 prefixIcon: const Icon(
                                   Icons.person_outline_rounded,
                                   color: AppColors.textMuted,
@@ -162,23 +223,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 20),
 
                             // ── Email Input ─────────────────────────
-                            Text(
-                              'Email Address',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
+                            Text('Email Address', style: _RS.label),
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _emailController,
-                              enabled: !isLoading,
                               keyboardType: TextInputType.emailAddress,
-                              style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                              style: _RS.input,
+                              textInputAction: TextInputAction.next,
                               decoration: InputDecoration(
                                 hintText: 'e.g. ahmed@gmail.com',
-                                hintStyle: GoogleFonts.inter(color: AppColors.textMuted),
+                                hintStyle: _RS.hint,
                                 prefixIcon: const Icon(
                                   Icons.email_outlined,
                                   color: AppColors.textMuted,
@@ -194,31 +248,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 20),
 
                             // ── Password Input ──────────────────────
-                            Text(
-                              'Password',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
+                            Text('Password', style: _RS.label),
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _passwordController,
-                              enabled: !isLoading,
                               obscureText: _obscurePassword,
-                              style: GoogleFonts.inter(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                              style: _RS.input,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) => _submit(),
                               decoration: InputDecoration(
                                 hintText: '••••••••',
-                                hintStyle: GoogleFonts.inter(color: AppColors.textMuted),
+                                hintStyle: _RS.hint,
                                 prefixIcon: const Icon(
                                   Icons.lock_outline_rounded,
                                   color: AppColors.textMuted,
                                   size: 20,
                                 ),
-                                suffixIcon: GestureDetector(
-                                  onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-                                  child: Icon(
+                                suffixIcon: IconButton(
+                                  splashRadius: 20,
+                                  onPressed: _toggleObscure,
+                                  icon: Icon(
                                     _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                                     color: AppColors.textMuted,
                                     size: 20,
@@ -242,28 +291,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.black,
+                                  disabledBackgroundColor: AppColors.primary.withOpacity(0.7),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   elevation: 0,
                                 ),
-                                child: isLoading
-                                    ? const SizedBox(
-                                        width: 22,
-                                        height: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          valueColor: AlwaysStoppedAnimation(Colors.black),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: isLoading
+                                      ? const SizedBox(
+                                          key: ValueKey('loading'),
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            valueColor: AlwaysStoppedAnimation(Colors.black),
+                                          ),
+                                        )
+                                      : Text(
+                                          'Register',
+                                          key: const ValueKey('label'),
+                                          style: _RS.buttonText,
                                         ),
-                                      )
-                                    : Text(
-                                        'Register',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -272,14 +323,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text(
-                                    'OR',
-                                    style: GoogleFonts.inter(
-                                      color: AppColors.textMuted,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
+                                  child: Text('OR', style: _RS.orLabel),
                                 ),
                                 const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
                               ],
@@ -311,10 +355,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 label: Text(
                                   'Continue with Google',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: _RS.socialBtnLabel,
                                 ),
                               ),
                             ),
@@ -340,10 +381,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   icon: const Icon(Icons.apple_rounded, color: Colors.black, size: 22),
                                   label: Text(
                                     'Continue with Apple',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: _RS.socialBtnLabel,
                                   ),
                                 ),
                               ),
@@ -359,22 +397,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         children: [
                           Text(
                             "Already have an account? ",
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                            ),
+                            style: _RS.footerMuted,
                           ),
-                          GestureDetector(
+                          InkWell(
                             onTap: isLoading ? null : () => Navigator.pop(context),
-                            child: Text(
-                              'Login',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                              ),
-                            ),
+                            borderRadius: BorderRadius.circular(4),
+                            child: Text('Login', style: _RS.footerLink),
                           ),
                         ],
                       ),
