@@ -19,8 +19,8 @@
 
 **Aura** is an elite, hybrid-AI fitness suite designed to solve the challenge of tracking calories and macros in the Egyptian and international food markets. The ecosystem is composed of two primary pillars:
 
-1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) with full RTL layout support. Features include an active workout tracker, water & weight logging, a food search database, weekly meal plans, AI meal analysis, and a dedicated Local AI Meal Scan interface.
-2. **Multimodal REST Backend (`backend/`)** — A production-grade Express API (v2.0.0) built with TypeScript and Prisma. Orchestrates queries to Google Gemini and local Ollama inference models, manages user authentication (JWT), tracks all user data in PostgreSQL, and enforces rate limiting via Redis.
+1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) with full RTL layout support. Features include an active workout tracker, water & weight logging, a food search database, weekly meal plans, AI meal analysis, a dedicated Local AI Meal Scan interface, and one-tap **Google & Apple Sign-In**.
+2. **Multimodal REST Backend (`backend/`)** — A production-grade Express API (v2.0.0) built with TypeScript and Prisma. Orchestrates queries to Google Gemini and local Ollama inference models, manages user authentication (JWT + Social OAuth), tracks all user data in PostgreSQL, and enforces rate limiting via Redis.
 
 ---
 
@@ -40,7 +40,7 @@
                         ▼            ▼            │
   ┌───────────────────────────────────────────────┴─────┐
   │           Express API Gateway v2 (/api/v1)          │
-  │     (JWT Auth · Rate Limiting · Request Logger)     │
+  │   (JWT Auth · Social OAuth · Rate Limiting · Log)   │
   └──────┬───────────────────┬────────────────────┬─────┘
          │                   │                    │
    (Prisma ORM)       (Cloud API Call)    (Local API Call)
@@ -59,7 +59,7 @@
 ## 🚀 Key Features
 
 ### 📱 Mobile App
-- 🔐 **JWT Authentication** — Register / Login with secure token storage via `flutter_secure_storage`
+- 🔐 **Multi-method Auth** — Email/password + **Sign in with Google** (Android & iOS) + **Sign in with Apple** (iOS only)
 - 🧭 **Onboarding & Profile Setup** — Height, weight, age, gender, activity level, and fitness goal. Auto-calculates TDEE and macro targets
 - 📊 **Dashboard** — Live macro rings, calorie progress, today's food log summary vs daily goals
 - 🥗 **AI Meal Analysis** — Analyze meals by text description, restaurant name, or photo (uses Google Gemini)
@@ -75,6 +75,7 @@
 
 ### 🛠️ Backend API
 - ✅ **Full JWT Authentication** with bcrypt password hashing
+- 🔑 **Social OAuth** — Google Sign-In token verification + Apple identity token decoding with account linking
 - 📦 **Food Database** — Search by name (AR/EN), filter by category, paginated results
 - 📋 **Food Logs** — Log items from the database; combined daily summary with totals vs goals
 - 🤖 **Dual AI Engine** — Gemini for cloud meal analysis; Ollama for private offline vision inference
@@ -90,14 +91,14 @@
 ## 📂 Project Structure
 
 ```
-Calc-calories/
+Aura/
 ├── backend/                        # 🛠️ Node.js REST API (v2.0.0)
 │   ├── src/
 │   │   ├── app.ts                  # Express entry point & global middleware
 │   │   ├── routes/
 │   │   │   └── v1.routes.ts        # All /api/v1 endpoints
 │   │   ├── controllers/            # Business logic per domain
-│   │   │   ├── user.controller.ts
+│   │   │   ├── user.controller.ts  # Auth (email, Google, Apple) + profile
 │   │   │   ├── meal.controller.ts
 │   │   │   ├── local-llama.controller.ts
 │   │   │   ├── history.controller.ts
@@ -118,6 +119,14 @@ Calc-calories/
 │   └── package.json
 │
 └── mobile/                         # 📱 Flutter Mobile App
+    ├── ios/                        # 🍎 iOS project (Xcode)
+    │   ├── Runner/
+    │   │   ├── Info.plist          # Google Sign-In URL scheme + privacy strings
+    │   │   ├── Runner.entitlements # Sign in with Apple capability
+    │   │   └── AppDelegate.swift   # Google Sign-In URL handler
+    │   └── Flutter/
+    │       └── GoogleSignIn.xcconfig.template  # Google credentials template
+    ├── android/                    # 🤖 Android project (Gradle)
     ├── lib/
     │   ├── main.dart               # App entry, BLoC providers, router, LanguageCubit
     │   ├── core/
@@ -125,29 +134,36 @@ Calc-calories/
     │   │   ├── network/            # Dio API client with secure token injection
     │   │   ├── utils/              # Constants (box names, endpoints)
     │   │   └── widgets/            # Shared reusable widgets
-    │   ├── features/
-    │   │   ├── auth/               # Login · Register · AuthBloc
-    │   │   ├── profile/            # Onboarding · ProfileBloc · TDEE setup
-    │   │   └── calorie_tracker/    # All tracker features + BLoCs
-    │   │       ├── presentation/
-    │   │       │   ├── dashboard_screen.dart
-    │   │       │   ├── meals_dashboard_screen.dart
-    │   │       │   ├── analyze_meal_screen.dart
-    │   │       │   ├── food_search_screen.dart
-    │   │       │   ├── water_tracking_screen.dart
-    │   │       │   ├── weight_progress_screen.dart
-    │   │       │   ├── meal_plans_screen.dart
-    │   │       │   ├── workout_screen.dart
-    │   │       │   ├── ai_suggestion_screen.dart
-    │   │       │   ├── history_screen.dart
-    │   │       │   ├── settings_screen.dart
-    │   │       │   ├── splash_screen.dart
-    │   │       │   ├── home_shell_screen.dart
-    │   │       │   ├── gyms_screen.dart
-    │   │       │   └── market_screen.dart
-    │   │       └── bloc/           # CalorieTrackerBloc, DashboardBloc, FoodSearchBloc,
-    │   │                           # WaterBloc, WeightBloc, MealPlanBloc
-    │   └── l10n/                   # AR/EN ARB localization files
+    │   └── features/
+    │       ├── auth/               # Login · Register · Google · Apple · AuthBloc
+    │       │   ├── data/
+    │       │   │   └── repositories/auth_repository_impl.dart
+    │       │   ├── domain/
+    │       │   │   └── repositories/auth_repository.dart
+    │       │   └── presentation/
+    │       │       ├── login_screen.dart     # Email + Google + Apple buttons
+    │       │       ├── register_screen.dart  # Email + Google + Apple buttons
+    │       │       └── bloc/                 # AuthBloc, AuthEvent, AuthState
+    │       ├── profile/            # Onboarding · ProfileBloc · TDEE setup
+    │       └── calorie_tracker/    # All tracker features + BLoCs
+    │           ├── presentation/
+    │           │   ├── dashboard_screen.dart
+    │           │   ├── meals_dashboard_screen.dart
+    │           │   ├── analyze_meal_screen.dart
+    │           │   ├── food_search_screen.dart
+    │           │   ├── water_tracking_screen.dart
+    │           │   ├── weight_progress_screen.dart
+    │           │   ├── meal_plans_screen.dart
+    │           │   ├── workout_screen.dart
+    │           │   ├── ai_suggestion_screen.dart
+    │           │   ├── history_screen.dart
+    │           │   ├── settings_screen.dart
+    │           │   ├── splash_screen.dart
+    │           │   ├── home_shell_screen.dart
+    │           │   ├── gyms_screen.dart
+    │           │   └── market_screen.dart
+    │           └── bloc/           # CalorieTrackerBloc, DashboardBloc, FoodSearchBloc,
+    │                               # WaterBloc, WeightBloc, MealPlanBloc
     └── pubspec.yaml
 ```
 
@@ -225,7 +241,26 @@ flutter run
 
 ---
 
-### 5. Docker (Alternative)
+### 5. iOS Setup (Google & Apple Sign-In)
+
+> **Requires a Mac with Xcode to build.**
+
+**Google Sign-In:**
+1. Download `GoogleService-Info.plist` from [Firebase Console](https://console.firebase.google.com)
+2. Copy `ios/Flutter/GoogleSignIn.xcconfig.template` → `ios/Flutter/GoogleSignIn.xcconfig`
+3. Fill in `GOOGLE_CLIENT_ID` and `GOOGLE_REVERSED_CLIENT_ID` from the plist
+4. Add `#include "GoogleSignIn.xcconfig"` to both `ios/Flutter/Debug.xcconfig` and `ios/Flutter/Release.xcconfig`
+
+**Apple Sign-In:**
+1. Open `Runner.xcworkspace` in Xcode
+2. Go to `Runner → Signing & Capabilities → + Capability → Sign in with Apple`
+3. Ensure your Apple Developer account has the **Sign in with Apple** service enabled for the App ID
+
+> ⚠️ `GoogleService-Info.plist` and `GoogleSignIn.xcconfig` are git-ignored — never commit them.
+
+---
+
+### 6. Docker (Alternative)
 
 ```bash
 cd backend
@@ -244,8 +279,12 @@ Authorization: Bearer <jwt_token>
 ### 🔐 Auth
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/auth/register` | Create a new account |
-| `POST` | `/auth/login` | Authenticate and receive a JWT |
+| `POST` | `/auth/register` | Create a new account (email + password) |
+| `POST` | `/auth/login` | Authenticate with email & password → JWT |
+| `POST` | `/auth/google` | Sign in / register with Google ID token → JWT |
+| `POST` | `/auth/apple` | Sign in / register with Apple identity token → JWT |
+
+> **Account Linking:** If a Google or Apple email matches an existing account, the social ID is automatically linked — no duplicate accounts.
 
 ### 👤 User & Profile
 | Method | Endpoint | Description |
@@ -306,6 +345,35 @@ Authorization: Bearer <jwt_token>
 |--------|----------|-------------|
 | `POST` | `/workouts/setup` | Save training split config (days/week, split type) |
 | `GET` | `/workouts/routine` | Get active workout routine + today's session |
+
+---
+
+## 🔑 Authentication Flow
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                  Sign-In Options                        │
+├──────────────────┬─────────────────┬────────────────────┤
+│   Email/Password │  Google Sign-In │  Apple Sign-In     │
+│   (All platforms)│ (Android + iOS) │  (iOS only)        │
+└────────┬─────────┴────────┬────────┴──────────┬─────────┘
+         │                  │                   │
+         ▼                  ▼                   ▼
+    POST /auth/login   POST /auth/google   POST /auth/apple
+         │                  │                   │
+         └──────────────────┴───────────────────┘
+                            │
+                     JWT Token returned
+                            │
+                   Stored in flutter_secure_storage
+                            │
+                   Injected into every API request
+```
+
+**Account Linking Logic:**
+- If a social sign-in email matches an existing account → the social ID is linked, user is logged in
+- If no account exists → a new account is auto-created
+- Social-only accounts cannot log in with email/password (clear error returned)
 
 ---
 
@@ -379,6 +447,8 @@ The app ships with full **Arabic & English** localization via Flutter's `flutter
 |---------|---------|
 | `flutter_bloc` | BLoC state management |
 | `dio` | HTTP client with interceptors |
+| `google_sign_in` | Native Google OAuth (Android & iOS) |
+| `sign_in_with_apple` | Native Apple Sign-In (iOS only) |
 | `hive_flutter` | Offline meal log cache |
 | `flutter_secure_storage` | Secure JWT token storage |
 | `go_router` | Declarative navigation |
