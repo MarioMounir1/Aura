@@ -38,3 +38,7 @@ class RegisterSubmitted extends AuthEvent {
 }
 
 class LogoutRequested extends AuthEvent {}
+
+class GoogleSignInSubmitted extends AuthEvent {}
+
+class AppleSignInSubmitted extends AuthEvent {}
