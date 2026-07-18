@@ -26,4 +26,20 @@ abstract class AuthRepository {
 
   /// Check if the authenticated user is premium
   Future<bool> isUserPremium();
+
+  /// Login with Google
+  Future<Either<Failure, String>> loginWithGoogle({
+    required String googleId,
+    required String email,
+    required String name,
+    String? idToken,
+  });
+
+  /// Login with Apple
+  Future<Either<Failure, String>> loginWithApple({
+    required String appleId,
+    required String email,
+    required String name,
+    String? identityToken,
+  });
 }
