@@ -158,11 +158,58 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
 // ── GET /api/v1/workouts/routine ───────────────────────────
 
 export async function getWorkoutRoutine(req: Request, res: Response): Promise<void> {
-  // Returns null — app shows setup flow.
-  // Once the user has configured, a persistent store (Redis/DB) would return saved routine.
-  // For now, null triggers unconfigured state so the setup sheet opens.
-  res.status(200).json({
-    success: true,
-    data: { routine: null, currentSession: null },
-  });
+  try {
+    const userId = req.user!.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.age || !user.weightKg) {
+      res.status(200).json({
+        success: true,
+        data: { routine: null, currentSession: null },
+      });
+      return;
+    }
+
+    // Map activityLevel to routine
+    let splitType = "upper_lower";
+    let splitName = "Upper / Lower Split";
+    let daysPerWeek = 4;
+
+    if (user.activityLevel === "sedentary") {
+      splitType = "full_body";
+      splitName = "Full Body Split";
+      daysPerWeek = 3;
+    } else if (user.activityLevel === "lightly_active") {
+      splitType = "ppl_1x";
+      splitName = "Push / Pull / Legs";
+      daysPerWeek = 3;
+    } else if (user.activityLevel === "moderate") {
+      splitType = "upper_lower";
+      splitName = "Upper / Lower Split";
+      daysPerWeek = 4;
+    } else if (user.activityLevel === "very_active") {
+      splitType = "ul_ppl";
+      splitName = "Hybrid PPL Split";
+      daysPerWeek = 5;
+    }
+
+    const meta = ROUTINE_CATALOGUE[splitType];
+    const currentSession = buildCurrentSession(splitType, splitName);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        routine: {
+          splitType,
+          splitName,
+          daysPerWeek,
+          description: meta?.description ?? "",
+          weekSchedule: meta?.days ?? [],
+          configuredAt: user.updatedAt.toISOString(),
+        },
+        currentSession,
+      },
+    });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
 }
