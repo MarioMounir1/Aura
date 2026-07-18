@@ -20,6 +20,8 @@ import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
 import '../data/services/local_llama_service.dart';
 import '../../../../core/utils/constants.dart';
+import '../../profile/presentation/bloc/profile_bloc.dart';
+import '../../profile/presentation/bloc/profile_state.dart';
 
 // ── Layout State Enum ─────────────────────────────────────────
 
@@ -30,18 +32,18 @@ enum LayoutState { idle, processing, resultLoaded }
 class DashboardThemeColors {
   DashboardThemeColors._();
 
-  static const Color background     = Color(0xFF030712);
-  static const Color cardBackground = Color(0xFF0D1117);
-  static const Color cardSurface    = Color(0xFF111827);
-  static const Color accentEmerald  = Color(0xFF10B981);
-  static const Color accentLime     = Color(0xFFA3E635);
-  static const Color accentBlue     = Color(0xFF60A5FA);
-  static const Color accentRed      = Color(0xFFF87171);
-  static const Color accentAmber    = Color(0xFFFBBF24);
-  static const Color textPrimary    = Color(0xFFF9FAFB);
-  static const Color textSecondary  = Color(0xFF9CA3AF);
-  static const Color textMuted      = Color(0xFF6B7280);
-  static const Color trackBg        = Color(0xFF1F2937);
+  static const Color background     = Color(0xFF090C15);
+  static const Color cardBackground = Color(0xFF121824);
+  static const Color cardSurface    = Color(0xFF1B2232);
+  static const Color accentEmerald  = Color(0xFF4CAF50);
+  static const Color accentLime     = Color(0xFFCDDC39);
+  static const Color accentBlue     = Color(0xFF00BCD4);
+  static const Color accentRed      = Color(0xFFF44336);
+  static const Color accentAmber    = Color(0xFFFFC107);
+  static const Color textPrimary    = Color(0xFFFFFFFF);
+  static const Color textSecondary  = Color(0xFF8E929C);
+  static const Color textMuted      = Color(0xFF5D616B);
+  static const Color trackBg        = Color(0xFF222B3F);
 }
 
 // ── Existing MealWarning / MealEntry models (preserved) ───────
@@ -390,6 +392,14 @@ class _MealsDashboardState extends State<MealsDashboard>
 
   Widget _buildHeader() {
     final todayStr = DateFormat('EEEE, d MMMM').format(DateTime.now());
+    String userName = '';
+    try {
+      final profileState = context.read<ProfileBloc>().state;
+      if (profileState is ProfileLoaded) {
+        userName = profileState.user['name'] ?? '';
+      }
+    } catch (_) {}
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -420,7 +430,7 @@ class _MealsDashboardState extends State<MealsDashboard>
             ),
             const SizedBox(height: 4),
             Text(
-              'Meals Dashboard',
+              userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
               style: GoogleFonts.outfit(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
