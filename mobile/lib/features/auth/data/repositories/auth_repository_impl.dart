@@ -7,6 +7,8 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/auth_repository.dart';
 
+import '../models/auth_models.dart';
+
 class AuthRepositoryImpl implements AuthRepository {
   final ApiClient _apiClient;
 
@@ -19,21 +21,17 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
+      final authRequest = AuthRequest(name: name, email: email, password: password);
       final response = await _apiClient.dio.post(
-        '/auth/register',
-        data: {
-          'name': name,
-          'email': email,
-          'password': password,
-        },
+        '/auth/signup',
+        data: authRequest.toJson(),
       );
 
-      final token = response.data['data']['token'] as String;
-      final isPremium = response.data['data']['user']['isPremium'] as bool? ?? false;
-      await _apiClient.saveToken(token);
-      await _apiClient.saveIsPremium(isPremium);
+      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveIsPremium(authResponse.user.isPremium);
 
-      return Right(token);
+      return Right(authResponse.token);
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
@@ -47,20 +45,17 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
+      final authRequest = AuthRequest(email: email, password: password);
       final response = await _apiClient.dio.post(
         '/auth/login',
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: authRequest.toJson(),
       );
 
-      final token = response.data['data']['token'] as String;
-      final isPremium = response.data['data']['user']['isPremium'] as bool? ?? false;
-      await _apiClient.saveToken(token);
-      await _apiClient.saveIsPremium(isPremium);
+      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveIsPremium(authResponse.user.isPremium);
 
-      return Right(token);
+      return Right(authResponse.token);
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
@@ -81,6 +76,66 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<bool> isUserPremium() async {
     return await _apiClient.getIsPremium();
+  }
+
+  @override
+  Future<Either<Failure, String>> loginWithGoogle({
+    required String googleId,
+    required String email,
+    required String name,
+    String? idToken,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/auth/google',
+        data: {
+          'googleId': googleId,
+          'email': email,
+          'name': name,
+          'idToken': idToken,
+        },
+      );
+
+      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveIsPremium(authResponse.user.isPremium);
+
+      return Right(authResponse.token);
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> loginWithApple({
+    required String appleId,
+    required String email,
+    required String name,
+    String? identityToken,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/auth/apple',
+        data: {
+          'appleId': appleId,
+          'email': email,
+          'name': name,
+          'identityToken': identityToken,
+        },
+      );
+
+      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveIsPremium(authResponse.user.isPremium);
+
+      return Right(authResponse.token);
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
   }
 
   Failure _handleDioError(DioException e) {
