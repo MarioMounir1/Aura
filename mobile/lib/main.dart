@@ -246,86 +246,94 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, authState) {
         if (authState is Authenticated) {
-          return BlocListener<ProfileBloc, ProfileState>(
-            listener: (context, profileState) {
-              if (profileState is ProfileFailure &&
-                  (profileState.message.contains("Authentication required") ||
-                   profileState.message.contains("Unauthorized") ||
-                   profileState.message.contains("token") ||
-                   profileState.message.contains("Session expired"))) {
-                context.read<AuthBloc>().add(LogoutRequested());
-              }
-            },
-            child: BlocBuilder<ProfileBloc, ProfileState>(
-              builder: (context, profileState) {
-                if (profileState is ProfileInitial) {
-                  context.read<ProfileBloc>().add(LoadProfile());
-                  return const Scaffold(
-                    backgroundColor: AppColors.background,
-                    body: Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      ),
-                    ),
-                  );
-                }
-                if (profileState is ProfileLoading) {
-                  return const Scaffold(
-                    backgroundColor: AppColors.background,
-                    body: Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      ),
-                    ),
-                  );
-                }
-                if (profileState is ProfileLoaded) {
-                  if (profileState.isOnboardingCompleted) {
-                    return const HomeShellScreen();
-                  } else {
-                    return const OnboardingScreen();
-                  }
-                }
-                if (profileState is ProfileFailure) {
-                  // If it fails, let them complete onboarding or try loading again
-                  return Scaffold(
-                    backgroundColor: AppColors.background,
-                    body: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(profileState.message, style: const TextStyle(color: Colors.red)),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => context.read<ProfileBloc>().add(LoadProfile()),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              return const OnboardingScreen();
-            },
-          ),
-        );
-      }
-        if (authState is Unauthenticated || authState is AuthFailure) {
-          return const LoginScreen();
+          // Force fresh load of profile when user becomes authenticated (login or startup)
+          context.read<ProfileBloc>().add(LoadProfile());
         }
-        // Splash / loading state
-        return const Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-            ),
-          ),
-        );
       },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          if (authState is Authenticated) {
+            return BlocListener<ProfileBloc, ProfileState>(
+              listener: (context, profileState) {
+                if (profileState is ProfileFailure &&
+                    (profileState.message.contains("Authentication required") ||
+                     profileState.message.contains("Unauthorized") ||
+                     profileState.message.contains("token") ||
+                     profileState.message.contains("Session expired"))) {
+                  context.read<AuthBloc>().add(LogoutRequested());
+                }
+              },
+              child: BlocBuilder<ProfileBloc, ProfileState>(
+                builder: (context, profileState) {
+                  if (profileState is ProfileInitial) {
+                    context.read<ProfileBloc>().add(LoadProfile());
+                    return const Scaffold(
+                      backgroundColor: AppColors.background,
+                      body: Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    );
+                  }
+                  if (profileState is ProfileLoading) {
+                    return const Scaffold(
+                      backgroundColor: AppColors.background,
+                      body: Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    );
+                  }
+                  if (profileState is ProfileLoaded) {
+                    if (profileState.isOnboardingCompleted) {
+                      return const HomeShellScreen();
+                    } else {
+                      return const OnboardingScreen();
+                    }
+                  }
+                  if (profileState is ProfileFailure) {
+                    // If it fails, let them complete onboarding or try loading again
+                    return Scaffold(
+                      backgroundColor: AppColors.background,
+                      body: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(profileState.message, style: const TextStyle(color: Colors.red)),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => context.read<ProfileBloc>().add(LoadProfile()),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return const OnboardingScreen();
+                },
+              ),
+            );
+          }
+          if (authState is Unauthenticated || authState is AuthFailure) {
+            return const LoginScreen();
+          }
+          // Splash / loading state
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
