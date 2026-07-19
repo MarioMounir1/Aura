@@ -95,33 +95,54 @@ export async function analyzeMeal(input: AnalyzeInput): Promise<MealAnalysisResu
   const provider = process.env.AI_PROVIDER ?? "google";
 
   if (provider === "ollama") {
-    if (input.type === "image") {
-      throw new Error("Local Ollama (Llama 3) does not support multimodal image analysis. Please use text description or set AI_PROVIDER=google.");
-    }
     return analyzeWithOllama(input);
   }
 
   return analyzeWithGemini(input);
 }
 
-// ── Local Ollama (Llama 3) Implementation ──────────────────
+// ── Local Ollama Implementation ────────────────────────────
 
-async function analyzeWithOllama(input: AnalyzeTextInput): Promise<MealAnalysisResult> {
-  console.log(`🔮 Calling local Ollama (${OLLAMA_CONFIG.model}): ${input.restaurantName} — ${input.mealDescription}`);
+async function analyzeWithOllama(input: AnalyzeInput): Promise<MealAnalysisResult> {
+  const isImage = input.type === "image";
+  const modelName = isImage ? OLLAMA_CONFIG.visionModel : OLLAMA_CONFIG.model;
   
-  const userPrompt = `Restaurant: ${input.restaurantName}
+  console.log(`🔮 Calling local Ollama (${modelName}): ${isImage ? "Image buffer" : `${input.restaurantName} — ${input.mealDescription}`}`);
+  
+  let userPrompt: string;
+  const imagesArray: string[] = [];
+
+  if (input.type === "text") {
+    userPrompt = `Restaurant: ${input.restaurantName}
 Meal Description: ${input.mealDescription}
 
 Analyze the nutritional content of this specific meal from this Egyptian restaurant and return the macros.`;
+  } else {
+    const base64Image = input.imageBuffer.toString("base64");
+    imagesArray.push(base64Image);
+
+    userPrompt = input.restaurantName
+      ? `Analyze the food in this image. If it is from the restaurant: ${input.restaurantName}, analyze it accordingly. Otherwise, if it is a home-cooked, generic, or unidentified meal, analyze it and set restaurantName to "Homemade". Return the complete nutritional breakdown.`
+      : `Analyze the food/meal shown in this image. If it is from a restaurant, identify the restaurant if possible from logos or packaging. If it is a home-cooked, generic, or unidentified meal, analyze it and set restaurantName to "Homemade". Return the complete nutritional breakdown.`;
+  }
+
+  const userMessage: any = {
+    role: "user",
+    content: userPrompt,
+  };
+
+  if (imagesArray.length > 0) {
+    userMessage.images = imagesArray;
+  }
 
   const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: OLLAMA_CONFIG.model,
+      model: modelName,
       messages: [
         { role: "system", content: SYSTEM_INSTRUCTION },
-        { role: "user", content: userPrompt },
+        userMessage,
       ],
       stream: false,
       options: {
