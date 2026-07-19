@@ -321,14 +321,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final age        = int.tryParse(_ageController.text.trim()) ?? 25;
     final height     = double.tryParse(_heightController.text.trim()) ?? 170.0;
     final weight     = double.tryParse(_weightController.text.trim()) ?? 70.0;
+    final targetWeight = double.tryParse(_targetWeightController.text.trim()) ?? 70.0;
     final isArabic   = Localizations.localeOf(context).languageCode == 'ar';
 
-    // Mark onboarding complete + update profile
-    context.read<ProfileBloc>().add(CompleteOnboardingEvent());
+    // Update profile on the backend first, then trigger onboarding complete on success
     context.read<ProfileBloc>().add(UpdateProfileEvent(
       age: age,
       weightKg: weight,
       heightCm: height,
+      targetWeightKg: targetWeight,
       gender: _gender,
       activityLevel: activity.id,
       goal: goal.id,
@@ -343,7 +344,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       backgroundColor: _T.bg,
       body: BlocListener<ProfileBloc, ProfileState>(
         listener: (ctx, state) {
-          if (state is ProfileLoaded && state.isOnboardingCompleted) {
+          if (state is ProfileUpdateSuccess) {
+            // Once the backend update has completed successfully, finalize the onboarding
+            ctx.read<ProfileBloc>().add(CompleteOnboardingEvent());
+          } else if (state is ProfileLoaded && state.isOnboardingCompleted) {
             Navigator.pushReplacementNamed(ctx, '/');
           } else if (state is ProfileFailure) {
             setState(() => _isSubmitting = false);
