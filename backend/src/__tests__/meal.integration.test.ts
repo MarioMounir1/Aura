@@ -45,12 +45,6 @@ jest.mock('../services/prisma.service', () => ({
   },
 }));
 
-// Mock worker to avoid BullMQ initialization
-jest.mock('../services/worker', () => ({}));
-jest.mock('../services/queue', () => ({
-  addFoodToQueue: jest.fn(),
-  queueEvents: {},
-}));
 
 // Mock Redis to avoid connection
 jest.mock('../services/redis.service', () => ({
