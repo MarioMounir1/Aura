@@ -395,7 +395,7 @@ class _MealsDashboardState extends State<MealsDashboard>
     final todayStr = DateFormat('EEEE, d MMMM').format(DateTime.now());
     String userName = '';
     try {
-      final profileState = context.read<ProfileBloc>().state;
+      final profileState = BlocProvider.of<ProfileBloc>(context).state;
       if (profileState is ProfileLoaded) {
         userName = profileState.user['name'] ?? '';
       }
