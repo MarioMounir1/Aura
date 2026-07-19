@@ -30,11 +30,24 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     final isOnboardingCompleted = results[1] as bool;
 
     profileResult.fold(
-      (failure) => emit(ProfileFailure(failure.message)),
+      (failure) {
+        print("DEBUG [ProfileBloc]: Fetch user profile failed: ${failure.message}");
+        emit(ProfileFailure(failure.message));
+      },
       (user) {
+        final ageVal = user['age'];
+        final weightVal = user['weightKg'];
+        final heightVal = user['heightCm'];
+        
+        print("DEBUG [ProfileBloc]: fetched user Map: $user");
+        print("DEBUG [ProfileBloc]: isOnboardingCompleted (local): $isOnboardingCompleted");
+        print("DEBUG [ProfileBloc]: ageVal: $ageVal, weightVal: $weightVal, heightVal: $heightVal");
+
         // Automatically determine onboarding complete if they have basic info set in the DB
         final bool actuallyCompleted = isOnboardingCompleted ||
-            (user['age'] != null && user['weightKg'] != null && user['heightCm'] != null);
+            (ageVal != null && weightVal != null && heightVal != null);
+
+        print("DEBUG [ProfileBloc]: actuallyCompleted resolved to: $actuallyCompleted");
 
         // If it was true in DB but false in local prefs, sync it back to local prefs
         if (actuallyCompleted && !isOnboardingCompleted) {
