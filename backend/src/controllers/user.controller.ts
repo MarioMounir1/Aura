@@ -10,6 +10,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import jwt from "jsonwebtoken";
 import prisma from "../services/prisma.service";
 import { generateToken } from "../middleware/auth.middleware";
 
@@ -175,6 +176,15 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    if (!user.passwordHash) {
+      res.status(401).json({
+        success: false,
+        error: "This account is configured for social sign-in. Please log in with Google or Apple.",
+        code: "SOCIAL_ONLY_ACCOUNT",
+      });
+      return;
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       res.status(401).json({
@@ -324,5 +334,218 @@ export async function updateGoals(req: Request, res: Response): Promise<void> {
     const msg = err instanceof Error ? err.message : "Unknown error";
     console.error("❌ [User] updateGoals error:", msg);
     res.status(500).json({ success: false, error: "Failed to update goals." });
+  }
+}
+
+// ── Social Auth Controllers ────────────────────────────────
+
+const GoogleLoginSchema = z.object({
+  idToken: z.string().optional(),
+  email: z.string().email("Invalid email address").toLowerCase(),
+  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  googleId: z.string().min(1, "Google ID is required"),
+});
+
+const AppleLoginSchema = z.object({
+  identityToken: z.string().optional(),
+  email: z.string().email("Invalid email address").toLowerCase(),
+  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  appleId: z.string().min(1, "Apple ID is required"),
+});
+
+export async function googleLogin(req: Request, res: Response): Promise<void> {
+  const parsed = GoogleLoginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Validation failed",
+      details: parsed.error.flatten().fieldErrors,
+    });
+    return;
+  }
+
+  const { idToken, email, name, googleId } = parsed.data;
+  let verifiedEmail = email;
+  let verifiedGoogleId = googleId;
+
+  if (idToken) {
+    try {
+      const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+      if (response.ok) {
+        const ticket = (await response.json()) as any;
+        if (ticket.email) {
+          verifiedEmail = ticket.email.toLowerCase();
+        }
+        if (ticket.sub) {
+          verifiedGoogleId = ticket.sub;
+        }
+      } else {
+        console.warn("⚠️ [Auth] Google Token verification returned error code:", response.status);
+        if (process.env.NODE_ENV === "production") {
+          res.status(401).json({
+            success: false,
+            error: "Invalid Google ID token.",
+            code: "INVALID_GOOGLE_TOKEN",
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("❌ [Auth] Google token verification failed:", err);
+      if (process.env.NODE_ENV === "production") {
+        res.status(401).json({
+          success: false,
+          error: "Failed to verify Google token.",
+          code: "GOOGLE_VERIFY_ERROR",
+        });
+        return;
+      }
+    }
+  }
+
+  try {
+    let user = await prisma.user.findUnique({
+      where: { googleId: verifiedGoogleId },
+    });
+
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { email: verifiedEmail },
+      });
+
+      if (user) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { googleId: verifiedGoogleId },
+        });
+        console.log(`🔗 [Auth] Linked Google account to existing user: ${verifiedEmail}`);
+      } else {
+        user = await prisma.user.create({
+          data: {
+            name,
+            email: verifiedEmail,
+            googleId: verifiedGoogleId,
+            dailyCalorieGoal: 2000,
+          },
+        });
+        console.log(`✅ [Auth] Created new user via Google: ${verifiedEmail}`);
+      }
+    }
+
+    if (!user.isActive) {
+      res.status(401).json({
+        success: false,
+        error: "This account has been deactivated.",
+        code: "USER_DEACTIVATED",
+      });
+      return;
+    }
+
+    const token = generateToken(user.id, user.email);
+
+    res.json({
+      success: true,
+      data: {
+        user: userPublicProfile(user),
+        token,
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ [Auth] Google login error:", msg);
+    res.status(500).json({
+      success: false,
+      error: "Google login service temporarily unavailable.",
+      code: "GOOGLE_LOGIN_ERROR",
+    });
+  }
+}
+
+export async function appleLogin(req: Request, res: Response): Promise<void> {
+  const parsed = AppleLoginSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Validation failed",
+      details: parsed.error.flatten().fieldErrors,
+    });
+    return;
+  }
+
+  const { identityToken, email, name, appleId } = parsed.data;
+  let verifiedEmail = email;
+  let verifiedAppleId = appleId;
+
+  if (identityToken) {
+    try {
+      const decoded = jwt.decode(identityToken) as any;
+      if (decoded) {
+        if (decoded.email) {
+          verifiedEmail = decoded.email.toLowerCase();
+        }
+        if (decoded.sub) {
+          verifiedAppleId = decoded.sub;
+        }
+      }
+    } catch (err) {
+      console.error("❌ [Auth] Apple token decoding failed:", err);
+    }
+  }
+
+  try {
+    let user = await prisma.user.findUnique({
+      where: { appleId: verifiedAppleId },
+    });
+
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { email: verifiedEmail },
+      });
+
+      if (user) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { appleId: verifiedAppleId },
+        });
+        console.log(`🔗 [Auth] Linked Apple account to existing user: ${verifiedEmail}`);
+      } else {
+        user = await prisma.user.create({
+          data: {
+            name,
+            email: verifiedEmail,
+            appleId: verifiedAppleId,
+            dailyCalorieGoal: 2000,
+          },
+        });
+        console.log(`✅ [Auth] Created new user via Apple: ${verifiedEmail}`);
+      }
+    }
+
+    if (!user.isActive) {
+      res.status(401).json({
+        success: false,
+        error: "This account has been deactivated.",
+        code: "USER_DEACTIVATED",
+      });
+      return;
+    }
+
+    const token = generateToken(user.id, user.email);
+
+    res.json({
+      success: true,
+      data: {
+        user: userPublicProfile(user),
+        token,
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ [Auth] Apple login error:", msg);
+    res.status(500).json({
+      success: false,
+      error: "Apple login service temporarily unavailable.",
+      code: "APPLE_LOGIN_ERROR",
+    });
   }
 }
