@@ -35,6 +35,49 @@ class DashboardTabWrapper extends StatelessWidget {
         builder: (context, state) {
           if (state is DashboardInitial) {
             context.read<DashboardBloc>().add(const LoadDashboard());
+            return const Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+            );
+          }
+          if (state is DashboardLoading) {
+            return const Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+            );
+          }
+          if (state is DashboardLoaded) {
+            return MealsDashboard(
+              foodSummary: state.foodSummary,
+              mealLogs: null,
+            );
+          }
+          if (state is DashboardFailure) {
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(state.message, style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => context.read<DashboardBloc>().add(const LoadDashboard()),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
           return const Scaffold(
             backgroundColor: AppColors.background,
             body: Center(
@@ -43,50 +86,8 @@ class DashboardTabWrapper extends StatelessWidget {
               ),
             ),
           );
-        }
-        if (state is DashboardLoading) {
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-              ),
-            ),
-          );
-        }
-        if (state is DashboardLoaded) {
-          return MealsDashboard(
-            foodSummary: state.foodSummary,
-            mealLogs: null,
-          );
-        }
-        if (state is DashboardFailure) {
-          return Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(state.message, style: const TextStyle(color: Colors.red)),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.read<DashboardBloc>().add(const LoadDashboard()),
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-        return const Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-            ),
-          ),
-        );
-      },
+        },
+      ),
     );
   }
 }
