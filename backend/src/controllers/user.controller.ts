@@ -50,12 +50,28 @@ function userPublicProfile(user: {
   fatsGoal: number;
   isPremium: boolean;
   createdAt: Date;
+  age?: number | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  targetWeightKg?: number | null;
+  gender?: string | null;
+  activityLevel?: string | null;
+  goal?: string | null;
+  language?: string | null;
 }) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     isPremium: user.isPremium,
+    age: user.age,
+    weightKg: user.weightKg,
+    heightCm: user.heightCm,
+    targetWeightKg: user.targetWeightKg,
+    gender: user.gender,
+    activityLevel: user.activityLevel,
+    goal: user.goal,
+    language: user.language,
     goals: {
       dailyCalories: user.dailyCalorieGoal,
       protein: user.proteinGoal,
@@ -164,6 +180,14 @@ export async function login(req: Request, res: Response): Promise<void> {
         fatsGoal: true,
         isPremium: true,
         createdAt: true,
+        age: true,
+        weightKg: true,
+        heightCm: true,
+        targetWeightKg: true,
+        gender: true,
+        activityLevel: true,
+        goal: true,
+        language: true,
       },
     });
 
@@ -239,6 +263,14 @@ export async function getMe(req: Request, res: Response): Promise<void> {
           fatsGoal: true,
           isPremium: true,
           createdAt: true,
+          age: true,
+          weightKg: true,
+          heightCm: true,
+          targetWeightKg: true,
+          gender: true,
+          activityLevel: true,
+          goal: true,
+          language: true,
         },
       }),
       prisma.mealLog.findMany({
