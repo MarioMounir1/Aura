@@ -15,8 +15,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../profile/presentation/bloc/profile_bloc.dart';
+import '../../profile/presentation/bloc/profile_state.dart';
 import '../data/models/workout_models.dart';
 
 // ── State Machine ─────────────────────────────────────────────
@@ -234,13 +237,20 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   Widget build(BuildContext context) {
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    return Scaffold(
-      backgroundColor: _C.bg,
-      body: SafeArea(
-        bottom: false,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          child: _buildCurrentView(isArabic),
+    return BlocListener<ProfileBloc, ProfileState>(
+      listener: (context, profileState) {
+        if (profileState is ProfileLoaded) {
+          _loadRoutine();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: _C.bg,
+        body: SafeArea(
+          bottom: false,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            child: _buildCurrentView(isArabic),
+          ),
         ),
       ),
     );
