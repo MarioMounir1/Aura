@@ -321,7 +321,7 @@ class _MealsDashboardState extends State<MealsDashboard>
           if (!isPremium)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: DashboardThemeColors.primaryColor,
+                backgroundColor: DashboardThemeColors.accentEmerald,
               ),
               onPressed: () {
                 Navigator.pop(context);
