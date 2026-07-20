@@ -108,6 +108,7 @@ model User {
   waterLogs        WaterLog[]
   weightLogs       WeightLog[]
   mealPlans        MealPlan[]
+  aiUsageLogs      AiUsageLog[]
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -141,6 +142,20 @@ model MealLog {
 
   @@index([userId, loggedAt])
   @@index([userId])
+}
+
+// -- AI Usage Log (Cost tracking and limits) -----------------
+
+model AiUsageLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  scanType  String   // "camera" or "gallery"
+  date      DateTime @db.Date // The day this usage occurred
+  createdAt DateTime @default(now())
+
+  @@index([userId, date, scanType])
 }
 
 // -- Food Item (Egyptian Food Database bilingual) ------------

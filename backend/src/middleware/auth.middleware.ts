@@ -22,6 +22,7 @@ declare global {
         id: string;
         email: string;
         name: string;
+        isPremium: boolean;
       };
       // existing field from company auth middleware
       company?: {
@@ -72,7 +73,7 @@ export async function requireAuth(
   try {
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, name: true, isActive: true },
+      select: { id: true, email: true, name: true, isActive: true, isPremium: true },
     });
 
     if (!user || !user.isActive) {
@@ -84,7 +85,7 @@ export async function requireAuth(
       return;
     }
 
-    req.user = { id: user.id, email: user.email, name: user.name };
+    req.user = { id: user.id, email: user.email, name: user.name, isPremium: user.isPremium };
     next();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
@@ -123,10 +124,10 @@ export async function optionalAuth(
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, name: true, isActive: true },
+      select: { id: true, email: true, name: true, isActive: true, isPremium: true },
     });
     if (user && user.isActive) {
-      req.user = { id: user.id, email: user.email, name: user.name };
+      req.user = { id: user.id, email: user.email, name: user.name, isPremium: user.isPremium };
     }
   } catch {
     // Silently ignore invalid tokens in optional auth

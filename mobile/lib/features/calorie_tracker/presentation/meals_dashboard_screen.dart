@@ -235,6 +235,22 @@ class _MealsDashboardState extends State<MealsDashboard>
   // ── Image Pick & Upload ───────────────────────────────────
 
   Future<void> _pickAndAnalyze(ImageSource source) async {
+    final scanType = source == ImageSource.camera ? 'camera' : 'gallery';
+
+    // ── Check Quota Limits First ──
+    try {
+      final quota = await _llamaService.fetchAiUsage();
+      final isExceeded = scanType == 'camera' ? quota.isCameraExceeded : quota.isGalleryExceeded;
+      
+      if (isExceeded) {
+        if (!mounted) return;
+        _showUpgradeDialog(scanType, quota.isPremium);
+        return;
+      }
+    } catch (e) {
+      debugPrint('Quota check failed, proceeding anyway: $e');
+    }
+
     final picked = await _imagePicker.pickImage(
       source: source,
       imageQuality: 85,
@@ -250,7 +266,7 @@ class _MealsDashboardState extends State<MealsDashboard>
     });
 
     try {
-      final result = await _llamaService.scanMealImage(_selectedImage!);
+      final result = await _llamaService.scanMealImage(_selectedImage!, scanType);
 
       if (!mounted) return;
       setState(() {
@@ -279,6 +295,42 @@ class _MealsDashboardState extends State<MealsDashboard>
       });
       _showErrorSnackbar('Unexpected error: $e');
     }
+  }
+
+  void _showUpgradeDialog(String scanType, bool isPremium) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: DashboardThemeColors.cardBackground,
+        title: Text(
+          isPremium ? 'Daily Limit Reached' : 'Upgrade to Premium',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          isPremium 
+            ? 'You have reached your premium limit for $scanType scans today.' 
+            : 'You have used all your free $scanType scans for today. Upgrade to Premium to get more scans!',
+          style: const TextStyle(color: DashboardThemeColors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe Later', style: TextStyle(color: DashboardThemeColors.textMuted)),
+          ),
+          if (!isPremium)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: DashboardThemeColors.primaryColor,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                // TODO: Navigate to Premium Upgrade Screen
+              },
+              child: const Text('Upgrade Now', style: TextStyle(color: Colors.white)),
+            ),
+        ],
+      ),
+    );
   }
 
   void _logResultToFeed() {

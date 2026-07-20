@@ -7,7 +7,7 @@
 import { Router } from "express";
 import { register, login, getMe, updateGoals, googleLogin, appleLogin } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler } from "../controllers/meal.controller";
-import { scanLocalHandler } from "../controllers/local-llama.controller";
+import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
 import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
@@ -220,11 +220,18 @@ router.put("/meal-plans/:id/eaten", requireAuth, markAsEaten);
 router.post("/meals/analyze", requireAuth, analyzeMealLimiter, analyzeMealHandler);
 
 /**
+ * @route   GET /api/v1/meals/usage
+ * @desc    Get today's AI usage quotas (camera vs gallery)
+ * @access  Private
+ */
+router.get("/meals/usage", requireAuth, getAiUsageHandler);
+
+/**
  * @route   POST /api/v1/meals/scan-local
  * @desc    Analyze a meal image using the local Llama vision model (Ollama)
  *          Returns structured macros + contextual AI recommendation
  * @access  Private (JWT required)
- * @body    multipart/form-data: { image (file) }
+ * @body    multipart/form-data: { image (file), scanType (string) }
  * @rateLimit 30 requests per minute per user
  */
 router.post("/meals/scan-local", requireAuth, analyzeMealLimiter, scanLocalHandler);

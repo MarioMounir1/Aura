@@ -12,6 +12,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/utils/constants.dart';
 import '../models/llama_meal_response.dart';
+import '../models/ai_usage_quota.dart';
 
 class LocalLlamaService {
   final Dio _dio;
@@ -61,6 +62,23 @@ class LocalLlamaService {
     return dio;
   }
 
+  // ── Fetch Usage Limits ──────────────────────────────────────
+
+  Future<AiUsageQuota> fetchAiUsage() async {
+    try {
+      final response = await _dio.get<dynamic>('/meals/usage');
+      final body = response.data;
+      if (body != null && body['success'] == true) {
+        return AiUsageQuota.fromJson(body['data']);
+      }
+      throw const LlamaApiException('Failed to fetch AI usage quota');
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    } catch (e) {
+      throw LlamaApiException('Error fetching AI usage: $e');
+    }
+  }
+
   // ── Core Upload Method ────────────────────────────────────
 
   /// Uploads [imageFile] to the local Llama scan endpoint.
@@ -68,7 +86,7 @@ class LocalLlamaService {
   /// Throws:
   ///   [LlamaApiException]    — on API-level errors (bad payload, model failure)
   ///   [LlamaNetworkException] — on connectivity / timeout issues
-  Future<LlamaMealResponse> scanMealImage(File imageFile) async {
+  Future<LlamaMealResponse> scanMealImage(File imageFile, String scanType) async {
     // Validate file exists before sending
     if (!imageFile.existsSync()) {
       throw const LlamaNetworkException('Image file does not exist on device.');
@@ -87,6 +105,7 @@ class LocalLlamaService {
     late final FormData formData;
     try {
       formData = FormData.fromMap({
+        'scanType': scanType,
         'image': await MultipartFile.fromFile(
           imageFile.path,
           filename: 'meal_scan_${DateTime.now().millisecondsSinceEpoch}.jpg',

@@ -174,7 +174,42 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
     return;
   }
 
-  // ── Step 2: Convert image to base64 ─────────────────────
+  // ── Step 2: Validate AI Usage Limits ──────────────────────
+  const scanType: "camera" | "gallery" = req.body.scanType === "camera" ? "camera" : "gallery";
+  const userId = req.user!.id;
+  const isPremium = req.user!.isPremium;
+
+  try {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    const usageCount = await prisma.aiUsageLog.count({
+      where: {
+        userId,
+        scanType,
+        date: { gte: todayStart, lte: todayEnd },
+      },
+    });
+
+    const limit = isPremium ? 7 : 2;
+    if (usageCount >= limit) {
+      res.status(isPremium ? 429 : 402).json({
+        success: false,
+        error: isPremium 
+          ? `Premium limit reached. You can only use ${scanType} ${limit} times per day.`
+          : `Free limit reached. Upgrade to Premium for more ${scanType} uses!`,
+        code: "QUOTA_EXCEEDED",
+      });
+      return;
+    }
+  } catch (err: unknown) {
+    console.error("❌ [LocalLlama] Quota check failed:", err);
+    // Best-effort: allow if check fails to avoid blocking legitimate users due to DB errors
+  }
+
+  // ── Step 3: Convert image to base64 ──────────────────────
   const base64Image = file.buffer.toString("base64");
   const mimeType    = file.mimetype; // e.g. "image/jpeg"
 
@@ -248,7 +283,6 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
 
   // ── Step 6: Persist to MealLog (best-effort, non-blocking) ──
   try {
-    const userId = req.user!.id;
     await prisma.mealLog.create({
       data: {
         userId,
@@ -264,8 +298,8 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
       },
       select: { id: true },
     });
+    await prisma.aiUsageLog.create({ data: { userId, scanType, date: new Date() } });
   } catch (dbErr: unknown) {
-    // Non-blocking — log but don't fail the request
     console.warn("⚠️  [LocalLlama] DB log failed (non-critical):", dbErr instanceof Error ? dbErr.message : dbErr);
   }
 
@@ -282,4 +316,64 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
   };
 
   res.status(200).json(response);
+}
+
+// ── AI Usage Quota Endpoint ──────────────────────────────────
+
+/**
+ * GET /api/v1/meals/usage
+ * Returns the current day's usage counts for camera and gallery scans.
+ */
+export async function getAiUsageHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    
+    // Get start and end of today in UTC
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    const logs = await prisma.aiUsageLog.groupBy({
+      by: ['scanType'],
+      where: {
+        userId,
+        date: {
+          gte: todayStart,
+          lte: todayEnd,
+        }
+      },
+      _count: {
+        id: true,
+      }
+    });
+
+    const usage = {
+      camera: 0,
+      gallery: 0,
+    };
+
+    logs.forEach(log => {
+      if (log.scanType === 'camera') usage.camera = log._count.id;
+      if (log.scanType === 'gallery') usage.gallery = log._count.id;
+    });
+
+    const isPremium = req.user?.isPremium ?? false;
+    const limit = isPremium ? 7 : 2;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        usage,
+        limits: {
+          camera: limit,
+          gallery: limit,
+        },
+        isPremium
+      }
+    });
+  } catch (error: unknown) {
+    console.error("❌ [AiUsage] Failed to fetch usage:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch usage limits" });
+  }
 }
