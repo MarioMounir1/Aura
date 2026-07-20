@@ -18,6 +18,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/widgets/ad_banner.dart';
+import '../../premium/presentation/premium_upgrade_screen.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
 import '../data/models/workout_models.dart';
@@ -199,6 +201,17 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   // ── Launch Active Workout ──────────────────────────────────
   void _startWorkout() {
+    final profileState = context.read<ProfileBloc>().state;
+    final isPremium = profileState is ProfileLoaded && profileState.isPremium;
+
+    if (!isPremium) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (ctx) => const PremiumUpgradeScreen()),
+      );
+      return;
+    }
+
     if (_activeRoutine == null) return;
     final log = _currentSession != null
         ? WorkoutLog.fromSession(_currentSession!)
@@ -396,6 +409,22 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   child: _buildWeeklyCalendar(isArabic),
                 ),
               ],
+              
+              const SizedBox(height: 32),
+              
+              // ── Ads Banner for Free Users ──────────────
+              Builder(builder: (context) {
+                final profileState = context.read<ProfileBloc>().state;
+                final isPremium = profileState is ProfileLoaded && profileState.isPremium;
+                if (!isPremium) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: AdBanner(),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
+              const SizedBox(height: 32),
             ],
           ),
         ),

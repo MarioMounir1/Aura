@@ -5,7 +5,7 @@
 // ============================================================
 
 import { Router } from "express";
-import { register, login, getMe, updateGoals, googleLogin, appleLogin } from "../controllers/user.controller";
+import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler } from "../controllers/meal.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
@@ -51,6 +51,13 @@ router.post("/auth/apple", authLimiter, appleLogin);
  * @access  Private (JWT required)
  */
 router.get("/users/me", requireAuth, getMe);
+
+/**
+ * @route   POST /api/v1/users/me/upgrade
+ * @desc    Mock upgrade user to premium
+ * @access  Private
+ */
+router.post("/users/me/upgrade", requireAuth, upgradeUser);
 
 /**
  * @route   PUT /api/v1/users/me/goals

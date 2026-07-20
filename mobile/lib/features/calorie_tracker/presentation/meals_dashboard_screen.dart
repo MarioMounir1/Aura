@@ -20,6 +20,7 @@ import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
 import '../data/services/local_llama_service.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../core/widgets/ad_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
@@ -399,6 +400,12 @@ class _MealsDashboardState extends State<MealsDashboard>
 
   @override
   Widget build(BuildContext context) {
+    bool isPremium = false;
+    final profileState = context.read<ProfileBloc>().state;
+    if (profileState is ProfileLoaded) {
+      isPremium = profileState.isPremium;
+    }
+
     return Theme(
       data: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: DashboardThemeColors.background,
@@ -433,6 +440,12 @@ class _MealsDashboardState extends State<MealsDashboard>
                 const SizedBox(height: 28),
                 _buildFeedSection(),
                 const SizedBox(height: 32),
+
+                // ── Ads Banner for Free Users ──────────────
+                if (!isPremium) ...[
+                  const AdBanner(),
+                  const SizedBox(height: 32),
+                ],
               ],
             ),
           ),

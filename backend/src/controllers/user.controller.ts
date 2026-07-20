@@ -14,6 +14,24 @@ import jwt from "jsonwebtoken";
 import prisma from "../services/prisma.service";
 import { generateToken } from "../middleware/auth.middleware";
 
+// ── User Controller ──────────────────────────────────────────
+
+export async function upgradeUser(req: Request, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { isPremium: true },
+    });
+    res.json({
+      success: true,
+      data: { user: userPublicProfile(updated) },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Upgrade failed" });
+  }
+}
+
 // ── Zod Validation Schemas ─────────────────────────────────
 
 const RegisterSchema = z.object({

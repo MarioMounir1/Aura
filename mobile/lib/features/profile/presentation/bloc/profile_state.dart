@@ -23,6 +23,8 @@ class ProfileLoaded extends ProfileState {
     required this.isOnboardingCompleted,
   });
 
+  bool get isPremium => user['isPremium'] == true;
+
   @override
   List<Object?> get props => [user, isOnboardingCompleted];
 }
