@@ -25,6 +25,7 @@ import '../../profile/presentation/bloc/profile_state.dart';
 import '../data/models/workout_models.dart';
 import 'bloc/workout_bloc.dart';
 import 'bloc/workout_event.dart';
+import 'bloc/workout_state.dart';
 
 // ── State Machine ─────────────────────────────────────────────
 enum WorkoutHubState { unconfigured, loading, ready, activeWorkout }
@@ -1268,7 +1269,7 @@ class _ActiveWorkoutViewState extends State<_ActiveWorkoutView> {
             setIndex: s.setIndex,
             weightKg: weight,
             reps: reps,
-            workoutExerciseId: s.id, // Replace with actual ID if available
+            workoutExerciseId: widget.log.exerciseName,
           ),
         );
       }
