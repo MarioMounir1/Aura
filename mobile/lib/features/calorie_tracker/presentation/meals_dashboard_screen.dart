@@ -502,7 +502,7 @@ class _MealsDashboardState extends State<MealsDashboard>
                       Text(
                         'Daily Performance',
                         style: GoogleFonts.outfit(
-                          fontSize: 15,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: DashboardThemeColors.textPrimary,
                         ),
@@ -527,7 +527,7 @@ class _MealsDashboardState extends State<MealsDashboard>
                     child: Text(
                       '${caloriesTarget > 0 ? ((caloriesConsumed / caloriesTarget) * 100).round() : 0}% Target',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: DashboardThemeColors.accentEmerald,
                       ),
@@ -535,17 +535,18 @@ class _MealsDashboardState extends State<MealsDashboard>
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               LayoutBuilder(builder: (context, constraints) {
                 const spacing = 12.0;
                 final itemW = (constraints.maxWidth - spacing * 3) / 4;
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildRing('CALORIES', caloriesConsumed, caloriesTarget, 'kcal', DashboardThemeColors.accentLime,   itemW),
-                    _buildRing('PROTEIN',  proteinConsumed,  proteinTarget,  'g',    DashboardThemeColors.accentEmerald, itemW),
-                    _buildRing('CARBS',    carbsConsumed,    carbsTarget,    'g',    DashboardThemeColors.accentBlue,    itemW),
-                    _buildRing('FATS',     fatsConsumed,     fatsTarget,     'g',    DashboardThemeColors.accentRed,     itemW),
+                    _buildRing('Calories', caloriesConsumed, caloriesTarget, 'kcal', DashboardThemeColors.accentEmerald, itemW),
+                    _buildRing('Protein',  proteinConsumed,  proteinTarget,  'g',    DashboardThemeColors.accentBlue,    itemW),
+                    _buildRing('Carbs',    carbsConsumed,    carbsTarget,    'g',    DashboardThemeColors.accentAmber,   itemW),
+                    _buildRing('Fats',     fatsConsumed,     fatsTarget,     'g',    DashboardThemeColors.accentRed,     itemW),
                   ],
                 );
               }),
@@ -556,28 +557,31 @@ class _MealsDashboardState extends State<MealsDashboard>
     );
   }
 
-  Widget _buildRing(String label, double consumed, double target, String unit,
-      Color color, double width) {
+  Widget _buildRing(String label, double consumed, double target, String unit, Color color, double width) {
     final pct = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+    
+    // Formatting for internal ring text (e.g., "kcal" or "g Protein")
+    final innerLabel = label.toLowerCase() == 'calories' ? unit : 'g $label';
+
     return SizedBox(
       width: width,
       child: Column(
         children: [
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: pct),
-            duration: const Duration(milliseconds: 1200),
+            duration: const Duration(milliseconds: 1400),
             curve: Curves.easeOutCubic,
             builder: (_, v, __) => CustomPaint(
-              size: Size(width - 4, width - 4),
+              size: Size(width, width),
               painter: CustomCircularProgressPainter(
                 progress: v,
                 color: color,
-                trackColor: DashboardThemeColors.trackBg,
-                strokeWidth: 6.5,
+                trackColor: color.withValues(alpha: 0.15),
+                strokeWidth: 7.0,
               ),
               child: SizedBox(
-                width: width - 4,
-                height: width - 4,
+                width: width,
+                height: width,
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -585,16 +589,16 @@ class _MealsDashboardState extends State<MealsDashboard>
                       Text(
                         '${consumed.round()}',
                         style: GoogleFonts.outfit(
-                          fontSize: width > 75 ? 15 : 13,
+                          fontSize: width > 75 ? 18 : 15,
                           fontWeight: FontWeight.w800,
                           color: DashboardThemeColors.textPrimary,
                         ),
                       ),
                       Text(
-                        unit,
+                        innerLabel,
                         style: GoogleFonts.inter(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
                           color: DashboardThemeColors.textSecondary,
                         ),
                       ),
@@ -604,23 +608,15 @@ class _MealsDashboardState extends State<MealsDashboard>
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
-            label,
-            style: GoogleFonts.outfit(
-              fontSize: 9,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.7,
-              color: DashboardThemeColors.textSecondary,
+            '/ ${target.round()} $unit',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: DashboardThemeColors.textSecondary.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
-          ),
-          Text(
-            'Goal: ${target.round()}',
-            style: GoogleFonts.inter(
-              fontSize: 8,
-              color: DashboardThemeColors.textMuted,
-            ),
           ),
         ],
       ),
