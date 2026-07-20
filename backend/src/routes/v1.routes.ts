@@ -16,7 +16,7 @@ import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-lo
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
-import { setupWorkoutRoutine, getWorkoutRoutine } from "../controllers/workout.controller";
+import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -289,5 +289,33 @@ router.post("/workouts/setup", requireAuth, setupWorkoutRoutine);
  * @access  Private (JWT required)
  */
 router.get("/workouts/routine", requireAuth, getWorkoutRoutine);
+
+/**
+ * @route   POST /api/v1/workouts/session/start
+ * @desc    Start a new workout session
+ * @access  Private (JWT required)
+ */
+router.post("/workouts/session/start", requireAuth, startSession);
+
+/**
+ * @route   POST /api/v1/workouts/session/exercise
+ * @desc    Add an exercise to a session
+ * @access  Private (JWT required)
+ */
+router.post("/workouts/session/exercise", requireAuth, addExercise);
+
+/**
+ * @route   POST /api/v1/workouts/session/set
+ * @desc    Log a set for an exercise in a session
+ * @access  Private (JWT required)
+ */
+router.post("/workouts/session/set", requireAuth, logSet);
+
+/**
+ * @route   POST /api/v1/workouts/session/:id/finish
+ * @desc    Finish a workout session
+ * @access  Private (JWT required)
+ */
+router.post("/workouts/session/:id/finish", requireAuth, finishSession);
 
 export default router;
