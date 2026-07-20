@@ -9,6 +9,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
+import { WorkoutService } from "../services/workout.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -39,6 +40,10 @@ const SetupSchema = z.object({
   splitType:   z.string().min(1).max(80),
   splitName:   z.string().min(1).max(120),
 });
+
+const StartSessionSchema = z.object({ name: z.string().min(1) });
+const AddExerciseSchema = z.object({ sessionId: z.string(), exerciseId: z.string(), order: z.number().int(), notes: z.string().optional() });
+const LogSetSchema = z.object({ workoutExerciseId: z.string(), setNumber: z.number().int(), reps: z.number().int().optional(), weightKg: z.number().optional(), rpe: z.number().optional() });
 
 // ── Static exercise catalogue per day type ─────────────────
 const DAY_EXERCISES: Record<string, SessionExercise[]> = {
@@ -210,6 +215,69 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       },
     });
   } catch (err: unknown) {
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── POST /api/v1/workouts/session/start ────────────────────────────
+export async function startSession(req: Request, res: Response): Promise<void> {
+  try {
+    const parsed = StartSessionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: parsed.error.flatten() });
+      return;
+    }
+    
+    const userId = req.user!.id;
+    const session = await WorkoutService.startWorkoutSession(userId, parsed.data.name);
+    res.status(200).json({ success: true, data: session });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── POST /api/v1/workouts/session/exercise ────────────────────────────
+export async function addExercise(req: Request, res: Response): Promise<void> {
+  try {
+    const parsed = AddExerciseSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: parsed.error.flatten() });
+      return;
+    }
+    
+    const exercise = await WorkoutService.addExerciseToSession(
+      parsed.data.sessionId, parsed.data.exerciseId, parsed.data.order, parsed.data.notes
+    );
+    res.status(200).json({ success: true, data: exercise });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── POST /api/v1/workouts/session/set ────────────────────────────
+export async function logSet(req: Request, res: Response): Promise<void> {
+  try {
+    const parsed = LogSetSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: parsed.error.flatten() });
+      return;
+    }
+    
+    const set = await WorkoutService.logSet(
+      parsed.data.workoutExerciseId, parsed.data.setNumber, parsed.data.reps, parsed.data.weightKg, parsed.data.rpe
+    );
+    res.status(200).json({ success: true, data: set });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── POST /api/v1/workouts/session/:id/finish ────────────────────────────
+export async function finishSession(req: Request, res: Response): Promise<void> {
+  try {
+    const session = await WorkoutService.finishSession(req.params.id, req.body.notes);
+    res.status(200).json({ success: true, data: session });
+  } catch (err) {
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
