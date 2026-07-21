@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,7 +30,7 @@ class _C {
 // Active Workout View (Dynamic)
 // ═══════════════════════════════════════════════════════════════
 
-class ActiveWorkoutView extends StatelessWidget {
+class ActiveWorkoutView extends StatefulWidget {
   final WorkoutSessionActive sessionState;
   final bool isArabic;
   final VoidCallback onFinish;
@@ -41,108 +42,298 @@ class ActiveWorkoutView extends StatelessWidget {
     required this.onFinish,
   });
 
+  @override
+  State<ActiveWorkoutView> createState() => _ActiveWorkoutViewState();
+}
+
+class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
+  Timer? _timer;
+  int _timerSeconds = 0;
+  int _totalTimerSeconds = 90;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer(int seconds) {
+    _timer?.cancel();
+    setState(() {
+      _timerSeconds = seconds;
+      _totalTimerSeconds = seconds;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (_timerSeconds <= 1) {
+        _stopTimer();
+      } else {
+        setState(() {
+          _timerSeconds--;
+        });
+      }
+    });
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    setState(() {
+      _timerSeconds = 0;
+    });
+  }
+
+  void _adjustTimer(int delta) {
+    setState(() {
+      _timerSeconds = (_timerSeconds + delta).clamp(0, 999);
+      if (_timerSeconds > _totalTimerSeconds) {
+        _totalTimerSeconds = _timerSeconds;
+      }
+    });
+    if (_timerSeconds == 0) {
+      _stopTimer();
+    }
+  }
+
   void _showAddExerciseSheet(BuildContext context) {
-    if (sessionState.availableExercises == null) {
+    if (widget.sessionState.availableExercises == null) {
       context.read<WorkoutBloc>().add(const FetchAvailableExercises());
     }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AddExerciseSheet(isArabic: isArabic),
+      builder: (_) => _AddExerciseSheet(isArabic: widget.isArabic),
+    );
+  }
+
+  Widget _buildTimerBanner() {
+    final minutes = (_timerSeconds / 60).floor();
+    final seconds = _timerSeconds % 60;
+    final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final progress = _timerSeconds / _totalTimerSeconds;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: _C.card.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _C.cyan.withOpacity(0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: _C.cyan.withOpacity(0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, color: _C.cyan, size: 22),
+                  const SizedBox(width: 10),
+                  Text(
+                    widget.isArabic ? 'وقت الراحة' : 'Rest Timer',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _C.textPri,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    timeStr,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: _C.cyan,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // -10s
+                  TextButton(
+                    onPressed: () => _adjustTimer(-10),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 30),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      '-10s',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _C.textSec,
+                      ),
+                    ),
+                  ),
+                  // +10s
+                  TextButton(
+                    onPressed: () => _adjustTimer(10),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(36, 30),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      '+10s',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: _C.cyan,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Skip
+                  ElevatedButton(
+                    onPressed: _stopTimer,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _C.cardElev,
+                      foregroundColor: _C.textPri,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text(
+                      widget.isArabic ? 'تخطي' : 'Skip',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Progress Bar
+            Container(
+              height: 3,
+              width: double.infinity,
+              color: _C.border,
+              alignment: Alignment.centerLeft,
+              child: FractionallySizedBox(
+                widthFactor: progress.clamp(0.0, 1.0),
+                child: Container(color: _C.cyan),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final logs = sessionState.currentLogs;
+    final logs = widget.sessionState.currentLogs;
     final totalSets = logs.fold<int>(0, (sum, log) => sum + log.sets.length);
     final loggedSets = logs.fold<int>(0, (sum, log) => sum + log.loggedSetsCount);
 
-    return Column(
-      key: const ValueKey('activeWorkout'),
+    return Stack(
       children: [
-        // AppBar-like header
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          decoration: const BoxDecoration(
-            color: _C.card,
-            border: Border(bottom: BorderSide(color: _C.border, width: 1)),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: onFinish,
-                child: const Icon(Icons.close_rounded, color: _C.textPri, size: 22),
+        Column(
+          key: const ValueKey('activeWorkout'),
+          children: [
+            // AppBar-like header
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              decoration: const BoxDecoration(
+                color: _C.card,
+                border: Border(bottom: BorderSide(color: _C.border, width: 1)),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  isArabic ? 'جلسة التمرين النشطة' : 'Active Workout Session',
-                  style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700, color: _C.textPri),
-                ),
-              ),
-              // Logged set counter
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _C.cyan.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _C.cyan.withOpacity(0.3)),
-                ),
-                child: Text(
-                  '$loggedSets/$totalSets sets',
-                  style: GoogleFonts.inter(
-                      fontSize: 11, fontWeight: FontWeight.w700, color: _C.cyan),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-            itemCount: logs.length + 1,
-            itemBuilder: (context, index) {
-              if (index == logs.length) {
-                // Add Exercise Button
-                return Padding(
-                  padding: const EdgeInsets.only(top: 10, bottom: 40),
-                  child: ElevatedButton(
-                    onPressed: () => _showAddExerciseSheet(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _C.cardElev,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: _C.border, width: 1.2),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.add_rounded, color: _C.cyan),
-                        const SizedBox(width: 8),
-                        Text(
-                          isArabic ? 'إضافة تمرين' : 'Add Exercise',
-                          style: GoogleFonts.inter(
-                            color: _C.cyan,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: widget.onFinish,
+                    child: const Icon(Icons.close_rounded, color: _C.textPri, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      widget.isArabic ? 'جلسة التمرين النشطة' : 'Active Workout Session',
+                      style: GoogleFonts.inter(
+                          fontSize: 15, fontWeight: FontWeight.w700, color: _C.textPri),
                     ),
                   ),
-                );
-              }
-              return _ExerciseCard(log: logs[index], isArabic: isArabic);
-            },
-          ),
+                  // Logged set counter
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _C.cyan.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _C.cyan.withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '$loggedSets/$totalSets sets',
+                      style: GoogleFonts.inter(
+                          fontSize: 11, fontWeight: FontWeight.w700, color: _C.cyan),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: ListView.builder(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+                itemCount: logs.length + 1,
+                itemBuilder: (context, index) {
+                  if (index == logs.length) {
+                    // Add Exercise Button
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 10, bottom: 40),
+                      child: ElevatedButton(
+                        onPressed: () => _showAddExerciseSheet(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _C.cardElev,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: const BorderSide(color: _C.border, width: 1.2),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_rounded, color: _C.cyan),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.isArabic ? 'إضافة تمرين' : 'Add Exercise',
+                              style: GoogleFonts.inter(
+                                color: _C.cyan,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return _ExerciseCard(
+                    log: logs[index],
+                    isArabic: widget.isArabic,
+                    onSetCompleted: () => _startTimer(90),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
+        if (_timerSeconds > 0)
+          Positioned(
+            left: 20,
+            right: 20,
+            bottom: 20,
+            child: _buildTimerBanner(),
+          ),
       ],
     );
   }
@@ -151,8 +342,13 @@ class ActiveWorkoutView extends StatelessWidget {
 class _ExerciseCard extends StatefulWidget {
   final WorkoutLog log;
   final bool isArabic;
+  final VoidCallback onSetCompleted;
 
-  const _ExerciseCard({required this.log, required this.isArabic});
+  const _ExerciseCard({
+    required this.log,
+    required this.isArabic,
+    required this.onSetCompleted,
+  });
 
   @override
   State<_ExerciseCard> createState() => _ExerciseCardState();
@@ -250,6 +446,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
           workoutExerciseId: s.id ?? widget.log.exerciseName,
         ),
       );
+      widget.onSetCompleted();
     }
     
     // Optimistic UI handled by Bloc now, but we can do a local haptic
@@ -443,7 +640,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
         SizedBox(width: 46, child: IconButton(
           icon: Icon(
             locked ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
-            color: locked ? _C.cyan : _C.textMut,
+            color: locked ? _C.success : _C.textMut,
             size: 26,
           ),
           onPressed: () => _logSet(index),
