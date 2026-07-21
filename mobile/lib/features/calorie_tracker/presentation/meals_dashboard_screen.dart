@@ -327,13 +327,7 @@ class _MealsDashboardState extends State<MealsDashboard>
               ),
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PremiumUpgradeScreen(),
-                    fullscreenDialog: true,
-                  ),
-                );
+                PurchaseService.instance.presentPaywall(context);
               },
               child: const Text('Upgrade Now', style: TextStyle(color: Colors.white)),
             ),
