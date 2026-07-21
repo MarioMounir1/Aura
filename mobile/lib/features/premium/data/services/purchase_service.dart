@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
@@ -126,8 +127,8 @@ class PurchaseService {
     }
 
     try {
-      final customerInfo = await Purchases.purchasePackage(package);
-      final isNowPremium = customerInfo.entitlements.all['premium']?.isActive ?? false;
+      final purchaseResult = await Purchases.purchasePackage(package);
+      final isNowPremium = purchaseResult.customerInfo.entitlements.all['premium']?.isActive ?? false;
       return isNowPremium;
     } on PlatformException catch (e) {
       final errorCode = PurchasesErrorHelper.getErrorCode(e);
