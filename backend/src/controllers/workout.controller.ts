@@ -383,3 +383,68 @@ export async function getAvailableExercises(req: Request, res: Response): Promis
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
+
+// ── GET /api/v1/workouts/exercises/:id/alternatives ────────────────
+export async function getExerciseAlternatives(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  try {
+    const exercise = await prisma.exercise.findUnique({ where: { id } });
+    if (!exercise) {
+      res.status(404).json({ success: false, error: "Exercise not found" });
+      return;
+    }
+
+    // 1. Check direct ExerciseAlternative entries
+    const alternatives = await prisma.exerciseAlternative.findMany({
+      where: { exerciseId: id },
+      include: { alternative: true }
+    });
+
+    let data = alternatives.map(a => a.alternative);
+
+    // 2. Fallback: If empty, fetch exercises with same muscle group (excluding itself)
+    if (data.length === 0) {
+      data = await prisma.exercise.findMany({
+        where: {
+          muscleGroup: exercise.muscleGroup,
+          id: { not: id }
+        },
+        orderBy: { name: 'asc' },
+        take: 10
+      });
+    }
+
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    console.error("❌ [Workout] getExerciseAlternatives error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── POST /api/v1/workouts/session/swap ────────────────────────────
+export async function swapSessionExercise(req: Request, res: Response): Promise<void> {
+  const { workoutExerciseId, newExerciseId } = req.body;
+  if (!workoutExerciseId || !newExerciseId) {
+    res.status(400).json({ success: false, error: "Missing workoutExerciseId or newExerciseId" });
+    return;
+  }
+
+  try {
+    // 1. Perform Swap
+    const updated = await prisma.workoutExercise.update({
+      where: { id: workoutExerciseId },
+      data: { exerciseId: newExerciseId },
+      include: { exercise: true }
+    });
+
+    // 2. Clear any logged sets for this exercise log since the movement has changed
+    await prisma.exerciseSet.deleteMany({
+      where: { workoutExerciseId }
+    });
+
+    res.status(200).json({ success: true, data: updated });
+  } catch (err) {
+    console.error("❌ [Workout] swapSessionExercise error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}

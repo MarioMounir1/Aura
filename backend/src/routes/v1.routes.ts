@@ -16,7 +16,7 @@ import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-lo
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
-import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises } from "../controllers/workout.controller";
+import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -331,5 +331,19 @@ router.post("/workouts/session/set", requireAuth, logSet);
  * @access  Private (JWT required)
  */
 router.post("/workouts/session/:id/finish", requireAuth, finishSession);
+
+/**
+ * @route   GET /api/v1/workouts/exercises/:id/alternatives
+ * @desc    Get alternatives or similar exercises for a given exercise
+ * @access  Private (JWT required)
+ */
+router.get("/workouts/exercises/:id/alternatives", requireAuth, getExerciseAlternatives);
+
+/**
+ * @route   POST /api/v1/workouts/session/swap
+ * @desc    Swap an exercise in the active session with an alternative
+ * @access  Private (JWT required)
+ */
+router.post("/workouts/session/swap", requireAuth, swapSessionExercise);
 
 export default router;
