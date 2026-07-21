@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../features/premium/presentation/premium_upgrade_screen.dart';
 import '../../features/premium/data/services/purchase_service.dart';
 
 class AdBanner extends StatelessWidget {
@@ -39,7 +40,13 @@ class AdBanner extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
-              PurchaseService.instance.presentPaywall(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PremiumUpgradeScreen(),
+                  fullscreenDialog: true,
+                ),
+              );
             },
             splashColor: const Color(0xFFFBBF24).withOpacity(0.1),
             highlightColor: const Color(0xFFFBBF24).withOpacity(0.05),
