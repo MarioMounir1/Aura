@@ -88,6 +88,7 @@ class PurchaseService {
   /// Fetch all available subscription packages/offerings
   Future<Offerings> fetchOfferings() async {
     try {
+      await Purchases.invalidateCustomerInfoCache();
       return await Purchases.getOfferings();
     } catch (e) {
       print('❌ [RevenueCat] fetchOfferings error: $e');
