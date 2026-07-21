@@ -50,12 +50,12 @@ class PurchaseService {
       // Listen for subscription updates in real-time
       Purchases.addCustomerInfoUpdateListener((customerInfo) {
         final isActive = customerInfo.entitlements.all['premium']?.isActive ?? false;
-        _premiumStreamController.add(isActive);
+        setMockPremiumStatus(isActive);
       });
 
       // Emit initial entitlement state
       final currentInfo = await Purchases.getCustomerInfo();
-      _premiumStreamController.add(currentInfo.entitlements.all['premium']?.isActive ?? false);
+      setMockPremiumStatus(currentInfo.entitlements.all['premium']?.isActive ?? false);
     } catch (e) {
       print('❌ [RevenueCat] Initialization error: $e');
     }
@@ -67,7 +67,7 @@ class PurchaseService {
       if (!Platform.isAndroid && !Platform.isIOS) return;
       await Purchases.logIn(appUserId);
       final currentInfo = await Purchases.getCustomerInfo();
-      _premiumStreamController.add(currentInfo.entitlements.all['premium']?.isActive ?? false);
+      setMockPremiumStatus(currentInfo.entitlements.all['premium']?.isActive ?? false);
     } catch (e) {
       print('❌ [RevenueCat] LogIn error: $e');
     }
