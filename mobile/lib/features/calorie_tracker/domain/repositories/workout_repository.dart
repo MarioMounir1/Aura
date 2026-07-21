@@ -6,7 +6,7 @@ abstract class WorkoutRepository {
   Future<List<Map<String, dynamic>>> getAvailableExercises();
 
   /// Start a new gym workout session
-  Future<Map<String, dynamic>> startSession(String name);
+  Future<Map<String, dynamic>> startSession(String name, {List<Map<String, dynamic>>? exercises});
 
   /// Add an exercise to an ongoing session
   Future<Map<String, dynamic>> addExercise(

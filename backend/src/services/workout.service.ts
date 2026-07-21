@@ -4,12 +4,25 @@ export class WorkoutService {
   /**
    * Start a new gym workout session
    */
-  static async startWorkoutSession(userId: string, name: string) {
+  static async startWorkoutSession(userId: string, name: string, exercises?: any[]) {
+    // Determine the data to create
     return prisma.workoutSession.create({
       data: {
         userId,
         name,
+        ...(exercises && exercises.length > 0 && {
+          exercises: {
+            create: exercises.map((ex, index) => ({
+              // if ex.id exists, it's the Exercise template DB id
+              exerciseId: ex.id,
+              order: index,
+            }))
+          }
+        })
       },
+      include: {
+        exercises: true,
+      }
     });
   }
 

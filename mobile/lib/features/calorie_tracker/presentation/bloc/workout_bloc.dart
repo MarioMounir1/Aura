@@ -21,13 +21,61 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
   ) async {
     emit(WorkoutLoading());
     try {
-      final sessionData = await repository.startSession(event.sessionName);
+      List<Map<String, dynamic>>? payloadExercises;
+      if (event.initialExercises != null) {
+        payloadExercises = event.initialExercises!.map((e) => {
+          'id': e.id,
+          'name': e.name,
+          'targetSets': e.targetSets,
+          'muscleGroup': e.muscleGroup,
+          if (e.lastWeekWeight != null) 'lastWeekWeight': e.lastWeekWeight,
+          if (e.lastWeekReps != null) 'lastWeekReps': e.lastWeekReps,
+        }).toList();
+      }
+
+      final sessionData = await repository.startSession(
+        event.sessionName,
+        exercises: payloadExercises,
+      );
       final sessionId = sessionData['id'] as String;
 
-      // Initialize empty session
+      // The backend returns the created WorkoutSession along with nested exercises (WorkoutExercise)
+      // We map these back to WorkoutLog objects
+      List<WorkoutLog> initialLogs = [];
+      
+      final createdExercises = sessionData['exercises'] as List<dynamic>? ?? [];
+      if (createdExercises.isNotEmpty && event.initialExercises != null) {
+        for (int i = 0; i < event.initialExercises!.length; i++) {
+          final exTemplate = event.initialExercises![i];
+          // Match by order if possible, or just index
+          final dbEx = createdExercises.firstWhere(
+            (e) => e['exerciseId'] == exTemplate.id && e['order'] == i,
+            orElse: () => createdExercises.length > i ? createdExercises[i] : null,
+          );
+          
+          if (dbEx != null) {
+             initialLogs.add(
+                WorkoutLog(
+                  sessionId: sessionId,
+                  exerciseName: exTemplate.name,
+                  muscleGroup: exTemplate.muscleGroup,
+                  lastWeekTopPerformance: (exTemplate.lastWeekWeight != null && exTemplate.lastWeekReps != null)
+                      ? '${exTemplate.lastWeekWeight!.toStringAsFixed(0)} kg × ${exTemplate.lastWeekReps}'
+                      : null,
+                  sets: List.generate(exTemplate.targetSets, (sIdx) => ExerciseSet(
+                    id: dbEx['id'] as String, // the workoutExerciseId
+                    setIndex: sIdx + 1,
+                    label: sIdx == exTemplate.targetSets - 1 ? 'Top Set' : 'Working Set',
+                  )),
+                ),
+             );
+          }
+        }
+      }
+
       emit(WorkoutSessionActive(
         sessionId: sessionId,
-        currentLogs: [],
+        currentLogs: initialLogs,
       ));
     } catch (e) {
       emit(WorkoutError(e.toString()));

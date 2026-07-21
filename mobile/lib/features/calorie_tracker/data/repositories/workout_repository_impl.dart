@@ -21,11 +21,14 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> startSession(String name) async {
+  Future<Map<String, dynamic>> startSession(String name, {List<Map<String, dynamic>>? exercises}) async {
     try {
       final response = await _apiClient.dio.post(
         '/workouts/session/start',
-        data: {'name': name},
+        data: {
+          'name': name,
+          if (exercises != null) 'exercises': exercises,
+        },
       );
       return response.data['data'] as Map<String, dynamic>;
     } catch (e) {

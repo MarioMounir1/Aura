@@ -42,7 +42,17 @@ const SetupSchema = z.object({
   splitName:   z.string().min(1).max(120),
 });
 
-const StartSessionSchema = z.object({ name: z.string().min(1) });
+const StartSessionSchema = z.object({ 
+  name: z.string().min(1),
+  exercises: z.array(z.object({
+    id: z.string().optional(), // Exercise DB id
+    name: z.string(),
+    targetSets: z.number().int(),
+    muscleGroup: z.string().optional(),
+    lastWeekWeight: z.number().optional(),
+    lastWeekReps: z.number().optional()
+  })).optional()
+});
 const AddExerciseSchema = z.object({ sessionId: z.string(), exerciseId: z.string(), order: z.number().int(), notes: z.string().optional() });
 const LogSetSchema = z.object({ workoutExerciseId: z.string(), setNumber: z.number().int(), reps: z.number().int().optional(), weightKg: z.number().optional(), rpe: z.number().optional() });
 
@@ -230,6 +240,20 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
   }
 }
 
+// ── GET /api/v1/workouts/exercises ─────────────────────────────
+export async function getAvailableExercises(req: Request, res: Response): Promise<void> {
+  try {
+    const exercises = await prisma.exercise.findMany({
+      select: { id: true, name: true, muscleGroup: true, mechanic: true },
+      orderBy: { name: 'asc' },
+    });
+    res.status(200).json({ success: true, data: exercises });
+  } catch (err) {
+    console.error("❌ [Workout] getAvailableExercises error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
 // ── POST /api/v1/workouts/session/start ────────────────────────────
 export async function startSession(req: Request, res: Response): Promise<void> {
   try {
@@ -240,7 +264,7 @@ export async function startSession(req: Request, res: Response): Promise<void> {
     }
     
     const userId = req.user!.id;
-    const session = await WorkoutService.startWorkoutSession(userId, parsed.data.name);
+    const session = await WorkoutService.startWorkoutSession(userId, parsed.data.name, parsed.data.exercises);
     res.status(200).json({ success: true, data: session });
   } catch (err) {
     console.error("❌ [Workout] startSession error:", err);

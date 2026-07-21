@@ -215,7 +215,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
 
     context.read<WorkoutBloc>().add(StartWorkoutSession(
-        _currentSession != null ? _currentSession!.routineName : 'Custom Session'));
+      _currentSession != null ? _currentSession!.routineName : 'Custom Session',
+      initialExercises: _currentSession?.exercises,
+    ));
 
     setState(() {
       _state = WorkoutHubState.activeWorkout;
