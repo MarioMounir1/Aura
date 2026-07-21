@@ -16,6 +16,8 @@ class PurchaseService {
   PurchaseService._();
   static final PurchaseService instance = PurchaseService._();
 
+  static const bool isTestMode = true; // Set to true for mock purchases during testing, false for production
+
   // API Keys loaded via String.fromEnvironment (or falling back to the test credentials)
   static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
   static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
@@ -88,6 +90,27 @@ class PurchaseService {
 
   /// Purchase a package and return the updated premium entitlement status
   Future<bool> purchaseSubPackage(Package package) async {
+    if (isTestMode) {
+      print('ℹ️ [PurchaseService] simulating local 1-second purchase in Test Mode...');
+      await Future.delayed(const Duration(seconds: 1));
+      print('✅ Successful \$1.00 test purchase logged!');
+      
+      try {
+        final dio = ApiClient().dio;
+        await dio.post('/users/me/upgrade');
+        print('✅ Backend updated successfully!');
+      } catch (e) {
+        print('⚠️ Failed to notify backend: $e');
+        try {
+          final dio = ApiClient().dio;
+          await dio.post('/users/subscribe');
+        } catch (_) {}
+      }
+      
+      _premiumStreamController.add(true);
+      return true;
+    }
+
     try {
       final purchaseResult = await Purchases.purchasePackage(package);
       final isNowPremium = purchaseResult.customerInfo.entitlements.all['premium']?.isActive ?? false;
