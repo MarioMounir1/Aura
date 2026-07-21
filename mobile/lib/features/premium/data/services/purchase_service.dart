@@ -42,6 +42,12 @@ class PurchaseService {
 
       await Purchases.configure(configuration);
 
+      if (isTestMode) {
+        // Do not listen to real entitlements or emit them in test mode
+        _premiumStreamController.add(false);
+        return;
+      }
+
       // Listen for subscription updates in real-time
       Purchases.addCustomerInfoUpdateListener((customerInfo) {
         final isActive = customerInfo.entitlements.all['premium']?.isActive ?? false;
@@ -58,6 +64,9 @@ class PurchaseService {
 
   /// Log in the user to sync entitlements across devices
   Future<void> logIn(String appUserId) async {
+    if (isTestMode) {
+      return; // Do not fetch or emit real customer info in test mode
+    }
     try {
       await Purchases.logIn(appUserId);
       final currentInfo = await Purchases.getCustomerInfo();
@@ -69,6 +78,9 @@ class PurchaseService {
 
   /// Check current entitlement status synchronously/on-demand
   Future<bool> isPremium() async {
+    if (isTestMode) {
+      return false; // Let database status control it in test mode
+    }
     try {
       final customerInfo = await Purchases.getCustomerInfo();
       return customerInfo.entitlements.all['premium']?.isActive ?? false;
