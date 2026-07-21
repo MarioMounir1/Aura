@@ -98,4 +98,31 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       throw Exception('Failed to finish session: $e');
     }
   }
+
+  @override
+  Future<List<Map<String, dynamic>>> getAlternatives(String exerciseId) async {
+    try {
+      final response = await _apiClient.dio.get('/workouts/exercises/$exerciseId/alternatives');
+      final data = response.data['data'] as List;
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch alternative exercises: $e');
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> swapExercise(String workoutExerciseId, String newExerciseId) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/workouts/session/swap',
+        data: {
+          'workoutExerciseId': workoutExerciseId,
+          'newExerciseId': newExerciseId,
+        },
+      );
+      return response.data['data'] as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to swap exercise: $e');
+    }
+  }
 }

@@ -13,6 +13,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     on<AddExerciseToSessionEvent>(_onAddExerciseToSessionEvent);
     on<LogSetEvent>(_onLogSetEvent);
     on<FinishWorkoutSession>(_onFinishWorkoutSession);
+    on<SwapWorkoutExercise>(_onSwapWorkoutExercise);
   }
 
   Future<void> _onStartWorkoutSession(
@@ -24,10 +25,10 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       List<Map<String, dynamic>>? payloadExercises;
       if (event.initialExercises != null) {
         payloadExercises = event.initialExercises!.map((e) => {
-          'id': e.id,
+          if (e.id != null) 'id': e.id,
           'name': e.name,
           'targetSets': e.targetSets,
-          'muscleGroup': e.muscleGroup,
+          if (e.muscleGroup.isNotEmpty) 'muscleGroup': e.muscleGroup,
           if (e.lastWeekWeight != null) 'lastWeekWeight': e.lastWeekWeight,
           if (e.lastWeekReps != null) 'lastWeekReps': e.lastWeekReps,
         }).toList();
@@ -206,6 +207,57 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     try {
       await repository.finishSession(currentState.sessionId, notes: 'Great workout!');
       emit(const WorkoutSessionFinished('Workout successfully completed!'));
+    } catch (e) {
+      emit(currentState.copyWith(
+        isSubmitting: false,
+        error: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onSwapWorkoutExercise(
+    SwapWorkoutExercise event,
+    Emitter<WorkoutState> emit,
+  ) async {
+    final currentState = state;
+    if (currentState is! WorkoutSessionActive) return;
+
+    emit(currentState.copyWith(isSubmitting: true));
+
+    try {
+      // 1. Perform Swap via repository
+      await repository.swapExercise(event.workoutExerciseId, event.newExerciseId);
+      
+      // 2. Fetch the metadata for the replacement exercise
+      final newExerciseDetail = currentState.availableExercises?.firstWhere(
+        (e) => e.id == event.newExerciseId,
+        orElse: () => Exercise(id: event.newExerciseId, name: 'Alternative Movement', muscleGroup: 'Alternative'),
+      );
+
+      // 3. Map logs to updated exercise state
+      final updatedLogs = currentState.currentLogs.map((log) {
+        final matches = log.sets.any((s) => s.id == event.workoutExerciseId);
+        if (matches) {
+          final targetSetsCount = log.sets.length;
+          return WorkoutLog(
+            sessionId: log.sessionId,
+            exerciseName: newExerciseDetail?.name ?? 'Alternative Movement',
+            muscleGroup: newExerciseDetail?.muscleGroup ?? 'Alternative',
+            lastWeekTopPerformance: null, // Reset history as movement changed
+            sets: List.generate(targetSetsCount, (sIdx) => ExerciseSet(
+              id: event.workoutExerciseId,
+              setIndex: sIdx + 1,
+              label: sIdx == targetSetsCount - 1 ? 'Top Set' : 'Working Set',
+            )),
+          );
+        }
+        return log;
+      }).toList();
+
+      emit(currentState.copyWith(
+        currentLogs: updatedLogs,
+        isSubmitting: false,
+      ));
     } catch (e) {
       emit(currentState.copyWith(
         isSubmitting: false,

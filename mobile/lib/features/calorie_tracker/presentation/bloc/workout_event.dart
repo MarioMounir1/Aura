@@ -49,3 +49,16 @@ class LogSetEvent extends WorkoutEvent {
 class FinishWorkoutSession extends WorkoutEvent {
   const FinishWorkoutSession();
 }
+
+class SwapWorkoutExercise extends WorkoutEvent {
+  final String workoutExerciseId;
+  final String newExerciseId;
+
+  const SwapWorkoutExercise({
+    required this.workoutExerciseId,
+    required this.newExerciseId,
+  });
+
+  @override
+  List<Object> get props => [workoutExerciseId, newExerciseId];
+}

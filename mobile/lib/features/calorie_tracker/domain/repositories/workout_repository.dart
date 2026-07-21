@@ -27,4 +27,10 @@ abstract class WorkoutRepository {
 
   /// Finish the workout session
   Future<Map<String, dynamic>> finishSession(String sessionId, {String? notes});
+
+  /// Fetch alternative exercises for a given exercise
+  Future<List<Map<String, dynamic>>> getAlternatives(String exerciseId);
+
+  /// Swap an exercise in the active session with a new exercise
+  Future<Map<String, dynamic>> swapExercise(String workoutExerciseId, String newExerciseId);
 }
