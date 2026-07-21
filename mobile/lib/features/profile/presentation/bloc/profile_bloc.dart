@@ -165,6 +165,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) {
     final currentState = state;
     if (currentState is ProfileLoaded) {
+      if (currentState.user['isPremium'] == event.isPremium) return;
       final updatedUser = Map<String, dynamic>.from(currentState.user);
       updatedUser['isPremium'] = event.isPremium;
       emit(ProfileLoaded(
