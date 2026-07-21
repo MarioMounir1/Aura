@@ -21,7 +21,9 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
 
-  bool _isUpgrading = false;
+  Offerings? _offerings;
+  bool _loadingOfferings = true;
+  String? _offeringsError;
 
   @override
   void initState() {
@@ -37,6 +39,26 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
     _controller.forward();
+    _loadOfferings();
+  }
+
+  Future<void> _loadOfferings() async {
+    try {
+      final offerings = await PurchaseService.instance.fetchOfferings();
+      if (mounted) {
+        setState(() {
+          _offerings = offerings;
+          _loadingOfferings = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _offeringsError = e.toString();
+          _loadingOfferings = false;
+        });
+      }
+    }
   }
 
   @override
@@ -50,7 +72,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
     
     try {
       final dio = ApiClient().dio;
-      // Mock endpoint — we will implement this on the backend
+      // Tell backend user is now premium. (Backend verification step next)
       await dio.post('/users/me/upgrade');
       
       // Refresh profile to pull the new isPremium status
@@ -68,7 +90,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to upgrade: $e'),
+            content: Text('Failed to sync profile: $e'),
             backgroundColor: const Color(0xFFF44336),
           ),
         );
@@ -78,7 +100,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
     }
   }
 
-  void _showMockPaymentDialog() {
+  void _showMockPaymentDialog(Package package) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -121,7 +143,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'You are subscribing to Aura Premium for \$1.00 / month. Enter mock billing info to proceed.',
+                    'Subscribe to Aura Premium for ${package.storeProduct.priceString} / month.',
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: const Color(0xFF9CA3AF),
@@ -185,11 +207,27 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                         child: ElevatedButton(
                           onPressed: processing ? null : () async {
                             setModalState(() => processing = true);
-                            // Simulate payment processing time
-                            await Future.delayed(const Duration(seconds: 2));
-                            if (mounted) {
-                              Navigator.pop(context); // Close sheet
-                              _completeUpgradeBackend(); // Call backend to set premium flag
+                            try {
+                              // Perform RevenueCat Purchase
+                              final success = await PurchaseService.instance.purchaseSubPackage(package);
+                              if (success && mounted) {
+                                Navigator.pop(context); // Close sheet
+                                _completeUpgradeBackend(); // Sync subscription to DB
+                              } else {
+                                if (mounted) {
+                                  setModalState(() => processing = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Purchase not active.'), backgroundColor: Colors.orange),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                setModalState(() => processing = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Payment Failed: $e'), backgroundColor: Colors.red),
+                                );
+                              }
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -203,7 +241,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                                 width: 20, height: 20,
                                 child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                               )
-                            : Text('Pay \$1.00', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                            : Text('Pay ${package.storeProduct.priceString}', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
@@ -219,6 +257,8 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final package = _offerings?.current?.monthly;
+
     return Scaffold(
       backgroundColor: const Color(0xFF090C15), // Deep dark bg
       appBar: AppBar(
@@ -336,33 +376,53 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                       SizedBox(
                         width: double.infinity,
                         height: 56,
-                        child: ElevatedButton(
-                          onPressed: _isUpgrading ? null : _showMockPaymentDialog,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFBBF24), // Amber primary
-                            foregroundColor: Colors.black, // Dark text
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: _isUpgrading
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.black54,
-                                  ),
-                                )
-                              : const Text(
-                                  'Subscribe for \$1',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                        child: _loadingOfferings
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFFBBF24),
                                 ),
-                        ),
+                              )
+                            : _offeringsError != null
+                                ? ElevatedButton(
+                                    onPressed: _loadOfferings,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFEF4444),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: const Text('Failed to load. Retry?'),
+                                  )
+                                : ElevatedButton(
+                                    onPressed: (package == null || _isUpgrading)
+                                        ? null
+                                        : () => _showMockPaymentDialog(package),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFBBF24), // Amber primary
+                                      foregroundColor: Colors.black, // Dark text
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: _isUpgrading
+                                        ? const SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.black54,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Subscribe for ${package?.storeProduct.priceString ?? "\$1"}',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                  ),
                       ),
                       const SizedBox(height: 16),
                       

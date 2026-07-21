@@ -58,3 +58,11 @@ class UpdateProfileEvent extends ProfileEvent {
 class CheckOnboardingStatus extends ProfileEvent {}
 
 class CompleteOnboardingEvent extends ProfileEvent {}
+
+class UpdatePremiumStatus extends ProfileEvent {
+  final bool isPremium;
+  const UpdatePremiumStatus(this.isPremium);
+
+  @override
+  List<Object?> get props => [isPremium];
+}

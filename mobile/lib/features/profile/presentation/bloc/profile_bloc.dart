@@ -1,19 +1,24 @@
-// lib/features/profile/presentation/bloc/profile_bloc.dart
-// The Teneen — Profile BLoC
-
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../premium/data/services/purchase_service.dart';
 import '../../domain/repositories/profile_repository.dart';
 import 'profile_event.dart';
 import 'profile_state.dart';
 
 class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   final ProfileRepository repository;
+  StreamSubscription? _premiumSubscription;
 
   ProfileBloc({required this.repository}) : super(ProfileInitial()) {
     on<LoadProfile>(_onLoadProfile);
     on<UpdateProfileEvent>(_onUpdateProfile);
     on<CheckOnboardingStatus>(_onCheckOnboardingStatus);
     on<CompleteOnboardingEvent>(_onCompleteOnboarding);
+    on<UpdatePremiumStatus>(_onUpdatePremiumStatus);
+
+    _premiumSubscription = PurchaseService.instance.premiumStream.listen((isPremium) {
+      add(UpdatePremiumStatus(isPremium));
+    });
   }
 
   Future<void> _onLoadProfile(
@@ -38,7 +43,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         final ageVal = user['age'];
         final weightVal = user['weightKg'];
         final heightVal = user['heightCm'];
+        final userId = user['id'] as String? ?? '';
         
+        // Initialize RevenueCat with the user's ID
+        if (userId.isNotEmpty) {
+          PurchaseService.instance.init(userId);
+        }
+
         print("DEBUG [ProfileBloc]: fetched user Map: $user");
         print("DEBUG [ProfileBloc]: isOnboardingCompleted (local): $isOnboardingCompleted");
         print("DEBUG [ProfileBloc]: ageVal: $ageVal, weightVal: $weightVal, heightVal: $heightVal");
@@ -138,5 +149,26 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         )),
       );
     }
+  }
+
+  void _onUpdatePremiumStatus(
+    UpdatePremiumStatus event,
+    Emitter<ProfileState> emit,
+  ) {
+    final currentState = state;
+    if (currentState is ProfileLoaded) {
+      final updatedUser = Map<String, dynamic>.from(currentState.user);
+      updatedUser['isPremium'] = event.isPremium;
+      emit(ProfileLoaded(
+        user: updatedUser,
+        isOnboardingCompleted: currentState.isOnboardingCompleted,
+      ));
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _premiumSubscription?.cancel();
+    return super.close();
   }
 }
