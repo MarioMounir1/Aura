@@ -45,6 +45,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         final heightVal = user['heightCm'];
         final userId = user['id'] as String? ?? '';
         
+        // Sync isPremium status from backend DB
+        final bool isDbPremium = user['isPremium'] == true;
+        PurchaseService.instance.setMockPremiumStatus(isDbPremium);
+
         // Log into RevenueCat with the user's ID & sync entitlement status
         if (userId.isNotEmpty) {
           PurchaseService.instance.logIn(userId);
