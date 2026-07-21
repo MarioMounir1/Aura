@@ -40,13 +40,7 @@ class AdBanner extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PremiumUpgradeScreen(),
-                  fullscreenDialog: true,
-                ),
-              );
+              PurchaseService.instance.presentPaywall(context);
             },
             splashColor: const Color(0xFFFBBF24).withOpacity(0.1),
             highlightColor: const Color(0xFFFBBF24).withOpacity(0.05),
