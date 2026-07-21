@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../premium/data/services/purchase_service.dart';
 import '../../domain/repositories/profile_repository.dart';
 import 'profile_event.dart';
@@ -45,8 +46,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         final heightVal = user['heightCm'];
         final userId = user['id'] as String? ?? '';
         
-        // Sync isPremium status from backend DB
+        // Sync isPremium status from backend DB to memory and local storage
         final bool isDbPremium = user['isPremium'] == true;
+        ApiClient().saveIsPremium(isDbPremium);
         PurchaseService.instance.setMockPremiumStatus(isDbPremium);
 
         // Log into RevenueCat with the user's ID & sync entitlement status
