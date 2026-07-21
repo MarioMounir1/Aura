@@ -20,9 +20,9 @@ class PurchaseService {
 
   static const bool isTestMode = false; // Set to false to enforce real RevenueCat purchases and entitlement checks
 
-  // Public API Keys for Mobile App SDK (Secret Keys sk_... belong ONLY in backend .env)
-  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'goog_WduHLUbxvLMORiUZWfuZsXzkcpV');
-  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'appl_WduHLUbxvLMORiUZWfuZsXzkcpV');
+  // Public API Keys for Mobile App SDK
+  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
+  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
 
   final _premiumStreamController = StreamController<bool>.broadcast();
   bool? _currentMockStatus;
