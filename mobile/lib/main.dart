@@ -50,6 +50,9 @@ import 'features/calorie_tracker/presentation/bloc/weight_bloc.dart';
 import 'features/calorie_tracker/presentation/bloc/meal_plan_bloc.dart';
 import 'features/calorie_tracker/presentation/gyms_screen.dart';
 import 'features/calorie_tracker/presentation/splash_screen.dart';
+import 'features/calorie_tracker/domain/repositories/workout_repository.dart';
+import 'features/calorie_tracker/data/repositories/workout_repository_impl.dart';
+import 'features/calorie_tracker/presentation/bloc/workout_bloc.dart';
 
 // ── Language Cubit ────────────────────────────────────────────
 // Simple cubit to hold and switch the app locale.
@@ -118,7 +121,8 @@ class TeneenApp extends StatelessWidget {
     final MealRepository  mealRepository = MealRepositoryImpl(apiClient);
     final AuthRepository  authRepository = AuthRepositoryImpl(apiClient);
     final ProfileRepository profileRepository = ProfileRepositoryImpl(apiClient);
-    final TrackerRepository trackerRepository = TrackerRepositoryImpl(apiClient);
+    final trackerRepository = TrackerRepositoryImpl(apiClient);
+    final WorkoutRepository workoutRepository = WorkoutRepositoryImpl(apiClient);
 
     return MultiRepositoryProvider(
       providers: [
@@ -126,6 +130,7 @@ class TeneenApp extends StatelessWidget {
         RepositoryProvider<AuthRepository>.value(value: authRepository),
         RepositoryProvider<ProfileRepository>.value(value: profileRepository),
         RepositoryProvider<TrackerRepository>.value(value: trackerRepository),
+        RepositoryProvider<WorkoutRepository>.value(value: workoutRepository),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -180,6 +185,12 @@ class TeneenApp extends StatelessWidget {
           BlocProvider<MealPlanBloc>(
             create: (ctx) => MealPlanBloc(
               repository: ctx.read<TrackerRepository>(),
+            ),
+          ),
+          // Workout Tracker
+          BlocProvider<WorkoutBloc>(
+            create: (ctx) => WorkoutBloc(
+              ctx.read<WorkoutRepository>(),
             ),
           ),
         ],

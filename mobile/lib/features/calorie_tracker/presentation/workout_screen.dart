@@ -26,6 +26,7 @@ import '../data/models/workout_models.dart';
 import 'bloc/workout_bloc.dart';
 import 'bloc/workout_event.dart';
 import 'bloc/workout_state.dart';
+import 'active_workout_view.dart';
 
 // ── State Machine ─────────────────────────────────────────────
 enum WorkoutHubState { unconfigured, loading, ready, activeWorkout }
@@ -229,6 +230,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        content: Text(
           'Workout complete! +30 pts 🎉',
           style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
         ),
