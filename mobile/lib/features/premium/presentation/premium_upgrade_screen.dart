@@ -73,19 +73,32 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
   Future<void> _handleSubscribe(Package? package) async {
     setState(() => _isUpgrading = true);
     try {
+      bool success = false;
       if (package != null) {
         // Perform simulated / real purchase
-        final success = await PurchaseService.instance.purchaseSubPackage(package);
-        if (success && mounted) {
-          // 1. Instantly update BLoC local state to true
-          context.read<ProfileBloc>().add(const UpdatePremiumStatus(true));
-          
-          // 2. Persist to backend by sending request in background / foreground
-          final dio = ApiClient().dio;
-          await dio.post('/users/subscribe');
-          
-          // 3. Inform user and pop the sheet immediately
+        success = await PurchaseService.instance.purchasePackage(package);
+      } else {
+        // Fallback mock checkout since package is null (RevenueCat not configured yet)
+        print('ℹ️ Simulating 1-second purchase in Test Mode (fallback)...');
+        await Future.delayed(const Duration(seconds: 1));
+        success = true;
+      }
+
+      if (success) {
+        // ONLY IF purchase succeeded, send request to the backend to update isPremium: true
+        final dio = ApiClient().dio;
+        final response = await dio.post('/users/subscribe');
+        
+        final data = response.data;
+        final bool isBackendSuccess = response.statusCode == 200 || 
+                                      response.statusCode == 201 ||
+                                      (data != null && data['success'] == true);
+
+        if (isBackendSuccess) {
+          // State & UI Sync: Update local state and stream status ONLY AFTER backend confirms
+          PurchaseService.instance.setMockPremiumStatus(true);
           if (mounted) {
+            context.read<ProfileBloc>().add(const UpdatePremiumStatus(true));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Welcome to Aura Premium!'),
@@ -96,39 +109,21 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
             Navigator.pop(context, true); // Close Paywall BottomSheet/Screen
           }
         } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Subscription purchase was not completed.'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
+          throw Exception('Backend failed to confirm premium subscription.');
         }
       } else {
-        // Fallback mock checkout since package is null (RevenueCat not configured yet)
-        await Future.delayed(const Duration(seconds: 1));
-        PurchaseService.instance.setMockPremiumStatus(true);
+        // IF the payment is cancelled, pending, or fails
         if (mounted) {
-          // 1. Instantly update BLoC local state to true
-          context.read<ProfileBloc>().add(const UpdatePremiumStatus(true));
-          
-          // 2. Persist to backend
-          final dio = ApiClient().dio;
-          await dio.post('/users/subscribe');
-          
-          // 3. Show success and pop
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Welcome to Aura Premium!'),
-              backgroundColor: Color(0xFF4CAF50),
-              duration: Duration(seconds: 2),
+              content: Text('Subscription purchase was not completed.'),
+              backgroundColor: Colors.orange,
             ),
           );
-          Navigator.pop(context, true);
         }
       }
     } catch (e) {
+      // IF the payment fails or backend fails, DO NOT change isPremium or state. Show error message.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
