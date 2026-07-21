@@ -275,6 +275,63 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
     const meta = ROUTINE_CATALOGUE[splitType];
     const currentSession = await buildCurrentSession(userId, splitType, splitName);
 
+    // Compute real workout streak & weekly completion from DB
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const dayOfWeek = (now.getDay() + 6) % 7; // Mon = 0, Sun = 6
+    startOfWeek.setDate(now.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+    const thisWeekSessions = await prisma.workoutSession.findMany({
+      where: {
+        userId,
+        startedAt: {
+          gte: startOfWeek,
+          lt: endOfWeek,
+        },
+      },
+      select: { startedAt: true },
+    });
+
+    const completedDaysThisWeek = [false, false, false, false, false, false, false];
+    thisWeekSessions.forEach((session) => {
+      const sessDay = (new Date(session.startedAt).getDay() + 6) % 7;
+      if (sessDay >= 0 && sessDay < 7) {
+        completedDaysThisWeek[sessDay] = true;
+      }
+    });
+
+    let streakDays = 0;
+    const allSessions = await prisma.workoutSession.findMany({
+      where: { userId },
+      select: { startedAt: true },
+      orderBy: { startedAt: 'desc' },
+    });
+
+    if (allSessions.length > 0) {
+      const sessionDates = new Set(
+        allSessions.map((s) => new Date(s.startedAt).toISOString().split('T')[0])
+      );
+      
+      let checkDate = new Date();
+      checkDate.setHours(0, 0, 0, 0);
+      let checkStr = checkDate.toISOString().split('T')[0];
+
+      if (!sessionDates.has(checkStr)) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        checkStr = checkDate.toISOString().split('T')[0];
+      }
+
+      while (sessionDates.has(checkStr)) {
+        streakDays++;
+        checkDate.setDate(checkDate.getDate() - 1);
+        checkStr = checkDate.toISOString().split('T')[0];
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -287,6 +344,8 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
           configuredAt: user.updatedAt.toISOString(),
         },
         currentSession,
+        streakDays,
+        completedDaysThisWeek,
       },
     });
   } catch (err: unknown) {
