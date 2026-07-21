@@ -29,18 +29,14 @@ class PurchaseService {
     try {
       await Purchases.setLogLevel(LogLevel.debug);
       
-      late PurchasesConfiguration configuration;
-      if (Platform.isAndroid) {
-        configuration = PurchasesConfiguration(_googleApiKey);
-      } else if (Platform.isIOS) {
-        configuration = PurchasesConfiguration(_appleApiKey);
-      } else {
+      if (!Platform.isAndroid && !Platform.isIOS) {
         return; // Platform not supported by RevenueCat
       }
 
-      if (appUserId != null) {
-        configuration.appUserId = appUserId;
-      }
+      final configuration = PurchasesConfiguration(
+        Platform.isAndroid ? _googleApiKey : _appleApiKey,
+        appUserId: appUserId,
+      );
 
       await Purchases.configure(configuration);
 
@@ -93,8 +89,8 @@ class PurchaseService {
   /// Purchase a package and return the updated premium entitlement status
   Future<bool> purchaseSubPackage(Package package) async {
     try {
-      final customerInfo = await Purchases.purchasePackage(package);
-      final isNowPremium = customerInfo.entitlements.all['premium']?.isActive ?? false;
+      final purchaseResult = await Purchases.purchasePackage(package);
+      final isNowPremium = purchaseResult.customerInfo.entitlements.all['premium']?.isActive ?? false;
       _premiumStreamController.add(isNowPremium);
       return isNowPremium;
     } catch (e) {
