@@ -15,6 +15,18 @@ class StartWorkoutSession extends WorkoutEvent {
   List<Object> get props => [sessionName];
 }
 
+class FetchAvailableExercises extends WorkoutEvent {
+  const FetchAvailableExercises();
+}
+
+class AddExerciseToSessionEvent extends WorkoutEvent {
+  final String exerciseId;
+  const AddExerciseToSessionEvent(this.exerciseId);
+
+  @override
+  List<Object> get props => [exerciseId];
+}
+
 class LogSetEvent extends WorkoutEvent {
   final int setIndex;
   final double weightKg;

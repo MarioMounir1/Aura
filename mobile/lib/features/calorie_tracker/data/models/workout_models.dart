@@ -10,10 +10,37 @@
 // ExerciseSet       → one logged set (weight, reps, locked state)
 
 // ═══════════════════════════════════════════════════════════════
+// Exercise (Database Entity)
+// ═══════════════════════════════════════════════════════════════
+
+class Exercise {
+  final String id;
+  final String name;
+  final String muscleGroup;
+  final String? mechanic;
+  
+  const Exercise({
+    required this.id,
+    required this.name,
+    required this.muscleGroup,
+    this.mechanic,
+  });
+
+  factory Exercise.fromJson(Map<String, dynamic> j) => Exercise(
+    id:          j['id'] as String? ?? '',
+    name:        j['name'] as String? ?? 'Exercise',
+    muscleGroup: j['muscleGroup'] as String? ?? '',
+    mechanic:    j['mechanic'] as String?,
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // SessionExercise
 // ═══════════════════════════════════════════════════════════════
 
 class SessionExercise {
+  final String? id; // Real DB Exercise ID
+  final String? workoutExerciseId; // Real DB WorkoutExercise ID if added to a session
   final String name;
   final int targetSets;
   final String muscleGroup;
@@ -21,6 +48,8 @@ class SessionExercise {
   final int? lastWeekReps;
 
   const SessionExercise({
+    this.id,
+    this.workoutExerciseId,
     required this.name,
     required this.targetSets,
     required this.muscleGroup,
@@ -29,6 +58,8 @@ class SessionExercise {
   });
 
   factory SessionExercise.fromJson(Map<String, dynamic> j) => SessionExercise(
+        id:             j['id'] as String?,
+        workoutExerciseId: j['workoutExerciseId'] as String?,
         name:           j['name'] as String? ?? 'Exercise',
         targetSets:     (j['targetSets'] as num?)?.toInt() ?? 3,
         muscleGroup:    j['muscleGroup'] as String? ?? '',
@@ -209,6 +240,7 @@ class RoutineCatalogue {
 // ═══════════════════════════════════════════════════════════════
 
 class ExerciseSet {
+  String? id; // Real DB ExerciseSet ID when saved
   final int setIndex;       // 1-based display number
   final String label;       // 'Warm-up', 'Working Set', 'Top Set'
   final double? targetWeightKg;
@@ -221,6 +253,7 @@ class ExerciseSet {
   DateTime? loggedAt;
 
   ExerciseSet({
+    this.id,
     required this.setIndex,
     required this.label,
     this.targetWeightKg,
@@ -240,6 +273,7 @@ class ExerciseSet {
   }
 
   Map<String, dynamic> toJson() => {
+    'id':             id,
     'setIndex':       setIndex,
     'label':          label,
     'targetWeightKg': targetWeightKg,
@@ -256,6 +290,7 @@ class ExerciseSet {
 // ═══════════════════════════════════════════════════════════════
 
 class WorkoutLog {
+  String? sessionId; // Real DB WorkoutSession ID
   final String exerciseName;
   final String muscleGroup;
   final List<ExerciseSet> sets;
@@ -263,6 +298,7 @@ class WorkoutLog {
   final DateTime startedAt;
 
   WorkoutLog({
+    this.sessionId,
     required this.exerciseName,
     required this.muscleGroup,
     required this.sets,

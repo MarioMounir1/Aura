@@ -10,6 +10,17 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   WorkoutRepositoryImpl(this._apiClient);
 
   @override
+  Future<List<Map<String, dynamic>>> getAvailableExercises() async {
+    try {
+      final response = await _apiClient.dio.get('/workouts/exercises');
+      final data = response.data['data'] as List;
+      return data.map((e) => e as Map<String, dynamic>).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch exercises: $e');
+    }
+  }
+
+  @override
   Future<Map<String, dynamic>> startSession(String name) async {
     try {
       final response = await _apiClient.dio.post(

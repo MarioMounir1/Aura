@@ -63,13 +63,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   // ── State ──────────────────────────────────────────────────
   WorkoutHubState _state = WorkoutHubState.loading;
-  RoutineSuggestion? _activeRoutine;
-  CurrentSession? _currentSession;          // ← live session data from backend
   int _activeDays = 0;
+  RoutineSuggestion? _activeRoutine;
+  CurrentSession? _currentSession;
   String? _errorMessage;
 
-  // ── Active Workout (log state) ─────────────────────────────
-  WorkoutLog? _activeLog;
 
   // ── Streak (mock — replace with backend data) ──────────────
   final int _streakDays = 5;
@@ -215,32 +213,23 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       return;
     }
 
-    if (_activeRoutine == null) return;
-    final log = _currentSession != null
-        ? WorkoutLog.fromSession(_currentSession!)
-        : WorkoutLog.defaultPushDay();
-
-    context.read<WorkoutBloc>().add(StartWorkoutSession(log.exerciseName));
+    context.read<WorkoutBloc>().add(StartWorkoutSession(
+        _currentSession != null ? _currentSession!.routineName : 'Custom Session'));
 
     setState(() {
-      _activeLog = log;
-      _state     = WorkoutHubState.activeWorkout;
+      _state = WorkoutHubState.activeWorkout;
     });
   }
 
-  // ── Finish Workout ─────────────────────────────────────────
   void _finishWorkout() {
     context.read<WorkoutBloc>().add(const FinishWorkoutSession());
 
-    final logged = _activeLog?.sets.where((s) => s.isLogged).length ?? 0;
     setState(() {
-      _activeLog = null;
-      _state     = WorkoutHubState.ready;
+      _state = WorkoutHubState.ready;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Workout complete! $logged sets logged. +30 pts 🎉',
+          'Workout complete! +30 pts 🎉',
           style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         backgroundColor: _C.success,
@@ -299,7 +288,19 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       case WorkoutHubState.loading:
         return _buildLoadingView(isArabic);
       case WorkoutHubState.activeWorkout:
-        return _buildActiveWorkoutView(isArabic);
+        return BlocBuilder<WorkoutBloc, WorkoutState>(
+          builder: (context, workoutState) {
+            if (workoutState is WorkoutSessionActive) {
+              return ActiveWorkoutView(
+                key: const ValueKey('activeWorkout'),
+                sessionState: workoutState,
+                isArabic: isArabic,
+                onFinish: _finishWorkout,
+              );
+            }
+            return _buildLoadingView(isArabic);
+          },
+        );
       case WorkoutHubState.unconfigured:
       case WorkoutHubState.ready:
         return _buildHubView(isArabic);
@@ -849,16 +850,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ══════════════════════════════════════════════════════════════
   // ACTIVE WORKOUT VIEW
   // ══════════════════════════════════════════════════════════════
-
-  Widget _buildActiveWorkoutView(bool isArabic) {
-    if (_activeLog == null) return const SizedBox.shrink();
-    return _ActiveWorkoutView(
-      key: const ValueKey('activeWorkout'),
-      log: _activeLog!,
-      isArabic: isArabic,
-      onFinish: _finishWorkout,
-    );
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1196,363 +1187,6 @@ class _QuestionnaireSheetState extends State<_QuestionnaireSheet> {
         ),
         const SizedBox(height: 24),
       ],
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Active Workout View
-// ═══════════════════════════════════════════════════════════════
-
-class _ActiveWorkoutView extends StatefulWidget {
-  final WorkoutLog log;
-  final bool isArabic;
-  final VoidCallback onFinish;
-
-  const _ActiveWorkoutView({
-    super.key,
-    required this.log,
-    required this.isArabic,
-    required this.onFinish,
-  });
-
-  @override
-  State<_ActiveWorkoutView> createState() => _ActiveWorkoutViewState();
-}
-
-class _ActiveWorkoutViewState extends State<_ActiveWorkoutView> {
-  late final List<TextEditingController> _weightCtrl;
-  late final List<TextEditingController> _repsCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _weightCtrl = widget.log.sets.map((s) => TextEditingController(
-      text: s.loggedWeightKg?.toStringAsFixed(0) ?? '',
-    )).toList();
-    _repsCtrl = widget.log.sets.map((s) => TextEditingController(
-      text: s.loggedReps?.toString() ?? '',
-    )).toList();
-  }
-
-  @override
-  void dispose() {
-    for (final c in _weightCtrl) c.dispose();
-    for (final c in _repsCtrl) c.dispose();
-    super.dispose();
-  }
-
-  void _logSet(int index) {
-    final weight = double.tryParse(_weightCtrl[index].text.trim());
-    final reps   = int.tryParse(_repsCtrl[index].text.trim());
-
-    if (weight == null || reps == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Enter valid weight and reps.',
-              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-          backgroundColor: _C.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      final s = widget.log.sets[index];
-      final bool willLog = !s.isLogged;
-
-      if (willLog) {
-        context.read<WorkoutBloc>().add(
-          LogSetEvent(
-            setIndex: s.setIndex,
-            weightKg: weight,
-            reps: reps,
-            workoutExerciseId: widget.log.exerciseName,
-          ),
-        );
-      }
-
-      s.loggedWeightKg = weight;
-      s.loggedReps     = reps;
-      s.isLogged       = willLog;
-      s.loggedAt       = willLog ? DateTime.now() : null;
-    });
-
-    HapticFeedback.lightImpact();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final log = widget.log;
-    return Column(
-      key: const ValueKey('activeWorkout'),
-      children: [
-        // AppBar-like header
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          decoration: BoxDecoration(
-            color: _C.card,
-            border: Border(bottom: BorderSide(color: _C.border, width: 1)),
-          ),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: widget.onFinish,
-                child: const Icon(Icons.close_rounded, color: _C.textPri, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  widget.isArabic ? 'جلسة التمرين النشطة' : 'Active Workout Session',
-                  style: GoogleFonts.inter(
-                      fontSize: 15, fontWeight: FontWeight.w700, color: _C.textPri),
-                ),
-              ),
-              // Logged set counter
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _C.cyan.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: _C.cyan.withOpacity(0.3)),
-                ),
-                child: Text(
-                  '${log.loggedSetsCount}/${log.sets.length} sets',
-                  style: GoogleFonts.inter(
-                      fontSize: 11, fontWeight: FontWeight.w700, color: _C.cyan),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: ListView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-            children: [
-              // Exercise name + muscle group
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    log.exerciseName,
-                    style: GoogleFonts.inter(
-                        fontSize: 22, fontWeight: FontWeight.w900, color: _C.textPri),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _C.cardElev,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: _C.border),
-                    ),
-                    child: Text(log.muscleGroup,
-                        style: GoogleFonts.inter(fontSize: 11, color: _C.textSec)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-
-              // Last week performance — directly under exercise name
-              if (log.lastWeekTopPerformance != null)
-                Row(children: [
-                  const Icon(Icons.history_rounded, size: 13, color: _C.textMut),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Last week's top: ${log.lastWeekTopPerformance}",
-                    style: GoogleFonts.inter(fontSize: 12, color: _C.textMut),
-                  ),
-                ]),
-              const SizedBox(height: 20),
-
-              // Form demo card
-              Container(
-                width: double.infinity, height: 130,
-                decoration: BoxDecoration(
-                  color: _C.cardElev,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: _C.border, width: 1.2),
-                ),
-                child: Stack(alignment: Alignment.center, children: [
-                  Opacity(
-                    opacity: 0.12,
-                    child: const Icon(Icons.fitness_center_rounded,
-                        size: 64, color: _C.cyan),
-                  ),
-                  Positioned(
-                    bottom: 10, right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.loop_rounded, color: _C.cyan, size: 11),
-                        const SizedBox(width: 5),
-                        Text('FORM GUIDE',
-                            style: GoogleFonts.inter(
-                                fontSize: 9, fontWeight: FontWeight.w800, color: _C.textPri)),
-                      ]),
-                    ),
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 22),
-
-              // Table header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(children: [
-                  Expanded(flex: 4,
-                      child: Text('SET & TARGET',
-                          style: GoogleFonts.inter(
-                              fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-                  Expanded(flex: 3,
-                      child: Text('WEIGHT (kg)',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                              fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-                  Expanded(flex: 3,
-                      child: Text('REPS',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
-                              fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-                  const SizedBox(width: 46),
-                ]),
-              ),
-              const SizedBox(height: 10),
-
-              // Dynamic set rows
-              ...List.generate(log.sets.length, (i) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildSetRow(i, log.sets[i]),
-              )),
-            ],
-          ),
-        ),
-
-        // Finish button
-        Positioned(
-          bottom: 0,
-          child: Container(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSetRow(int index, ExerciseSet s) {
-    final locked = s.isLogged;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: locked ? _C.cyan.withOpacity(0.07) : _C.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: locked ? _C.cyan : _C.border,
-          width: locked ? 1.6 : 1.2,
-        ),
-      ),
-      child: Row(children: [
-        // Set label column
-        Expanded(flex: 4, child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              if (s.label == 'Top Set') ...[
-                const Icon(Icons.star_rounded, color: _C.amber, size: 14),
-                const SizedBox(width: 4),
-              ],
-              Text('Set ${s.setIndex}',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w700,
-                      color: s.label == 'Top Set' ? _C.amber : _C.textPri)),
-            ]),
-            const SizedBox(height: 2),
-            Text(s.targetDisplayLabel,
-                style: GoogleFonts.inter(fontSize: 10, color: _C.textMut)),
-          ],
-        )),
-
-        // Weight input
-        Expanded(flex: 3, child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: SizedBox(height: 38, child: TextFormField(
-            controller: _weightCtrl[index],
-            enabled: !locked,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textAlign: TextAlign.center,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-            style: GoogleFonts.inter(
-                fontSize: 14, fontWeight: FontWeight.w700,
-                color: locked ? _C.textMut : _C.textPri),
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.zero,
-              filled: true,
-              fillColor: locked ? _C.cardElev.withOpacity(0.5) : _C.cardElev,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.cyan, width: 1.5)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.border)),
-            ),
-          )),
-        )),
-
-        // Reps input
-        Expanded(flex: 3, child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: SizedBox(height: 38, child: TextFormField(
-            controller: _repsCtrl[index],
-            enabled: !locked,
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: GoogleFonts.inter(
-                fontSize: 14, fontWeight: FontWeight.w700,
-                color: locked ? _C.textMut : _C.textPri),
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.zero,
-              filled: true,
-              fillColor: locked ? _C.cardElev.withOpacity(0.5) : _C.cardElev,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.cyan, width: 1.5)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.border)),
-            ),
-          )),
-        )),
-
-        // Checkmark lock button
-        SizedBox(width: 46, child: IconButton(
-          icon: Icon(
-            locked ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
-            color: locked ? _C.cyan : _C.textMut,
-            size: 26,
-          ),
-          onPressed: () => _logSet(index),
-          padding: EdgeInsets.zero,
-        )),
-      ]),
     );
   }
 }

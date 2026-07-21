@@ -16,7 +16,7 @@ import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-lo
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
-import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession } from "../controllers/workout.controller";
+import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -274,6 +274,13 @@ router.get("/meals/suggestions", requireAuth, getSuggestions);
 router.delete("/meals/:id", requireAuth, deleteMealLog);
 
 // ── Workout Routes ──────────────────────────────────────────
+
+/**
+ * @route   GET /api/v1/workouts/exercises
+ * @desc    Get all available exercises from the database
+ * @access  Private (JWT required)
+ */
+router.get("/workouts/exercises", requireAuth, getAvailableExercises);
 
 /**
  * @route   POST /api/v1/workouts/setup

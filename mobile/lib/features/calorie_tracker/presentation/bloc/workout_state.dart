@@ -14,33 +14,37 @@ class WorkoutLoading extends WorkoutState {}
 
 class WorkoutSessionActive extends WorkoutState {
   final String sessionId;
-  final WorkoutLog currentLog;
+  final List<WorkoutLog> currentLogs;
   final bool isSubmitting;
   final String? error;
+  final List<Exercise>? availableExercises;
 
   const WorkoutSessionActive({
     required this.sessionId,
-    required this.currentLog,
+    required this.currentLogs,
     this.isSubmitting = false,
     this.error,
+    this.availableExercises,
   });
 
   WorkoutSessionActive copyWith({
     String? sessionId,
-    WorkoutLog? currentLog,
+    List<WorkoutLog>? currentLogs,
     bool? isSubmitting,
     String? error,
+    List<Exercise>? availableExercises,
   }) {
     return WorkoutSessionActive(
       sessionId: sessionId ?? this.sessionId,
-      currentLog: currentLog ?? this.currentLog,
+      currentLogs: currentLogs ?? this.currentLogs,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: error, // overwrite with null or value
+      availableExercises: availableExercises ?? this.availableExercises,
     );
   }
 
   @override
-  List<Object?> get props => [sessionId, currentLog, isSubmitting, error];
+  List<Object?> get props => [sessionId, currentLogs, isSubmitting, error, availableExercises];
 }
 
 class WorkoutError extends WorkoutState {

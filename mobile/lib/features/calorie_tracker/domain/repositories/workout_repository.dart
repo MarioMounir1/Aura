@@ -2,6 +2,9 @@
 // Aura — Workout Repository Interface
 
 abstract class WorkoutRepository {
+  /// Fetch all available exercises from the database
+  Future<List<Map<String, dynamic>>> getAvailableExercises();
+
   /// Start a new gym workout session
   Future<Map<String, dynamic>> startSession(String name);
 

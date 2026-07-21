@@ -14,6 +14,7 @@ import { WorkoutService } from "../services/workout.service";
 // ── Types ──────────────────────────────────────────────────
 
 interface SessionExercise {
+  id?: string;
   name: string;
   targetSets: number;
   muscleGroup: string;
@@ -88,14 +89,24 @@ const ROUTINE_CATALOGUE: Record<string, { description: string; days: string[] }>
 };
 
 // ── Build currentSession from today's weekday + routine ────
-function buildCurrentSession(splitType: string, splitName: string): CurrentSession {
+async function buildCurrentSession(splitType: string, splitName: string): Promise<CurrentSession> {
   const meta = ROUTINE_CATALOGUE[splitType];
   const days = meta?.days ?? [];
 
   // weekday: 1=Mon, 7=Sun. Convert to 0-indexed Mon=0
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayDayName = days[todayIndex % days.length] ?? "Rest";
-  const exercises = DAY_EXERCISES[todayDayName] ?? [];
+  const baseExercises = DAY_EXERCISES[todayDayName] ?? [];
+
+  // Fetch real Exercise IDs from the DB
+  const dbExercises = await prisma.exercise.findMany({
+    where: { name: { in: baseExercises.map(e => e.name) } }
+  });
+
+  const exercises = baseExercises.map(ex => {
+    const dbEx = dbExercises.find(d => d.name === ex.name);
+    return { ...ex, id: dbEx?.id };
+  });
 
   const first = exercises[0];
   const topHistoricalSet = first
@@ -137,7 +148,7 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
 
     console.log(`✅ [Workout] Routine setup by user ${userId}: ${splitName} (${daysPerWeek}d/${splitType})`);
 
-    const currentSession = buildCurrentSession(splitType, splitName);
+    const currentSession = await buildCurrentSession(splitType, splitName);
 
     res.status(200).json({
       success: true,
@@ -198,7 +209,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
     }
 
     const meta = ROUTINE_CATALOGUE[splitType];
-    const currentSession = buildCurrentSession(splitType, splitName);
+    const currentSession = await buildCurrentSession(splitType, splitName);
 
     res.status(200).json({
       success: true,
@@ -232,6 +243,7 @@ export async function startSession(req: Request, res: Response): Promise<void> {
     const session = await WorkoutService.startWorkoutSession(userId, parsed.data.name);
     res.status(200).json({ success: true, data: session });
   } catch (err) {
+    console.error("❌ [Workout] startSession error:", err);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
@@ -277,6 +289,18 @@ export async function finishSession(req: Request, res: Response): Promise<void> 
   try {
     const session = await WorkoutService.finishSession(req.params.id, req.body.notes);
     res.status(200).json({ success: true, data: session });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── GET /api/v1/workouts/exercises ────────────────────────────
+export async function getAvailableExercises(req: Request, res: Response): Promise<void> {
+  try {
+    const exercises = await prisma.exercise.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.status(200).json({ success: true, data: exercises });
   } catch (err) {
     res.status(500).json({ success: false, error: "Internal server error" });
   }
