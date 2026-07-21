@@ -35,8 +35,7 @@ class PurchaseService {
 
       final configuration = PurchasesConfiguration(
         Platform.isAndroid ? _googleApiKey : _appleApiKey,
-        appUserId: appUserId,
-      );
+      )..appUserID = appUserId;
 
       await Purchases.configure(configuration);
 
