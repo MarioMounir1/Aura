@@ -5,7 +5,7 @@
 // ============================================================
 
 import { Router } from "express";
-import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, revenueCatWebhook } from "../controllers/user.controller";
+import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler } from "../controllers/meal.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
@@ -60,6 +60,8 @@ router.get("/users/me", requireAuth, getMe);
 router.post("/users/me/upgrade", requireAuth, upgradeUser);
 router.post("/users/subscribe", requireAuth, upgradeUser);
 router.patch("/users/subscribe", requireAuth, upgradeUser);
+router.delete("/users/subscribe", requireAuth, unsubscribeUser);
+router.post("/users/unsubscribe", requireAuth, unsubscribeUser);
 
 /**
  * @route   POST /api/v1/revenuecat/webhook
