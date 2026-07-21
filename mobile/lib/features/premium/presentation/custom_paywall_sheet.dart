@@ -49,18 +49,33 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
   }
 
   Future<void> _handleSubscribe(Package? package) async {
+    if (package == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No active RevenueCat offering package loaded. Please verify your RevenueCat Public API Key & Offerings in RevenueCat dashboard.'),
+          backgroundColor: AppColors.error,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isUpgrading = true);
     try {
-      bool success = false;
-      if (package != null) {
-        success = await PurchaseService.instance.purchasePackage(package);
-      } else {
-        debugPrint('ℹ️ Package null: Simulating test purchase checkout...');
-        await Future.delayed(const Duration(seconds: 1));
-        success = true;
-      }
+      final bool success = await PurchaseService.instance.purchasePackage(package);
 
-      if (success) {
+      if (!success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Purchase was cancelled or payment failed. Account remains free tier.'),
+              backgroundColor: AppColors.warning,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
         final dio = ApiClient().dio;
         final response = await dio.post('/users/subscribe');
         
