@@ -341,7 +341,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                                   package?.storeProduct.priceString ?? '\$1.00',
                                   style: GoogleFonts.inter(
                                     color: Colors.white,
-                                    fontWeight: FontWeight.extrabold,
+                                    fontWeight: FontWeight.w800,
                                     fontSize: 20,
                                   ),
                                 ),
