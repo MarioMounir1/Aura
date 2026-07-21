@@ -18,7 +18,7 @@ import { generateToken } from "../middleware/auth.middleware";
 
 export async function upgradeUser(req: Request, res: Response): Promise<void> {
   const userId = req.user!.id;
-  const secretKey = process.env.REVENUECAT_SECRET_KEY || "goog_mock_key_123456";
+  const secretKey = process.env.REVENUECAT_SECRET_KEY || "sk_vaJIkGGEPnvOtqAXEDyvQpajTSGzs";
 
   try {
     // Development fallback for local simulation
