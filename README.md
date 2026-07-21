@@ -63,7 +63,8 @@
 - 🧭 **Onboarding & Profile Setup** — Height, weight, age, gender, activity level, and fitness goal. Auto-calculates TDEE and macro targets
 - 📊 **Dashboard** — Live macro rings, calorie progress, today's food log summary vs daily goals
 - 🥗 **AI Meal Analysis** — Analyze meals by text description, restaurant name, or photo (uses Google Gemini)
-- 🦙 **Offline Local AI Scan** — Snap or upload a plate photo — inference runs entirely on-device via Ollama (`llava` / `llama3.2-vision`). Your images never leave your machine
+- 🦙 **Offline Local AI Scan** — Snap or upload a plate photo — inference runs entirely on-device via Ollama (`llava` / `llama3.2-vision`). Free tier includes 2 free scans daily; unlimited for Premium
+- 💳 **RevenueCat In-App Subscriptions** — Seamless native in-app purchases via RevenueCat SDK (`purchases_flutter`). Displays custom dark glassmorphic paywall sheet (`CustomPaywallSheet`), strictly verifying active entitlements before upgrading
 - 🔍 **Egyptian Food Database Search** — Bilingual (AR/EN) searchable database with categories, serving sizes, and full macro details
 - 💧 **Water Tracking** — Log intake in ml, see daily progress vs goal with an hourly breakdown
 - ⚖️ **Weight Logging** — Track weight history with trend analysis (delta, min/max/avg over 7–365 days)
@@ -71,11 +72,12 @@
 - 🏋️ **Workout Hub** — Configure a training split (3–6 days/week: Full Body, PPL, Upper/Lower, Bro Split, Arnold Split). View today's session, log sets with warm-up / working / top / back-off labels, and track progression vs last week
 - 💡 **AI Macro Suggestions** — Get personalized supplement and food suggestions to hit daily macro targets
 - 🌍 **AR/EN Localization + RTL** — Full bilingual support with dynamic RTL layout switching
-- ⚙️ **Settings** — Language toggle, profile editing, goal updates
+- ⚙️ **Settings** — Language toggle, profile editing, goal updates, subscription management
 
 ### 🛠️ Backend API
 - ✅ **Full JWT Authentication** with bcrypt password hashing
 - 🔑 **Social OAuth** — Google Sign-In token verification + Apple identity token decoding with account linking
+- 💳 **Subscription Verification & Quota API** — Server-side subscription sync (`/users/subscribe`, `/users/unsubscribe`) integrated with RevenueCat secret key validation; enforces 2 daily free AI scan limits
 - 📦 **Food Database** — Search by name (AR/EN), filter by category, paginated results
 - 📋 **Food Logs** — Log items from the database; combined daily summary with totals vs goals
 - 🤖 **Dual AI Engine** — Gemini for cloud meal analysis; Ollama for private offline vision inference
