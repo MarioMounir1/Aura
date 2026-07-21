@@ -21,8 +21,8 @@ class PurchaseService {
   static const bool isTestMode = false; // Set to false to enforce real RevenueCat purchases and entitlement checks
 
   // API Keys loaded via String.fromEnvironment (or falling back to the test credentials)
-  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
-  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
+  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'sk_vaJIkGGEPnvOtqAXEDyvQpajTSGzs');
+  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'sk_vaJIkGGEPnvOtqAXEDyvQpajTSGzs');
 
   final _premiumStreamController = StreamController<bool>.broadcast();
   bool? _currentMockStatus;
