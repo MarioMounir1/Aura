@@ -70,47 +70,31 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
     super.dispose();
   }
 
-  Future<void> _completeUpgradeBackend() async {
-    setState(() => _isUpgrading = true);
-    
-    try {
-      final dio = ApiClient().dio;
-      // Tell backend user is now premium. (Backend verification step next)
-      await dio.post('/users/me/upgrade');
-      
-      // Refresh profile to pull the new isPremium status
-      if (mounted) {
-        context.read<ProfileBloc>().add(LoadProfile());
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Welcome to Aura Premium!'),
-            backgroundColor: Color(0xFF4CAF50),
-          ),
-        );
-        Navigator.pop(context); // Close the screen
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to sync profile: $e'),
-            backgroundColor: const Color(0xFFF44336),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isUpgrading = false);
-    }
-  }
-
   Future<void> _handleSubscribe(Package? package) async {
     setState(() => _isUpgrading = true);
     try {
       if (package != null) {
-        // Perform RevenueCat Purchase
+        // Perform simulated / real purchase
         final success = await PurchaseService.instance.purchaseSubPackage(package);
         if (success && mounted) {
-          await _completeUpgradeBackend(); // Sync subscription to DB
+          // 1. Instantly update BLoC local state to true
+          context.read<ProfileBloc>().add(const UpdatePremiumStatus(true));
+          
+          // 2. Persist to backend by sending request in background / foreground
+          final dio = ApiClient().dio;
+          await dio.post('/users/subscribe');
+          
+          // 3. Inform user and pop the sheet immediately
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Welcome to Aura Premium!'),
+                backgroundColor: Color(0xFF4CAF50),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            Navigator.pop(context, true); // Close Paywall BottomSheet/Screen
+          }
         } else {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -126,12 +110,26 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
         await Future.delayed(const Duration(seconds: 1));
         PurchaseService.instance.setMockPremiumStatus(true);
         if (mounted) {
-          await _completeUpgradeBackend();
+          // 1. Instantly update BLoC local state to true
+          context.read<ProfileBloc>().add(const UpdatePremiumStatus(true));
+          
+          // 2. Persist to backend
+          final dio = ApiClient().dio;
+          await dio.post('/users/subscribe');
+          
+          // 3. Show success and pop
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Welcome to Aura Premium!'),
+              backgroundColor: Color(0xFF4CAF50),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        // Graceful error handling (no raw system dialogs)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Subscription failed: ${e.toString()}'),
