@@ -53,6 +53,7 @@ import 'features/calorie_tracker/presentation/splash_screen.dart';
 import 'features/calorie_tracker/domain/repositories/workout_repository.dart';
 import 'features/calorie_tracker/data/repositories/workout_repository_impl.dart';
 import 'features/calorie_tracker/presentation/bloc/workout_bloc.dart';
+import 'features/premium/data/services/purchase_service.dart';
 
 // ── Language Cubit ────────────────────────────────────────────
 // Simple cubit to hold and switch the app locale.
@@ -105,6 +106,9 @@ Future<void> main() async {
 
   // Load saved language preference
   final savedLang = await LanguageCubit.getSavedLanguage();
+
+  // Initialize RevenueCat SDK
+  await PurchaseService.instance.init();
 
   runApp(TeneenApp(initialLang: savedLang));
 }

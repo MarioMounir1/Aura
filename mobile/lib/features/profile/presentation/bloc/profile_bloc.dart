@@ -45,9 +45,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         final heightVal = user['heightCm'];
         final userId = user['id'] as String? ?? '';
         
-        // Initialize RevenueCat with the user's ID
+        // Log into RevenueCat with the user's ID
         if (userId.isNotEmpty) {
-          PurchaseService.instance.init(userId);
+          PurchaseService.instance.logIn(userId);
         }
 
         print("DEBUG [ProfileBloc]: fetched user Map: $user");

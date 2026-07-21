@@ -9,17 +9,17 @@ class PurchaseService {
   PurchaseService._();
   static final PurchaseService instance = PurchaseService._();
 
-  // API Keys loaded via String.fromEnvironment (or falling back to dummy credentials)
-  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'goog_mock_key_123456');
-  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'appl_mock_key_123456');
+  // API Keys loaded via String.fromEnvironment (or falling back to the test credentials)
+  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'test_WduHLUbxvLM0rIUZwFuZsXzkcpV');
+  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'test_WduHLUbxvLM0rIUZwFuZsXzkcpV');
 
   final _premiumStreamController = StreamController<bool>.broadcast();
 
   /// Stream to listen to real-time subscription status changes (isPremium)
   Stream<bool> get premiumStream => _premiumStreamController.stream;
 
-  /// Initialize the SDK with the correct platform key and login user
-  Future<void> init(String appUserId) async {
+  /// Initialize the SDK with the correct platform key
+  Future<void> init({String? appUserId}) async {
     try {
       await Purchases.setLogLevel(LogLevel.debug);
       
@@ -32,8 +32,11 @@ class PurchaseService {
         return; // Platform not supported by RevenueCat
       }
 
+      if (appUserId != null) {
+        configuration.appUserId = appUserId;
+      }
+
       await Purchases.configure(configuration);
-      await Purchases.logIn(appUserId);
 
       // Listen for subscription updates in real-time
       Purchases.addCustomerInfoUpdateListener((customerInfo) {
@@ -46,6 +49,17 @@ class PurchaseService {
       _premiumStreamController.add(currentInfo.entitlements.all['premium']?.isActive ?? false);
     } catch (e) {
       print('❌ [RevenueCat] Initialization error: $e');
+    }
+  }
+
+  /// Log in the user to sync entitlements across devices
+  Future<void> logIn(String appUserId) async {
+    try {
+      await Purchases.logIn(appUserId);
+      final currentInfo = await Purchases.getCustomerInfo();
+      _premiumStreamController.add(currentInfo.entitlements.all['premium']?.isActive ?? false);
+    } catch (e) {
+      print('❌ [RevenueCat] LogIn error: $e');
     }
   }
 
