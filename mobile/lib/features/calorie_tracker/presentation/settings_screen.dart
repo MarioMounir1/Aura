@@ -143,13 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else {
       return GestureDetector(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const PremiumUpgradeScreen(),
-              fullscreenDialog: true,
-            ),
-          );
+          PurchaseService.instance.presentPaywall(context);
         },
         child: Container(
           width: double.infinity,
