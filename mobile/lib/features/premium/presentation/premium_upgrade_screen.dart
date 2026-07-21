@@ -4,9 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/network/api_client.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_event.dart';
+import '../data/services/purchase_service.dart';
 
 class PremiumUpgradeScreen extends StatefulWidget {
   const PremiumUpgradeScreen({super.key});
@@ -24,6 +26,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
   Offerings? _offerings;
   bool _loadingOfferings = true;
   String? _offeringsError;
+  bool _isUpgrading = false;
 
   @override
   void initState() {
