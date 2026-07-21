@@ -39,6 +39,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isInitialized = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProfileBloc>().add(LoadProfile());
+    });
+  }
+
+  @override
   void dispose() {
     if (_isInitialized) {
       _nameController.dispose();
