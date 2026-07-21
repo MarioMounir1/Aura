@@ -18,6 +18,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
+import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../core/widgets/ad_banner.dart';
@@ -325,7 +326,7 @@ class _MealsDashboardState extends State<MealsDashboard>
               ),
               onPressed: () {
                 Navigator.pop(context);
-                // TODO: Navigate to Premium Upgrade Screen
+                PurchaseService.instance.presentPaywall(context);
               },
               child: const Text('Upgrade Now', style: TextStyle(color: Colors.white)),
             ),

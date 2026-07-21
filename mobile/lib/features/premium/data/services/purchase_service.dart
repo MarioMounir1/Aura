@@ -3,7 +3,13 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/presentation/bloc/profile_event.dart';
 
 class PurchaseService {
   PurchaseService._();
@@ -107,6 +113,34 @@ class PurchaseService {
     } catch (e) {
       print('❌ [RevenueCat] restore error: $e');
       rethrow;
+    }
+  }
+
+  /// Present the built-in RevenueCat UI Paywall modal sheet.
+  /// If the purchase is successful, syncs to backend and refreshes profile.
+  Future<bool> presentPaywall(BuildContext context) async {
+    try {
+      await RevenueCatUI.presentPaywall(
+        displayCloseButton: true,
+      );
+      final isNowPremium = await isPremium();
+      _premiumStreamController.add(isNowPremium);
+      
+      if (isNowPremium) {
+        try {
+          final dio = ApiClient().dio;
+          await dio.post('/users/me/upgrade');
+          if (context.mounted) {
+            context.read<ProfileBloc>().add(LoadProfile());
+          }
+        } catch (backendError) {
+          print('❌ [RevenueCat] Failed to sync status with backend: $backendError');
+        }
+      }
+      return isNowPremium;
+    } catch (e) {
+      print('❌ [RevenueCatUI] presentPaywall error: $e');
+      return false;
     }
   }
 }

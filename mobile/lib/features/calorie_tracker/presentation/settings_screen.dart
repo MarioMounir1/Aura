@@ -12,7 +12,7 @@ import '../../profile/presentation/bloc/profile_state.dart';
 import '../../auth/presentation/bloc/auth_bloc.dart';
 import '../../auth/presentation/bloc/auth_event.dart';
 
-import '../../premium/presentation/premium_upgrade_screen.dart';
+import '../../premium/data/services/purchase_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -141,12 +141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } else {
       return GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const PremiumUpgradeScreen()),
-          );
-        },
+        onTap: () => PurchaseService.instance.presentPaywall(context),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
