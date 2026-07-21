@@ -53,10 +53,12 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
       bool success = false;
       if (package != null) {
         success = await PurchaseService.instance.purchasePackage(package);
-      } else {
-        debugPrint('ℹ️ Simulating 1-second purchase in Test Mode (fallback)...');
+      } else if (PurchaseService.isTestMode) {
+        debugPrint('ℹ️ Simulating 1-second purchase in Test Mode...');
         await Future.delayed(const Duration(seconds: 1));
         success = true;
+      } else {
+        throw Exception('Subscription package is unavailable. Please try again later.');
       }
 
       if (success) {
