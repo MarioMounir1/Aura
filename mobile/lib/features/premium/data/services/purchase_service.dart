@@ -10,6 +10,7 @@ import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_event.dart';
+import '../../presentation/custom_paywall_sheet.dart';
 import '../../presentation/premium_upgrade_screen.dart';
 
 class PurchaseService {
@@ -135,16 +136,15 @@ class PurchaseService {
     }
   }
 
-  /// Present the custom Flutter Paywall Screen.
+  /// Present the custom Flutter Paywall BottomSheet.
   /// If the purchase is successful, syncs to backend and refreshes profile.
   Future<bool> presentPaywall(BuildContext context) async {
     if (context.mounted) {
-      final isNowPremium = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const PremiumUpgradeScreen(),
-          fullscreenDialog: true,
-        ),
+      final isNowPremium = await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => const CustomPaywallSheet(),
       );
       return isNowPremium ?? false;
     }
