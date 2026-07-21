@@ -655,3 +655,66 @@ export async function appleLogin(req: Request, res: Response): Promise<void> {
     });
   }
 }
+
+// ── RevenueCat Webhook ─────────────────────────────────────
+export async function revenueCatWebhook(req: Request, res: Response): Promise<void> {
+  const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
+  const authHeader = req.headers.authorization;
+
+  // Authorization token verification
+  if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+    console.warn("⚠️ [RevenueCat Webhook] Rejected unauthorized request headers.");
+    res.status(401).json({ success: false, error: "Unauthorized webhook caller." });
+    return;
+  }
+
+  const event = req.body?.event;
+  if (!event) {
+    res.status(400).json({ success: false, error: "Missing event payload." });
+    return;
+  }
+
+  const type = event.type;
+  const appUserId = event.app_user_id;
+  const entitlementId = event.entitlement_id;
+  const entitlementIds = event.entitlement_ids || [];
+
+  // Verify this event pertains to our "premium" entitlement
+  const hasPremiumEntitlement = entitlementId === "premium" || entitlementIds.includes("premium");
+  if (!hasPremiumEntitlement) {
+    res.json({ success: true, message: "Ignored: Event not related to premium entitlement." });
+    return;
+  }
+
+  try {
+    switch (type) {
+      case "INITIAL_PURCHASE":
+      case "RENEWAL":
+        await prisma.user.update({
+          where: { id: appUserId },
+          data: { isPremium: true },
+        });
+        console.log(`✅ [RevenueCat Webhook] Subscribed user ${appUserId} to premium via ${type}.`);
+        break;
+
+      case "EXPIRATION":
+      case "REVOCATION":
+        await prisma.user.update({
+          where: { id: appUserId },
+          data: { isPremium: false },
+        });
+        console.log(`⚠️ [RevenueCat Webhook] Suspended premium user ${appUserId} due to ${type}.`);
+        break;
+
+      default:
+        console.log(`ℹ️ [RevenueCat Webhook] Event ${type} processed (no db action needed).`);
+        break;
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ [RevenueCat Webhook] Database update failed:", err);
+    res.status(500).json({ success: false, error: "Database transaction failed." });
+  }
+}
+

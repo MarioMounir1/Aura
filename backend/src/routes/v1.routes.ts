@@ -60,6 +60,13 @@ router.get("/users/me", requireAuth, getMe);
 router.post("/users/me/upgrade", requireAuth, upgradeUser);
 
 /**
+ * @route   POST /api/v1/revenuecat/webhook
+ * @desc    RevenueCat webhook for syncing subscription status
+ * @access  Public (protected via webhook token check)
+ */
+router.post("/revenuecat/webhook", revenueCatWebhook);
+
+/**
  * @route   PUT /api/v1/users/me/goals
  * @desc    Update daily calorie and macro goals
  * @access  Private (JWT required)
