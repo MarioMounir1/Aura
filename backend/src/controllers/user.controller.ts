@@ -18,7 +18,62 @@ import { generateToken } from "../middleware/auth.middleware";
 
 export async function upgradeUser(req: Request, res: Response): Promise<void> {
   const userId = req.user!.id;
+  const secretKey = process.env.REVENUECAT_SECRET_KEY || "goog_mock_key_123456";
+
   try {
+    // Development fallback for local simulation
+    if (secretKey === "goog_mock_key_123456" && process.env.NODE_ENV === "development") {
+      console.log(`ℹ️ [Workout] Mock upgrade allowed in development for user: ${userId}`);
+      const updated = await prisma.user.update({
+        where: { id: userId },
+        data: { isPremium: true },
+      });
+      res.json({
+        success: true,
+        data: { user: userPublicProfile(updated) },
+      });
+      return;
+    }
+
+    // Server-to-server call to RevenueCat to check subscriber data
+    const response = await fetch(`https://api.revenuecat.com/v1/subscribers/${userId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`❌ [RevenueCat] API Error: ${response.status} - ${errText}`);
+      res.status(400).json({ success: false, error: "Failed to verify subscription with RevenueCat." });
+      return;
+    }
+
+    const json = await response.json() as any;
+    const subscriber = json?.subscriber;
+    const entitlements = subscriber?.entitlements || {};
+    
+    // Check if the "premium" entitlement is active
+    const premiumEntitlement = entitlements["premium"];
+    const isActive = premiumEntitlement
+      ? premiumEntitlement.expires_date
+        ? new Date(premiumEntitlement.expires_date) > new Date()
+        : true
+      : false;
+
+    if (!isActive) {
+      console.warn(`⚠️ [RevenueCat] User ${userId} requested premium upgrade, but entitlement is inactive.`);
+      // Sync status back to false in DB just in case
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isPremium: false },
+      });
+      res.status(403).json({ success: false, error: "No active premium subscription found." });
+      return;
+    }
+
     const updated = await prisma.user.update({
       where: { id: userId },
       data: { isPremium: true },
@@ -28,7 +83,8 @@ export async function upgradeUser(req: Request, res: Response): Promise<void> {
       data: { user: userPublicProfile(updated) },
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: "Upgrade failed" });
+    console.error("❌ [Workout] upgradeUser verification error:", err);
+    res.status(500).json({ success: false, error: "Upgrade verification failed." });
   }
 }
 
