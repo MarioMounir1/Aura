@@ -171,7 +171,20 @@ class _ExerciseCardState extends State<_ExerciseCard> {
   @override
   void didUpdateWidget(_ExerciseCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.log.sets.length != widget.log.sets.length) {
+    bool needsReinit = oldWidget.log.sets.length != widget.log.sets.length;
+    if (!needsReinit) {
+      for (int i = 0; i < widget.log.sets.length; i++) {
+        final os = oldWidget.log.sets[i];
+        final ns = widget.log.sets[i];
+        if (os.isLogged != ns.isLogged ||
+            os.loggedWeightKg != ns.loggedWeightKg ||
+            os.loggedReps != ns.loggedReps) {
+          needsReinit = true;
+          break;
+        }
+      }
+    }
+    if (needsReinit) {
       _disposeControllers();
       _initControllers();
     }
@@ -202,8 +215,15 @@ class _ExerciseCardState extends State<_ExerciseCard> {
   }
 
   void _logSet(int index) {
-    final weight = double.tryParse(_weightCtrl[index].text.trim());
-    final reps   = int.tryParse(_repsCtrl[index].text.trim());
+    final weightStr = _weightCtrl[index].text.trim();
+    final repsStr   = _repsCtrl[index].text.trim();
+
+    final weight = weightStr.isEmpty
+        ? widget.log.sets[index].targetWeightKg
+        : double.tryParse(weightStr);
+    final reps = repsStr.isEmpty
+        ? widget.log.sets[index].targetReps
+        : int.tryParse(repsStr);
 
     if (weight == null || reps == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -248,10 +268,12 @@ class _ExerciseCardState extends State<_ExerciseCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                log.exerciseName,
-                style: GoogleFonts.inter(
-                    fontSize: 22, fontWeight: FontWeight.w900, color: _C.textPri),
+              Expanded(
+                child: Text(
+                  log.exerciseName,
+                  style: GoogleFonts.inter(
+                      fontSize: 22, fontWeight: FontWeight.w900, color: _C.textPri),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -265,6 +287,15 @@ class _ExerciseCardState extends State<_ExerciseCard> {
               ),
             ],
           ),
+          if (log.lastWeekTopPerformance != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              widget.isArabic
+                  ? 'الأسبوع الماضي: ${log.lastWeekTopPerformance}'
+                  : 'Last week: ${log.lastWeekTopPerformance}',
+              style: GoogleFonts.inter(fontSize: 11, color: _C.cyan, fontWeight: FontWeight.w600),
+            ),
+          ],
           const SizedBox(height: 22),
 
           // Table header
@@ -347,6 +378,8 @@ class _ExerciseCardState extends State<_ExerciseCard> {
                 fontSize: 14, fontWeight: FontWeight.w700,
                 color: locked ? _C.textMut : _C.textPri),
             decoration: InputDecoration(
+              hintText: s.targetWeightKg?.toStringAsFixed(0) ?? '0',
+              hintStyle: GoogleFonts.inter(color: _C.textMut.withOpacity(0.5), fontSize: 13),
               contentPadding: EdgeInsets.zero,
               filled: true,
               fillColor: locked ? _C.cardElev.withOpacity(0.5) : _C.cardElev,
@@ -379,6 +412,8 @@ class _ExerciseCardState extends State<_ExerciseCard> {
                 fontSize: 14, fontWeight: FontWeight.w700,
                 color: locked ? _C.textMut : _C.textPri),
             decoration: InputDecoration(
+              hintText: s.targetReps?.toString() ?? '0',
+              hintStyle: GoogleFonts.inter(color: _C.textMut.withOpacity(0.5), fontSize: 13),
               contentPadding: EdgeInsets.zero,
               filled: true,
               fillColor: locked ? _C.cardElev.withOpacity(0.5) : _C.cardElev,
