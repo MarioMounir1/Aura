@@ -1285,7 +1285,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     return Column(
       children: [
-        _buildMergedCoachCard(isArabic),
+        _buildCoachCard(isArabic),
         if (isSkipped)
           Container(
             decoration: BoxDecoration(
