@@ -95,6 +95,7 @@ model User {
   workoutDays        Int?
   workoutSplitType   String?
   workoutSplitName   String?
+  workoutConfiguredAt DateTime?
 
   // Daily goals
   dailyCalorieGoal Int         @default(2000)
