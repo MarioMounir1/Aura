@@ -110,6 +110,7 @@ model User {
   mealPlans        MealPlan[]
   aiUsageLogs      AiUsageLog[]
   workoutSessions  WorkoutSession[]
+  sessionOverrides SessionOverride[]
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -342,4 +343,17 @@ model ExerciseSet {
   createdAt         DateTime        @default(now())
 
   @@index([workoutExerciseId])
+}
+
+model SessionOverride {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      String   // ISO YYYY-MM-DD e.g. "2026-07-23"
+  dayType   String   // e.g. "Legs A", "Push B", "Rest", "skip"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@index([userId, date])
 }
