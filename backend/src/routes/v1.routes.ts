@@ -16,7 +16,7 @@ import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-lo
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
-import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise } from "../controllers/workout.controller";
+import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -349,5 +349,13 @@ router.get("/workouts/exercises/:id/alternatives", requireAuth, getExerciseAlter
  * @access  Private (JWT required)
  */
 router.post("/workouts/session/swap", requireAuth, swapSessionExercise);
+
+/**
+ * @route   POST /api/v1/workouts/session/override
+ * @desc    Override day session type for a specific calendar date (e.g., Legs A, Rest, skip)
+ * @access  Private (JWT required)
+ * @body    { date?, dayType }
+ */
+router.post("/workouts/session/override", requireAuth, overrideSessionType);
 
 export default router;
