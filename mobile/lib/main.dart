@@ -138,65 +138,15 @@ class TeneenApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
-          // Language switching
+          // Language switching (App Root)
           BlocProvider<LanguageCubit>(
             create: (_) => LanguageCubit(initialLang),
           ),
-          // Auth
+          // Auth Session (App Root)
           BlocProvider<AuthBloc>(
             create: (ctx) => AuthBloc(
               authRepository: ctx.read<AuthRepository>(),
             )..add(AppStarted()),
-          ),
-          // Profile
-          BlocProvider<ProfileBloc>(
-            create: (ctx) => ProfileBloc(
-              repository: ctx.read<ProfileRepository>(),
-            ),
-          ),
-          // Dashboard
-          BlocProvider<DashboardBloc>(
-            create: (ctx) => DashboardBloc(
-              repository: ctx.read<TrackerRepository>(),
-              mealRepository: ctx.read<MealRepository>(),
-            ),
-          ),
-          // Meal tracker
-          BlocProvider<CalorieTrackerBloc>(
-            create: (ctx) => CalorieTrackerBloc(
-              repository:     ctx.read<MealRepository>(),
-              authRepository: ctx.read<AuthRepository>(),
-            ),
-          ),
-          // Food Search
-          BlocProvider<FoodSearchBloc>(
-            create: (ctx) => FoodSearchBloc(
-              repository: ctx.read<TrackerRepository>(),
-            ),
-          ),
-          // Water tracking
-          BlocProvider<WaterBloc>(
-            create: (ctx) => WaterBloc(
-              repository: ctx.read<TrackerRepository>(),
-            ),
-          ),
-          // Weight tracking
-          BlocProvider<WeightBloc>(
-            create: (ctx) => WeightBloc(
-              repository: ctx.read<TrackerRepository>(),
-            ),
-          ),
-          // Meal plans
-          BlocProvider<MealPlanBloc>(
-            create: (ctx) => MealPlanBloc(
-              repository: ctx.read<TrackerRepository>(),
-            ),
-          ),
-          // Workout Tracker
-          BlocProvider<WorkoutBloc>(
-            create: (ctx) => WorkoutBloc(
-              ctx.read<WorkoutRepository>(),
-            ),
           ),
         ],
         child: BlocBuilder<LanguageCubit, Locale>(
@@ -262,93 +212,133 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, authState) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
         if (authState is Authenticated) {
-          // Force fresh load of profile when user becomes authenticated (login or startup)
-          context.read<ProfileBloc>().add(LoadProfile());
+          final sessionKey = authState.token.isNotEmpty ? authState.token : 'authed_session';
+          return MultiBlocProvider(
+            key: ValueKey(sessionKey),
+            providers: [
+              BlocProvider<ProfileBloc>(
+                create: (ctx) => ProfileBloc(
+                  repository: ctx.read<ProfileRepository>(),
+                )..add(LoadProfile()),
+              ),
+              BlocProvider<DashboardBloc>(
+                create: (ctx) => DashboardBloc(
+                  repository: ctx.read<TrackerRepository>(),
+                  mealRepository: ctx.read<MealRepository>(),
+                ),
+              ),
+              BlocProvider<CalorieTrackerBloc>(
+                create: (ctx) => CalorieTrackerBloc(
+                  repository:     ctx.read<MealRepository>(),
+                  authRepository: ctx.read<AuthRepository>(),
+                ),
+              ),
+              BlocProvider<FoodSearchBloc>(
+                create: (ctx) => FoodSearchBloc(
+                  repository: ctx.read<TrackerRepository>(),
+                ),
+              ),
+              BlocProvider<WaterBloc>(
+                create: (ctx) => WaterBloc(
+                  repository: ctx.read<TrackerRepository>(),
+                ),
+              ),
+              BlocProvider<WeightBloc>(
+                create: (ctx) => WeightBloc(
+                  repository: ctx.read<TrackerRepository>(),
+                ),
+              ),
+              BlocProvider<MealPlanBloc>(
+                create: (ctx) => MealPlanBloc(
+                  repository: ctx.read<TrackerRepository>(),
+                ),
+              ),
+              BlocProvider<WorkoutBloc>(
+                create: (ctx) => WorkoutBloc(
+                  ctx.read<WorkoutRepository>(),
+                ),
+              ),
+            ],
+            child: const AuthenticatedUserScope(),
+          );
+        }
+        if (authState is Unauthenticated || authState is AuthFailure) {
+          return const LoginScreen();
+        }
+        // Splash / loading state
+        return const Scaffold(
+          backgroundColor: AppColors.background,
+          body: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Authenticated User Scope ──────────────────────────────────
+
+class AuthenticatedUserScope extends StatelessWidget {
+  const AuthenticatedUserScope({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ProfileBloc, ProfileState>(
+      listener: (context, profileState) {
+        if (profileState is ProfileFailure &&
+            (profileState.message.contains("Authentication required") ||
+             profileState.message.contains("Unauthorized") ||
+             profileState.message.contains("token") ||
+             profileState.message.contains("Session expired"))) {
+          context.read<AuthBloc>().add(LogoutRequested());
         }
       },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, authState) {
-          if (authState is Authenticated) {
-            return BlocListener<ProfileBloc, ProfileState>(
-              listener: (context, profileState) {
-                if (profileState is ProfileFailure &&
-                    (profileState.message.contains("Authentication required") ||
-                     profileState.message.contains("Unauthorized") ||
-                     profileState.message.contains("token") ||
-                     profileState.message.contains("Session expired"))) {
-                  context.read<AuthBloc>().add(LogoutRequested());
-                }
-              },
-              child: BlocBuilder<ProfileBloc, ProfileState>(
-                builder: (context, profileState) {
-                  if (profileState is ProfileInitial) {
-                    context.read<ProfileBloc>().add(LoadProfile());
-                    return const Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                      ),
-                    );
-                  }
-                  if (profileState is ProfileLoading) {
-                    return const Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                      ),
-                    );
-                  }
-                  if (profileState is ProfileLoaded) {
-                    if (profileState.isOnboardingCompleted) {
-                      final userId = profileState.user['id'] as String? ?? 'user';
-                      return HomeShellScreen(key: ValueKey(userId));
-                    } else {
-                      return const OnboardingScreen();
-                    }
-                  }
-                  if (profileState is ProfileFailure) {
-                    // If it fails, let them complete onboarding or try loading again
-                    return Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(profileState.message, style: const TextStyle(color: Colors.red)),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () => context.read<ProfileBloc>().add(LoadProfile()),
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  return const OnboardingScreen();
-                },
+      child: BlocBuilder<ProfileBloc, ProfileState>(
+        builder: (context, profileState) {
+          if (profileState is ProfileInitial || profileState is ProfileLoading) {
+            return const Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
               ),
             );
           }
-          if (authState is Unauthenticated || authState is AuthFailure) {
-            return const LoginScreen();
+          if (profileState is ProfileLoaded) {
+            if (profileState.isOnboardingCompleted) {
+              final userId = profileState.user['id'] as String? ?? 'user';
+              return HomeShellScreen(key: ValueKey(userId));
+            } else {
+              return const OnboardingScreen();
+            }
           }
-          // Splash / loading state
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+          if (profileState is ProfileFailure) {
+            // If it fails, let them complete onboarding or try loading again
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(profileState.message, style: const TextStyle(color: Colors.red)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => context.read<ProfileBloc>().add(LoadProfile()),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
+            );
+          }
+          return const OnboardingScreen();
         },
       ),
     );
