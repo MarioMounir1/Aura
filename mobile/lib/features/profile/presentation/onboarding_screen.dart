@@ -344,12 +344,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       backgroundColor: _T.bg,
       body: BlocListener<ProfileBloc, ProfileState>(
         listener: (ctx, state) {
-          if (state is ProfileUpdateSuccess) {
-            // Once the backend update has completed successfully, finalize the onboarding
-            ctx.read<ProfileBloc>().add(CompleteOnboardingEvent());
-          } else if (state is ProfileLoaded && state.isOnboardingCompleted) {
-            Navigator.pushReplacementNamed(ctx, '/');
-          } else if (state is ProfileFailure) {
+          if (state is ProfileFailure) {
             setState(() => _isSubmitting = false);
             _showError(state.message);
           }
@@ -430,16 +425,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  stepLabels[_currentStep],
-                  key: ValueKey(_currentStep),
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: _T.cyan,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
+              const SizedBox(width: 8),
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    stepLabels[_currentStep],
+                    key: ValueKey(_currentStep),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: _T.cyan,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
               ),

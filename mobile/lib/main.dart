@@ -290,6 +290,9 @@ class AuthWrapper extends StatelessWidget {
           if (authState is Authenticated) {
             return BlocListener<ProfileBloc, ProfileState>(
               listener: (context, profileState) {
+                if (profileState is ProfileLoaded && profileState.isOnboardingCompleted) {
+                  context.read<DashboardBloc>().add(const LoadDashboard());
+                }
                 if (profileState is ProfileFailure &&
                     (profileState.message.contains("Authentication required") ||
                      profileState.message.contains("Unauthorized") ||
