@@ -28,6 +28,8 @@ interface CurrentSession {
   routineName: string;
   todayDayName: string;
   exercises: SessionExercise[];
+  isSkipped?: boolean;
+  isOverridden?: boolean;
   coachNote?: string;
   topHistoricalSet: {
     exerciseName: string;
@@ -141,13 +143,59 @@ async function getLastWeekPerformance(userId: string, exerciseId: string): Promi
 }
 
 // ── Build currentSession from today's weekday + routine ────
-async function buildCurrentSession(userId: string, splitType: string, splitName: string): Promise<CurrentSession> {
+async function buildCurrentSession(
+  userId: string,
+  splitType: string,
+  splitName: string,
+  dateStr?: string
+): Promise<CurrentSession> {
   const meta = ROUTINE_CATALOGUE[splitType];
   const days = meta?.days ?? [];
 
-  // weekday: 1=Mon, 7=Sun. Convert to 0-indexed Mon=0
-  const todayIndex = (new Date().getDay() + 6) % 7;
-  const todayDayName = days[todayIndex % days.length] ?? "Rest";
+  const targetDateStr = dateStr ?? new Date().toISOString().split("T")[0];
+
+  // 1. Check for a date-specific override in SessionOverride table
+  const override = await prisma.sessionOverride.findUnique({
+    where: {
+      userId_date: {
+        userId,
+        date: targetDateStr,
+      },
+    },
+  });
+
+  let todayDayName: string;
+  let isOverridden = false;
+  let isSkipped = false;
+
+  if (override) {
+    isOverridden = true;
+    if (override.dayType === "skip") {
+      isSkipped = true;
+      todayDayName = "Skipped";
+    } else {
+      todayDayName = override.dayType;
+    }
+  } else {
+    // weekday: 1=Mon, 7=Sun. Convert to 0-indexed Mon=0
+    const targetDate = new Date(targetDateStr);
+    const todayIndex = (targetDate.getDay() + 6) % 7;
+    todayDayName = days[todayIndex % days.length] ?? "Rest";
+  }
+
+  // Handle explicit skipped state
+  if (isSkipped) {
+    return {
+      routineName: splitName,
+      todayDayName: "Skipped",
+      exercises: [],
+      isSkipped: true,
+      isOverridden: true,
+      coachNote: "Today is marked as skipped. Take the time to rest, recover, and stay hydrated.",
+      topHistoricalSet: null,
+    };
+  }
+
   const baseExercises = DAY_EXERCISES[todayDayName] ?? [];
 
   // Fetch real Exercise IDs from the DB
@@ -205,6 +253,8 @@ async function buildCurrentSession(userId: string, splitType: string, splitName:
     routineName: splitName,
     todayDayName,
     exercises: exercisesWithCoachNotes,
+    isSkipped: false,
+    isOverridden,
     coachNote: sessionCoachNote,
     topHistoricalSet,
   };
@@ -305,16 +355,35 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 7);
 
-    const thisWeekSessions = await prisma.workoutSession.findMany({
-      where: {
-        userId,
-        startedAt: {
-          gte: startOfWeek,
-          lt: endOfWeek,
+    const startOfWeekStr = startOfWeek.toISOString().split("T")[0];
+    const endOfWeekMinus1Str = new Date(endOfWeek.getTime() - 86400000).toISOString().split("T")[0];
+
+    const [thisWeekSessions, weekOverrides] = await Promise.all([
+      prisma.workoutSession.findMany({
+        where: {
+          userId,
+          startedAt: {
+            gte: startOfWeek,
+            lt: endOfWeek,
+          },
         },
-      },
-      select: { startedAt: true },
-    });
+        select: { startedAt: true },
+      }),
+      prisma.sessionOverride.findMany({
+        where: {
+          userId,
+          date: {
+            gte: startOfWeekStr,
+            lte: endOfWeekMinus1Str,
+          },
+        },
+      }),
+    ]);
+
+    const overrideMap = new Map(weekOverrides.map((o) => [o.date, o.dayType]));
+    const completedDateStrs = new Set(
+      thisWeekSessions.map((s) => new Date(s.startedAt).toISOString().split("T")[0])
+    );
 
     const completedDaysThisWeek = [false, false, false, false, false, false, false];
     thisWeekSessions.forEach((session) => {
@@ -322,6 +391,53 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       if (sessDay >= 0 && sessDay < 7) {
         completedDaysThisWeek[sessDay] = true;
       }
+    });
+
+    const todayStr = now.toISOString().split("T")[0];
+    const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const daysArr = meta?.days ?? [];
+
+    const weekScheduleDetails = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      const dateStr = d.toISOString().split("T")[0];
+
+      const overrideType = overrideMap.get(dateStr);
+      let dayType: string;
+      let isOverridden = false;
+      let isSkipped = false;
+
+      if (overrideType) {
+        isOverridden = true;
+        if (overrideType === "skip") {
+          isSkipped = true;
+          dayType = "skip";
+        } else {
+          dayType = overrideType;
+        }
+      } else {
+        dayType = daysArr[i % daysArr.length] ?? "Rest";
+      }
+
+      const isRest = dayType === "Rest";
+      const isCompleted = completedDateStrs.has(dateStr);
+      const isToday = dateStr === todayStr;
+      const isPast = dateStr < todayStr;
+      const isFuture = dateStr > todayStr;
+      const isMissed = isPast && !isCompleted && !isRest && !isSkipped;
+
+      return {
+        dayName: dayNamesShort[i],
+        dateStr,
+        dayType,
+        isRest,
+        isSkipped,
+        isOverridden,
+        isCompleted,
+        isMissed,
+        isFuture,
+        isToday,
+      };
     });
 
     let streakDays = 0;
@@ -360,7 +476,8 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
           splitName,
           daysPerWeek,
           description: meta?.description ?? "",
-          weekSchedule: meta?.days ?? [],
+          weekSchedule: weekScheduleDetails.map((d) => d.dayType),
+          weekScheduleDetails,
           configuredAt: user.updatedAt.toISOString(),
         },
         currentSession,
@@ -524,6 +641,74 @@ export async function swapSessionExercise(req: Request, res: Response): Promise<
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
     console.error("❌ [Workout] swapSessionExercise error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── POST /api/v1/workouts/session/override ────────────────────────
+const OverrideSessionSchema = z.object({
+  date: z.string().optional(), // YYYY-MM-DD
+  dayType: z.string().min(1).max(80),
+});
+
+export async function overrideSessionType(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+
+    const parsed = OverrideSessionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, error: "Invalid data", details: parsed.error.format() });
+      return;
+    }
+
+    const targetDate = parsed.data.date ?? new Date().toISOString().split("T")[0];
+    const dayType = parsed.data.dayType;
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      res.status(404).json({ success: false, error: "User not found" });
+      return;
+    }
+
+    let splitType = "upper_lower";
+    let splitName = "Upper / Lower Split";
+    if (user.activityLevel === "sedentary") {
+      splitType = "full_body";
+      splitName = "Full Body Split";
+    } else if (user.activityLevel === "lightly_active") {
+      splitType = "ppl_1x";
+      splitName = "Push / Pull / Legs";
+    } else if (user.activityLevel === "moderate") {
+      splitType = "upper_lower";
+      splitName = "Upper / Lower Split";
+    } else if (user.activityLevel === "very_active") {
+      splitType = "ul_ppl";
+      splitName = "Hybrid PPL Split";
+    }
+
+    await prisma.sessionOverride.upsert({
+      where: { userId_date: { userId, date: targetDate } },
+      update: { dayType },
+      create: { userId, date: targetDate, dayType },
+    });
+
+    const currentSession = await buildCurrentSession(userId, splitType, splitName, targetDate);
+
+    res.status(200).json({
+      success: true,
+      message: "Session type overridden successfully",
+      data: {
+        date: targetDate,
+        dayType,
+        currentSession,
+      },
+    });
+  } catch (error) {
+    console.error("❌ [Workout] overrideSessionType error:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
