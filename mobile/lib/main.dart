@@ -53,6 +53,8 @@ import 'features/calorie_tracker/presentation/splash_screen.dart';
 import 'features/calorie_tracker/domain/repositories/workout_repository.dart';
 import 'features/calorie_tracker/data/repositories/workout_repository_impl.dart';
 import 'features/calorie_tracker/presentation/bloc/workout_bloc.dart';
+import 'features/calorie_tracker/presentation/bloc/dashboard_event.dart';
+import 'features/calorie_tracker/presentation/bloc/workout_event.dart';
 import 'features/premium/data/services/purchase_service.dart';
 
 // ── Language Cubit ────────────────────────────────────────────
@@ -138,120 +140,115 @@ class TeneenApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
-          // Language switching (App Root)
+          // Language switching
           BlocProvider<LanguageCubit>(
             create: (_) => LanguageCubit(initialLang),
           ),
-          // Auth Session (App Root)
+          // Auth Session
           BlocProvider<AuthBloc>(
             create: (ctx) => AuthBloc(
               authRepository: ctx.read<AuthRepository>(),
             )..add(AppStarted()),
           ),
+          // Profile
+          BlocProvider<ProfileBloc>(
+            create: (ctx) => ProfileBloc(
+              repository: ctx.read<ProfileRepository>(),
+            ),
+          ),
+          // Dashboard
+          BlocProvider<DashboardBloc>(
+            create: (ctx) => DashboardBloc(
+              repository: ctx.read<TrackerRepository>(),
+              mealRepository: ctx.read<MealRepository>(),
+            ),
+          ),
+          // Meal tracker
+          BlocProvider<CalorieTrackerBloc>(
+            create: (ctx) => CalorieTrackerBloc(
+              repository:     ctx.read<MealRepository>(),
+              authRepository: ctx.read<AuthRepository>(),
+            ),
+          ),
+          // Food Search
+          BlocProvider<FoodSearchBloc>(
+            create: (ctx) => FoodSearchBloc(
+              repository: ctx.read<TrackerRepository>(),
+            ),
+          ),
+          // Water tracking
+          BlocProvider<WaterBloc>(
+            create: (ctx) => WaterBloc(
+              repository: ctx.read<TrackerRepository>(),
+            ),
+          ),
+          // Weight tracking
+          BlocProvider<WeightBloc>(
+            create: (ctx) => WeightBloc(
+              repository: ctx.read<TrackerRepository>(),
+            ),
+          ),
+          // Meal plans
+          BlocProvider<MealPlanBloc>(
+            create: (ctx) => MealPlanBloc(
+              repository: ctx.read<TrackerRepository>(),
+            ),
+          ),
+          // Workout Tracker
+          BlocProvider<WorkoutBloc>(
+            create: (ctx) => WorkoutBloc(
+              ctx.read<WorkoutRepository>(),
+            ),
+          ),
         ],
-        child: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, authState) {
-            final sessionKey = authState is Authenticated
-                ? (authState.token.isNotEmpty ? authState.token : 'authed_session')
-                : 'unauthed_session';
+        child: BlocBuilder<LanguageCubit, Locale>(
+          builder: (context, locale) {
+            // RTL for Arabic, LTR for English
+            final isArabic = locale.languageCode == 'ar';
 
-            return MultiBlocProvider(
-              key: ValueKey(sessionKey),
-              providers: [
-                BlocProvider<ProfileBloc>(
-                  create: (ctx) => ProfileBloc(
-                    repository: ctx.read<ProfileRepository>(),
-                  ),
-                ),
-                BlocProvider<DashboardBloc>(
-                  create: (ctx) => DashboardBloc(
-                    repository: ctx.read<TrackerRepository>(),
-                    mealRepository: ctx.read<MealRepository>(),
-                  ),
-                ),
-                BlocProvider<CalorieTrackerBloc>(
-                  create: (ctx) => CalorieTrackerBloc(
-                    repository:     ctx.read<MealRepository>(),
-                    authRepository: ctx.read<AuthRepository>(),
-                  ),
-                ),
-                BlocProvider<FoodSearchBloc>(
-                  create: (ctx) => FoodSearchBloc(
-                    repository: ctx.read<TrackerRepository>(),
-                  ),
-                ),
-                BlocProvider<WaterBloc>(
-                  create: (ctx) => WaterBloc(
-                    repository: ctx.read<TrackerRepository>(),
-                  ),
-                ),
-                BlocProvider<WeightBloc>(
-                  create: (ctx) => WeightBloc(
-                    repository: ctx.read<TrackerRepository>(),
-                  ),
-                ),
-                BlocProvider<MealPlanBloc>(
-                  create: (ctx) => MealPlanBloc(
-                    repository: ctx.read<TrackerRepository>(),
-                  ),
-                ),
-                BlocProvider<WorkoutBloc>(
-                  create: (ctx) => WorkoutBloc(
-                    ctx.read<WorkoutRepository>(),
-                  ),
-                ),
+            return MaterialApp(
+              title:                   'The Teneen | التنين',
+              debugShowCheckedModeBanner: false,
+              theme:                   AppTheme.darkTheme,
+
+              // ── Localization ────────────────────────────
+              locale:                  locale,
+              supportedLocales: const [
+                Locale('en'),
+                Locale('ar'),
               ],
-              child: BlocBuilder<LanguageCubit, Locale>(
-                builder: (context, locale) {
-                  // RTL for Arabic, LTR for English
-                  final isArabic = locale.languageCode == 'ar';
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
 
-                  return MaterialApp(
-                    title:                   'The Teneen | التنين',
-                    debugShowCheckedModeBanner: false,
-                    theme:                   AppTheme.darkTheme,
+              // ── RTL / LTR ───────────────────────────────
+              builder: (context, child) {
+                return Directionality(
+                  textDirection: isArabic
+                      ? TextDirection.rtl
+                      : TextDirection.ltr,
+                  child: child!,
+                );
+              },
 
-                    // ── Localization ────────────────────────────
-                    locale:                  locale,
-                    supportedLocales: const [
-                      Locale('en'),
-                      Locale('ar'),
-                    ],
-                    localizationsDelegates: const [
-                      AppLocalizations.delegate,
-                      GlobalMaterialLocalizations.delegate,
-                      GlobalWidgetsLocalizations.delegate,
-                      GlobalCupertinoLocalizations.delegate,
-                    ],
-
-                    // ── RTL / LTR ───────────────────────────────
-                    builder: (context, child) {
-                      return Directionality(
-                        textDirection: isArabic
-                            ? TextDirection.rtl
-                            : TextDirection.ltr,
-                        child: child!,
-                      );
-                    },
-
-                    // ── Routes ──────────────────────────────────
-                    initialRoute: '/splash',
-                    routes: {
-                      '/splash':  (_) => const SplashScreen(),
-                      '/':        (_) => const AuthWrapper(),
-                      '/login':   (_) => const LoginScreen(),
-                      '/history': (_) => const HistoryScreen(),
-                      '/settings': (_) => const SettingsScreen(),
-                      '/foods/search': (_) => const FoodSearchScreen(),
-                      '/weight/progress': (_) => const WeightProgressScreen(),
-                      '/meals/analyze': (_) => const AnalyzeMealScreen(),
-                      '/water/progress': (_) => const WaterTrackingScreen(),
-                      '/meals/ai-suggestion': (_) => const AiSuggestionScreen(),
-                      '/gyms': (_) => const GymsScreen(),
-                    },
-                  );
-                },
-              ),
+              // ── Routes ──────────────────────────────────
+              initialRoute: '/splash',
+              routes: {
+                '/splash':  (_) => const SplashScreen(),
+                '/':        (_) => const AuthWrapper(),
+                '/login':   (_) => const LoginScreen(),
+                '/history': (_) => const HistoryScreen(),
+                '/settings': (_) => const SettingsScreen(),
+                '/foods/search': (_) => const FoodSearchScreen(),
+                '/weight/progress': (_) => const WeightProgressScreen(),
+                '/meals/analyze': (_) => const AnalyzeMealScreen(),
+                '/water/progress': (_) => const WaterTrackingScreen(),
+                '/meals/ai-suggestion': (_) => const AiSuggestionScreen(),
+                '/gyms': (_) => const GymsScreen(),
+              },
             );
           },
         ),
@@ -270,8 +267,12 @@ class AuthWrapper extends StatelessWidget {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
         if (authState is Authenticated) {
-          // Force fresh load of profile when user becomes authenticated (login or startup)
           context.read<ProfileBloc>().add(LoadProfile());
+          context.read<DashboardBloc>().add(const LoadDashboard());
+        } else if (authState is Unauthenticated) {
+          context.read<ProfileBloc>().add(ResetProfileEvent());
+          context.read<DashboardBloc>().add(const ResetDashboardEvent());
+          context.read<WorkoutBloc>().add(const ResetWorkoutEvent());
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
