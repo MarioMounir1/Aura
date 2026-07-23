@@ -512,7 +512,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   _buildStreakBadge(),
                   const SizedBox(width: 8),
                   InkWell(
-                    onTap: () => _showSetupModal(isArabic),
+                    onTap: _openSetupSheet,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -825,59 +825,106 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   Widget _buildCoachCard(bool isArabic) {
     final coachNote = _currentSession?.coachNote;
-    if (coachNote == null || coachNote.trim().isEmpty) return const SizedBox.shrink();
+    final hasNote = coachNote != null && coachNote.trim().isEmpty == false;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _C.cyan.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        color: _C.card,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1.2),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: _C.cyan.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.psychology_rounded, color: _C.cyan, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+          if (hasNote) ...[
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      isArabic ? 'مدربك الشخصي' : 'YOUR COACH',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: _C.cyan,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    _buildLocalAiBadge(),
-                  ],
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: _C.cyan.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.psychology_rounded, color: _C.cyan, size: 16),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  coachNote,
-                  style: GoogleFonts.inter(
-                    fontSize: 12.5,
-                    height: 1.4,
-                    color: _C.textPri,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isArabic ? 'نصيحة مدرب الذكاء الاصطناعي' : 'AI COACH NOTE',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: _C.cyan,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          _buildLocalAiBadge(),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        coachNote!,
+                        style: GoogleFonts.inter(
+                          fontSize: 12.5,
+                          color: _C.textPri,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 12),
+            const Divider(color: _C.border, height: 1, thickness: 0.8),
+            const SizedBox(height: 10),
+          ],
+
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _aiCommandController,
+                  enabled: !_isInterpretingAiCommand,
+                  style: GoogleFonts.inter(fontSize: 12, color: _C.textPri),
+                  decoration: InputDecoration(
+                    hintText: isArabic ? 'اكتب أمراً.. "غير اليوم لـ Legs"' : 'Command AI coach.. e.g. "swap today for legs"',
+                    hintStyle: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  onSubmitted: (_) => _sendAiCommand(isArabic),
+                ),
+              ),
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: _isInterpretingAiCommand ? null : () => _sendAiCommand(isArabic),
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: _isInterpretingAiCommand
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_C.cyan)),
+                        )
+                      : const Icon(Icons.send_rounded, color: _C.cyan, size: 16),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1740,52 +1787,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  Widget _buildAiCommandInput(bool isArabic) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: _C.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _C.borderMid, width: 1.0),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _aiCommandController,
-              enabled: !_isInterpretingAiCommand,
-              style: GoogleFonts.inter(fontSize: 12.5, color: _C.textPri),
-              decoration: InputDecoration(
-                hintText: isArabic ? 'اكتب أمراً.. "غير اليوم لـ Legs"' : 'Type command.. e.g. "swap today for legs"',
-                hintStyle: GoogleFonts.inter(fontSize: 11.5, color: _C.textMut),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-              onSubmitted: (_) => _sendAiCommand(isArabic),
-            ),
-          ),
-          const SizedBox(width: 6),
-          IconButton(
-            onPressed: _isInterpretingAiCommand ? null : () => _sendAiCommand(isArabic),
-            icon: _isInterpretingAiCommand
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_C.cyan)),
-                  )
-                : const Icon(Icons.send_rounded, color: _C.cyan, size: 18),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _sendAiCommand(bool isArabic) async {
     final msg = _aiCommandController.text.trim();
     if (msg.isEmpty || _isInterpretingAiCommand) return;
@@ -1795,9 +1796,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       final resp = await _dio.post('/workouts/session/interpret', data: {'message': msg});
       final data = resp.data['data'];
       final confirmationMsg = data?['confirmationMessage'] as String? ?? 'Session updated.';
+      final updatedSessionJson = data?['currentSession'];
 
       _aiCommandController.clear();
-      await _loadRoutine();
+
+      if (updatedSessionJson != null && mounted) {
+        setState(() {
+          _currentSession = CurrentSession.fromJson(updatedSessionJson as Map<String, dynamic>);
+        });
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
