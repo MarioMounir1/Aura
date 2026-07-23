@@ -134,3 +134,26 @@ export async function generateWeightCoachNote(trendData: WeightTrendInput): Prom
 
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
+
+// ── 4. Routine Recommendation Coach Note ─────────────────────
+
+interface RoutineRecommendInput {
+  days: number;
+  trainingExperience: string;
+  goal: string;
+  splitName: string;
+}
+
+export async function generateRoutineRecommendationNote(input: RoutineRecommendInput): Promise<string> {
+  const expLabel = input.trainingExperience === "new"
+    ? "beginner"
+    : input.trainingExperience === "experienced"
+    ? "experienced"
+    : "intermediate";
+
+  const systemPrompt = `You are an expert strength coach explaining why a specific routine split is recommended for a user. Write 1-2 short sentences max (maximum 35 words total). Explicitly reference their ${input.days}-day schedule, ${expLabel} experience, and ${input.goal} goal. No markdown, no quotes.`;
+  const userPrompt = `Split: ${input.splitName}. User context: ${input.days} days/week, ${expLabel} experience, goal is ${input.goal}. Explain why this split is best fit.`;
+
+  const fallback = `As a ${expLabel} lifter training ${input.days} days per week, ${input.splitName} provides the optimal balance of muscle frequency and recovery capacity for your ${input.goal} goal.`;
+  return callOllamaChat(systemPrompt, userPrompt, fallback);
+}
