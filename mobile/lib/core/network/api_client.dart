@@ -103,4 +103,9 @@ class ApiClient {
     final val = await _secureStorage.read(key: 'is_premium');
     return val == 'true';
   }
+
+  /// Get active userId from secure storage
+  Future<String?> getUserId() async {
+    return await _secureStorage.read(key: AppConstants.userIdKey);
+  }
 }

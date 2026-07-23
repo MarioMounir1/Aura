@@ -105,12 +105,16 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<bool> isOnboardingCompleted() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_onboardingKey) ?? false;
+    final userId = await apiClient.getUserId();
+    final key = userId != null && userId.isNotEmpty ? '${_onboardingKey}_$userId' : _onboardingKey;
+    return prefs.getBool(key) ?? false;
   }
 
   @override
   Future<void> setOnboardingCompleted(bool completed) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_onboardingKey, completed);
+    final userId = await apiClient.getUserId();
+    final key = userId != null && userId.isNotEmpty ? '${_onboardingKey}_$userId' : _onboardingKey;
+    await prefs.setBool(key, completed);
   }
 }

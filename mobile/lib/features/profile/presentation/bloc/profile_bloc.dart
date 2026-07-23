@@ -73,16 +73,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         print("DEBUG [ProfileBloc]: isOnboardingCompleted (local): $isOnboardingCompleted");
         print("DEBUG [ProfileBloc]: ageVal: $ageVal, weightVal: $weightVal, heightVal: $heightVal");
 
-        // Automatically determine onboarding complete if they have basic info set in the DB
-        final bool actuallyCompleted = isOnboardingCompleted ||
+        // Onboarding is completed ONLY IF the user's DB profile has physical body stats set
+        final bool actuallyCompleted =
             (ageVal != null && weightVal != null && heightVal != null);
 
         print("DEBUG [ProfileBloc]: actuallyCompleted resolved to: $actuallyCompleted");
 
-        // If it was true in DB but false in local prefs, sync it back to local prefs
-        if (actuallyCompleted && !isOnboardingCompleted) {
-          repository.setOnboardingCompleted(true);
-        }
+        // Sync local prefs
+        repository.setOnboardingCompleted(actuallyCompleted);
 
         emit(ProfileLoaded(
           user: user,
