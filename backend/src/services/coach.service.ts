@@ -3,13 +3,12 @@
 //  Aura — Local Ollama AI Personal Coach Service
 // ============================================================
 
-import { OLLAMA_CONFIG } from "../config";
-
-interface ExerciseInput {
+import { OLLAMA_CONFIG } from "../config";interface ExerciseInput {
   name: string;
   targetSets: number;
   lastWeekWeight?: number | null;
   lastWeekReps?: number | null;
+  isPlateaued?: boolean;
 }
 
 interface WorkoutSessionInput {
@@ -19,6 +18,7 @@ interface WorkoutSessionInput {
   isOverridden?: boolean;
   isSkipped?: boolean;
   streakDays?: number;
+  highFatigueRisk?: boolean;
 }
 
 interface WeightTrendInput {
@@ -92,6 +92,13 @@ export async function generateWorkoutCoachNote(session: WorkoutSessionInput): Pr
     return callOllamaChat(systemPrompt, userPrompt, fallback);
   }
 
+  if (session.highFatigueRisk) {
+    const systemPrompt = `You are a proactive strength & recovery coach. The user has completed 3+ consecutive days of workouts without rest and is training today. Produce 1-2 short sentences (maximum 30 words) cautioning them on fatigue and suggesting a lighter intensity session or taking an extra rest day. No markdown, no quotes.`;
+    const userPrompt = `User has trained 3+ consecutive days without rest. Today is ${session.todayDayName}. Give a fatigue caution tip.`;
+    const fallback = `You've worked out 3+ days in a row. Listen closely to your body today — consider dropping intensity slightly or taking an extra rest day if fatigue sets in.`;
+    return callOllamaChat(systemPrompt, userPrompt, fallback);
+  }
+
   if (session.isOverridden) {
     const systemPrompt = `You are an expert strength coach. The user manually swapped today's session to ${session.todayDayName}. Produce 1-2 short sentences (maximum 30 words) acknowledging the swap and advising them to listen to their body and adjust recovery. No markdown, no quotes.`;
     const userPrompt = `User swapped today's session to ${session.todayDayName} on routine ${session.splitName}. Give a short coach tip acknowledging the swap.`;
@@ -150,9 +157,16 @@ export async function generateSwapSuggestionNote(input: SwapSuggestionInput): Pr
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
 
-// ── 2. Exercise Specific Coach Note ──────────────────────────
+// ── 3. Exercise Specific Coach Note ──────────────────────────
 
 export async function generateExerciseCoachNote(exercise: ExerciseInput): Promise<string> {
+  if (exercise.isPlateaued) {
+    const systemPrompt = `You are an expert strength coach. The user has plateaued on ${exercise.name} across their last 3 completed sessions (${exercise.lastWeekWeight ?? 0}kg × ${exercise.lastWeekReps ?? 0} reps). Produce exactly ONE short sentence (maximum 22 words) giving a concrete adjustment like a 10% deload or changing rep targets. No markdown, no quotes.`;
+    const userPrompt = `Exercise: ${exercise.name} is plateaued. Last stats: ${exercise.lastWeekWeight}kg x ${exercise.lastWeekReps}. Give a concrete deload or rep adjustment tip.`;
+    const fallback = `Plateau detected on ${exercise.name}: try a 10% deload or adjust rep ranges to spark new adaptation.`;
+    return callOllamaChat(systemPrompt, userPrompt, fallback);
+  }
+
   const hasHistory = exercise.lastWeekWeight != null && exercise.lastWeekWeight > 0;
   const historyText = hasHistory
     ? `Last performance: ${exercise.lastWeekWeight}kg × ${exercise.lastWeekReps} reps.`
@@ -168,7 +182,7 @@ export async function generateExerciseCoachNote(exercise: ExerciseInput): Promis
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
 
-// ── 3. Weight Progress Coach Note ───────────────────────────
+// ── 4. Weight Progress Coach Note ───────────────────────────
 
 export async function generateWeightCoachNote(trendData: WeightTrendInput): Promise<string> {
   const trend = trendData.trend ?? "stable";
@@ -188,7 +202,7 @@ export async function generateWeightCoachNote(trendData: WeightTrendInput): Prom
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
 
-// ── 4. Routine Recommendation Coach Note ─────────────────────
+// ── 5. Routine Recommendation Coach Note ─────────────────────
 
 interface RoutineRecommendInput {
   days: number;
@@ -211,7 +225,7 @@ export async function generateRoutineRecommendationNote(input: RoutineRecommendI
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
 
-// ── 5. Post-Workout Summary Coach Note ───────────────────────
+// ── 6. Post-Workout Summary Coach Note ───────────────────────
 
 interface FinishedWorkoutSessionInput {
   sessionName: string;
@@ -232,5 +246,20 @@ export async function generateWorkoutSummaryNote(input: FinishedWorkoutSessionIn
     ? `Outstanding workout! You smashed a new PR today on ${input.prsAchieved[0]}. Keep this momentum going!`
     : `Great job completing your ${input.sessionName} session today! Consistency is where true strength gains are forged.`;
 
+  return callOllamaChat(systemPrompt, userPrompt, fallback);
+}
+
+// ── 7. Overtraining Caution Coach Note ───────────────────────
+
+interface OvertrainingInput {
+  consecutiveDays: number;
+  splitMaxAllowed: number;
+}
+
+export async function generateOvertrainingNote(input: OvertrainingInput): Promise<string> {
+  const systemPrompt = `You are a strength and recovery coach. The user has logged ${input.consecutiveDays} consecutive training days, exceeding their plan's scheduled maximum (${input.splitMaxAllowed} days in a row). Produce ONE short sentence (maximum 22 words) advising them to schedule a rest day soon. No markdown, no quotes.`;
+  const userPrompt = `User trained ${input.consecutiveDays} days straight when split allows max ${input.splitMaxAllowed}. Give a short recovery rest day advice.`;
+
+  const fallback = `You've trained ${input.consecutiveDays} days in a row — consider scheduling a rest day soon to allow muscle recovery and prevent overtraining.`;
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
