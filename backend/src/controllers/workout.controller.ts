@@ -278,6 +278,7 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
   };
 
   try {
+    console.log(`⏳ [Workout] Setting up routine for user ${userId}: ${splitName} (${daysPerWeek}d/${splitType})`);
     await prisma.user.update({
       where: { id: userId },
       data: {
