@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -143,11 +143,13 @@ async function getLastWeekPerformance(userId: string, exerciseId: string): Promi
 }
 
 // ── Build currentSession from today's weekday + routine ────
+// ── Build currentSession from configured date + routine ────
 async function buildCurrentSession(
   userId: string,
   splitType: string,
   splitName: string,
-  dateStr?: string
+  dateStr?: string,
+  configuredAt?: Date | null
 ): Promise<CurrentSession> {
   const meta = ROUTINE_CATALOGUE[splitType];
   const days = meta?.days ?? [];
@@ -176,22 +178,34 @@ async function buildCurrentSession(
     } else {
       todayDayName = override.dayType;
     }
+  } else if (configuredAt && days.length > 0) {
+    const targetDate = new Date(targetDateStr + "T00:00:00Z");
+    const configDateStr = configuredAt.toISOString().split("T")[0];
+    const configDate = new Date(configDateStr + "T00:00:00Z");
+    const diffDays = Math.max(0, Math.floor((targetDate.getTime() - configDate.getTime()) / 86400000));
+    todayDayName = days[diffDays % days.length] ?? "Rest";
   } else {
-    // weekday: 1=Mon, 7=Sun. Convert to 0-indexed Mon=0
-    const targetDate = new Date(targetDateStr);
+    const targetDate = new Date(targetDateStr + "T00:00:00Z");
     const todayIndex = (targetDate.getDay() + 6) % 7;
     todayDayName = days[todayIndex % days.length] ?? "Rest";
   }
 
   // Handle explicit skipped state
   if (isSkipped) {
+    const sessionCoachNote = await generateWorkoutCoachNote({
+      splitName,
+      todayDayName: "Skipped",
+      exercises: [],
+      isSkipped: true,
+      isOverridden: true,
+    });
     return {
       routineName: splitName,
       todayDayName: "Skipped",
       exercises: [],
       isSkipped: true,
       isOverridden: true,
-      coachNote: "Today is marked as skipped. Take the time to rest, recover, and stay hydrated.",
+      coachNote: sessionCoachNote,
       topHistoricalSet: null,
     };
   }
@@ -237,6 +251,8 @@ async function buildCurrentSession(
     splitName,
     todayDayName,
     exercises: exercisesWithCoachNotes,
+    isOverridden,
+    isSkipped: false,
   });
 
   const first = exercisesWithCoachNotes[0];
@@ -278,6 +294,7 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
   };
 
   try {
+    const configuredAt = new Date();
     console.log(`⏳ [Workout] Setting up routine for user ${userId}: ${splitName} (${daysPerWeek}d/${splitType})`);
     await prisma.user.update({
       where: { id: userId },
@@ -285,12 +302,13 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
         workoutDays: daysPerWeek,
         workoutSplitType: splitType,
         workoutSplitName: splitName,
+        workoutConfiguredAt: configuredAt,
       },
     });
 
     console.log(`✅ [Workout] Routine setup by user ${userId}: ${splitName} (${daysPerWeek}d/${splitType})`);
 
-    const currentSession = await buildCurrentSession(userId, splitType, splitName);
+    const currentSession = await buildCurrentSession(userId, splitType, splitName, undefined, configuredAt);
 
     res.status(200).json({
       success: true,
@@ -301,7 +319,7 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
           daysPerWeek,
           description: meta.description,
           weekSchedule: meta.days,
-          configuredAt: new Date().toISOString(),
+          configuredAt: configuredAt.toISOString(),
         },
         currentSession,
       },
@@ -327,15 +345,16 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       return;
     }
 
+    const targetDateStr = (req.query.date as string) || new Date().toISOString().split("T")[0];
     const splitType = user.workoutSplitType;
     const splitName = user.workoutSplitName ?? user.workoutSplitType;
     const daysPerWeek = user.workoutDays;
 
     const meta = ROUTINE_CATALOGUE[splitType];
-    const currentSession = await buildCurrentSession(userId, splitType, splitName);
+    const currentSession = await buildCurrentSession(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
 
     // Compute real workout streak & weekly completion from DB
-    const now = new Date();
+    const now = new Date(targetDateStr + "T12:00:00Z");
     const startOfWeek = new Date(now);
     const dayOfWeek = (now.getDay() + 6) % 7; // Mon = 0, Sun = 6
     startOfWeek.setDate(now.getDate() - dayOfWeek);
@@ -382,9 +401,10 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       }
     });
 
-    const todayStr = now.toISOString().split("T")[0];
+    const todayStr = targetDateStr;
     const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const daysArr = meta?.days ?? [];
+    const configDateStr = user.workoutConfiguredAt ? user.workoutConfiguredAt.toISOString().split("T")[0] : null;
 
     const weekScheduleDetails = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startOfWeek);
@@ -404,21 +424,28 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
         } else {
           dayType = overrideType;
         }
+      } else if (configDateStr && user.workoutConfiguredAt) {
+        const configDate = new Date(configDateStr + "T00:00:00Z");
+        const curDate = new Date(dateStr + "T00:00:00Z");
+        const diffDays = Math.floor((curDate.getTime() - configDate.getTime()) / 86400000);
+        dayType = diffDays >= 0 ? (daysArr[diffDays % daysArr.length] ?? "Rest") : "Rest";
       } else {
         dayType = daysArr[i % daysArr.length] ?? "Rest";
       }
 
+      const isBeforePlan = configDateStr != null && dateStr < configDateStr;
       const isRest = dayType === "Rest";
       const isCompleted = completedDateStrs.has(dateStr);
       const isToday = dateStr === todayStr;
       const isPast = dateStr < todayStr;
       const isFuture = dateStr > todayStr;
-      const isMissed = isPast && !isCompleted && !isRest && !isSkipped;
+      const isMissed = isPast && !isBeforePlan && !isCompleted && !isRest && !isSkipped;
 
       return {
         dayName: dayNamesShort[i],
         dateStr,
         dayType,
+        isBeforePlan,
         isRest,
         isSkipped,
         isOverridden,
@@ -457,6 +484,14 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       }
     }
 
+    const uniqueTypes = Array.from(new Set(daysArr)).filter(t => t !== "Rest");
+    const completedSessionNames = Array.from(completedDateStrs);
+    const swapSuggestionNote = await generateSwapSuggestionNote({
+      splitName,
+      completedDaysThisWeek: completedSessionNames,
+      availableOptions: uniqueTypes,
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -464,8 +499,8 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
           splitType,
           splitName,
           daysPerWeek,
-          description: meta?.description ?? "",
-          weekSchedule: weekScheduleDetails.map((d) => d.dayType),
+          description: meta.description,
+          weekSchedule: meta.days,
           weekScheduleDetails,
           configuredAt: user.updatedAt.toISOString(),
         },
