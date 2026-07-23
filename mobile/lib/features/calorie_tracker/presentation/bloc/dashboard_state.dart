@@ -2,6 +2,7 @@
 // The Teneen — Dashboard States
 
 import 'package:equatable/equatable.dart';
+import '../../domain/entities/meal_log_entity.dart';
 
 abstract class DashboardState extends Equatable {
   const DashboardState();
@@ -19,6 +20,7 @@ class DashboardLoaded extends DashboardState {
   final Map<String, dynamic> waterSummary;
   final Map<String, dynamic> weightSummary;
   final Map<String, dynamic> mealPlanSummary;
+  final List<MealLogEntity> todayMealLogs;
   final String date;
 
   const DashboardLoaded({
@@ -26,6 +28,7 @@ class DashboardLoaded extends DashboardState {
     required this.waterSummary,
     required this.weightSummary,
     required this.mealPlanSummary,
+    this.todayMealLogs = const [],
     required this.date,
   });
 
@@ -35,6 +38,7 @@ class DashboardLoaded extends DashboardState {
         waterSummary,
         weightSummary,
         mealPlanSummary,
+        todayMealLogs,
         date,
       ];
 }
