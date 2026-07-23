@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -19,8 +19,9 @@ interface SessionExercise {
   name: string;
   targetSets: number;
   muscleGroup: string;
-  lastWeekWeight?: number;
-  lastWeekReps?: number;
+  lastWeekWeight?: number | null;
+  lastWeekReps?: number | null;
+  isPlateaued?: boolean;
   coachNote?: string;
 }
 
@@ -103,6 +104,56 @@ const ROUTINE_CATALOGUE: Record<string, { description: string; days: string[] }>
   arnold_split:{ description: "Arnold's 6-day blueprint — antagonist supersets",         days: ["Chest + Back", "Shoulders + Arms", "Legs", "Chest + Back", "Shoulders + Arms", "Legs", "Rest"] },
 };
 
+// ── Fetch user's performance history for plateau detection ────
+async function getRecentPerformanceTrend(
+  userId: string,
+  exerciseId: string,
+  limit = 3
+): Promise<{ history: { weight: number; reps: number }[]; isPlateaued: boolean }> {
+  const recentExercises = await prisma.workoutExercise.findMany({
+    where: {
+      exerciseId,
+      session: {
+        userId,
+        endedAt: { not: null },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: limit,
+    include: {
+      sets: {
+        where: {
+          isCompleted: true,
+          weightKg: { not: null },
+          reps: { not: null },
+        },
+        orderBy: [
+          { weightKg: "desc" },
+          { reps: "desc" },
+        ],
+        take: 1,
+      },
+    },
+  });
+
+  const history = recentExercises
+    .filter((we) => we.sets.length > 0)
+    .map((we) => ({
+      weight: we.sets[0].weightKg!,
+      reps: we.sets[0].reps!,
+    }));
+
+  let isPlateaued = false;
+  if (history.length >= limit) {
+    const first = history[0];
+    isPlateaued = history.every((h) => h.weight <= first.weight && h.reps <= first.reps);
+  }
+
+  return { history, isPlateaued };
+}
+
 // ── Fetch user's actual previous performance from the DB ────
 async function getLastWeekPerformance(userId: string, exerciseId: string): Promise<{ weight: number; reps: number } | null> {
   const lastWorkoutExercise = await prisma.workoutExercise.findFirst({
@@ -142,7 +193,6 @@ async function getLastWeekPerformance(userId: string, exerciseId: string): Promi
   return null;
 }
 
-// ── Build currentSession from today's weekday + routine ────
 // ── Build currentSession from configured date + routine ────
 async function buildCurrentSession(
   userId: string,
@@ -226,16 +276,19 @@ async function buildCurrentSession(
         ...ex,
         id: undefined,
         lastWeekWeight: undefined,
-        lastWeekReps: undefined
+        lastWeekReps: undefined,
+        isPlateaued: false,
       };
     }
 
-    const lastPerf = await getLastWeekPerformance(userId, dbEx.id);
+    const trend = await getRecentPerformanceTrend(userId, dbEx.id, 3);
+    const lastPerf = trend.history[0] ?? null;
     return {
       ...ex,
       id: dbEx.id,
       lastWeekWeight: lastPerf ? lastPerf.weight : null,
       lastWeekReps: lastPerf ? lastPerf.reps : null,
+      isPlateaued: trend.isPlateaued,
     };
   }));
 
@@ -249,6 +302,8 @@ async function buildCurrentSession(
     })
   );
 
+  const highFatigueRisk = (streakDays ?? 0) >= 3 && todayDayName !== "Rest" && !isSkipped;
+
   const sessionCoachNote = await generateWorkoutCoachNote({
     splitName,
     todayDayName,
@@ -256,6 +311,7 @@ async function buildCurrentSession(
     isOverridden,
     isSkipped: false,
     streakDays,
+    highFatigueRisk,
   });
 
   const first = exercisesWithCoachNotes[0];
@@ -316,6 +372,24 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
     res.status(200).json({
       success: true,
       data: {
+        routine: {
+          splitType,
+          splitName,
+          daysPerWeek,
+          description: meta.description,
+          weekSchedule: meta.days,
+          configuredAt: configuredAt.toISOString(),
+        },
+        currentSession,
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ [Workout] setup error:", msg);
+    res.status(500).json({ success: false, error: "Failed to save routine configuration." });
+  }
+}
+
 // ── GET /api/v1/workouts/routine ───────────────────────────
 
 export async function getWorkoutRoutine(req: Request, res: Response): Promise<void> {
@@ -478,6 +552,40 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       availableOptions: uniqueTypes,
     });
 
+    // Compute overtraining risk: compare actual consecutive completed days against split's max consecutive
+    let splitMaxConsecutive = 0;
+    let currentConsec = 0;
+    for (const d of daysArr) {
+      if (d !== "Rest") {
+        currentConsec++;
+        if (currentConsec > splitMaxConsecutive) splitMaxConsecutive = currentConsec;
+      } else {
+        currentConsec = 0;
+      }
+    }
+    if (splitMaxConsecutive === 0) splitMaxConsecutive = 3;
+
+    let actualConsecutive = 0;
+    let tempConsecutive = 0;
+    completedDaysThisWeek.forEach((done) => {
+      if (done) {
+        tempConsecutive++;
+        if (tempConsecutive > actualConsecutive) actualConsecutive = tempConsecutive;
+      } else {
+        tempConsecutive = 0;
+      }
+    });
+
+    const overtrainingRisk = actualConsecutive > splitMaxConsecutive || streakDays > (splitMaxConsecutive + 1);
+
+    let overtrainingNote: string | null = null;
+    if (overtrainingRisk) {
+      overtrainingNote = await generateOvertrainingNote({
+        consecutiveDays: Math.max(actualConsecutive, streakDays),
+        splitMaxAllowed: splitMaxConsecutive,
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -489,10 +597,13 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
           weekSchedule: meta.days,
           weekScheduleDetails,
           configuredAt: (user.workoutConfiguredAt ?? user.updatedAt).toISOString(),
+          overtrainingRisk,
+          overtrainingNote,
         },
         currentSession,
         streakDays,
         completedDaysThisWeek,
+        swapSuggestionNote,
       },
     });
   } catch (err: unknown) {
@@ -504,7 +615,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
 export async function getAvailableExercises(req: Request, res: Response): Promise<void> {
   try {
     const exercises = await prisma.exercise.findMany({
-      select: { id: true, name: true, muscleGroup: true, mechanic: true },
+      select: { id: true, name: true, muscleGroup: true },
       orderBy: { name: 'asc' },
     });
     res.status(200).json({ success: true, data: exercises });
@@ -524,7 +635,7 @@ export async function startSession(req: Request, res: Response): Promise<void> {
     }
     
     const userId = req.user!.id;
-    const session = await WorkoutService.startWorkoutSession(userId, parsed.data.name, parsed.data.exercises);
+    const session = await WorkoutService.startWorkoutSession(userId, parsed.data.name, parsed.data.exercises ?? undefined);
     res.status(200).json({ success: true, data: session });
   } catch (err) {
     console.error("❌ [Workout] startSession error:", err);
@@ -649,18 +760,6 @@ export async function finishSession(req: Request, res: Response): Promise<void> 
     });
   } catch (err) {
     console.error("❌ [Workout] finishSession error:", err);
-    res.status(500).json({ success: false, error: "Internal server error" });
-  }
-}
-
-// ── GET /api/v1/workouts/exercises ────────────────────────────
-export async function getAvailableExercises(req: Request, res: Response): Promise<void> {
-  try {
-    const exercises = await prisma.exercise.findMany({
-      orderBy: { name: 'asc' }
-    });
-    res.status(200).json({ success: true, data: exercises });
-  } catch (err) {
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
