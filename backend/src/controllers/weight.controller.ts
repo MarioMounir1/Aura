@@ -9,6 +9,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
+import { generateWeightCoachNote } from "../services/coach.service";
 
 // ── Validation ───────────────────────────────────────────────
 
@@ -120,12 +121,14 @@ export async function getWeightHistory(req: Request, res: Response): Promise<voi
     ]);
 
     if (logs.length === 0) {
+      const coachNote = await generateWeightCoachNote({ trend: "stable", goal: user?.goal ?? "maintain" });
       res.status(200).json({
         days,
         logs:         [],
         stats:        null,
         currentWeight: user?.weightKg ?? null,
         goal:          user?.goal     ?? "maintain",
+        coachNote,
       });
       return;
     }
@@ -150,11 +153,21 @@ export async function getWeightHistory(req: Request, res: Response): Promise<voi
       else if (diff > 0.2)  trend = "gaining";
     }
 
+    const coachNote = await generateWeightCoachNote({
+      totalDelta,
+      minWeight,
+      maxWeight,
+      avgWeight,
+      trend,
+      goal: user?.goal ?? "maintain",
+    });
+
     res.status(200).json({
       days,
       logs,
       currentWeight: user?.weightKg ?? last,
       goal:          user?.goal     ?? "maintain",
+      coachNote,
       stats: {
         firstWeight:  first,
         currentWeight: last,
@@ -164,6 +177,7 @@ export async function getWeightHistory(req: Request, res: Response): Promise<voi
         avgWeight,
         trend,                 // losing | gaining | stable
         logsCount: logs.length,
+        coachNote,
       },
     });
   } catch (error) {
