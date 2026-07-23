@@ -16,7 +16,7 @@ import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-lo
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
-import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType } from "../controllers/workout.controller";
+import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -357,5 +357,13 @@ router.post("/workouts/session/swap", requireAuth, swapSessionExercise);
  * @body    { date?, dayType }
  */
 router.post("/workouts/session/override", requireAuth, overrideSessionType);
+
+/**
+ * @route   GET /api/v1/workouts/recommend
+ * @desc    Get ranked workout routine recommendations based on user profile (experience, goal, days)
+ * @access  Private (JWT required)
+ * @query   days (number, 3-6)
+ */
+router.get("/workouts/recommend", requireAuth, recommendWorkoutRoutine);
 
 export default router;
