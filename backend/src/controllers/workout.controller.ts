@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -709,6 +709,192 @@ export async function overrideSessionType(req: Request, res: Response): Promise<
     });
   } catch (error) {
     console.error("❌ [Workout] overrideSessionType error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── GET /api/v1/workouts/recommend ─────────────────────────────
+export async function recommendWorkoutRoutine(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, error: "Unauthorized" });
+      return;
+    }
+
+    const rawDays = parseInt(req.query.days as string, 10);
+    const days = isNaN(rawDays) ? 4 : Math.min(Math.max(rawDays, 3), 6);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        trainingExperience: true,
+        goal: true,
+        activityLevel: true,
+      },
+    });
+
+    const exp = (user?.trainingExperience ?? "new") as "new" | "consistent" | "experienced";
+    const goal = (user?.goal ?? "maintain") as "lose" | "maintain" | "gain";
+
+    interface SplitItem {
+      name: string;
+      splitType: string;
+      tagline: string;
+      breakdown: string[];
+      reasonTag: string;
+      rank: number;
+    }
+
+    let items: SplitItem[] = [];
+
+    if (days === 3) {
+      if (exp === "new") {
+        items = [
+          {
+            name: "Full Body Split",
+            splitType: "full_body",
+            tagline: "3 full-body sessions — all major muscle groups each day",
+            breakdown: ROUTINE_CATALOGUE["full_body"].days,
+            reasonTag: "Best Fit: Optimal frequency for beginners",
+            rank: 1,
+          },
+          {
+            name: "Push / Pull / Legs",
+            splitType: "ppl_1x",
+            tagline: "Classic PPL hit once per week — 3 dedicated sessions",
+            breakdown: ROUTINE_CATALOGUE["ppl_1x"].days,
+            reasonTag: "Lower frequency per muscle group",
+            rank: 2,
+          },
+        ];
+      } else {
+        items = [
+          {
+            name: "Push / Pull / Legs",
+            splitType: "ppl_1x",
+            tagline: "Classic PPL hit once per week — 3 dedicated sessions",
+            breakdown: ROUTINE_CATALOGUE["ppl_1x"].days,
+            reasonTag: "Best Fit: High per-session focus",
+            rank: 1,
+          },
+          {
+            name: "Full Body Split",
+            splitType: "full_body",
+            tagline: "3 full-body sessions — all major muscle groups each day",
+            breakdown: ROUTINE_CATALOGUE["full_body"].days,
+            reasonTag: "Higher per-session systemic fatigue",
+            rank: 2,
+          },
+        ];
+      }
+    } else if (days === 4) {
+      items = [
+        {
+          name: "Upper / Lower Split",
+          splitType: "upper_lower",
+          tagline: "Each muscle group 2× per week — optimal frequency",
+          breakdown: ROUTINE_CATALOGUE["upper_lower"].days,
+          reasonTag: "Best Fit: Balanced 2x weekly muscle frequency",
+          rank: 1,
+        },
+        {
+          name: "Bro Split (4-Day)",
+          splitType: "bro_split",
+          tagline: "One muscle group per day — high volume focus",
+          breakdown: ROUTINE_CATALOGUE["bro_split"].days,
+          reasonTag: "High volume — lower weekly frequency per muscle group",
+          rank: 2,
+        },
+      ];
+    } else if (days === 5) {
+      items = [
+        {
+          name: "Hybrid PPL Split",
+          splitType: "ul_ppl",
+          tagline: "Hybrid 5-day — upper/lower + push/pull/legs",
+          breakdown: ROUTINE_CATALOGUE["ul_ppl"].days,
+          reasonTag: "Best Fit: Combines heavy strength & hypertrophy",
+          rank: 1,
+        },
+        {
+          name: "5-Day Bodypart Split",
+          splitType: "bro_split_5",
+          tagline: "Full coverage — arms get dedicated session",
+          breakdown: ROUTINE_CATALOGUE["bro_split_5"].days,
+          reasonTag: "High isolation volume — long recovery window",
+          rank: 2,
+        },
+      ];
+    } else if (days === 6) {
+      if (exp === "experienced" && goal !== "lose") {
+        items = [
+          {
+            name: "Arnold Split (6-Day)",
+            splitType: "arnold_split",
+            tagline: "Arnold's 6-day blueprint — antagonist supersets",
+            breakdown: ROUTINE_CATALOGUE["arnold_split"].days,
+            reasonTag: "Best Fit: Peak volume for experienced lifters",
+            rank: 1,
+          },
+          {
+            name: "Push / Pull / Legs (2x/wk)",
+            splitType: "ppl_2x",
+            tagline: "Each muscle group 2× per week — king of hypertrophy",
+            breakdown: ROUTINE_CATALOGUE["ppl_2x"].days,
+            reasonTag: "High frequency hypertrophy blueprint",
+            rank: 2,
+          },
+        ];
+      } else {
+        items = [
+          {
+            name: "Push / Pull / Legs (2x/wk)",
+            splitType: "ppl_2x",
+            tagline: "Each muscle group 2× per week — king of hypertrophy",
+            breakdown: ROUTINE_CATALOGUE["ppl_2x"].days,
+            reasonTag: "Best Fit: Gold standard for 6-day hypertrophy & recovery",
+            rank: 1,
+          },
+          {
+            name: "Arnold Split (6-Day)",
+            splitType: "arnold_split",
+            tagline: "Arnold's 6-day blueprint — antagonist supersets",
+            breakdown: ROUTINE_CATALOGUE["arnold_split"].days,
+            reasonTag: "Extremely high volume — heavy recovery demand",
+            rank: 2,
+          },
+        ];
+      }
+    }
+
+    const top = items[0];
+    const reasonNote = await generateRoutineRecommendationNote({
+      days,
+      trainingExperience: exp,
+      goal,
+      splitName: top.name,
+    });
+
+    const recommended = {
+      ...top,
+      reasonNote,
+      reasonTag: "Best Fit for Your Profile",
+    };
+
+    const otherOptions = items.slice(1);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        days,
+        userProfile: { trainingExperience: exp, goal },
+        recommended,
+        otherOptions,
+      },
+    });
+  } catch (error) {
+    console.error("❌ [Workout] recommendWorkoutRoutine error:", error);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
