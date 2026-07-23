@@ -307,7 +307,8 @@ class AuthWrapper extends StatelessWidget {
                   }
                   if (profileState is ProfileLoaded) {
                     if (profileState.isOnboardingCompleted) {
-                      return const HomeShellScreen();
+                      final userId = profileState.user['id'] as String? ?? 'user';
+                      return HomeShellScreen(key: ValueKey(userId));
                     } else {
                       return const OnboardingScreen();
                     }
