@@ -33,3 +33,7 @@ class DeleteWeightLogEvent extends WeightEvent {
   @override
   List<Object?> get props => [logId];
 }
+
+class ResetWeightEvent extends WeightEvent {
+  const ResetWeightEvent();
+}

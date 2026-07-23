@@ -13,6 +13,7 @@ class WeightBloc extends Bloc<WeightEvent, WeightState> {
     on<LoadWeightHistory>(_onLoadWeightHistory);
     on<LogWeightMeasurement>(_onLogWeight);
     on<DeleteWeightLogEvent>(_onDeleteWeightLog);
+    on<ResetWeightEvent>((event, emit) => emit(WeightInitial()));
   }
 
   Future<void> _onLoadWeightHistory(
