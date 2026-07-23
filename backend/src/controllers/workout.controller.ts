@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -1079,6 +1079,244 @@ export async function recommendWorkoutRoutine(req: Request, res: Response): Prom
     });
   } catch (error) {
     console.error("❌ [Workout] recommendWorkoutRoutine error:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── Interpret Natural Language Session Request ───────────────
+
+export async function interpretWorkoutSessionRequest(req: Request, res: Response): Promise<void> {
+  try {
+    const { message } = req.body;
+    if (!message || typeof message !== "string" || !message.trim()) {
+      res.status(400).json({ success: false, error: "Message is required" });
+      return;
+    }
+
+    const userId = req.user!.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.workoutSplitType) {
+      res.status(400).json({ success: false, error: "No active workout routine configuration found." });
+      return;
+    }
+
+    const splitType = user.workoutSplitType;
+    const splitName = user.workoutSplitName ?? user.workoutSplitType;
+    const targetDateStr = new Date().toISOString().split("T")[0];
+
+    const currentSession = await buildCurrentSession(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
+    const meta = ROUTINE_CATALOGUE[splitType];
+    const availableDayTypes = meta?.days ?? [];
+
+    const interpretation = await interpretSessionRequest(message.trim(), {
+      splitName,
+      availableDayTypes,
+      todayDayName: currentSession.todayDayName,
+      exercises: currentSession.exercises,
+    });
+
+    let confirmationMessage = interpretation.confirmationMessage;
+    let actionExecuted = false;
+
+    if (interpretation.intent === "override_day" && interpretation.dayType) {
+      const rawChosen = interpretation.dayType.trim();
+      const chosenType = rawChosen.toLowerCase() === "skip" ? "skip" : rawChosen;
+      await prisma.sessionOverride.upsert({
+        where: { userId_date: { userId, date: targetDateStr } },
+        update: { dayType: chosenType },
+        create: { userId, date: targetDateStr, dayType: chosenType },
+      });
+      actionExecuted = true;
+      if (!confirmationMessage) {
+        confirmationMessage = `Updated today's session to ${chosenType}.`;
+      }
+    } else if (interpretation.intent === "swap_exercise") {
+      const queryName = (interpretation.exerciseName ?? "").toLowerCase();
+      const targetEx = currentSession.exercises.find(
+        (e) => e.name.toLowerCase().includes(queryName) || e.muscleGroup.toLowerCase().includes(queryName)
+      ) ?? currentSession.exercises[0];
+
+      if (targetEx && targetEx.id) {
+        const alternatives = await prisma.exerciseAlternative.findMany({
+          where: { exerciseId: targetEx.id },
+          include: { alternative: true },
+        });
+
+        let alt = alternatives.length > 0 ? alternatives[0].alternative : null;
+        if (!alt) {
+          const fallbacks = await prisma.exercise.findMany({
+            where: { muscleGroup: targetEx.muscleGroup, id: { not: targetEx.id } },
+            take: 1,
+          });
+          if (fallbacks.length > 0) alt = fallbacks[0];
+        }
+
+        if (alt) {
+          const activeSession = await prisma.workoutSession.findFirst({
+            where: { userId, endedAt: null },
+            include: { exercises: true },
+          });
+
+          if (activeSession) {
+            const we = activeSession.exercises.find((e) => e.exerciseId === targetEx.id) ?? activeSession.exercises[0];
+            if (we) {
+              await prisma.workoutExercise.update({
+                where: { id: we.id },
+                data: { exerciseId: alt.id },
+              });
+              await prisma.exerciseSet.deleteMany({ where: { workoutExerciseId: we.id } });
+              actionExecuted = true;
+            }
+          } else {
+            actionExecuted = true;
+          }
+          confirmationMessage = `Swapped ${targetEx.name} for ${alt.name}.`;
+        }
+      }
+    } else if (interpretation.intent === "lighter_intensity") {
+      actionExecuted = true;
+      confirmationMessage = "Understood — today's session will focus on controlled execution with lighter intensity.";
+    }
+
+    const updatedSession = await buildCurrentSession(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        intent: interpretation.intent,
+        actionExecuted,
+        confirmationMessage: confirmationMessage || "Session updated successfully.",
+        currentSession: updatedSession,
+      },
+    });
+  } catch (err) {
+    console.error("❌ [Workout] interpretWorkoutSessionRequest error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── Weekly AI Recap ──────────────────────────────────────────
+
+export async function getWeeklyRecap(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.workoutSplitType) {
+      res.status(200).json({
+        success: true,
+        data: { recapNote: "No active routine split found. Setup a routine to receive weekly recaps." },
+      });
+      return;
+    }
+
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    const dayOfWeek = (now.getDay() + 6) % 7;
+    startOfWeek.setDate(now.getDate() - dayOfWeek);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+
+    const sessions = await prisma.workoutSession.findMany({
+      where: {
+        userId,
+        startedAt: { gte: startOfWeek, lt: endOfWeek },
+        endedAt: { not: null },
+      },
+      include: {
+        exercises: {
+          include: { exercise: true, sets: true },
+        },
+      },
+    });
+
+    const completedDaysCount = new Set(sessions.map((s) => new Date(s.startedAt).toISOString().split("T")[0])).size;
+    const splitType = user.workoutSplitType;
+    const splitName = user.workoutSplitName ?? user.workoutSplitType;
+    const meta = ROUTINE_CATALOGUE[splitType];
+    const daysArr = meta?.days ?? [];
+    const scheduledTrainingDays = daysArr.filter((d) => d !== "Rest").length;
+
+    const missedDaysCount = Math.max(0, Math.min(dayOfWeek + 1, scheduledTrainingDays) - completedDaysCount);
+    const restDaysCount = (dayOfWeek + 1) - completedDaysCount;
+
+    let prsAchieved: string[] = [];
+    for (const session of sessions) {
+      for (const we of session.exercises) {
+        const completedSets = we.sets.filter((s) => s.isCompleted && s.weightKg != null && s.reps != null);
+        if (completedSets.length > 0) {
+          completedSets.sort((a, b) => (b.weightKg! * b.reps!) - (a.weightKg! * a.reps!));
+          const topSet = completedSets[0];
+
+          const previousBest = await prisma.exerciseSet.findFirst({
+            where: {
+              isCompleted: true,
+              weightKg: { not: null },
+              reps: { not: null },
+              workoutExercise: {
+                exerciseId: we.exerciseId,
+                session: { userId, startedAt: { lt: startOfWeek } },
+              },
+            },
+            orderBy: [{ weightKg: "desc" }, { reps: "desc" }],
+          });
+
+          if (previousBest && previousBest.weightKg != null) {
+            if (topSet.weightKg! > previousBest.weightKg || (topSet.weightKg! === previousBest.weightKg && topSet.reps! > previousBest.reps!)) {
+              prsAchieved.push(`${we.exercise.name}: ${topSet.weightKg}kg × ${topSet.reps} reps`);
+            }
+          }
+        }
+      }
+    }
+
+    let streakDays = 0;
+    const allSessions = await prisma.workoutSession.findMany({
+      where: { userId },
+      select: { startedAt: true },
+      orderBy: { startedAt: "desc" },
+    });
+
+    if (allSessions.length > 0) {
+      const sessionDates = new Set(allSessions.map((s) => new Date(s.startedAt).toISOString().split("T")[0]));
+      let checkDate = new Date();
+      checkDate.setHours(0, 0, 0, 0);
+      let checkStr = checkDate.toISOString().split("T")[0];
+      if (!sessionDates.has(checkStr)) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        checkStr = checkDate.toISOString().split("T")[0];
+      }
+      while (sessionDates.has(checkStr)) {
+        streakDays++;
+        checkDate.setDate(checkDate.getDate() - 1);
+        checkStr = checkDate.toISOString().split("T")[0];
+      }
+    }
+
+    const recapNote = await generateWeeklyRecapNote({
+      splitName,
+      completedDaysCount,
+      missedDaysCount,
+      restDaysCount,
+      streakDays,
+      prsAchieved: Array.from(new Set(prsAchieved)),
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        splitName,
+        completedDaysCount,
+        missedDaysCount,
+        restDaysCount,
+        streakDays,
+        prsAchieved: Array.from(new Set(prsAchieved)),
+        recapNote,
+      },
+    });
+  } catch (err) {
+    console.error("❌ [Workout] getWeeklyRecap error:", err);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }

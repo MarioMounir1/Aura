@@ -16,7 +16,7 @@ import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-lo
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
-import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine } from "../controllers/workout.controller";
+import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine, interpretWorkoutSessionRequest, getWeeklyRecap } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
 
@@ -357,6 +357,21 @@ router.post("/workouts/session/swap", requireAuth, swapSessionExercise);
  * @body    { date?, dayType }
  */
 router.post("/workouts/session/override", requireAuth, overrideSessionType);
+
+/**
+ * @route   POST /api/v1/workouts/session/interpret
+ * @desc    Interpret natural language message to control/swap today's workout session
+ * @access  Private (JWT required)
+ * @body    { message: string }
+ */
+router.post("/workouts/session/interpret", requireAuth, interpretWorkoutSessionRequest);
+
+/**
+ * @route   GET /api/v1/workouts/weekly-recap
+ * @desc    Get AI-generated weekly workout recap summarizing completion, PRs, and next week focus
+ * @access  Private (JWT required)
+ */
+router.get("/workouts/weekly-recap", requireAuth, getWeeklyRecap);
 
 /**
  * @route   GET /api/v1/workouts/recommend
