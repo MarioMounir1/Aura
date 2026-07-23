@@ -138,7 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         ),
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
-        listenWhen: (_, cur) => cur is AuthFailure || cur is Authenticated,
+        listenWhen: (_, cur) => cur is AuthFailure,
         listener: (context, state) {
           if (state is AuthFailure) {
             ScaffoldMessenger.of(context)
@@ -153,9 +153,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ),
               );
-          }
-          if (state is Authenticated) {
-            Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
           }
         },
         buildWhen: (prev, cur) => (prev is AuthLoading) != (cur is AuthLoading),
