@@ -69,3 +69,5 @@ class UpdatePremiumStatus extends ProfileEvent {
   @override
   List<Object?> get props => [isPremium];
 }
+
+class ResetProfileEvent extends ProfileEvent {}
