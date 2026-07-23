@@ -15,6 +15,7 @@ abstract class ProfileRepository {
     String? gender, // male | female
     String? activityLevel, // sedentary | lightly_active | moderate | very_active
     String? goal, // lose | maintain | gain
+    String? trainingExperience, // new | consistent | experienced
     int? dailyCalorieGoal,
     int? dailyWaterGoalMl,
     String? language, // en | ar

@@ -24,6 +24,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     String? gender,
     String? activityLevel,
     String? goal,
+    String? trainingExperience,
     int? dailyCalorieGoal,
     int? dailyWaterGoalMl,
     String? language,
@@ -38,6 +39,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       if (gender != null) data['gender'] = gender;
       if (activityLevel != null) data['activityLevel'] = activityLevel;
       if (goal != null) data['goal'] = goal;
+      if (trainingExperience != null) data['trainingExperience'] = trainingExperience;
       if (dailyCalorieGoal != null) data['dailyCalorieGoal'] = dailyCalorieGoal;
       if (dailyWaterGoalMl != null) data['dailyWaterGoalMl'] = dailyWaterGoalMl;
       if (language != null) data['language'] = language;
