@@ -18,6 +18,7 @@ interface WorkoutSessionInput {
   exercises: ExerciseInput[];
   isOverridden?: boolean;
   isSkipped?: boolean;
+  streakDays?: number;
 }
 
 interface WeightTrendInput {
@@ -106,10 +107,26 @@ export async function generateWorkoutCoachNote(session: WorkoutSessionInput): Pr
     .map((e) => `${e.name} (${e.lastWeekWeight ? `${e.lastWeekWeight}kg × ${e.lastWeekReps}` : "no history"})`)
     .join(", ");
 
-  const systemPrompt = `You are an elite, encouraging strength coach. Produce 1-2 short, plain-language sentences max (maximum 35 words total). Explain what to focus on for today's session and why exercise sequence matters. Do NOT use markdown, bullet points, or quotes. Speak directly to the lifter.`;
-  const userPrompt = `Routine: ${session.splitName} - ${session.todayDayName}. Exercises today: ${exListStr}. Give a short 1-2 sentence coach tip.`;
+  const streak = session.streakDays ?? 0;
+  let streakContext = "";
+  if (streak >= 3) {
+    streakContext = `User is on a strong ${streak}-day active workout streak! Explicitly praise their ${streak}-day streak and consistency.`;
+  } else if (streak <= 1) {
+    streakContext = `User has 0-1 recent streak days. Encourage them to ease back in cleanly without rushing intensity.`;
+  } else {
+    streakContext = `User has a ${streak}-day workout streak. Encourage solid execution.`;
+  }
 
-  const fallback = `Focus on clean execution today. Prioritize your heavy compound lifts first before moving to accessory movements.`;
+  const systemPrompt = `You are an elite, encouraging strength coach. Produce 1-2 short, plain-language sentences max (maximum 35 words total). Explain what to focus on for today's session and why exercise sequence matters. ${streakContext} Do NOT use markdown, bullet points, or quotes. Speak directly to the lifter.`;
+  const userPrompt = `Routine: ${session.splitName} - ${session.todayDayName}. Exercises today: ${exListStr}. Streak: ${streak} days. Give a short 1-2 sentence coach tip.`;
+
+  let fallback = `Focus on clean execution today. Prioritize your heavy compound lifts first before moving to accessory movements.`;
+  if (streak >= 3) {
+    fallback = `Incredible ${streak}-day streak! Keep this powerful momentum going today by prioritizing clean execution on compound lifts first.`;
+  } else if (streak <= 1) {
+    fallback = `Welcome back! Ease into today's session with clean form and controlled reps — building consistency is your top priority.`;
+  }
+
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
 
@@ -191,5 +208,29 @@ export async function generateRoutineRecommendationNote(input: RoutineRecommendI
   const userPrompt = `Split: ${input.splitName}. User context: ${input.days} days/week, ${expLabel} experience, goal is ${input.goal}. Explain why this split is best fit.`;
 
   const fallback = `As a ${expLabel} lifter training ${input.days} days per week, ${input.splitName} provides the optimal balance of muscle frequency and recovery capacity for your ${input.goal} goal.`;
+  return callOllamaChat(systemPrompt, userPrompt, fallback);
+}
+
+// ── 5. Post-Workout Summary Coach Note ───────────────────────
+
+interface FinishedWorkoutSessionInput {
+  sessionName: string;
+  exercisesLogged: number;
+  totalSetsCompleted: number;
+  prsAchieved?: string[];
+}
+
+export async function generateWorkoutSummaryNote(input: FinishedWorkoutSessionInput): Promise<string> {
+  const prText = input.prsAchieved && input.prsAchieved.length > 0
+    ? `Personal Records set today: ${input.prsAchieved.join(", ")}.`
+    : "No new PRs set today, but execution and consistency were solid.";
+
+  const systemPrompt = `You are an enthusiastic strength coach providing a 1-2 sentence post-workout summary (maximum 30 words). If the user set a PR today, celebrate it explicitly! Otherwise, praise their effort and consistency. No markdown, no quotes.`;
+  const userPrompt = `Finished workout: ${input.sessionName}. Exercises completed: ${input.exercisesLogged}, Total sets: ${input.totalSetsCompleted}. ${prText} Give a short post-workout summary note.`;
+
+  const fallback = input.prsAchieved && input.prsAchieved.length > 0
+    ? `Outstanding workout! You smashed a new PR today on ${input.prsAchieved[0]}. Keep this momentum going!`
+    : `Great job completing your ${input.sessionName} session today! Consistency is where true strength gains are forged.`;
+
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
