@@ -71,8 +71,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   String? _errorMessage;
 
 
-  // ── Streak (mock — replace with backend data) ──────────────
-  final int _streakDays = 5;
+  // ── Streak & Real-Time Weekly Completion ──────────────────────
+  int _streakDays = 0;
+  List<bool> _completedDaysThisWeek = List.filled(7, false);
 
   // ── Dio ───────────────────────────────────────────────────
   late final Dio _dio;
@@ -98,7 +99,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         final days      = data['daysPerWeek'] as int? ?? 4;
         final suggestions = RoutineCatalogue.forDays(days);
         final found = suggestions.where((s) => s.splitType == splitType).toList();
+        final streak = resp.data['data']['streakDays'] as int? ?? 0;
+        final completedList = (resp.data['data']['completedDaysThisWeek'] as List<dynamic>?)
+                ?.map((e) => e == true)
+                .toList() ??
+            List.filled(7, false);
+
         setState(() {
+          _streakDays = streak;
+          _completedDaysThisWeek = completedList;
           _activeDays   = days;
           _activeRoutine = found.isNotEmpty
               ? found.first
@@ -461,6 +470,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   Widget _buildStreakBadge() {
+    if (_streakDays <= 0) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -568,11 +578,97 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
+  Widget _buildCoachCard(bool isArabic) {
+    final coachNote = _currentSession?.coachNote;
+    if (coachNote == null || coachNote.trim().isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _C.cyan.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _C.cyan.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.psychology_rounded, color: _C.cyan, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isArabic ? 'مدربك الشخصي' : 'YOUR COACH',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: _C.cyan,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    _buildLocalAiBadge(),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  coachNote,
+                  style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: _C.textPri,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocalAiBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: _C.cyan.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.memory_rounded, color: _C.cyan, size: 11),
+          const SizedBox(width: 4),
+          Text(
+            'Local AI · offline',
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: _C.cyan,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTodayCard(bool isArabic) {
     final routine = _activeRoutine!;
     final session = _currentSession;
 
-    // Derive today label from session (authoritative) or local schedule fallback
     final todayLabel = session?.todayDayName
         ?? (() {
           final idx = DateTime.now().weekday - 1;
@@ -583,141 +679,199 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     final exercises = session?.exercises ?? [];
     final isRestDay = exercises.isEmpty;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: _C.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: _C.border, width: 1.2),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _C.cyan.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 1),
-            ),
-            child: Text(
-              isArabic ? 'جلسة اليوم' : "TODAY'S SESSION",
-              style: GoogleFonts.inter(
-                  fontSize: 10, fontWeight: FontWeight.w800,
-                  color: _C.cyan, letterSpacing: 0.8),
-            ),
+    return Column(
+      children: [
+        _buildCoachCard(isArabic),
+        Container(
+          decoration: BoxDecoration(
+            color: _C.card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: _C.border, width: 1.2),
           ),
-          const SizedBox(height: 10),
-
-          // Routine name + today label
-          Text(
-            '${routine.name} — $todayLabel',
-            style: GoogleFonts.inter(
-                fontSize: 18, fontWeight: FontWeight.w900,
-                color: _C.textPri, letterSpacing: -0.3),
-          ),
-          const SizedBox(height: 16),
-          Divider(color: _C.border, height: 1),
-          const SizedBox(height: 14),
-
-          // ── Exercise List ──────────────────────────────
-          if (isRestDay)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(children: [
-                const Icon(Icons.hotel_rounded, color: _C.textMut, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  isArabic ? 'يوم راحة — استرح واستعد' : 'Rest Day — Recover & recharge',
-                  style: GoogleFonts.inter(fontSize: 13, color: _C.textMut),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _C.cyan.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 1),
                 ),
-              ]),
-            )
-          else
-            ...List.generate(exercises.length, (i) {
-              final ex = exercises[i];
-              final isFirst = i == 0;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Index badge
-                    Container(
-                      width: 26, height: 26,
-                      decoration: BoxDecoration(
-                        color: isFirst
-                            ? _C.cyan.withValues(alpha: 0.15)
-                            : _C.cardElev,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isFirst ? _C.cyan : _C.borderMid,
-                          width: 1.2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${i + 1}',
-                          style: GoogleFonts.inter(
-                            fontSize: 11, fontWeight: FontWeight.w800,
-                            color: isFirst ? _C.cyan : _C.textMut,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
+                child: Text(
+                  isArabic ? 'جلسة اليوم' : "TODAY'S SESSION",
+                  style: GoogleFonts.inter(
+                      fontSize: 10, fontWeight: FontWeight.w800,
+                      color: _C.cyan, letterSpacing: 0.8),
+                ),
+              ),
+              const SizedBox(height: 10),
 
-                    // Exercise name + muscle group
-                    Expanded(
+              // Routine name + today label
+              Text(
+                '${routine.name} — $todayLabel',
+                style: GoogleFonts.inter(
+                    fontSize: 18, fontWeight: FontWeight.w900,
+                    color: _C.textPri, letterSpacing: -0.3),
+              ),
+              const SizedBox(height: 16),
+              Divider(color: _C.border, height: 1),
+              const SizedBox(height: 14),
+
+              // ── Exercise List ──────────────────────────────
+              if (isRestDay)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(children: [
+                    const Icon(Icons.hotel_rounded, color: _C.textMut, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      isArabic ? 'يوم راحة — استرح واستعد' : 'Rest Day — Recover & recharge',
+                      style: GoogleFonts.inter(fontSize: 13, color: _C.textMut),
+                    ),
+                  ]),
+                )
+              else
+                ...List.generate(exercises.length, (i) {
+                  final ex = exercises[i];
+                  final isFirst = i == 0;
+                  final isExpanded = _expandedExerciseIndex == i;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _expandedExerciseIndex = isExpanded ? null : i;
+                      });
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            ex.name,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: isFirst ? FontWeight.w700 : FontWeight.w600,
-                              color: isFirst ? _C.textPri : _C.textSec,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // Index badge
+                              Container(
+                                width: 26, height: 26,
+                                decoration: BoxDecoration(
+                                  color: isFirst
+                                      ? _C.cyan.withValues(alpha: 0.15)
+                                      : _C.cardElev,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isFirst ? _C.cyan : _C.borderMid,
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${i + 1}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11, fontWeight: FontWeight.w800,
+                                      color: isFirst ? _C.cyan : _C.textMut,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+
+                              // Exercise name + muscle group
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      ex.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: isFirst ? FontWeight.w700 : FontWeight.w600,
+                                        color: isFirst ? _C.textPri : _C.textSec,
+                                      ),
+                                    ),
+                                    Text(
+                                      ex.muscleGroup,
+                                      style: GoogleFonts.inter(fontSize: 10, color: _C.textMut),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Sets badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: _C.cardElev,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: _C.border),
+                                ),
+                                child: Text(
+                                  '${ex.targetSets} sets',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 10, fontWeight: FontWeight.w600, color: _C.textMut),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+
+                              // Chevron accordion indicator
+                              Icon(
+                                isExpanded
+                                    ? Icons.keyboard_arrow_up_rounded
+                                    : Icons.keyboard_arrow_down_rounded,
+                                color: _C.textMut,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+
+                          // Accordion Expanded Coach Note Body
+                          if (isExpanded) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _C.cardElev,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: _C.borderMid),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.lightbulb_outline_rounded, color: _C.amber, size: 16),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      ex.coachNote ??
+                                          (ex.lastWeekWeight != null
+                                              ? 'Target matching ${ex.lastWeekWeight}kg × ${ex.lastWeekReps} reps.'
+                                              : 'First time on this exercise — start conservative and focus on form.'),
+                                      style: GoogleFonts.inter(fontSize: 12, color: _C.textSec, height: 1.4),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          Text(
-                            ex.muscleGroup,
-                            style: GoogleFonts.inter(fontSize: 10, color: _C.textMut),
-                          ),
+                          ],
                         ],
                       ),
                     ),
+                  );
+                }),
 
-                    // Sets badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _C.cardElev,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: _C.border),
-                      ),
-                      child: Text(
-                        '${ex.targetSets} sets',
-                        style: GoogleFonts.inter(
-                            fontSize: 10, fontWeight: FontWeight.w600, color: _C.textMut),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
+              const SizedBox(height: 16),
+              Divider(color: _C.border, height: 1),
+              const SizedBox(height: 14),
 
-          const SizedBox(height: 16),
-          Divider(color: _C.border, height: 1),
-          const SizedBox(height: 14),
-
-          // Start Workout CTA
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: isRestDay ? null : _startWorkout,
+              // Start Workout CTA
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: isRestDay ? null : _startWorkout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _C.cyan,
                 disabledBackgroundColor: _C.cardElev,
@@ -810,7 +964,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(7, (i) {
-        final isActive  = i < _activeDays;
+        final isActive  = i < _completedDaysThisWeek.length ? _completedDaysThisWeek[i] : false;
         final isToday   = i == todayIndex;
         final label     = weekDayLabels[i];
         // READ-ONLY: no GestureDetector, no onTap
