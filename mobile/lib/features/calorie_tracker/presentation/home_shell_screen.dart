@@ -22,62 +22,9 @@ class DashboardTabWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<ProfileBloc, ProfileState>(
-      listener: (context, profileState) {
-        if (profileState is ProfileLoaded) {
-          final dashboardState = context.read<DashboardBloc>().state;
-          if (dashboardState is DashboardLoaded) {
-            context.read<DashboardBloc>().add(const LoadDashboard());
-          }
-        }
-      },
-      child: BlocBuilder<DashboardBloc, DashboardState>(
-        builder: (context, state) {
-          if (state is DashboardInitial) {
-            context.read<DashboardBloc>().add(const LoadDashboard());
-            return const Scaffold(
-              backgroundColor: AppColors.background,
-              body: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-            );
-          }
-          if (state is DashboardLoading) {
-            return const Scaffold(
-              backgroundColor: AppColors.background,
-              body: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-            );
-          }
-          if (state is DashboardLoaded) {
-            return MealsDashboard(
-              foodSummary: state.foodSummary,
-              mealLogs: state.todayMealLogs,
-            );
-          }
-          if (state is DashboardFailure) {
-            return Scaffold(
-              backgroundColor: AppColors.background,
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(state.message, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => context.read<DashboardBloc>().add(const LoadDashboard()),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        if (state is DashboardInitial || state is DashboardLoading) {
           return const Scaffold(
             backgroundColor: AppColors.background,
             body: Center(
@@ -86,8 +33,40 @@ class DashboardTabWrapper extends StatelessWidget {
               ),
             ),
           );
-        },
-      ),
+        }
+        if (state is DashboardLoaded) {
+          return MealsDashboard(
+            foodSummary: state.foodSummary,
+            mealLogs: state.todayMealLogs,
+          );
+        }
+        if (state is DashboardFailure) {
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(state.message, style: const TextStyle(color: Colors.red)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => context.read<DashboardBloc>().add(const LoadDashboard()),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return const Scaffold(
+          backgroundColor: AppColors.background,
+          body: Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+          ),
+        );
+      },
     );
   }
 }

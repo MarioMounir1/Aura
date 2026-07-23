@@ -55,6 +55,11 @@ import 'features/calorie_tracker/data/repositories/workout_repository_impl.dart'
 import 'features/calorie_tracker/presentation/bloc/workout_bloc.dart';
 import 'features/calorie_tracker/presentation/bloc/dashboard_event.dart';
 import 'features/calorie_tracker/presentation/bloc/workout_event.dart';
+import 'features/calorie_tracker/presentation/bloc/calorie_tracker_event.dart';
+import 'features/calorie_tracker/presentation/bloc/food_search_event.dart';
+import 'features/calorie_tracker/presentation/bloc/water_event.dart';
+import 'features/calorie_tracker/presentation/bloc/weight_event.dart';
+import 'features/calorie_tracker/presentation/bloc/meal_plan_event.dart';
 import 'features/premium/data/services/purchase_service.dart';
 
 // ── Language Cubit ────────────────────────────────────────────
@@ -272,6 +277,11 @@ class AuthWrapper extends StatelessWidget {
         } else if (authState is Unauthenticated) {
           context.read<ProfileBloc>().add(ResetProfileEvent());
           context.read<DashboardBloc>().add(const ResetDashboardEvent());
+          context.read<CalorieTrackerBloc>().add(const ResetCalorieTracker());
+          context.read<FoodSearchBloc>().add(const ResetFoodSearchEvent());
+          context.read<WaterBloc>().add(const ResetWaterEvent());
+          context.read<WeightBloc>().add(const ResetWeightEvent());
+          context.read<MealPlanBloc>().add(const ResetMealPlanEvent());
           context.read<WorkoutBloc>().add(const ResetWorkoutEvent());
         }
       },
@@ -290,8 +300,7 @@ class AuthWrapper extends StatelessWidget {
               },
               child: BlocBuilder<ProfileBloc, ProfileState>(
                 builder: (context, profileState) {
-                  if (profileState is ProfileInitial) {
-                    context.read<ProfileBloc>().add(LoadProfile());
+                  if (profileState is ProfileInitial || profileState is ProfileLoading) {
                     return const Scaffold(
                       backgroundColor: AppColors.background,
                       body: Center(
