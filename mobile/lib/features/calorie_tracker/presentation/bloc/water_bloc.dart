@@ -13,6 +13,7 @@ class WaterBloc extends Bloc<WaterEvent, WaterState> {
     on<LoadWaterToday>(_onLoadWaterToday);
     on<LogWaterIntake>(_onLogWaterIntake);
     on<DeleteWaterLogEvent>(_onDeleteWaterLog);
+    on<ResetWaterEvent>((event, emit) => emit(WaterInitial()));
   }
 
   Future<void> _onLoadWaterToday(

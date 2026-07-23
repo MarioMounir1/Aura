@@ -33,3 +33,7 @@ class DeleteWaterLogEvent extends WaterEvent {
   @override
   List<Object?> get props => [logId];
 }
+
+class ResetWaterEvent extends WaterEvent {
+  const ResetWaterEvent();
+}
