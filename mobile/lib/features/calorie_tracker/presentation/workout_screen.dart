@@ -90,9 +90,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   // ── Load existing routine from backend ─────────────────────
   Future<void> _loadRoutine() async {
+    if (!mounted) return;
     setState(() => _state = WorkoutHubState.loading);
     try {
       final resp = await _dio.get('/workouts/routine');
+      if (!mounted) return;
       final data = resp.data['data']['routine'];
       final sessionData = resp.data['data']['currentSession'];
       if (data != null) {
@@ -113,6 +115,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             ? rawWeekDetails.map((e) => WeekDayDetail.fromJson(e as Map<String, dynamic>)).toList()
             : <WeekDayDetail>[];
 
+        if (!mounted) return;
         setState(() {
           _streakDays = streak;
           _completedDaysThisWeek = completedList;
@@ -135,9 +138,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           _state = WorkoutHubState.ready;
         });
       } else {
+        if (!mounted) return;
         setState(() => _state = WorkoutHubState.unconfigured);
       }
     } on DioException catch (e) {
+      if (!mounted) return;
       // 401 → probably not set up yet, treat as unconfigured
       if (e.response?.statusCode == 404 || e.response?.statusCode == 401) {
         setState(() => _state = WorkoutHubState.unconfigured);
@@ -148,12 +153,14 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() => _state = WorkoutHubState.unconfigured);
     }
   }
 
   // ── POST setup to backend ──────────────────────────────────
   Future<void> _submitRoutine(int days, RoutineSuggestion split) async {
+    if (!mounted) return;
     setState(() => _state = WorkoutHubState.loading);
     try {
       final resp = await _dio.post('/workouts/setup', data: {
@@ -161,6 +168,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         'splitType':   split.splitType,
         'splitName':   split.name,
       });
+      if (!mounted) return;
       final sessionData = resp.data['data']?['currentSession'];
       setState(() {
         _activeDays    = days;
@@ -184,6 +192,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         );
       }
     } on DioException catch (e) {
+      if (!mounted) return;
       final msg = (e.response?.data is Map
               ? e.response?.data['error']
               : null) as String? ??
@@ -201,6 +210,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         );
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() => _state = WorkoutHubState.unconfigured);
     }
   }
@@ -269,13 +279,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     return MultiBlocListener(
       listeners: [
-        BlocListener<ProfileBloc, ProfileState>(
-          listener: (context, profileState) {
-            if (profileState is ProfileLoaded) {
-              _loadRoutine();
-            }
-          },
-        ),
         BlocListener<WorkoutBloc, WorkoutState>(
           listener: (context, workoutState) {
             if (workoutState is WorkoutError) {
