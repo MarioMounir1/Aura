@@ -13,6 +13,7 @@ class MealPlanBloc extends Bloc<MealPlanEvent, MealPlanState> {
     on<LoadWeeklyMealPlan>(_onLoadWeeklyMealPlan);
     on<GenerateWeeklyPlanEvent>(_onGenerateWeeklyPlan);
     on<ToggleMealEatenEvent>(_onToggleMealEaten);
+    on<ResetMealPlanEvent>((event, emit) => emit(MealPlanInitial()));
   }
 
   Future<void> _onLoadWeeklyMealPlan(

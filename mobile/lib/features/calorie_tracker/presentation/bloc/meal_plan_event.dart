@@ -23,3 +23,7 @@ class ToggleMealEatenEvent extends MealPlanEvent {
   @override
   List<Object?> get props => [planEntryId, isEaten];
 }
+
+class ResetMealPlanEvent extends MealPlanEvent {
+  const ResetMealPlanEvent();
+}
