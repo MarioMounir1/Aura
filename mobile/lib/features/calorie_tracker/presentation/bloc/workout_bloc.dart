@@ -14,6 +14,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     on<LogSetEvent>(_onLogSetEvent);
     on<FinishWorkoutSession>(_onFinishWorkoutSession);
     on<SwapWorkoutExercise>(_onSwapWorkoutExercise);
+    on<ResetWorkoutEvent>((event, emit) => emit(WorkoutInitial()));
   }
 
   Future<void> _onStartWorkoutSession(
