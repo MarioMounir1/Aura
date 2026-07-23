@@ -75,6 +75,7 @@ async function callOllamaChat(systemPrompt: string, userPrompt: string, fallback
 
     // Strip markdown formatting, quotes, or newlines
     const cleaned = content.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
+    return cleaned || fallback;
   } catch (err) {
     clearTimeout(timeoutId);
     return fallback;
@@ -392,6 +393,39 @@ export async function generateWeeklyRecapNote(summary: WeeklyRecapSummaryInput):
   const fallback = summary.completedDaysCount > 0
     ? `Solid effort this past week with ${summary.completedDaysCount} completed workout sessions! ${summary.prsAchieved.length > 0 ? `You achieved great progress on ${summary.prsAchieved[0]}.` : "You maintained consistent execution across your routine."} For next week, focus on progressive overload and hitting all scheduled sessions cleanly.`
     : `Your routine is ready for a fresh start. Focus on locking in your first scheduled workout session this upcoming week to build momentum!`;
+
+  return callOllamaChat(systemPrompt, userPrompt, fallback);
+}
+
+// ── 10. Natural AI Intent Confirmation Generator ─────────────
+
+export interface IntentConfirmationInput {
+  intent: "override_day" | "swap_exercise" | "lighter_intensity" | "unrecognized";
+  dayType?: string;
+  exerciseSwappedFrom?: string;
+  exerciseSwappedTo?: string;
+  userMessage: string;
+}
+
+export async function generateIntentConfirmationNote(input: IntentConfirmationInput): Promise<string> {
+  let fallback = "I've updated your workout session context. Let's get to work!";
+
+  if (input.intent === "override_day") {
+    fallback = input.dayType === "skip"
+      ? "Got it! Marked today as skipped for extra recovery — rest up and get ready to smash your next session!"
+      : `All set! Swapped today's session to ${input.dayType ?? "your requested workout"}. Bring high energy today!`;
+  } else if (input.intent === "swap_exercise") {
+    fallback = input.exerciseSwappedFrom && input.exerciseSwappedTo
+      ? `Swapped out ${input.exerciseSwappedFrom} for ${input.exerciseSwappedTo}. Keep your reps controlled and form tight!`
+      : "Swapped your exercise to a solid alternative for today's session!";
+  } else if (input.intent === "lighter_intensity") {
+    fallback = "Understood — today's session is adjusted for lighter intensity and recovery focus. Listen closely to your body!";
+  } else if (input.intent === "unrecognized") {
+    fallback = "I wasn't sure what you meant by that — try naming a specific day type (e.g. Legs A) or an exercise to swap.";
+  }
+
+  const systemPrompt = `You are a warm, encouraging strength coach replying to a lifter after applying an action to their workout session. Produce ONE short, enthusiastic sentence (maximum 22 words). Speak naturally as their personal coach. Do NOT use markdown or quotes.`;
+  const userPrompt = `User said: "${input.userMessage}". Action performed: ${input.intent} (${input.dayType || input.exerciseSwappedTo || ""}). Produce a short, natural coach confirmation line.`;
 
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
