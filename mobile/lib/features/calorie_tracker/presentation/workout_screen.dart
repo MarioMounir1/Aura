@@ -70,6 +70,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   RoutineSuggestion? _activeRoutine;
   CurrentSession? _currentSession;
   String? _errorMessage;
+  String? _swapSuggestionNote;
   int? _expandedExerciseIndex;
   List<WeekDayDetail> _weekScheduleDetails = [];
 
@@ -93,10 +94,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     if (!mounted) return;
     setState(() => _state = WorkoutHubState.loading);
     try {
-      final resp = await _dio.get('/workouts/routine');
+      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      final resp = await _dio.get('/workouts/routine?date=$todayStr');
       if (!mounted) return;
       final data = resp.data['data']['routine'];
       final sessionData = resp.data['data']['currentSession'];
+      final swapNote = resp.data['data']?['swapSuggestionNote'] as String?;
       if (data != null) {
         // Backend returned a saved routine
         final splitType = data['splitType'] as String;
@@ -120,6 +123,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           _streakDays = streak;
           _completedDaysThisWeek = completedList;
           _weekScheduleDetails = weekDetails;
+          _swapSuggestionNote = swapNote;
           _activeDays   = days;
           _activeRoutine = found.isNotEmpty
               ? found.first
@@ -763,6 +767,34 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 style: GoogleFonts.inter(fontSize: 12, color: _C.textMut),
               ),
               const SizedBox(height: 20),
+
+              if (_swapSuggestionNote != null && _swapSuggestionNote!.trim().isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _C.cyan.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.psychology_rounded, color: _C.cyan, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _swapSuggestionNote!,
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: _C.textPri,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               ...uniqueTypes.map((type) {
                 final isSelected = type == currentType;
