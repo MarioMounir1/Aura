@@ -75,7 +75,58 @@ async function callOllamaChat(systemPrompt: string, userPrompt: string, fallback
 
     // Strip markdown formatting, quotes, or newlines
     const cleaned = content.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-    return cleaned || fallback;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    return fallback;
+  }
+}
+
+// ── Helper: Ollama Chat Call (JSON Mode) ───────────────────
+
+async function callOllamaJsonChat<T>(systemPrompt: string, userPrompt: string, fallback: T): Promise<T> {
+  const provider = process.env.AI_PROVIDER ?? "ollama";
+  if (provider === "none") {
+    return fallback;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+  try {
+    const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: OLLAMA_CONFIG.model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: false,
+        format: "json",
+        options: {
+          temperature: 0.2,
+          num_predict: 160,
+        },
+      }),
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return fallback;
+    }
+
+    const data = (await response.json()) as any;
+    const content = data.message?.content?.trim();
+
+    if (!content) {
+      return fallback;
+    }
+
+    const parsed = JSON.parse(content) as T;
+    return parsed || fallback;
   } catch (err) {
     clearTimeout(timeoutId);
     return fallback;
@@ -261,5 +312,86 @@ export async function generateOvertrainingNote(input: OvertrainingInput): Promis
   const userPrompt = `User trained ${input.consecutiveDays} days straight when split allows max ${input.splitMaxAllowed}. Give a short recovery rest day advice.`;
 
   const fallback = `You've trained ${input.consecutiveDays} days in a row — consider scheduling a rest day soon to allow muscle recovery and prevent overtraining.`;
+  return callOllamaChat(systemPrompt, userPrompt, fallback);
+}
+
+// ── 8. Natural Language Session Intent Interpreter ───────────
+
+export interface InterpretContext {
+  splitName: string;
+  availableDayTypes: string[];
+  todayDayName: string;
+  exercises: { id?: string; workoutExerciseId?: string; name: string; muscleGroup: string }[];
+}
+
+export interface InterpretResult {
+  intent: "override_day" | "swap_exercise" | "lighter_intensity" | "unrecognized";
+  dayType?: string;
+  exerciseName?: string;
+  reason?: string;
+  confirmationMessage: string;
+}
+
+export async function interpretSessionRequest(
+  message: string,
+  context: InterpretContext
+): Promise<InterpretResult> {
+  const availableDaysStr = Array.from(new Set(context.availableDayTypes)).join(", ");
+  const currentExercisesStr = context.exercises.map((e) => e.name).join(", ");
+
+  const systemPrompt = `You are a natural-language workout session controller. Classify the user's message into ONE of these 4 intents:
+1. "override_day": user wants to change or skip today's workout split day type. "dayType" MUST be one of: [${availableDaysStr}] or "skip".
+2. "swap_exercise": user wants to replace an exercise or target a body part. "exerciseName" is the exercise or muscle group to replace.
+3. "lighter_intensity": user is fatigued, sore, or asking to make today lighter/easier.
+4. "unrecognized": fallback if request is ambiguous, gibberish, or not actionable.
+
+Respond ONLY with a single JSON object. Schema:
+{
+  "intent": "override_day" | "swap_exercise" | "lighter_intensity" | "unrecognized",
+  "dayType": string or null,
+  "exerciseName": string or null,
+  "reason": string or null,
+  "confirmationMessage": "Short 1-sentence response explaining what action was performed or why unrecognized"
+}`;
+
+  const userPrompt = `Active routine: ${context.splitName}. Today's day: ${context.todayDayName}. Today's exercises: ${currentExercisesStr}. Available day types: ${availableDaysStr}. User message: "${message}"`;
+
+  const fallback: InterpretResult = {
+    intent: "unrecognized",
+    confirmationMessage: "I wasn't sure what you meant by that — try naming a specific day type (e.g. Legs A) or exercise to swap.",
+  };
+
+  const res = await callOllamaJsonChat<InterpretResult>(systemPrompt, userPrompt, fallback);
+  if (!res.intent || !["override_day", "swap_exercise", "lighter_intensity", "unrecognized"].includes(res.intent)) {
+    return fallback;
+  }
+
+  return res;
+}
+
+// ── 9. Weekly AI Recap Coach Note ────────────────────────────
+
+export interface WeeklyRecapSummaryInput {
+  splitName: string;
+  completedDaysCount: number;
+  missedDaysCount: number;
+  restDaysCount: number;
+  streakDays: number;
+  prsAchieved: string[];
+}
+
+export async function generateWeeklyRecapNote(summary: WeeklyRecapSummaryInput): Promise<string> {
+  const prsText = summary.prsAchieved.length > 0
+    ? `PRs smashed: ${summary.prsAchieved.join(", ")}.`
+    : "No new PRs set this week, but consistency was maintained.";
+
+  const systemPrompt = `You are an elite, supportive strength coach writing a weekly workout recap. Produce ONE short paragraph (3-4 sentences max, maximum 60 words total). Summarize what got done, constructively mention missed days if any (no guilt-tripping), and provide 1 concrete focus for next week. Speak directly to the user. No markdown, no quotes.`;
+
+  const userPrompt = `Routine: ${summary.splitName}. Week stats: ${summary.completedDaysCount} sessions completed, ${summary.missedDaysCount} missed, ${summary.restDaysCount} rest/skipped days. Streak: ${summary.streakDays} days. ${prsText} Write the weekly recap paragraph.`;
+
+  const fallback = summary.completedDaysCount > 0
+    ? `Solid effort this past week with ${summary.completedDaysCount} completed workout sessions! ${summary.prsAchieved.length > 0 ? `You achieved great progress on ${summary.prsAchieved[0]}.` : "You maintained consistent execution across your routine."} For next week, focus on progressive overload and hitting all scheduled sessions cleanly.`
+    : `Your routine is ready for a fresh start. Focus on locking in your first scheduled workout session this upcoming week to build momentum!`;
+
   return callOllamaChat(systemPrompt, userPrompt, fallback);
 }
