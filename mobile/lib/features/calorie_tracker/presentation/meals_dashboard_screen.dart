@@ -191,11 +191,21 @@ class _MealsDashboardState extends State<MealsDashboard>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(MealsDashboard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.mealLogs != oldWidget.mealLogs || widget.foodSummary != oldWidget.foodSummary) {
+      _initData();
+    }
+  }
+
   // ── Data initialization (preserved from original) ─────────
 
   void _initData() {
     if (widget.mealLogs != null && widget.mealLogs!.isNotEmpty) {
-      logs = widget.mealLogs!.map((entity) {
+      final sortedEntities = List<MealLogEntity>.from(widget.mealLogs!)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      logs = sortedEntities.map((entity) {
         final isNutritious = entity.protein > 25 && entity.calories < 400;
         final List<MealWarning> warnings = [];
         if (entity.carbs > 80)     warnings.add(const MealWarning(warningText: 'High carb load detected', isSevere: false));
