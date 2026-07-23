@@ -16,6 +16,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<CheckOnboardingStatus>(_onCheckOnboardingStatus);
     on<CompleteOnboardingEvent>(_onCompleteOnboarding);
     on<UpdatePremiumStatus>(_onUpdatePremiumStatus);
+    on<ResetProfileEvent>((event, emit) => emit(ProfileInitial()));
 
     _premiumSubscription = PurchaseService.instance.premiumStream.listen((isPremium) {
       add(UpdatePremiumStatus(isPremium));
