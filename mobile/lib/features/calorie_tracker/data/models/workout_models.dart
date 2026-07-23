@@ -107,6 +107,8 @@ class CurrentSession {
   final String routineName;
   final String todayDayName;
   final List<SessionExercise> exercises;
+  final bool isSkipped;
+  final bool isOverridden;
   final String? coachNote;
   final TopHistoricalSet? topHistoricalSet;
 
@@ -114,11 +116,13 @@ class CurrentSession {
     required this.routineName,
     required this.todayDayName,
     required this.exercises,
+    this.isSkipped = false,
+    this.isOverridden = false,
     this.coachNote,
     this.topHistoricalSet,
   });
 
-  bool get isRestDay => exercises.isEmpty;
+  bool get isRestDay => exercises.isEmpty && !isSkipped;
 
   factory CurrentSession.fromJson(Map<String, dynamic> j) => CurrentSession(
         routineName:     j['routineName'] as String? ?? 'Workout',
@@ -126,10 +130,55 @@ class CurrentSession {
         exercises:       (j['exercises'] as List<dynamic>? ?? [])
             .map((e) => SessionExercise.fromJson(e as Map<String, dynamic>))
             .toList(),
+        isSkipped:        j['isSkipped'] as bool? ?? false,
+        isOverridden:     j['isOverridden'] as bool? ?? false,
         coachNote:        j['coachNote'] as String?,
         topHistoricalSet: j['topHistoricalSet'] != null
             ? TopHistoricalSet.fromJson(j['topHistoricalSet'] as Map<String, dynamic>)
             : null,
+      );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WeekDayDetail — rich schedule details for calendar view
+// ═══════════════════════════════════════════════════════════════
+
+class WeekDayDetail {
+  final String dayName;
+  final String dateStr;
+  final String dayType;
+  final bool isRest;
+  final bool isSkipped;
+  final bool isOverridden;
+  final bool isCompleted;
+  final bool isMissed;
+  final bool isFuture;
+  final bool isToday;
+
+  const WeekDayDetail({
+    required this.dayName,
+    required this.dateStr,
+    required this.dayType,
+    required this.isRest,
+    required this.isSkipped,
+    required this.isOverridden,
+    required this.isCompleted,
+    required this.isMissed,
+    required this.isFuture,
+    required this.isToday,
+  });
+
+  factory WeekDayDetail.fromJson(Map<String, dynamic> j) => WeekDayDetail(
+        dayName:      j['dayName'] as String? ?? '',
+        dateStr:      j['dateStr'] as String? ?? '',
+        dayType:      j['dayType'] as String? ?? 'Rest',
+        isRest:       j['isRest'] as bool? ?? false,
+        isSkipped:    j['isSkipped'] as bool? ?? false,
+        isOverridden: j['isOverridden'] as bool? ?? false,
+        isCompleted:  j['isCompleted'] as bool? ?? false,
+        isMissed:     j['isMissed'] as bool? ?? false,
+        isFuture:     j['isFuture'] as bool? ?? false,
+        isToday:      j['isToday'] as bool? ?? false,
       );
 }
 
