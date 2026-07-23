@@ -46,6 +46,7 @@ class SessionExercise {
   final String muscleGroup;
   final double? lastWeekWeight;
   final int? lastWeekReps;
+  final bool isPlateaued;
   final String? coachNote;
 
   const SessionExercise({
@@ -56,6 +57,7 @@ class SessionExercise {
     required this.muscleGroup,
     this.lastWeekWeight,
     this.lastWeekReps,
+    this.isPlateaued = false,
     this.coachNote,
   });
 
@@ -67,6 +69,7 @@ class SessionExercise {
         muscleGroup:    j['muscleGroup'] as String? ?? '',
         lastWeekWeight: (j['lastWeekWeight'] as num?)?.toDouble(),
         lastWeekReps:   (j['lastWeekReps'] as num?)?.toInt(),
+        isPlateaued:    j['isPlateaued'] as bool? ?? false,
         coachNote:      j['coachNote'] as String?,
       );
 }

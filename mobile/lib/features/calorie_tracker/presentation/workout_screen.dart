@@ -71,15 +71,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   CurrentSession? _currentSession;
   String? _errorMessage;
   String? _swapSuggestionNote;
+  bool _overtrainingRisk = false;
+  String? _overtrainingNote;
   int? _expandedExerciseIndex;
   List<WeekDayDetail> _weekScheduleDetails = [];
-
 
   // ── Streak & Real-Time Weekly Completion ──────────────────────
   int _streakDays = 0;
   List<bool> _completedDaysThisWeek = List.filled(7, false);
 
-  // ── Dio ───────────────────────────────────────────────────
   late final Dio _dio;
 
   @override
@@ -118,12 +118,17 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             ? rawWeekDetails.map((e) => WeekDayDetail.fromJson(e as Map<String, dynamic>)).toList()
             : <WeekDayDetail>[];
 
+        final overtrainRisk = data['overtrainingRisk'] as bool? ?? false;
+        final overtrainNote = data['overtrainingNote'] as String?;
+
         if (!mounted) return;
         setState(() {
           _streakDays = streak;
           _completedDaysThisWeek = completedList;
           _weekScheduleDetails = weekDetails;
           _swapSuggestionNote = swapNote;
+          _overtrainingRisk = overtrainRisk;
+          _overtrainingNote = overtrainNote;
           _activeDays   = days;
           _activeRoutine = found.isNotEmpty
               ? found.first
@@ -260,16 +265,124 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() {
       _state = WorkoutHubState.ready;
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Workout complete! +30 pts 🎉',
-          style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: _C.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+  }
+
+  void _showPostWorkoutSummarySheet(String summaryNote) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: _C.bg,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _C.cyan.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.emoji_events_rounded, color: _C.amber, size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Workout Complete! 🎉',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: _C.textPri,
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: _C.textMut),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _C.cyan.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1.2),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _C.cyan.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.psychology_rounded, color: _C.cyan, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'COACH SUMMARY',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: _C.cyan,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            summaryNote,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              height: 1.4,
+                              color: _C.textPri,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _C.cyan,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'Done',
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -293,6 +406,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   behavior: SnackBarBehavior.floating,
                 ),
               );
+            } else if (workoutState is WorkoutSessionFinished) {
+              _loadRoutine();
+              _showPostWorkoutSummarySheet(workoutState.message);
             }
           },
         ),
@@ -461,6 +577,60 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: _buildWeeklyCalendar(isArabic),
                 ),
+
+                if (_overtrainingRisk && _overtrainingNote != null) ...[
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: _C.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _C.amber.withValues(alpha: 0.35), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _C.amber.withValues(alpha: 0.18),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.warning_amber_rounded, color: _C.amber, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isArabic ? 'تنبيه التعافي' : 'RECOVERY NOTICE',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: _C.amber,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _overtrainingNote!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: _C.textPri,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
               
               const SizedBox(height: 32),
@@ -1193,13 +1363,46 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      ex.name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        fontWeight: isFirst ? FontWeight.w700 : FontWeight.w600,
-                                        color: isFirst ? _C.textPri : _C.textSec,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            ex.name,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13,
+                                              fontWeight: isFirst ? FontWeight.w700 : FontWeight.w600,
+                                              color: isFirst ? _C.textPri : _C.textSec,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (ex.isPlateaued) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: _C.amber.withValues(alpha: 0.15),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: _C.amber.withValues(alpha: 0.4), width: 0.8),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.show_chart_rounded, color: _C.amber, size: 10),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  'Plateau',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 9.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: _C.amber,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                     Text(
                                       ex.muscleGroup,
