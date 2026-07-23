@@ -10,6 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -20,12 +21,14 @@ interface SessionExercise {
   muscleGroup: string;
   lastWeekWeight?: number;
   lastWeekReps?: number;
+  coachNote?: string;
 }
 
 interface CurrentSession {
   routineName: string;
   todayDayName: string;
   exercises: SessionExercise[];
+  coachNote?: string;
   topHistoricalSet: {
     exerciseName: string;
     weight: number;
@@ -172,7 +175,23 @@ async function buildCurrentSession(userId: string, splitType: string, splitName:
     };
   }));
 
-  const first = exercises[0];
+  const exercisesWithCoachNotes = await Promise.all(
+    exercises.map(async (ex) => {
+      const coachNote = await generateExerciseCoachNote(ex);
+      return {
+        ...ex,
+        coachNote,
+      };
+    })
+  );
+
+  const sessionCoachNote = await generateWorkoutCoachNote({
+    splitName,
+    todayDayName,
+    exercises: exercisesWithCoachNotes,
+  });
+
+  const first = exercisesWithCoachNotes[0];
   const topHistoricalSet = (first && first.lastWeekWeight && first.lastWeekReps)
     ? {
         exerciseName: first.name,
@@ -185,7 +204,8 @@ async function buildCurrentSession(userId: string, splitType: string, splitName:
   return {
     routineName: splitName,
     todayDayName,
-    exercises,
+    exercises: exercisesWithCoachNotes,
+    coachNote: sessionCoachNote,
     topHistoricalSet,
   };
 }
