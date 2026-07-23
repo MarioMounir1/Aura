@@ -22,6 +22,7 @@ import '../../../core/widgets/ad_banner.dart';
 import '../../premium/presentation/premium_upgrade_screen.dart';
 import '../../premium/data/services/purchase_service.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
+import '../../profile/presentation/bloc/profile_event.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
 import '../data/models/workout_models.dart';
 import 'bloc/workout_bloc.dart';
