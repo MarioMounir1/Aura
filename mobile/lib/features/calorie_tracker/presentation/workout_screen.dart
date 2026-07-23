@@ -76,6 +76,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   int? _expandedExerciseIndex;
   List<WeekDayDetail> _weekScheduleDetails = [];
 
+  final TextEditingController _aiCommandController = TextEditingController();
+  bool _isInterpretingAiCommand = false;
+
   // ── Streak & Real-Time Weekly Completion ──────────────────────
   int _streakDays = 0;
   List<bool> _completedDaysThisWeek = List.filled(7, false);
@@ -87,6 +90,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     super.initState();
     _dio = ApiClient().dio;
     _loadRoutine();
+  }
+
+  @override
+  void dispose() {
+    _aiCommandController.dispose();
+    super.dispose();
   }
 
   // ── Load existing routine from backend ─────────────────────
@@ -552,16 +561,44 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 ),
                 const SizedBox(height: 28),
 
-                // Weekly overview label
+                // Weekly overview label + Weekly Recap action
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        isArabic ? 'نظرة أسبوعية' : 'Weekly Overview',
-                        style: GoogleFonts.inter(
-                            fontSize: 15, fontWeight: FontWeight.w700, color: _C.textPri),
+                      Row(
+                        children: [
+                          Text(
+                            isArabic ? 'نظرة أسبوعية' : 'Weekly Overview',
+                            style: GoogleFonts.inter(
+                                fontSize: 15, fontWeight: FontWeight.w700, color: _C.textPri),
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _showWeeklyRecapSheet(isArabic),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _C.cyan.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _C.cyan.withValues(alpha: 0.35), width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 12),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isArabic ? 'ملخص الأسبوع' : 'Weekly Recap',
+                                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: _C.cyan),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       Text(
                         isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/week',
@@ -1178,6 +1215,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     return Column(
       children: [
         _buildCoachCard(isArabic),
+        _buildAiCommandInput(isArabic),
         if (isSkipped)
           Container(
             decoration: BoxDecoration(
@@ -1642,6 +1680,271 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           ]),
         );
       }),
+    );
+  }
+
+  Widget _buildAiCommandInput(bool isArabic) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: _C.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _C.borderMid, width: 1.0),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _aiCommandController,
+              enabled: !_isInterpretingAiCommand,
+              style: GoogleFonts.inter(fontSize: 12.5, color: _C.textPri),
+              decoration: InputDecoration(
+                hintText: isArabic ? 'اكتب أمراً.. "غير اليوم لـ Legs"' : 'Type command.. e.g. "swap today for legs"',
+                hintStyle: GoogleFonts.inter(fontSize: 11.5, color: _C.textMut),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              onSubmitted: (_) => _sendAiCommand(isArabic),
+            ),
+          ),
+          const SizedBox(width: 6),
+          IconButton(
+            onPressed: _isInterpretingAiCommand ? null : () => _sendAiCommand(isArabic),
+            icon: _isInterpretingAiCommand
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_C.cyan)),
+                  )
+                : const Icon(Icons.send_rounded, color: _C.cyan, size: 18),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendAiCommand(bool isArabic) async {
+    final msg = _aiCommandController.text.trim();
+    if (msg.isEmpty || _isInterpretingAiCommand) return;
+
+    setState(() => _isInterpretingAiCommand = true);
+    try {
+      final resp = await _dio.post('/workouts/session/interpret', data: {'message': msg});
+      final data = resp.data['data'];
+      final confirmationMsg = data?['confirmationMessage'] as String? ?? 'Session updated.';
+
+      _aiCommandController.clear();
+      await _loadRoutine();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.auto_awesome_rounded, color: Colors.black, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    confirmationMsg,
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: _C.cyan,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to process command. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isInterpretingAiCommand = false);
+      }
+    }
+  }
+
+  Future<void> _showWeeklyRecapSheet(bool isArabic) async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: _C.bg,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: FutureBuilder(
+            future: _dio.get('/workouts/weekly-recap'),
+            builder: (context, AsyncSnapshot<Response> snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_C.cyan)),
+                  ),
+                );
+              }
+
+              if (snapshot.hasError || !snapshot.hasData) {
+                return SizedBox(
+                  height: 180,
+                  child: Center(
+                    child: Text(
+                      isArabic ? 'فشل تحميل الملخص الأسبوعي' : 'Failed to load weekly recap',
+                      style: GoogleFonts.inter(color: _C.textMut),
+                    ),
+                  ),
+                );
+              }
+
+              final data = snapshot.data!.data['data'];
+              final recapNote = data['recapNote'] as String? ?? '';
+              final completed = data['completedDaysCount'] as int? ?? 0;
+              final streak = data['streakDays'] as int? ?? 0;
+              final prs = (data['prsAchieved'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _C.cyan.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            isArabic ? 'الملخص الأسبوعي بالذكاء الاصطناعي' : 'Weekly AI Recap',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: _C.textPri,
+                            ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        icon: const Icon(Icons.close_rounded, color: _C.textMut, size: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _buildRecapStatBadge(
+                        label: isArabic ? 'مكتمل' : 'Completed',
+                        value: '$completed days',
+                        color: _C.cyan,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildRecapStatBadge(
+                        label: isArabic ? 'سلسلة' : 'Streak',
+                        value: '$streak days',
+                        color: Colors.orangeAccent,
+                      ),
+                      const SizedBox(width: 10),
+                      _buildRecapStatBadge(
+                        label: isArabic ? 'أرقام قياسية' : 'PRs',
+                        value: '${prs.length}',
+                        color: Colors.greenAccent,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _C.cardElev,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _C.border, width: 1),
+                    ),
+                    child: Text(
+                      recapNote,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: _C.textPri,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _C.cyan,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: Text(
+                        isArabic ? 'حسناً' : 'Got it',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecapStatBadge({required String label, required String value, required Color color}) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: _C.textMut),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: color),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
