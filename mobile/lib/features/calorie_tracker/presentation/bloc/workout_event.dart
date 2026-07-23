@@ -62,3 +62,7 @@ class SwapWorkoutExercise extends WorkoutEvent {
   @override
   List<Object> get props => [workoutExerciseId, newExerciseId];
 }
+
+class ResetWorkoutEvent extends WorkoutEvent {
+  const ResetWorkoutEvent();
+}
