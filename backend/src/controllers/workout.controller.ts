@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote, generateIntentConfirmationNote } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -1202,14 +1202,7 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       actionExecuted = true;
     }
 
-    // Generate warm, casual coach confirmation line
-    const confirmationMessage = await generateIntentConfirmationNote({
-      intent: interpretation.intent,
-      dayType: interpretation.dayType,
-      exerciseSwappedFrom: swappedFrom,
-      exerciseSwappedTo: swappedTo,
-      userMessage: message.trim(),
-    });
+    const confirmationMessage = interpretation.reply;
 
     // Fetch updated session data without triggering 10 exercise note calls
     const updatedSession = await fetchSessionData(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
