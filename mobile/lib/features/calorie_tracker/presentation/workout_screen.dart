@@ -81,6 +81,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ── Streak & Real-Time Weekly Completion ──────────────────────
   int _streakDays = 0;
   List<bool> _completedDaysThisWeek = List.filled(7, false);
+  bool _isRefreshingInPlace = false;
 
   late final Dio _dio;
 
@@ -97,9 +98,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   // ── Load existing routine from backend ─────────────────────
-  Future<void> _loadRoutine() async {
+  Future<void> _loadRoutine({bool silent = false}) async {
     if (!mounted) return;
-    setState(() => _state = WorkoutHubState.loading);
+    if (!silent || _state != WorkoutHubState.ready) {
+      setState(() => _state = WorkoutHubState.loading);
+    } else {
+      setState(() => _isRefreshingInPlace = true);
+    }
     try {
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
       final resp = await _dio.get('/workouts/routine?date=$todayStr');
@@ -152,25 +157,34 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               ? CurrentSession.fromJson(sessionData as Map<String, dynamic>)
               : null;
           _state = WorkoutHubState.ready;
+          _isRefreshingInPlace = false;
         });
       } else {
         if (!mounted) return;
-        setState(() => _state = WorkoutHubState.unconfigured);
+        setState(() {
+          _isRefreshingInPlace = false;
+          if (!silent) _state = WorkoutHubState.unconfigured;
+        });
       }
     } on DioException catch (e) {
       if (!mounted) return;
-      // 401 → probably not set up yet, treat as unconfigured
-      if (e.response?.statusCode == 404 || e.response?.statusCode == 401) {
-        setState(() => _state = WorkoutHubState.unconfigured);
-      } else {
-        setState(() {
-          _state = WorkoutHubState.unconfigured;
-          _errorMessage = 'Could not load routine. Please try again.';
-        });
-      }
+      setState(() {
+        _isRefreshingInPlace = false;
+        if (!silent) {
+          if (e.response?.statusCode == 404 || e.response?.statusCode == 401) {
+            _state = WorkoutHubState.unconfigured;
+          } else {
+            _state = WorkoutHubState.unconfigured;
+            _errorMessage = 'Could not load routine. Please try again.';
+          }
+        }
+      });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _state = WorkoutHubState.unconfigured);
+      setState(() {
+        _isRefreshingInPlace = false;
+        if (!silent) _state = WorkoutHubState.unconfigured;
+      });
     }
   }
 
@@ -585,7 +599,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                         _currentSession = updatedSession;
                       });
                     },
-                    onRoutineUpdated: _loadRoutine,
+                    onRoutineUpdated: () => _loadRoutine(silent: true),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1211,230 +1225,256 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     final visibleCount = _showAllExercises ? exercises.length : (exercises.length > 2 ? 2 : exercises.length);
     final remainingCount = exercises.length - 2;
 
-    return Column(
-      children: [
-        if (isSkipped)
-          Container(
-            decoration: BoxDecoration(
-              color: _C.card,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _C.amber.withValues(alpha: 0.4), width: 1.2),
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeIn,
+      switchOutCurve: Curves.easeOut,
+      child: KeyedSubtree(
+        key: ValueKey('${routine.splitType}_${todayLabel}_${exercises.length}_$isSkipped'),
+        child: Stack(
+          children: [
+            Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _C.amber.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _C.amber.withValues(alpha: 0.3), width: 1),
-                      ),
-                      child: Text(
-                        isArabic ? 'تمرين متخطى' : 'SESSION SKIPPED',
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: _C.amber),
-                      ),
+                if (isSkipped)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _C.card,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _C.amber.withValues(alpha: 0.4), width: 1.2),
                     ),
-                    TextButton.icon(
-                      onPressed: () => _showSwapSessionSheet(isArabic),
-                      icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: _C.cyan),
-                      label: Text(
-                        isArabic ? 'تغيير' : 'Swap Session',
-                        style: GoogleFonts.inter(fontSize: 12, color: _C.cyan, fontWeight: FontWeight.w700),
-                      ),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _C.amber.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _C.amber.withValues(alpha: 0.3), width: 1),
+                              ),
+                              child: Text(
+                                isArabic ? 'تمرين متخطى' : 'SESSION SKIPPED',
+                                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: _C.amber),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _showSwapSessionSheet(isArabic),
+                              icon: const Icon(Icons.swap_horiz_rounded, size: 16, color: _C.cyan),
+                              label: Text(
+                                isArabic ? 'تغيير' : 'Swap Session',
+                                style: GoogleFonts.inter(fontSize: 12, color: _C.cyan, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            const Icon(Icons.do_not_disturb_on_rounded, color: _C.amber, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                isArabic
+                                    ? 'تمت إضافة هذا اليوم كراحة إضافية. سيتواصل جدول تمرينك كالمعتاد غداً.'
+                                    : 'You marked today as skipped for extra recovery. Regular split resumes tomorrow.',
+                                style: GoogleFonts.inter(fontSize: 13, color: _C.textSec, height: 1.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    const Icon(Icons.do_not_disturb_on_rounded, color: _C.amber, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        isArabic
-                            ? 'تمت إضافة هذا اليوم كراحة إضافية. سيتواصل جدول تمرينك كالمعتاد غداً.'
-                            : 'You marked today as skipped for extra recovery. Regular split resumes tomorrow.',
-                        style: GoogleFonts.inter(fontSize: 13, color: _C.textSec, height: 1.4),
-                      ),
+                  )
+                else
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _C.card,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _C.border, width: 1.2),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          )
-        else
-          Container(
-            decoration: BoxDecoration(
-              color: _C.card,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _C.border, width: 1.2),
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Badge + Swap Button Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _C.cyan.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 1),
-                      ),
-                      child: Text(
-                        isArabic ? 'جلسة اليوم' : "TODAY'S SESSION",
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Badge + Swap Button Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _C.cyan.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 1),
+                              ),
+                              child: Text(
+                                isArabic ? 'جلسة اليوم' : "TODAY'S SESSION",
+                                style: GoogleFonts.inter(
+                                    fontSize: 10, fontWeight: FontWeight.w800,
+                                    color: _C.cyan, letterSpacing: 0.8),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () => _showSwapSessionSheet(isArabic),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _C.cyan.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: _C.cyan.withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.swap_horiz_rounded, size: 14, color: _C.cyan),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isArabic ? 'تغيير' : 'Swap Session',
+                                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _C.cyan),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                      // Routine name + today label
+                      Text(
+                        '${routine.name} — $todayLabel',
                         style: GoogleFonts.inter(
-                            fontSize: 10, fontWeight: FontWeight.w800,
-                            color: _C.cyan, letterSpacing: 0.8),
+                            fontSize: 18, fontWeight: FontWeight.w900,
+                            color: _C.textPri, letterSpacing: -0.3),
                       ),
-                    ),
-                    InkWell(
-                      onTap: () => _showSwapSessionSheet(isArabic),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _C.cyan.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _C.cyan.withValues(alpha: 0.2)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.swap_horiz_rounded, size: 14, color: _C.cyan),
-                            const SizedBox(width: 4),
+                      const SizedBox(height: 16),
+                      Divider(color: _C.border, height: 1),
+                      const SizedBox(height: 14),
+
+                      // ── Exercise List ──────────────────────────────
+                      if (isRestDay)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(children: [
+                            const Icon(Icons.hotel_rounded, color: _C.textMut, size: 16),
+                            const SizedBox(width: 8),
                             Text(
-                              isArabic ? 'تغيير' : 'Swap Session',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _C.cyan),
+                              isArabic ? 'يوم راحة — استرح واستعد' : 'Rest Day — Recover & recharge',
+                              style: GoogleFonts.inter(fontSize: 13, color: _C.textMut),
+                            ),
+                          ]),
+                        )
+                      else
+                        ...[
+                          ...List.generate(visibleCount, (i) {
+                            return WorkoutExerciseRow(
+                              key: ValueKey(exercises[i].id ?? exercises[i].name),
+                              exercise: exercises[i],
+                              index: i,
+                              isFirst: i == 0,
+                              dio: _dio,
+                              isArabic: isArabic,
+                              onSessionUpdated: (updatedSession) {
+                                setState(() {
+                                  _currentSession = updatedSession;
+                                });
+                              },
+                            );
+                          }),
+                          if (exercises.length > 2) ...[
+                            const SizedBox(height: 4),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _showAllExercises = !_showAllExercises;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _showAllExercises
+                                          ? (isArabic ? 'إخفاء التمارين' : 'Show less')
+                                          : (isArabic ? '+ $remainingCount تمارين إضافية' : '+ $remainingCount more exercises'),
+                                      style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: _C.cyan),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                      color: _C.cyan,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ],
-                        ),
+                        ],
+
+                      const SizedBox(height: 16),
+                      Divider(color: _C.border, height: 1),
+                      const SizedBox(height: 14),
+
+                      // Start Workout CTA
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: isRestDay ? null : _startWorkout,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _C.cyan,
+                        disabledBackgroundColor: _C.cardElev,
+                        foregroundColor: Colors.black,
+                        disabledForegroundColor: _C.textMut,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            isRestDay
+                                ? (isArabic ? 'يوم راحة' : 'Rest Day')
+                                : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
+                            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-              // Routine name + today label
-              Text(
-                '${routine.name} — $todayLabel',
-                style: GoogleFonts.inter(
-                    fontSize: 18, fontWeight: FontWeight.w900,
-                    color: _C.textPri, letterSpacing: -0.3),
-              ),
-              const SizedBox(height: 16),
-              Divider(color: _C.border, height: 1),
-              const SizedBox(height: 14),
-
-              // ── Exercise List ──────────────────────────────
-              if (isRestDay)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(children: [
-                    const Icon(Icons.hotel_rounded, color: _C.textMut, size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      isArabic ? 'يوم راحة — استرح واستعد' : 'Rest Day — Recover & recharge',
-                      style: GoogleFonts.inter(fontSize: 13, color: _C.textMut),
-                    ),
-                  ]),
-                )
-              else
-                ...[
-                  ...List.generate(visibleCount, (i) {
-                    return WorkoutExerciseRow(
-                      key: ValueKey(exercises[i].id ?? exercises[i].name),
-                      exercise: exercises[i],
-                      index: i,
-                      isFirst: i == 0,
-                      dio: _dio,
-                      isArabic: isArabic,
-                      onSessionUpdated: (updatedSession) {
-                        setState(() {
-                          _currentSession = updatedSession;
-                        });
-                      },
-                    );
-                  }),
-                  if (exercises.length > 2) ...[
-                    const SizedBox(height: 4),
-                    InkWell(
-                      onTap: () {
-                        setState(() {
-                          _showAllExercises = !_showAllExercises;
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        alignment: Alignment.center,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _showAllExercises
-                                  ? (isArabic ? 'إخفاء التمارين' : 'Show less')
-                                  : (isArabic ? '+ $remainingCount تمارين إضافية' : '+ $remainingCount more exercises'),
-                              style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: _C.cyan),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                              color: _C.cyan,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-
-              const SizedBox(height: 16),
-              Divider(color: _C.border, height: 1),
-              const SizedBox(height: 14),
-
-              // Start Workout CTA
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: isRestDay ? null : _startWorkout,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _C.cyan,
-                disabledBackgroundColor: _C.cardElev,
-                foregroundColor: Colors.black,
-                disabledForegroundColor: _C.textMut,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded, size: 22),
-                  const SizedBox(width: 8),
-                  Text(
-                    isRestDay
-                        ? (isArabic ? 'يوم راحة' : 'Rest Day')
-                        : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
-                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+        if (_isRefreshingInPlace)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: const LinearProgressIndicator(
+                minHeight: 2.5,
+                backgroundColor: Colors.transparent,
+                valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
+              ),
+            ),
           ),
-        ],
-      ),
+      ],
     ),
-  ],
+  ),
 );
 }
 
