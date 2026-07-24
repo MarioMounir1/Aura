@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote, generateExerciseAlternatives } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -518,7 +518,14 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
     const todayStr = targetDateStr;
     const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const daysArr = meta?.days ?? [];
-    const configDateStr = user.workoutConfiguredAt ? user.workoutConfiguredAt.toISOString().split("T")[0] : null;
+    // Bug-fix: if workoutConfiguredAt is null, fall back to today so that
+    // no day before today is ever flagged as isMissed for a brand-new plan.
+    if (!user.workoutConfiguredAt) {
+      console.warn(`⚠️ [Workout] workoutConfiguredAt is null for user ${userId} — defaulting isBeforePlan baseline to today to prevent false missed-day flags.`);
+    }
+    const configDateStr = user.workoutConfiguredAt
+      ? user.workoutConfiguredAt.toISOString().split("T")[0]
+      : targetDateStr;  // treat "configured right now" as the safe default
 
     const weekScheduleDetails = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(startOfWeek);
@@ -538,16 +545,15 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
         } else {
           dayType = overrideType;
         }
-      } else if (configDateStr && user.workoutConfiguredAt) {
+      } else {
         const configDate = new Date(configDateStr + "T00:00:00Z");
         const curDate = new Date(dateStr + "T00:00:00Z");
         const diffDays = Math.floor((curDate.getTime() - configDate.getTime()) / 86400000);
         dayType = diffDays >= 0 ? (daysArr[diffDays % daysArr.length] ?? "Rest") : "Rest";
-      } else {
-        dayType = daysArr[i % daysArr.length] ?? "Rest";
       }
 
-      const isBeforePlan = configDateStr != null && dateStr < configDateStr;
+      // configDateStr is always set (falls back to today when DB field is null)
+      const isBeforePlan = dateStr < configDateStr;
       const isRest = dayType === "Rest";
       const isCompleted = completedDateStrs.has(dateStr);
       const isToday = dateStr === todayStr;
@@ -790,6 +796,10 @@ export async function finishSession(req: Request, res: Response): Promise<void> 
   }
 }
 
+// ── In-memory alternatives cache (5-min TTL per exerciseId) ─
+const _altCache = new Map<string, { data: { name: string; reason: string; muscleGroup: string }[]; expiresAt: number }>();
+const ALT_CACHE_TTL_MS = 5 * 60 * 1000;
+
 // ── GET /api/v1/workouts/exercises/:id/alternatives ────────────────
 export async function getExerciseAlternatives(req: Request, res: Response): Promise<void> {
   const { id } = req.params;
@@ -800,27 +810,23 @@ export async function getExerciseAlternatives(req: Request, res: Response): Prom
       return;
     }
 
-    // 1. Check direct ExerciseAlternative entries
-    const alternatives = await prisma.exerciseAlternative.findMany({
-      where: { exerciseId: id },
-      include: { alternative: true }
-    });
-
-    let data = alternatives.map(a => a.alternative);
-
-    // 2. Fallback: If empty, fetch exercises with same muscle group (excluding itself)
-    if (data.length === 0) {
-      data = await prisma.exercise.findMany({
-        where: {
-          muscleGroup: exercise.muscleGroup,
-          id: { not: id }
-        },
-        orderBy: { name: 'asc' },
-        take: 10
-      });
+    // Check in-memory cache first
+    const cached = _altCache.get(id);
+    if (cached && Date.now() < cached.expiresAt) {
+      console.log(`✅ [Workout] getExerciseAlternatives cache hit for exerciseId=${id}`);
+      res.status(200).json({ success: true, data: cached.data, source: "cache" });
+      return;
     }
 
-    res.status(200).json({ success: true, data });
+    // Generate AI alternatives
+    console.log(`🤖 [Workout] Generating AI alternatives for exercise: ${exercise.name} (${exercise.muscleGroup})`);
+    const suggestions = await generateExerciseAlternatives({ name: exercise.name, muscleGroup: exercise.muscleGroup });
+    const data = suggestions.map(s => ({ name: s.name, reason: s.reason, muscleGroup: s.muscleGroup }));
+
+    // Store in cache
+    _altCache.set(id, { data, expiresAt: Date.now() + ALT_CACHE_TTL_MS });
+
+    res.status(200).json({ success: true, data, source: "ai" });
   } catch (err) {
     console.error("❌ [Workout] getExerciseAlternatives error:", err);
     res.status(500).json({ success: false, error: "Internal server error" });
@@ -1161,12 +1167,29 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       ) ?? currentSession.exercises[0];
 
       if (targetEx && targetEx.id) {
-        const alternatives = await prisma.exerciseAlternative.findMany({
-          where: { exerciseId: targetEx.id },
-          include: { alternative: true },
-        });
+        // Use AI alternatives (same function as the alternatives endpoint, with caching)
+        const cached = _altCache.get(targetEx.id);
+        let altName: string | null = null;
 
-        let alt = alternatives.length > 0 ? alternatives[0].alternative : null;
+        if (cached && Date.now() < cached.expiresAt && cached.data.length > 0) {
+          altName = cached.data[0].name;
+        } else {
+          const suggestions = await generateExerciseAlternatives({ name: targetEx.name, muscleGroup: targetEx.muscleGroup });
+          if (suggestions.length > 0) {
+            const cacheData = suggestions.map(s => ({ name: s.name, reason: s.reason, muscleGroup: s.muscleGroup }));
+            _altCache.set(targetEx.id, { data: cacheData, expiresAt: Date.now() + ALT_CACHE_TTL_MS });
+            altName = suggestions[0].name;
+          }
+        }
+
+        // Resolve or create the Exercise record for the AI-suggested name
+        let alt = altName ? await prisma.exercise.findFirst({ where: { name: { equals: altName, mode: "insensitive" } } }) : null;
+        if (!alt && altName) {
+          alt = await prisma.exercise.create({
+            data: { name: altName, muscleGroup: targetEx.muscleGroup, description: `AI-suggested alternative for ${targetEx.name}` },
+          });
+        }
+        // Fallback to DB same-muscle-group exercise if AI failed entirely
         if (!alt) {
           const fallbacks = await prisma.exercise.findMany({
             where: { muscleGroup: targetEx.muscleGroup, id: { not: targetEx.id } },
