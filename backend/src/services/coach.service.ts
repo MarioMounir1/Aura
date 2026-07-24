@@ -483,3 +483,46 @@ export async function generateWeeklyRecapNote(summary: WeeklyRecapSummaryInput):
 
   return callOllamaChat(systemPrompt, userPrompt, fallback, { callerName: "generateWeeklyRecapNote" });
 }
+
+// ── 10. AI Exercise Alternatives Generator ───────────────────
+
+export interface ExerciseAlternativeSuggestion {
+  name: string;
+  reason: string;
+  muscleGroup: string;
+}
+
+export async function generateExerciseAlternatives(exercise: {
+  name: string;
+  muscleGroup: string;
+}): Promise<ExerciseAlternativeSuggestion[]> {
+  const systemPrompt = `You are a certified strength coach. Given an exercise name and its target muscle group, suggest 2-3 alternative exercises that train the same primary muscle group using different equipment or body positioning. Respond ONLY with this exact JSON schema:
+{
+  "alternatives": [
+    { "name": "Exercise Name", "reason": "One short sentence why this is a good swap.", "muscleGroup": "same muscle group" }
+  ]
+}
+Produce exactly 2 to 3 entries. No markdown, no extra keys.`;
+
+  const userPrompt = `Exercise: ${exercise.name}. Muscle group: ${exercise.muscleGroup}. Suggest 2-3 gym-practical alternatives.`;
+
+  const fallback: { alternatives: ExerciseAlternativeSuggestion[] } = {
+    alternatives: [
+      { name: `${exercise.muscleGroup} Machine Press`, reason: `Machine variation for ${exercise.muscleGroup} with guided path and reduced stabilizer demand.`, muscleGroup: exercise.muscleGroup },
+      { name: `${exercise.muscleGroup} Cable Fly`, reason: `Cable variation provides constant tension through the full range of motion.`, muscleGroup: exercise.muscleGroup },
+    ],
+  };
+
+  const result = await callOllamaJsonChat<{ alternatives: ExerciseAlternativeSuggestion[] }>(
+    systemPrompt,
+    userPrompt,
+    fallback,
+    { callerName: "generateExerciseAlternatives", timeoutMs: 10000 }
+  );
+
+  const list = result?.alternatives;
+  if (!Array.isArray(list) || list.length === 0) return fallback.alternatives;
+  return list.slice(0, 3).filter(
+    (a) => typeof a.name === "string" && a.name.trim().length > 0
+  );
+}
