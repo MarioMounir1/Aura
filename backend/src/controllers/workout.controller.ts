@@ -459,6 +459,12 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
       },
     });
 
+    // Clear stale session overrides from today onward for a fresh plan baseline
+    const todayStr = new Date().toISOString().split("T")[0];
+    await prisma.sessionOverride.deleteMany({
+      where: { userId, date: { gte: todayStr } },
+    });
+
     console.log(`✅ [Workout] Routine setup by user ${userId}: ${splitName} (${daysPerWeek}d/${splitType})`);
 
     const currentSession = await buildCurrentSession(userId, splitType, splitName, undefined, configuredAt);
@@ -1218,6 +1224,10 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
     let actionExecuted = false;
     let swappedFrom: string | undefined;
     let swappedTo: string | undefined;
+    let activeSplitType = splitType;
+    let activeSplitName = splitName;
+    let activeConfiguredAt = user.workoutConfiguredAt;
+    let confirmationMessage = interpretation.reply;
 
     if (interpretation.intent === "override_day" && interpretation.dayType) {
       const rawChosen = interpretation.dayType.trim();
@@ -1230,23 +1240,27 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       actionExecuted = true;
     } else if (interpretation.intent === "swap_exercise") {
       const queryName = (interpretation.exerciseName ?? "").toLowerCase();
+      // Match query against exercise name or muscle group, or fallback to 1st exercise if query is open-ended ("something better")
       const targetEx = currentSession.exercises.find(
-        (e) => e.name.toLowerCase().includes(queryName) || e.muscleGroup.toLowerCase().includes(queryName)
+        (e) => queryName && (e.name.toLowerCase().includes(queryName) || e.muscleGroup.toLowerCase().includes(queryName))
       ) ?? currentSession.exercises[0];
 
       if (targetEx && targetEx.id) {
-        // Use AI alternatives (same function as the alternatives endpoint, with caching)
+        // Use AI alternatives (same function as alternatives endpoint, with caching)
         const cached = _altCache.get(targetEx.id);
         let altName: string | null = null;
+        let altReason: string | null = null;
 
         if (cached && Date.now() < cached.expiresAt && cached.data.length > 0) {
           altName = cached.data[0].name;
+          altReason = cached.data[0].reason;
         } else {
           const suggestions = await generateExerciseAlternatives({ name: targetEx.name, muscleGroup: targetEx.muscleGroup });
           if (suggestions.length > 0) {
             const cacheData = suggestions.map(s => ({ name: s.name, reason: s.reason, muscleGroup: s.muscleGroup }));
             _altCache.set(targetEx.id, { data: cacheData, expiresAt: Date.now() + ALT_CACHE_TTL_MS });
             altName = suggestions[0].name;
+            altReason = suggestions[0].reason;
           }
         }
 
@@ -1287,44 +1301,63 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           } else {
             actionExecuted = true;
           }
+
+          if (swappedFrom && swappedTo) {
+            const reasonClause = altReason ? ` (${altReason})` : "";
+            if (!confirmationMessage.toLowerCase().includes(swappedTo.toLowerCase())) {
+              confirmationMessage = `Swapped ${swappedFrom} for ${swappedTo}${reasonClause}.`;
+            }
+          }
         }
       }
     } else if (interpretation.intent === "lighter_intensity") {
       actionExecuted = true;
     } else if (interpretation.intent === "change_plan") {
-      // Do NOT apply yet — return proposal for user confirmation in the mobile UI.
-      // The mobile calls POST /workouts/setup after the user taps Confirm.
-      actionExecuted = false;
-    }
-
-    const confirmationMessage = interpretation.reply;
-
-    // For change_plan: resolve the proposed split and attach to response
-    let changePlanProposal: { splitType: string; splitName: string; daysPerWeek: number; description: string } | null = null;
-    if (interpretation.intent === "change_plan") {
       const currentDays = user.workoutDays ?? 4;
-      changePlanProposal = resolveSplitForChangePlan(
+      const resolved = resolveSplitForChangePlan(
         interpretation.proposedSplitName,
         typeof interpretation.proposedDays === "number" ? interpretation.proposedDays : null,
         currentDays
       );
-      if (!changePlanProposal) {
-        // Could not resolve — downgrade to unrecognized
-        res.status(200).json({
-          success: true,
+
+      if (resolved) {
+        const configuredAt = new Date();
+        console.log(`⏳ [Workout] Executing change_plan via chat for user ${userId}: ${resolved.splitName} (${resolved.daysPerWeek}d/${resolved.splitType})`);
+
+        await prisma.user.update({
+          where: { id: userId },
           data: {
-            intent: "unrecognized",
-            actionExecuted: false,
-            confirmationMessage: "I understood you want to change your plan, but I couldn't figure out which split you mean. Try naming a specific split like \"Upper/Lower\" or saying how many days you want to train.",
-            currentSession: await fetchSessionData(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt),
+            workoutDays: resolved.daysPerWeek,
+            workoutSplitType: resolved.splitType,
+            workoutSplitName: resolved.splitName,
+            workoutConfiguredAt: configuredAt,
           },
         });
-        return;
+
+        // Clear stale session overrides from today onward
+        await prisma.sessionOverride.deleteMany({
+          where: { userId, date: { gte: targetDateStr } },
+        });
+
+        actionExecuted = true;
+        activeSplitType = resolved.splitType;
+        activeSplitName = resolved.splitName;
+        activeConfiguredAt = configuredAt;
+
+        if (!confirmationMessage || confirmationMessage.includes("tap Confirm")) {
+          confirmationMessage = `Switched your routine to ${resolved.splitName} (${resolved.daysPerWeek} days/week). Today's session is now updated.`;
+        }
+      } else {
+        // Ambiguous request — ask clarifying question instead of executing wrong split
+        actionExecuted = false;
+        if (!confirmationMessage || confirmationMessage.toLowerCase().includes("switched")) {
+          confirmationMessage = "I'd be happy to change your workout plan! Which routine would you like to switch to (e.g. Upper/Lower, PPL, Arnold split) or how many days a week would you like to train?";
+        }
       }
     }
 
-    // Fetch updated session data without triggering full Ollama note calls
-    const updatedSession = await fetchSessionData(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
+    // Fetch updated session data using effective split type
+    const updatedSession = await fetchSessionData(userId, activeSplitType, activeSplitName, targetDateStr, activeConfiguredAt);
 
     res.status(200).json({
       success: true,
@@ -1333,7 +1366,6 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
         actionExecuted,
         confirmationMessage,
         currentSession: updatedSession,
-        ...(changePlanProposal ? { changePlanProposal } : {}),
       },
     });
 
