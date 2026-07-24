@@ -94,7 +94,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   @override
   void dispose() {
-    _aiCommandController.dispose();
     super.dispose();
   }
 
@@ -1548,8 +1547,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       final data = resp.data['data'];
       final confirmationMsg = data?['confirmationMessage'] as String? ?? 'Session updated.';
       final updatedSessionJson = data?['currentSession'];
-
-      _aiCommandController.clear();
 
       if (updatedSessionJson != null && mounted) {
         setState(() {
