@@ -1333,6 +1333,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       exercise: exercises[i],
                       index: i,
                       isFirst: i == 0,
+                      dio: _dio,
+                      isArabic: isArabic,
+                      onSessionUpdated: (updatedSession) {
+                        setState(() {
+                          _currentSession = updatedSession;
+                        });
+                      },
                     );
                   }),
                   if (exercises.length > 2) ...[
@@ -2632,12 +2639,18 @@ class WorkoutExerciseRow extends StatefulWidget {
   final SessionExercise exercise;
   final int index;
   final bool isFirst;
+  final Dio dio;
+  final bool isArabic;
+  final ValueChanged<CurrentSession> onSessionUpdated;
 
   const WorkoutExerciseRow({
     super.key,
     required this.exercise,
     required this.index,
     required this.isFirst,
+    required this.dio,
+    required this.isArabic,
+    required this.onSessionUpdated,
   });
 
   @override
@@ -2646,6 +2659,92 @@ class WorkoutExerciseRow extends StatefulWidget {
 
 class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
   bool _isExpanded = false;
+  bool _showAlternatives = false;
+  bool _isLoadingAlternatives = false;
+  bool _isSwapping = false;
+  List<dynamic>? _alternatives;
+
+  Future<void> _toggleAlternatives() async {
+    if (_showAlternatives) {
+      setState(() {
+        _showAlternatives = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _showAlternatives = true;
+    });
+
+    if (_alternatives == null) {
+      final exId = widget.exercise.id;
+      if (exId == null || exId.isEmpty) {
+        setState(() {
+          _alternatives = [];
+        });
+        return;
+      }
+
+      setState(() {
+        _isLoadingAlternatives = true;
+      });
+
+      try {
+        final resp = await widget.dio.get('/workouts/exercises/$exId/alternatives');
+        final data = resp.data['data'] as List<dynamic>? ?? [];
+        if (mounted) {
+          setState(() {
+            _alternatives = data;
+            _isLoadingAlternatives = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _alternatives = [];
+            _isLoadingAlternatives = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _performSwap(String altName) async {
+    if (_isSwapping) return;
+    setState(() {
+      _isSwapping = true;
+    });
+
+    try {
+      final resp = await widget.dio.post(
+        '/workouts/session/interpret',
+        data: {'message': 'swap ${widget.exercise.name} for $altName'},
+      );
+      final data = resp.data['data'];
+      final updatedSessionJson = data?['currentSession'];
+
+      if (updatedSessionJson != null) {
+        final session = CurrentSession.fromJson(updatedSessionJson as Map<String, dynamic>);
+        widget.onSessionUpdated(session);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.isArabic ? 'فشل تبديل التمرين' : 'Failed to swap exercise'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSwapping = false;
+          _showAlternatives = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2653,19 +2752,19 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
     final i = widget.index;
     final isFirst = widget.isFirst;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _isExpanded = !_isExpanded;
-        });
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            behavior: HitTestBehavior.opaque,
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Index badge
@@ -2763,6 +2862,27 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                 ),
                 const SizedBox(width: 6),
 
+                // Alternatives Swap Icon Button
+                InkWell(
+                  onTap: _toggleAlternatives,
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: _showAlternatives
+                          ? _C.cyan.withValues(alpha: 0.2)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.swap_horiz_rounded,
+                      color: _C.cyan,
+                      size: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+
                 // Chevron accordion indicator
                 Icon(
                   _isExpanded
@@ -2773,38 +2893,137 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                 ),
               ],
             ),
+          ),
 
-            // Accordion Expanded Coach Note Body
-            if (_isExpanded) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: _C.cardElev,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _C.borderMid),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.lightbulb_outline_rounded, color: _C.amber, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        ex.coachNote ??
-                            (ex.lastWeekWeight != null
-                                ? 'Target matching ${ex.lastWeekWeight}kg × ${ex.lastWeekReps} reps.'
-                                : 'First time on this exercise — start conservative and focus on form.'),
-                        style: GoogleFonts.inter(fontSize: 12, color: _C.textSec, height: 1.4),
-                      ),
-                    ),
-                  ],
-                ),
+          // Accordion Expanded Alternatives Body
+          if (_showAlternatives) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _C.cardElev,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _C.cyan.withValues(alpha: 0.3)),
               ),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.swap_horiz_rounded, color: _C.cyan, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        widget.isArabic ? 'التمارين البديلة' : 'ALTERNATIVES',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: _C.cyan,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      if (_isSwapping) ...[
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (_isLoadingAlternatives)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Center(
+                        child: SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (_alternatives == null || _alternatives!.isEmpty)
+                    Text(
+                      widget.isArabic
+                          ? 'لا توجد بدائل مدرجة لهذا التمرين بعد'
+                          : 'No alternatives listed for this one yet',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        color: _C.textMut,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _alternatives!.map<Widget>((dynamic alt) {
+                        final altName = (alt is Map ? alt['name'] : alt.toString()) as String? ?? 'Alternative';
+                        return InkWell(
+                          onTap: _isSwapping ? null : () => _performSwap(altName),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _C.cyan.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: _C.cyan.withValues(alpha: 0.3)),
+                            ),
+                            child: Text(
+                              altName,
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: _C.textPri,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                ],
+              ),
+            ),
           ],
-        ),
+
+          // Accordion Expanded Coach Note Body
+          if (_isExpanded) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _C.cardElev,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _C.borderMid),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lightbulb_outline_rounded, color: _C.amber, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      ex.coachNote ??
+                          (ex.lastWeekWeight != null
+                              ? 'Target matching ${ex.lastWeekWeight}kg × ${ex.lastWeekReps} reps.'
+                              : 'First time on this exercise — start conservative and focus on form.'),
+                      style: GoogleFonts.inter(fontSize: 12, color: _C.textSec, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
