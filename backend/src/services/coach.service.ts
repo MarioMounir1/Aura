@@ -36,11 +36,13 @@ export interface OllamaResult<T> {
   value: T;
   source: "model" | "timeout" | "error";
   elapsedMs: number;
+  evalCount?: number;
 }
 
 export interface OllamaCallOptions {
   callerName?: string;
   timeoutMs?: number;
+  numPredict?: number;
 }
 
 // ── Helper: Ollama Chat Call with Timeout, Logging & Source Metadata ──────
@@ -54,6 +56,7 @@ async function callOllamaChatDetailed(
   const provider = process.env.AI_PROVIDER ?? "ollama";
   const callerName = options?.callerName ?? "callOllamaChat";
   const timeoutMs = options?.timeoutMs ?? 3500;
+  const numPredict = options?.numPredict ?? 80;
   const startTime = Date.now();
 
   if (provider === "none") {
@@ -77,7 +80,7 @@ async function callOllamaChatDetailed(
         stream: false,
         options: {
           temperature: OLLAMA_CONFIG.temperature ?? 0.7,
-          num_predict: 80,
+          num_predict: numPredict,
         },
       }),
     });
@@ -92,14 +95,15 @@ async function callOllamaChatDetailed(
 
     const data = (await response.json()) as any;
     const content = data.message?.content?.trim();
+    const evalCount = data.eval_count;
 
     if (!content) {
       console.warn(`⚠️ [Ollama Error] '${callerName}' returned empty content after ${elapsedMs}ms.`);
-      return { value: fallback, source: "error", elapsedMs };
+      return { value: fallback, source: "error", elapsedMs, evalCount };
     }
 
     const cleaned = content.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-    return { value: cleaned || fallback, source: "model", elapsedMs };
+    return { value: cleaned || fallback, source: "model", elapsedMs, evalCount };
   } catch (err: any) {
     clearTimeout(timeoutId);
     const elapsedMs = Date.now() - startTime;
@@ -133,6 +137,7 @@ async function callOllamaJsonChatDetailed<T>(
   const provider = process.env.AI_PROVIDER ?? "ollama";
   const callerName = options?.callerName ?? "callOllamaJsonChat";
   const timeoutMs = options?.timeoutMs ?? 4000;
+  const numPredict = options?.numPredict ?? 140;
   const startTime = Date.now();
 
   if (provider === "none") {
@@ -157,7 +162,7 @@ async function callOllamaJsonChatDetailed<T>(
         format: "json",
         options: {
           temperature: 0.2,
-          num_predict: 160,
+          num_predict: numPredict,
         },
       }),
     });
@@ -172,14 +177,15 @@ async function callOllamaJsonChatDetailed<T>(
 
     const data = (await response.json()) as any;
     const content = data.message?.content?.trim();
+    const evalCount = data.eval_count;
 
     if (!content) {
       console.warn(`⚠️ [Ollama Error] '${callerName}' returned empty content after ${elapsedMs}ms.`);
-      return { value: fallback, source: "error", elapsedMs };
+      return { value: fallback, source: "error", elapsedMs, evalCount };
     }
 
     const parsed = JSON.parse(content) as T;
-    return { value: parsed || fallback, source: "model", elapsedMs };
+    return { value: parsed || fallback, source: "model", elapsedMs, evalCount };
   } catch (err: any) {
     clearTimeout(timeoutId);
     const elapsedMs = Date.now() - startTime;
@@ -440,11 +446,11 @@ Respond ONLY with JSON:
     systemPrompt,
     userPrompt,
     fallback,
-    { callerName: "interpretSessionRequest", timeoutMs: 14000 }
+    { callerName: "interpretSessionRequest", timeoutMs: 8000, numPredict: 140 }
   );
 
   if (detailedRes.source === "timeout" || detailedRes.source === "error") {
-    console.warn(`⏱️ [Ollama] interpretSessionRequest failed/timed out after ${detailedRes.elapsedMs}ms (source: ${detailedRes.source})`);
+    console.warn(`⏱️ [Ollama] interpretSessionRequest failed/timed out after ${detailedRes.elapsedMs}ms (${detailedRes.evalCount ?? 0} tokens, source: ${detailedRes.source})`);
     return {
       intent: "unrecognized",
       reply: "Still thinking that one over — mind trying again in a second?",
@@ -452,7 +458,7 @@ Respond ONLY with JSON:
   }
 
   const res = detailedRes.value;
-  console.log(`⏱️ [Ollama] interpretSessionRequest finished in ${detailedRes.elapsedMs}ms (source: ${detailedRes.source}, intent: ${res.intent})`);
+  console.log(`⏱️ [Ollama] interpretSessionRequest finished in ${detailedRes.elapsedMs}ms (${detailedRes.evalCount ?? 0} tokens generated, source: ${detailedRes.source}, intent: ${res.intent})`);
 
   if (!res.intent || !["override_day", "swap_exercise", "lighter_intensity", "question", "change_plan", "unrecognized"].includes(res.intent)) {
     return fallback;
