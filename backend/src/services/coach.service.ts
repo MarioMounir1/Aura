@@ -30,16 +30,38 @@ interface WeightTrendInput {
   goal?: string;
 }
 
-// ── Helper: Ollama Chat Call with Timeout & Fallback ───────
+// ── Helper: Ollama Response Metadata & Call Options ────────
 
-async function callOllamaChat(systemPrompt: string, userPrompt: string, fallback: string): Promise<string> {
+export interface OllamaResult<T> {
+  value: T;
+  source: "model" | "timeout" | "error";
+  elapsedMs: number;
+}
+
+export interface OllamaCallOptions {
+  callerName?: string;
+  timeoutMs?: number;
+}
+
+// ── Helper: Ollama Chat Call with Timeout, Logging & Source Metadata ──────
+
+async function callOllamaChatDetailed(
+  systemPrompt: string,
+  userPrompt: string,
+  fallback: string,
+  options?: OllamaCallOptions
+): Promise<OllamaResult<string>> {
   const provider = process.env.AI_PROVIDER ?? "ollama";
+  const callerName = options?.callerName ?? "callOllamaChat";
+  const timeoutMs = options?.timeoutMs ?? 3500;
+  const startTime = Date.now();
+
   if (provider === "none") {
-    return fallback;
+    return { value: fallback, source: "error", elapsedMs: 0 };
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s safety cap
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
@@ -55,43 +77,70 @@ async function callOllamaChat(systemPrompt: string, userPrompt: string, fallback
         stream: false,
         options: {
           temperature: OLLAMA_CONFIG.temperature ?? 0.7,
-          num_predict: 80, // Cap output token count for fast UI captions
+          num_predict: 80,
         },
       }),
     });
 
     clearTimeout(timeoutId);
+    const elapsedMs = Date.now() - startTime;
 
     if (!response.ok) {
-      return fallback;
+      console.warn(`⚠️ [Ollama Error] '${callerName}' failed with HTTP ${response.status} after ${elapsedMs}ms.`);
+      return { value: fallback, source: "error", elapsedMs };
     }
 
     const data = (await response.json()) as any;
     const content = data.message?.content?.trim();
 
     if (!content) {
-      return fallback;
+      console.warn(`⚠️ [Ollama Error] '${callerName}' returned empty content after ${elapsedMs}ms.`);
+      return { value: fallback, source: "error", elapsedMs };
     }
 
-    // Strip markdown formatting, quotes, or newlines
     const cleaned = content.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-    return cleaned || fallback;
-  } catch (err) {
+    return { value: cleaned || fallback, source: "model", elapsedMs };
+  } catch (err: any) {
     clearTimeout(timeoutId);
-    return fallback;
+    const elapsedMs = Date.now() - startTime;
+    if (err?.name === "AbortError") {
+      console.warn(`⚠️ [Ollama Timeout] '${callerName}' timed out after ${elapsedMs}ms (limit: ${timeoutMs}ms).`);
+      return { value: fallback, source: "timeout", elapsedMs };
+    }
+    console.warn(`⚠️ [Ollama Error] '${callerName}' failed with error: ${err?.message ?? err} after ${elapsedMs}ms.`);
+    return { value: fallback, source: "error", elapsedMs };
   }
+}
+
+async function callOllamaChat(
+  systemPrompt: string,
+  userPrompt: string,
+  fallback: string,
+  options?: OllamaCallOptions
+): Promise<string> {
+  const res = await callOllamaChatDetailed(systemPrompt, userPrompt, fallback, options);
+  return res.value;
 }
 
 // ── Helper: Ollama Chat Call (JSON Mode) ───────────────────
 
-async function callOllamaJsonChat<T>(systemPrompt: string, userPrompt: string, fallback: T): Promise<T> {
+async function callOllamaJsonChatDetailed<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  fallback: T,
+  options?: OllamaCallOptions
+): Promise<OllamaResult<T>> {
   const provider = process.env.AI_PROVIDER ?? "ollama";
+  const callerName = options?.callerName ?? "callOllamaJsonChat";
+  const timeoutMs = options?.timeoutMs ?? 4000;
+  const startTime = Date.now();
+
   if (provider === "none") {
-    return fallback;
+    return { value: fallback, source: "error", elapsedMs: 0 };
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
@@ -114,24 +163,43 @@ async function callOllamaJsonChat<T>(systemPrompt: string, userPrompt: string, f
     });
 
     clearTimeout(timeoutId);
+    const elapsedMs = Date.now() - startTime;
 
     if (!response.ok) {
-      return fallback;
+      console.warn(`⚠️ [Ollama Error] '${callerName}' failed with HTTP ${response.status} after ${elapsedMs}ms.`);
+      return { value: fallback, source: "error", elapsedMs };
     }
 
     const data = (await response.json()) as any;
     const content = data.message?.content?.trim();
 
     if (!content) {
-      return fallback;
+      console.warn(`⚠️ [Ollama Error] '${callerName}' returned empty content after ${elapsedMs}ms.`);
+      return { value: fallback, source: "error", elapsedMs };
     }
 
     const parsed = JSON.parse(content) as T;
-    return parsed || fallback;
-  } catch (err) {
+    return { value: parsed || fallback, source: "model", elapsedMs };
+  } catch (err: any) {
     clearTimeout(timeoutId);
-    return fallback;
+    const elapsedMs = Date.now() - startTime;
+    if (err?.name === "AbortError") {
+      console.warn(`⚠️ [Ollama Timeout] '${callerName}' timed out after ${elapsedMs}ms (limit: ${timeoutMs}ms).`);
+      return { value: fallback, source: "timeout", elapsedMs };
+    }
+    console.warn(`⚠️ [Ollama Error] '${callerName}' failed with error: ${err?.message ?? err} after ${elapsedMs}ms.`);
+    return { value: fallback, source: "error", elapsedMs };
   }
+}
+
+async function callOllamaJsonChat<T>(
+  systemPrompt: string,
+  userPrompt: string,
+  fallback: T,
+  options?: OllamaCallOptions
+): Promise<T> {
+  const res = await callOllamaJsonChatDetailed<T>(systemPrompt, userPrompt, fallback, options);
+  return res.value;
 }
 
 // ── 1. Workout Session Coach Note ────────────────────────────
@@ -362,7 +430,21 @@ Respond ONLY with a single JSON object. Schema:
     confirmationMessage: "I wasn't sure what you meant by that — try naming a specific day type (e.g. Legs A) or exercise to swap.",
   };
 
-  const res = await callOllamaJsonChat<InterpretResult>(systemPrompt, userPrompt, fallback);
+  const detailedRes = await callOllamaJsonChatDetailed<InterpretResult>(
+    systemPrompt,
+    userPrompt,
+    fallback,
+    { callerName: "interpretSessionRequest", timeoutMs: 10000 }
+  );
+
+  if (detailedRes.source === "timeout" || detailedRes.source === "error") {
+    return {
+      intent: "unrecognized",
+      confirmationMessage: "Still thinking that one over — mind trying again in a second?",
+    };
+  }
+
+  const res = detailedRes.value;
   if (!res.intent || !["override_day", "swap_exercise", "lighter_intensity", "unrecognized"].includes(res.intent)) {
     return fallback;
   }
@@ -394,7 +476,7 @@ export async function generateWeeklyRecapNote(summary: WeeklyRecapSummaryInput):
     ? `Solid effort this past week with ${summary.completedDaysCount} completed workout sessions! ${summary.prsAchieved.length > 0 ? `You achieved great progress on ${summary.prsAchieved[0]}.` : "You maintained consistent execution across your routine."} For next week, focus on progressive overload and hitting all scheduled sessions cleanly.`
     : `Your routine is ready for a fresh start. Focus on locking in your first scheduled workout session this upcoming week to build momentum!`;
 
-  return callOllamaChat(systemPrompt, userPrompt, fallback);
+  return callOllamaChat(systemPrompt, userPrompt, fallback, { callerName: "generateWeeklyRecapNote" });
 }
 
 // ── 10. Natural AI Intent Confirmation Generator ─────────────
@@ -427,5 +509,16 @@ export async function generateIntentConfirmationNote(input: IntentConfirmationIn
   const systemPrompt = `You are a warm, encouraging strength coach replying to a lifter after applying an action to their workout session. Produce ONE short, enthusiastic sentence (maximum 22 words). Speak naturally as their personal coach. Do NOT use markdown or quotes.`;
   const userPrompt = `User said: "${input.userMessage}". Action performed: ${input.intent} (${input.dayType || input.exerciseSwappedTo || ""}). Produce a short, natural coach confirmation line.`;
 
-  return callOllamaChat(systemPrompt, userPrompt, fallback);
+  const detailedRes = await callOllamaChatDetailed(
+    systemPrompt,
+    userPrompt,
+    fallback,
+    { callerName: "generateIntentConfirmationNote", timeoutMs: 5000 }
+  );
+
+  if ((detailedRes.source === "timeout" || detailedRes.source === "error") && input.intent === "unrecognized") {
+    return "Still thinking that one over — mind trying again in a second?";
+  }
+
+  return detailedRes.value;
 }
