@@ -394,7 +394,7 @@ export interface InterpretContext {
 }
 
 export interface InterpretResult {
-  intent: "override_day" | "swap_exercise" | "lighter_intensity" | "unrecognized";
+  intent: "override_day" | "swap_exercise" | "lighter_intensity" | "question" | "unrecognized";
   dayType?: string;
   exerciseName?: string;
   reason?: string;
@@ -408,26 +408,27 @@ export async function interpretSessionRequest(
   const availableDaysStr = Array.from(new Set(context.availableDayTypes)).join(", ");
   const currentExercisesStr = context.exercises.map((e) => e.name).join(", ");
 
-  const systemPrompt = `You are a natural-language workout session controller and personal strength coach. Classify the user's message into ONE of these 4 intents:
+  const systemPrompt = `You are a natural-language workout session controller and personal strength coach. Classify the user's message into ONE of these 5 intents:
 1. "override_day": user wants to change or skip today's workout split day type. "dayType" MUST be one of: [${availableDaysStr}] or "skip".
 2. "swap_exercise": user wants to replace an exercise or target a body part. "exerciseName" is the exercise or muscle group to replace.
 3. "lighter_intensity": user is fatigued, sore, or asking to make today lighter/easier.
-4. "unrecognized": fallback if request is ambiguous, gibberish, or not actionable.
+4. "question": user is asking a genuine coaching/training question about an exercise, technique, split, recovery, or fitness in general (not asking to perform a session action).
+5. "unrecognized": fallback if request is ambiguous, incoherent gibberish, or completely off-topic.
 
 Respond ONLY with a single JSON object. Schema:
 {
-  "intent": "override_day" | "swap_exercise" | "lighter_intensity" | "unrecognized",
+  "intent": "override_day" | "swap_exercise" | "lighter_intensity" | "question" | "unrecognized",
   "dayType": string or null,
   "exerciseName": string or null,
   "reason": string or null,
-  "reply": "A warm, encouraging, short natural response (1-2 sentences) confirming the action as their personal coach"
+  "reply": "For action intents (1-3), a short 1-2 sentence confirmation line. For 'question', a helpful, specific, encouraging answer grounded in the session context (1-3 sentences). For 'unrecognized', explain you didn't understand."
 }`;
 
   const userPrompt = `Active routine: ${context.splitName}. Today's day: ${context.todayDayName}. Today's exercises: ${currentExercisesStr}. Available day types: ${availableDaysStr}. User message: "${message}"`;
 
   const fallback: InterpretResult = {
     intent: "unrecognized",
-    reply: "I wasn't sure what you meant by that — try naming a specific day type (e.g. Legs A) or exercise to swap.",
+    reply: "I wasn't sure what you meant by that — try naming a specific day type (e.g. Legs A) or exercise to swap, or ask a coaching question.",
   };
 
   const detailedRes = await callOllamaJsonChatDetailed<InterpretResult>(
@@ -445,7 +446,7 @@ Respond ONLY with a single JSON object. Schema:
   }
 
   const res = detailedRes.value;
-  if (!res.intent || !["override_day", "swap_exercise", "lighter_intensity", "unrecognized"].includes(res.intent)) {
+  if (!res.intent || !["override_day", "swap_exercise", "lighter_intensity", "question", "unrecognized"].includes(res.intent)) {
     return fallback;
   }
 
