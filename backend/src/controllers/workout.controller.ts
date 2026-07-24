@@ -104,6 +104,74 @@ const ROUTINE_CATALOGUE: Record<string, { description: string; days: string[] }>
   arnold_split:{ description: "Arnold's 6-day blueprint — antagonist supersets",         days: ["Chest + Back", "Shoulders + Arms", "Legs", "Chest + Back", "Shoulders + Arms", "Legs", "Rest"] },
 };
 
+// Friendly display names for each splitType key
+const ROUTINE_DISPLAY_NAMES: Record<string, string> = {
+  full_body:    "Full Body Split",
+  ppl_1x:       "Push / Pull / Legs",
+  upper_lower:  "Upper / Lower Split",
+  bro_split:    "Bro Split (4-Day)",
+  ul_ppl:       "Hybrid PPL Split",
+  bro_split_5:  "5-Day Bodypart Split",
+  ppl_2x:       "Push / Pull / Legs (2×/wk)",
+  arnold_split: "Arnold Split (6-Day)",
+};
+
+// Number of active training days for each split
+const SPLIT_DAY_COUNT: Record<string, number> = {
+  full_body: 3, ppl_1x: 3, upper_lower: 4, bro_split: 4,
+  ul_ppl: 5, bro_split_5: 5, ppl_2x: 6, arnold_split: 6,
+};
+
+// Rank-1 recommendation per day count (deterministic, no Ollama needed)
+const RANK1_BY_DAYS: Record<number, string> = { 3: "full_body", 4: "upper_lower", 5: "ul_ppl", 6: "ppl_2x" };
+
+/**
+ * Resolves a proposed plan change from AI-extracted fields.
+ * Returns { splitType, splitName, daysPerWeek, description } or null if unresolvable.
+ */
+function resolveSplitForChangePlan(
+  proposedSplitName: string | undefined | null,
+  proposedDays: number | undefined | null,
+  currentDays: number
+): { splitType: string; splitName: string; daysPerWeek: number; description: string } | null {
+  // 1. Split name mentioned → fuzzy-match against catalogue
+  if (proposedSplitName) {
+    const query = proposedSplitName.toLowerCase().replace(/[^a-z0-9 ]/g, "");
+    const tokens = query.split(/\s+/).filter(Boolean);
+    let bestKey: string | null = null;
+    let bestScore = 0;
+    for (const [key, meta] of Object.entries(ROUTINE_CATALOGUE)) {
+      const displayName = (ROUTINE_DISPLAY_NAMES[key] ?? key).toLowerCase();
+      const score = tokens.filter(t => displayName.includes(t) || key.includes(t)).length;
+      if (score > bestScore) { bestScore = score; bestKey = key; }
+    }
+    if (bestKey && bestScore > 0) {
+      const days = proposedDays ?? SPLIT_DAY_COUNT[bestKey] ?? currentDays;
+      return {
+        splitType: bestKey,
+        splitName: ROUTINE_DISPLAY_NAMES[bestKey] ?? bestKey,
+        daysPerWeek: days,
+        description: ROUTINE_CATALOGUE[bestKey].description,
+      };
+    }
+  }
+
+  // 2. Only days mentioned → pick rank-1 for that day count
+  const targetDays = proposedDays ?? null;
+  if (targetDays && RANK1_BY_DAYS[targetDays]) {
+    const key = RANK1_BY_DAYS[targetDays];
+    return {
+      splitType: key,
+      splitName: ROUTINE_DISPLAY_NAMES[key] ?? key,
+      daysPerWeek: targetDays,
+      description: ROUTINE_CATALOGUE[key].description,
+    };
+  }
+
+  return null;
+}
+
+
 // ── Fetch user's performance history for plateau detection ────
 async function getRecentPerformanceTrend(
   userId: string,
@@ -1223,11 +1291,39 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       }
     } else if (interpretation.intent === "lighter_intensity") {
       actionExecuted = true;
+    } else if (interpretation.intent === "change_plan") {
+      // Do NOT apply yet — return proposal for user confirmation in the mobile UI.
+      // The mobile calls POST /workouts/setup after the user taps Confirm.
+      actionExecuted = false;
     }
 
     const confirmationMessage = interpretation.reply;
 
-    // Fetch updated session data without triggering 10 exercise note calls
+    // For change_plan: resolve the proposed split and attach to response
+    let changePlanProposal: { splitType: string; splitName: string; daysPerWeek: number; description: string } | null = null;
+    if (interpretation.intent === "change_plan") {
+      const currentDays = user.workoutDays ?? 4;
+      changePlanProposal = resolveSplitForChangePlan(
+        interpretation.proposedSplitName,
+        typeof interpretation.proposedDays === "number" ? interpretation.proposedDays : null,
+        currentDays
+      );
+      if (!changePlanProposal) {
+        // Could not resolve — downgrade to unrecognized
+        res.status(200).json({
+          success: true,
+          data: {
+            intent: "unrecognized",
+            actionExecuted: false,
+            confirmationMessage: "I understood you want to change your plan, but I couldn't figure out which split you mean. Try naming a specific split like \"Upper/Lower\" or saying how many days you want to train.",
+            currentSession: await fetchSessionData(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt),
+          },
+        });
+        return;
+      }
+    }
+
+    // Fetch updated session data without triggering full Ollama note calls
     const updatedSession = await fetchSessionData(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
 
     res.status(200).json({
@@ -1237,8 +1333,10 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
         actionExecuted,
         confirmationMessage,
         currentSession: updatedSession,
+        ...(changePlanProposal ? { changePlanProposal } : {}),
       },
     });
+
   } catch (err) {
     console.error("❌ [Workout] interpretWorkoutSessionRequest error:", err);
     res.status(500).json({ success: false, error: "Internal server error" });
