@@ -76,7 +76,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   int? _expandedExerciseIndex;
   List<WeekDayDetail> _weekScheduleDetails = [];
 
-  bool _isInterpretingAiCommand = false;
   bool _showAllExercises = false;
 
   // ── Streak & Real-Time Weekly Completion ──────────────────────
@@ -1182,11 +1181,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     return Column(
       children: [
-        CoachInputCard(
+        CoachChatCard(
           coachNote: _currentSession?.coachNote,
           isArabic: isArabic,
-          isInterpreting: _isInterpretingAiCommand,
-          onSendCommand: (msg) => _sendAiCommand(msg, isArabic),
+          dio: _dio,
+          onSessionUpdated: (updatedSession) {
+            setState(() {
+              _currentSession = updatedSession;
+            });
+          },
         ),
         if (isSkipped)
           Container(
@@ -1537,60 +1540,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  Future<void> _sendAiCommand(String messageText, bool isArabic) async {
-    final msg = messageText.trim();
-    if (msg.isEmpty || _isInterpretingAiCommand) return;
 
-    setState(() => _isInterpretingAiCommand = true);
-    try {
-      final resp = await _dio.post('/workouts/session/interpret', data: {'message': msg});
-      final data = resp.data['data'];
-      final confirmationMsg = data?['confirmationMessage'] as String? ?? 'Session updated.';
-      final updatedSessionJson = data?['currentSession'];
-
-      if (updatedSessionJson != null && mounted) {
-        setState(() {
-          _currentSession = CurrentSession.fromJson(updatedSessionJson as Map<String, dynamic>);
-        });
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.auto_awesome_rounded, color: Colors.black, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    confirmationMsg,
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: _C.cyan,
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to process command. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isInterpretingAiCommand = false);
-      }
-    }
-  }
 
   Future<void> _showWeeklyRecapSheet(bool isArabic) async {
     showModalBottomSheet(
@@ -2332,44 +2282,112 @@ class _QuestionnaireSheetState extends State<_QuestionnaireSheet> {
 // EXTRACTED COMPONENT 1: CoachInputCard (Isolated text field state)
 // ══════════════════════════════════════════════════════════════
 
-class CoachInputCard extends StatefulWidget {
+// ══════════════════════════════════════════════════════════════
+// EXTRACTED COMPONENT 1: CoachChatCard (Isolated chat conversation state)
+// ══════════════════════════════════════════════════════════════
+
+class CoachChatMessage {
+  final String text;
+  final bool isUser;
+  final bool isTyping;
+
+  const CoachChatMessage({
+    required this.text,
+    required this.isUser,
+    this.isTyping = false,
+  });
+}
+
+class CoachChatCard extends StatefulWidget {
   final String? coachNote;
   final bool isArabic;
-  final bool isInterpreting;
-  final Future<void> Function(String message) onSendCommand;
+  final Dio dio;
+  final ValueChanged<CurrentSession> onSessionUpdated;
 
-  const CoachInputCard({
+  const CoachChatCard({
     super.key,
     required this.coachNote,
     required this.isArabic,
-    required this.isInterpreting,
-    required this.onSendCommand,
+    required this.dio,
+    required this.onSessionUpdated,
   });
 
   @override
-  State<CoachInputCard> createState() => _CoachInputCardState();
+  State<CoachChatCard> createState() => _CoachChatCardState();
 }
 
-class _CoachInputCardState extends State<CoachInputCard> {
-  late final TextEditingController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController();
-  }
+class _CoachChatCardState extends State<CoachChatCard> {
+  final List<CoachChatMessage> _messages = [];
+  final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _isInterpreting = false;
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  void _submit() {
-    final text = _controller.text.trim();
-    if (text.isEmpty || widget.isInterpreting) return;
-    widget.onSendCommand(text);
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _submit() async {
+    final msg = _controller.text.trim();
+    if (msg.isEmpty || _isInterpreting) return;
+
     _controller.clear();
+
+    setState(() {
+      _messages.add(CoachChatMessage(text: msg, isUser: true));
+      _messages.add(const CoachChatMessage(text: '', isUser: false, isTyping: true));
+      _isInterpreting = true;
+    });
+    _scrollToBottom();
+
+    try {
+      final resp = await widget.dio.post('/workouts/session/interpret', data: {'message': msg});
+      final data = resp.data['data'];
+      final confirmationMsg = data?['confirmationMessage'] as String? ?? 'Session updated.';
+      final updatedSessionJson = data?['currentSession'];
+
+      if (updatedSessionJson != null) {
+        final session = CurrentSession.fromJson(updatedSessionJson as Map<String, dynamic>);
+        widget.onSessionUpdated(session);
+      }
+
+      if (mounted) {
+        setState(() {
+          _messages.removeWhere((m) => m.isTyping);
+          _messages.add(CoachChatMessage(text: confirmationMsg, isUser: false));
+          _isInterpreting = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.removeWhere((m) => m.isTyping);
+          _messages.add(CoachChatMessage(
+            text: widget.isArabic
+                ? 'فشل في معالجة الطلب. يرجى المحاولة مرة أخرى.'
+                : 'Failed to process command. Please try again.',
+            isUser: false,
+          ));
+          _isInterpreting = false;
+        });
+        _scrollToBottom();
+      }
+    }
   }
 
   @override
@@ -2441,7 +2459,7 @@ class _CoachInputCardState extends State<CoachInputCard> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        coachNote!,
+                        coachNote,
                         style: GoogleFonts.inter(
                           fontSize: 12.5,
                           color: _C.textPri,
@@ -2459,6 +2477,25 @@ class _CoachInputCardState extends State<CoachInputCard> {
             const SizedBox(height: 10),
           ],
 
+          if (_messages.isNotEmpty) ...[
+            Container(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView.builder(
+                controller: _scrollController,
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  return _buildBubble(message, isArabic);
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Divider(color: _C.border, height: 1, thickness: 0.8),
+            const SizedBox(height: 10),
+          ],
+
           Row(
             children: [
               const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 16),
@@ -2466,10 +2503,12 @@ class _CoachInputCardState extends State<CoachInputCard> {
               Expanded(
                 child: TextField(
                   controller: _controller,
-                  enabled: !widget.isInterpreting,
+                  enabled: !_isInterpreting,
                   style: GoogleFonts.inter(fontSize: 12, color: _C.textPri),
                   decoration: InputDecoration(
-                    hintText: isArabic ? 'اكتب أمراً.. "غير اليوم لـ Legs"' : 'Command AI coach.. e.g. "swap today for legs"',
+                    hintText: isArabic
+                        ? 'اسأل المدرب أو اكتب أمراً.. "غير اليوم لـ Legs"'
+                        : 'Ask coach or command.. e.g. "swap today for legs"',
                     hintStyle: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
                     border: InputBorder.none,
                     isDense: true,
@@ -2480,15 +2519,18 @@ class _CoachInputCardState extends State<CoachInputCard> {
               ),
               const SizedBox(width: 4),
               InkWell(
-                onTap: widget.isInterpreting ? null : _submit,
+                onTap: _isInterpreting ? null : _submit,
                 borderRadius: BorderRadius.circular(10),
                 child: Padding(
                   padding: const EdgeInsets.all(6),
-                  child: widget.isInterpreting
+                  child: _isInterpreting
                       ? const SizedBox(
                           width: 14,
                           height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(_C.cyan)),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
+                          ),
                         )
                       : const Icon(Icons.send_rounded, color: _C.cyan, size: 16),
                 ),
@@ -2496,6 +2538,87 @@ class _CoachInputCardState extends State<CoachInputCard> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBubble(CoachChatMessage message, bool isArabic) {
+    if (message.isUser) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8, left: 32),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: _C.cyan.withValues(alpha: 0.18),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(14),
+              topRight: Radius.circular(14),
+              bottomLeft: Radius.circular(14),
+              bottomRight: Radius.circular(2),
+            ),
+            border: Border.all(color: _C.cyan.withValues(alpha: 0.35), width: 1),
+          ),
+          child: Text(
+            message.text,
+            style: GoogleFonts.inter(fontSize: 12, color: _C.textPri, fontWeight: FontWeight.w500),
+          ),
+        ),
+      );
+    }
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8, right: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: _C.cardElev,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(14),
+            topRight: Radius.circular(14),
+            bottomRight: Radius.circular(14),
+            bottomLeft: Radius.circular(2),
+          ),
+          border: Border.all(color: _C.borderMid, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 13),
+            const SizedBox(width: 6),
+            Flexible(
+              child: message.isTyping
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isArabic ? 'المدرب يفكر...' : 'Coach is thinking...',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            color: _C.textMut,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Text(
+                      message.text,
+                      style: GoogleFonts.inter(fontSize: 12, color: _C.textPri, height: 1.35),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
