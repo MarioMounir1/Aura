@@ -573,76 +573,107 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 ),
                 const SizedBox(height: 16),
 
-                // Last week performance
+                // Coach note + AI chat input
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildPerformanceBadge(isArabic),
+                  child: CoachChatCard(
+                    coachNote: _currentSession?.coachNote,
+                    isArabic: isArabic,
+                    dio: _dio,
+                    onSessionUpdated: (updatedSession) {
+                      setState(() {
+                        _currentSession = updatedSession;
+                      });
+                    },
+                  ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 16),
 
-                // Weekly overview label + Weekly Recap action
+                // ── Your Progress unified card ─────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            isArabic ? 'نظرة أسبوعية' : 'Weekly Overview',
-                            style: GoogleFonts.inter(
-                                fontSize: 15, fontWeight: FontWeight.w700, color: _C.textPri),
-                          ),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () => _showWeeklyRecapSheet(isArabic),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: _C.cyan.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: _C.cyan.withValues(alpha: 0.35), width: 1),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 12),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    isArabic ? 'ملخص الأسبوع' : 'Weekly Recap',
-                                    style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: _C.cyan),
-                                  ),
-                                ],
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: _C.card,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: _C.border, width: 1.2),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header row: Your Progress label + Weekly Recap button
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isArabic ? 'تقدمك' : 'Your Progress',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: _C.textPri,
+                                letterSpacing: 0.2,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/week',
-                        style: GoogleFonts.inter(fontSize: 12, color: _C.textMut),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Text(
+                                  isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/wk',
+                                  style: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
+                                ),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () => _showWeeklyRecapSheet(isArabic),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: _C.cyan.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: _C.cyan.withValues(alpha: 0.35), width: 1),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 11),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          isArabic ? 'الملخص' : 'Recap',
+                                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _C.cyan),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
 
-                // READ-ONLY weekly circles (dynamic, matches routine)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: WeeklyCalendarRow(
-                    weekScheduleDetails: _weekScheduleDetails,
-                    completedDaysThisWeek: _completedDaysThisWeek,
-                    isArabic: isArabic,
-                    onDayTap: (detail) => _showDayDetailSheet(detail, isArabic),
+                        // Weekly calendar dots row
+                        WeeklyCalendarRow(
+                          weekScheduleDetails: _weekScheduleDetails,
+                          completedDaysThisWeek: _completedDaysThisWeek,
+                          isArabic: isArabic,
+                          onDayTap: (detail) => _showDayDetailSheet(detail, isArabic),
+                        ),
+
+                        const SizedBox(height: 12),
+                        Divider(color: _C.border, height: 1, thickness: 0.8),
+                        const SizedBox(height: 12),
+
+                        // Last-week top performance (compact inline)
+                        _buildPerformanceBadge(isArabic),
+                      ],
+                    ),
                   ),
                 ),
+                const SizedBox(height: 16),
 
                 if (_overtrainingRisk && _overtrainingNote != null) ...[
-                  const SizedBox(height: 16),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -693,9 +724,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ],
               ],
-              
+
               const SizedBox(height: 32),
-              
+
               // ── Ads Banner for Free Users ──────────────
               Builder(builder: (context) {
                 final profileState = context.read<ProfileBloc>().state;
@@ -1181,16 +1212,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     return Column(
       children: [
-        CoachChatCard(
-          coachNote: _currentSession?.coachNote,
-          isArabic: isArabic,
-          dio: _dio,
-          onSessionUpdated: (updatedSession) {
-            setState(() {
-              _currentSession = updatedSession;
-            });
-          },
-        ),
         if (isSkipped)
           Container(
             decoration: BoxDecoration(
