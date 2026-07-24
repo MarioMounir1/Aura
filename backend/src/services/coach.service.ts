@@ -410,40 +410,41 @@ export async function interpretSessionRequest(
   const availableDaysStr = Array.from(new Set(context.availableDayTypes)).join(", ");
   const currentExercisesStr = context.exercises.map((e) => e.name).join(", ");
 
-  const systemPrompt = `You are a natural-language workout session controller and personal strength coach. Classify the user's message into ONE of these 6 intents:
-1. "override_day": user wants to change or skip TODAY's workout split day type only. "dayType" MUST be one of: [${availableDaysStr}] or "skip".
-2. "swap_exercise": user wants to replace a specific exercise or target a body part in today's session. "exerciseName" is the exercise or muscle group to replace.
-3. "lighter_intensity": user is fatigued, sore, or asking to make today lighter/easier.
-4. "question": user is asking a genuine coaching/training question about an exercise, technique, split, recovery, or fitness in general (not asking to perform a session action).
-5. "change_plan": user wants to switch their ENTIRE training routine/split going forward (not just today). Examples: "switch to Upper/Lower", "I want Arnold split", "change to 3 days a week". Extract "proposedSplitName" if a split name is mentioned (exact or approximate), and "proposedDays" if a day count (number) is mentioned.
-6. "unrecognized": fallback if request is ambiguous, incoherent gibberish, or completely off-topic.
+  const systemPrompt = `You are a fitness coach & session controller. Classify user message into 1 of 6 intents:
+1. "override_day": change/skip today's split day. "dayType" in [${availableDaysStr}] or "skip".
+2. "swap_exercise": replace exercise or target body part today. "exerciseName" is exercise/muscle group to replace.
+3. "lighter_intensity": request easier/lighter session today.
+4. "question": coaching/training question (exercise, form, recovery, general fitness).
+5. "change_plan": switch entire training split going forward (e.g. "switch to Upper/Lower", "Arnold split", "3 days a week"). Extract "proposedSplitName" if split name mentioned, and "proposedDays" (number) if days mentioned.
+6. "unrecognized": ambiguous, incoherent, or off-topic.
 
-Respond ONLY with a single JSON object. Schema:
+Respond ONLY with JSON:
 {
   "intent": "override_day" | "swap_exercise" | "lighter_intensity" | "question" | "change_plan" | "unrecognized",
-  "dayType": string or null,
-  "exerciseName": string or null,
-  "proposedDays": number or null,
-  "proposedSplitName": string or null,
-  "reason": string or null,
-  "reply": "For action intents (1-3), a short 1-2 sentence confirmation line. For 'question', a helpful specific answer (1-3 sentences). For 'change_plan', a short friendly proposal sentence e.g. 'Switching you to Upper/Lower — tap Confirm to apply.' For 'unrecognized', explain you didn't understand."
+  "dayType": string | null,
+  "exerciseName": string | null,
+  "proposedDays": number | null,
+  "proposedSplitName": string | null,
+  "reason": string | null,
+  "reply": "Short natural reply (1-2 sentences). For change_plan: confirmation line if split specified, or clarifying question if ambiguous."
 }`;
 
-  const userPrompt = `Active routine: ${context.splitName}. Today's day: ${context.todayDayName}. Today's exercises: ${currentExercisesStr}. Available day types: ${availableDaysStr}. User message: "${message}"`;
+  const userPrompt = `Routine: ${context.splitName}. Today: ${context.todayDayName}. Exercises: ${currentExercisesStr}. Message: "${message}"`;
 
   const fallback: InterpretResult = {
     intent: "unrecognized",
-    reply: "I wasn't sure what you meant by that — try naming a specific day type (e.g. Legs A) or exercise to swap, or ask a coaching question.",
+    reply: "I wasn't sure what you meant by that — try naming a specific day type or exercise to swap, or ask a coaching question.",
   };
 
   const detailedRes = await callOllamaJsonChatDetailed<InterpretResult>(
     systemPrompt,
     userPrompt,
     fallback,
-    { callerName: "interpretSessionRequest", timeoutMs: 10000 }
+    { callerName: "interpretSessionRequest", timeoutMs: 14000 }
   );
 
   if (detailedRes.source === "timeout" || detailedRes.source === "error") {
+    console.warn(`⏱️ [Ollama] interpretSessionRequest failed/timed out after ${detailedRes.elapsedMs}ms (source: ${detailedRes.source})`);
     return {
       intent: "unrecognized",
       reply: "Still thinking that one over — mind trying again in a second?",
@@ -451,6 +452,8 @@ Respond ONLY with a single JSON object. Schema:
   }
 
   const res = detailedRes.value;
+  console.log(`⏱️ [Ollama] interpretSessionRequest finished in ${detailedRes.elapsedMs}ms (source: ${detailedRes.source}, intent: ${res.intent})`);
+
   if (!res.intent || !["override_day", "swap_exercise", "lighter_intensity", "question", "change_plan", "unrecognized"].includes(res.intent)) {
     return fallback;
   }
