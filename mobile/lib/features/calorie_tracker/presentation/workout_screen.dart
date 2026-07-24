@@ -585,6 +585,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                         _currentSession = updatedSession;
                       });
                     },
+                    onRoutineUpdated: _loadRoutine,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -2331,6 +2332,7 @@ class CoachChatCard extends StatefulWidget {
   final bool isArabic;
   final Dio dio;
   final ValueChanged<CurrentSession> onSessionUpdated;
+  final VoidCallback onRoutineUpdated; // called after a change_plan is confirmed
 
   const CoachChatCard({
     super.key,
@@ -2338,6 +2340,7 @@ class CoachChatCard extends StatefulWidget {
     required this.isArabic,
     required this.dio,
     required this.onSessionUpdated,
+    required this.onRoutineUpdated,
   });
 
   @override
@@ -2377,7 +2380,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
 
     setState(() {
       _messages.add(CoachChatMessage(text: msg, isUser: true));
-      _messages.add(const CoachChatMessage(text: '', isUser: false, isTyping: true));
+      _messages.add(CoachChatMessage(text: '', isUser: false, isTyping: true));
       _isInterpreting = true;
     });
     _scrollToBottom();
@@ -2385,12 +2388,18 @@ class _CoachChatCardState extends State<CoachChatCard> {
     try {
       final resp = await widget.dio.post('/workouts/session/interpret', data: {'message': msg});
       final data = resp.data['data'];
+      final intent = data?['intent'] as String? ?? 'unrecognized';
+      final actionExecuted = data?['actionExecuted'] as bool? ?? false;
       final confirmationMsg = data?['confirmationMessage'] as String? ?? 'Session updated.';
       final updatedSessionJson = data?['currentSession'];
 
       if (updatedSessionJson != null) {
         final session = CurrentSession.fromJson(updatedSessionJson as Map<String, dynamic>);
         widget.onSessionUpdated(session);
+      }
+
+      if (intent == 'change_plan' && actionExecuted) {
+        widget.onRoutineUpdated();
       }
 
       if (mounted) {
@@ -2595,6 +2604,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
       );
     }
 
+    // Normal coach bubble
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
