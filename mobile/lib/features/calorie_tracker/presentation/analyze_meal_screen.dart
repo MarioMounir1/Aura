@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../core/widgets/admob_mock.dart';
 import '../../../core/theme/app_colors.dart';
@@ -734,19 +735,30 @@ class _AnalyzeMealScreenState extends State<AnalyzeMealScreen>
                             child: SizedBox(
                               width: 80,
                               height: 80,
-                              child: Image.network(
-                                prod['imageUrl'] ?? '',
+                              child: CachedNetworkImage(
+                                imageUrl: prod['imageUrl'] ?? '',
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: AppColors.border,
-                                    child: const Icon(
-                                      Icons.fitness_center_rounded,
-                                      color: AppColors.primary,
-                                      size: 32,
+                                placeholder: (context, url) => Container(
+                                  color: AppColors.border,
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
-                                  );
-                                },
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: AppColors.border,
+                                  child: const Icon(
+                                    Icons.fitness_center_rounded,
+                                    color: AppColors.primary,
+                                    size: 32,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
