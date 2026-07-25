@@ -22,7 +22,6 @@ import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
 import '../data/models/ai_usage_quota.dart';
 import '../data/models/barcode_product.dart';
-import '../../premium/presentation/premium_upgrade_screen.dart';
 import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
 import '../data/services/barcode_service.dart';
