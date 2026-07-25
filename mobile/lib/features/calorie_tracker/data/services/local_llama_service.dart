@@ -185,9 +185,12 @@ class LocalLlamaService {
             'Authentication failed. Please log in again.',
           );
         }
-        if (statusCode == 429) {
-          return const LlamaNetworkException(
-            'Too many requests. Please wait a moment before scanning again.',
+        if (statusCode == 402 || statusCode == 429) {
+          return LlamaNetworkException(
+            errMsg ??
+                (statusCode == 402
+                    ? 'Free limit reached. Upgrade to Premium for more scans!'
+                    : 'Premium limit reached. Daily scans reset at midnight UTC.'),
           );
         }
         if (statusCode == 502 || statusCode == 504) {
