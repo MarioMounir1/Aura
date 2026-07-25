@@ -272,7 +272,86 @@ export async function getTodayFoodLogs(req: Request, res: Response): Promise<voi
   }
 }
 
-// ── DELETE /api/v1/food-logs/:id ─────────────────────────────
+// ── PUT /api/v1/food-logs/:id ─────────────────────────────
+
+const UpdateFoodLogSchema = z.object({
+  servings: z.number().min(0.1).max(50).optional(),
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snack", "other"]).optional(),
+});
+
+/**
+ * PUT /api/v1/food-logs/:id
+ * Update a food log entry's servings and/or meal type.
+ * Macros are derived from the FoodItem, so only servings & mealType are editable.
+ */
+export async function updateFoodLog(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const { id } = req.params;
+
+    const parsed = UpdateFoodLogSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({
+        error:   "Validation failed",
+        details: parsed.error.flatten().fieldErrors,
+      });
+      return;
+    }
+
+    if (!parsed.data.servings && !parsed.data.mealType) {
+      res.status(400).json({ error: "At least one of servings or mealType must be provided." });
+      return;
+    }
+
+    const log = await prisma.foodLog.findUnique({
+      where:   { id },
+      include: { foodItem: true },
+    });
+
+    if (!log) {
+      res.status(404).json({ error: "Food log entry not found" });
+      return;
+    }
+
+    if (log.userId !== userId) {
+      res.status(403).json({ error: "Forbidden: you do not own this log entry" });
+      return;
+    }
+
+    const updated = await prisma.foodLog.update({
+      where:   { id },
+      data:    parsed.data,
+      include: { foodItem: true },
+    });
+
+    const nutrition = calcNutrition(updated.foodItem, updated.servings);
+
+    res.status(200).json({
+      message: "Food log entry updated successfully",
+      log: {
+        id:       updated.id,
+        mealType: updated.mealType,
+        servings: updated.servings,
+        loggedAt: updated.loggedAt,
+        foodItem: {
+          id:          updated.foodItem.id,
+          nameEn:      updated.foodItem.nameEn,
+          nameAr:      updated.foodItem.nameAr,
+          servingSize: updated.foodItem.servingSize,
+          servingUnit: updated.foodItem.servingUnit,
+          category:    updated.foodItem.category,
+        },
+        nutrition,
+      },
+    });
+  } catch (error) {
+    console.error("[food-log] updateFoodLog error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 
 export async function deleteFoodLog(req: Request, res: Response): Promise<void> {
   try {
