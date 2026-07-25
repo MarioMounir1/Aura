@@ -528,7 +528,19 @@ class _MealsDashboardState extends State<MealsDashboard>
               children: [
                 _buildHeader(),
                 const SizedBox(height: 24),
-                _buildMacroRings(),
+
+                // ── Daily Performance Rings ─────────────────
+                _MacroRingsSection(
+                  caloriesConsumed: caloriesConsumed,
+                  caloriesTarget:   caloriesTarget,
+                  proteinConsumed:  proteinConsumed,
+                  proteinTarget:    proteinTarget,
+                  carbsConsumed:    carbsConsumed,
+                  carbsTarget:      carbsTarget,
+                  fatsConsumed:     fatsConsumed,
+                  fatsTarget:       fatsTarget,
+                  onTap:            _showManualLogSheet,
+                ),
                 const SizedBox(height: 28),
 
                 // ── AI Canvas area (state-driven) ──────────
@@ -540,7 +552,14 @@ class _MealsDashboardState extends State<MealsDashboard>
                 ),
 
                 const SizedBox(height: 28),
-                _buildFeedSection(),
+
+                // ── Today's Feed ──────────────────────────
+                _FeedSection(
+                  logs:      logs,
+                  onSnap:    () => _pickAndAnalyze(ImageSource.gallery),
+                  onEdit:    _showEditSheet,
+                  onDelete:  _handleDeleteEntry,
+                ),
                 const SizedBox(height: 32),
 
                 // ── Ads Banner for Free Users ──────────────
@@ -638,162 +657,7 @@ class _MealsDashboardState extends State<MealsDashboard>
     );
   }
 
-  // ── MACRO RINGS ───────────────────────────────────────────
-
-  Widget _buildMacroRings() {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: _showManualLogSheet,
-        borderRadius: BorderRadius.circular(24),
-        splashColor: DashboardThemeColors.accentEmerald.withValues(alpha: 0.06),
-        highlightColor: DashboardThemeColors.accentEmerald.withValues(alpha: 0.03),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: DashboardThemeColors.trackBg),
-            boxShadow: [
-              BoxShadow(
-                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.04),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Daily Performance',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: DashboardThemeColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Tooltip(
-                        message: 'Tap to log manually',
-                        child: Icon(
-                          Icons.edit_note_rounded,
-                          size: 16,
-                          color: DashboardThemeColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${caloriesTarget > 0 ? ((caloriesConsumed / caloriesTarget) * 100).round() : 0}% Target',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: DashboardThemeColors.accentEmerald,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-              LayoutBuilder(builder: (context, constraints) {
-                const spacing = 12.0;
-                final itemW = (constraints.maxWidth - spacing * 3) / 4;
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildRing('Calories', caloriesConsumed, caloriesTarget, 'kcal', DashboardThemeColors.accentEmerald, itemW),
-                    _buildRing('Protein',  proteinConsumed,  proteinTarget,  'g',    DashboardThemeColors.accentBlue,    itemW),
-                    _buildRing('Carbs',    carbsConsumed,    carbsTarget,    'g',    DashboardThemeColors.accentAmber,   itemW),
-                    _buildRing('Fats',     fatsConsumed,     fatsTarget,     'g',    DashboardThemeColors.accentRed,     itemW),
-                  ],
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRing(String label, double consumed, double target, String unit, Color color, double width) {
-    final pct = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
-    
-    // Formatting for internal ring text (e.g., "kcal" or "g Protein")
-    final innerLabel = label.toLowerCase() == 'calories' ? unit : 'g $label';
-
-    return SizedBox(
-      width: width,
-      child: Column(
-        children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: pct),
-            duration: const Duration(milliseconds: 1400),
-            curve: Curves.easeOutCubic,
-            builder: (_, v, __) => CustomPaint(
-              size: Size(width, width),
-              painter: CustomCircularProgressPainter(
-                progress: v,
-                color: color,
-                trackColor: color.withValues(alpha: 0.15),
-                strokeWidth: 7.0,
-              ),
-              child: SizedBox(
-                width: width,
-                height: width,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '${consumed.round()}',
-                        style: GoogleFonts.outfit(
-                          fontSize: width > 75 ? 18 : 15,
-                          fontWeight: FontWeight.w800,
-                          color: DashboardThemeColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        innerLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: DashboardThemeColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '/ ${target.round()} $unit',
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: DashboardThemeColors.textSecondary.withValues(alpha: 0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+  // (macro rings extracted to _MacroRingsSection below)
 
   // ── AI CANVAS (STATE SWITCH) ───────────────────────────────
 
@@ -811,187 +675,10 @@ class _MealsDashboardState extends State<MealsDashboard>
   // ── STATE 1: IDLE — Two action cards ─────────────────────
 
   Widget _buildIdleState() {
-    return Column(
+    return _SmartScannerSection(
       key: const ValueKey('idle'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.bolt, color: DashboardThemeColors.accentLime, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              'SMART MEAL SCANNER',
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.4,
-                color: DashboardThemeColors.accentLime,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Text(
-          'Analyze your meal instantly using local offline models — 100% private, zero cloud.',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            height: 1.5,
-            color: DashboardThemeColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.camera_alt_outlined,
-                label: 'Snap Meal',
-                subtitle: 'Use Camera',
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF064E3B), Color(0xFF065F46)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                accentColor: DashboardThemeColors.accentEmerald,
-                onTap: () => _pickAndAnalyze(ImageSource.camera),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: _buildActionCard(
-                icon: Icons.image_outlined,
-                label: 'Upload Screenshot',
-                subtitle: 'From Gallery',
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                accentColor: DashboardThemeColors.accentBlue,
-                onTap: () => _pickAndAnalyze(ImageSource.gallery),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        // Local AI badge
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: DashboardThemeColors.trackBg),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: DashboardThemeColors.accentEmerald,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '100% Local • No Cloud Required',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: DashboardThemeColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Powered by secure offline privacy engines — your data never leaves your device.',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: DashboardThemeColors.textMuted,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionCard({
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required LinearGradient gradient,
-    required Color accentColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 150,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accentColor.withValues(alpha: 0.25)),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.12),
-              blurRadius: 16,
-              spreadRadius: 1,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: accentColor, size: 24),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: DashboardThemeColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: accentColor.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      onCamera:  () => _pickAndAnalyze(ImageSource.camera),
+      onGallery: () => _pickAndAnalyze(ImageSource.gallery),
     );
   }
 
@@ -1457,9 +1144,429 @@ class _MealsDashboardState extends State<MealsDashboard>
     );
   }
 
-  // ── FEED SECTION (preserved from original) ────────────────
+}
+// ↑ End of _MealsDashboardState
 
-  Widget _buildFeedSection() {
+// ── Extracted: Daily Performance Rings ───────────────────────
+
+class _MacroRingsSection extends StatelessWidget {
+  final double caloriesConsumed;
+  final double caloriesTarget;
+  final double proteinConsumed;
+  final double proteinTarget;
+  final double carbsConsumed;
+  final double carbsTarget;
+  final double fatsConsumed;
+  final double fatsTarget;
+  final VoidCallback onTap;
+
+  const _MacroRingsSection({
+    required this.caloriesConsumed,
+    required this.caloriesTarget,
+    required this.proteinConsumed,
+    required this.proteinTarget,
+    required this.carbsConsumed,
+    required this.carbsTarget,
+    required this.fatsConsumed,
+    required this.fatsTarget,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        splashColor: DashboardThemeColors.accentEmerald.withValues(alpha: 0.06),
+        highlightColor: DashboardThemeColors.accentEmerald.withValues(alpha: 0.03),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: DashboardThemeColors.cardBackground,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: DashboardThemeColors.trackBg),
+            boxShadow: [
+              BoxShadow(
+                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.04),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Daily Performance',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: DashboardThemeColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Tooltip(
+                        message: 'Tap to log manually',
+                        child: Icon(
+                          Icons.edit_note_rounded,
+                          size: 16,
+                          color: DashboardThemeColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${caloriesTarget > 0 ? ((caloriesConsumed / caloriesTarget) * 100).round() : 0}% Target',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: DashboardThemeColors.accentEmerald,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              LayoutBuilder(builder: (ctx, constraints) {
+                const spacing = 12.0;
+                final itemW = (constraints.maxWidth - spacing * 3) / 4;
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _MacroRing(label: 'Calories', consumed: caloriesConsumed, target: caloriesTarget, unit: 'kcal', color: DashboardThemeColors.accentEmerald, width: itemW),
+                    _MacroRing(label: 'Protein',  consumed: proteinConsumed,  target: proteinTarget,  unit: 'g',    color: DashboardThemeColors.accentBlue,    width: itemW),
+                    _MacroRing(label: 'Carbs',    consumed: carbsConsumed,    target: carbsTarget,    unit: 'g',    color: DashboardThemeColors.accentAmber,   width: itemW),
+                    _MacroRing(label: 'Fats',     consumed: fatsConsumed,     target: fatsTarget,     unit: 'g',    color: DashboardThemeColors.accentRed,     width: itemW),
+                  ],
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MacroRing extends StatelessWidget {
+  final String label;
+  final double consumed;
+  final double target;
+  final String unit;
+  final Color color;
+  final double width;
+
+  const _MacroRing({
+    required this.label,
+    required this.consumed,
+    required this.target,
+    required this.unit,
+    required this.color,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct        = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+    final innerLabel = label.toLowerCase() == 'calories' ? unit : 'g $label';
+    return SizedBox(
+      width: width,
+      child: Column(
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: pct),
+            duration: const Duration(milliseconds: 1400),
+            curve: Curves.easeOutCubic,
+            builder: (_, v, __) => CustomPaint(
+              size: Size(width, width),
+              painter: CustomCircularProgressPainter(
+                progress: v,
+                color: color,
+                trackColor: color.withValues(alpha: 0.15),
+                strokeWidth: 7.0,
+              ),
+              child: SizedBox(
+                width: width,
+                height: width,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${consumed.round()}',
+                        style: GoogleFonts.outfit(
+                          fontSize: width > 75 ? 18 : 15,
+                          fontWeight: FontWeight.w800,
+                          color: DashboardThemeColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        innerLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          color: DashboardThemeColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '/ ${target.round()} $unit',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: DashboardThemeColors.textSecondary.withValues(alpha: 0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Extracted: Smart Scanner Idle State ──────────────────────
+
+class _SmartScannerSection extends StatelessWidget {
+  final VoidCallback onCamera;
+  final VoidCallback onGallery;
+
+  const _SmartScannerSection({
+    super.key,
+    required this.onCamera,
+    required this.onGallery,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.bolt, color: DashboardThemeColors.accentLime, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              'SMART MEAL SCANNER',
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.4,
+                color: DashboardThemeColors.accentLime,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'Analyze your meal instantly using local offline models — 100% private, zero cloud.',
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            height: 1.5,
+            color: DashboardThemeColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(child: _ActionCard(
+              icon: Icons.camera_alt_outlined,
+              label: 'Snap Meal',
+              subtitle: 'Use Camera',
+              gradient: const LinearGradient(
+                colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              accentColor: DashboardThemeColors.accentEmerald,
+              onTap: onCamera,
+            )),
+            const SizedBox(width: 14),
+            Expanded(child: _ActionCard(
+              icon: Icons.image_outlined,
+              label: 'Upload Screenshot',
+              subtitle: 'From Gallery',
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              accentColor: DashboardThemeColors.accentBlue,
+              onTap: onGallery,
+            )),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: DashboardThemeColors.cardBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: DashboardThemeColors.trackBg),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.lock_outline_rounded,
+                  color: DashboardThemeColors.accentEmerald,
+                  size: 16,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '100% Local • No Cloud Required',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: DashboardThemeColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Powered by secure offline privacy engines — your data never leaves your device.',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: DashboardThemeColors.textMuted,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final LinearGradient gradient;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  const _ActionCard({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.gradient,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 150,
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: accentColor.withValues(alpha: 0.25)),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withValues(alpha: 0.12),
+              blurRadius: 16,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: accentColor, size: 24),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: DashboardThemeColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: accentColor.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Extracted: Today's Feed Section ──────────────────────────
+
+class _FeedSection extends StatelessWidget {
+  final List<MealEntry> logs;
+  final VoidCallback onSnap;
+  final void Function(MealEntry) onEdit;
+  final void Function(MealEntry, int) onDelete;
+
+  const _FeedSection({
+    required this.logs,
+    required this.onSnap,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1493,7 +1600,7 @@ class _MealsDashboardState extends State<MealsDashboard>
               ),
             ]),
             TextButton.icon(
-              onPressed: () => _pickAndAnalyze(ImageSource.gallery),
+              onPressed: onSnap,
               icon: const Icon(Icons.add_photo_alternate_outlined, size: 16, color: DashboardThemeColors.accentLime),
               label: Text(
                 'Snap',
@@ -1534,14 +1641,42 @@ class _MealsDashboardState extends State<MealsDashboard>
             ),
           )
         else
-          Column(children: logs.map(_buildMealLogCard).toList()),
+          Column(
+            children: [
+              for (var i = 0; i < logs.length; i++)
+                _MealLogCard(
+                  key: ValueKey(logs[i].id),
+                  meal: logs[i],
+                  index: i,
+                  onEdit:   onEdit,
+                  onDelete: onDelete,
+                ),
+            ],
+          ),
       ],
     );
   }
+}
 
-  Widget _buildMealLogCard(MealEntry meal) {
-    final idx      = logs.indexOf(meal);
-    final mealTime = DateFormat('h:mm a').format(meal.createdAt.toLocal());
+// ── Extracted: Single Meal Log Card ──────────────────────────
+
+class _MealLogCard extends StatelessWidget {
+  final MealEntry meal;
+  final int index;
+  final void Function(MealEntry) onEdit;
+  final void Function(MealEntry, int) onDelete;
+
+  const _MealLogCard({
+    super.key,
+    required this.meal,
+    required this.index,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final mealTime  = DateFormat('h:mm a').format(meal.createdAt.toLocal());
     final hasSevere = meal.warnings.any((w) => w.isSevere);
     final hasWarn   = meal.warnings.isNotEmpty;
     Color borderColor = DashboardThemeColors.trackBg;
@@ -1554,12 +1689,11 @@ class _MealsDashboardState extends State<MealsDashboard>
     }
 
     return Dismissible(
-      key: ValueKey(meal.id),
+      key: ValueKey('dismiss_${meal.id}'),
       direction: DismissDirection.endToStart,
-      // Prevent auto-removal — we handle state ourselves
       confirmDismiss: (_) async {
-        _handleDeleteEntry(meal, idx);
-        return false; // keep widget; we remove manually above
+        onDelete(meal, index);
+        return false;
       },
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -1577,33 +1711,46 @@ class _MealsDashboardState extends State<MealsDashboard>
         ),
       ),
       child: GestureDetector(
-        onTap: () => _showEditSheet(meal),
+        onTap: () => onEdit(meal),
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: DashboardThemeColors.cardBackground,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: borderColor, width: hasWarn || meal.isHighlyNutritious ? 1.5 : 1.0),
+            border: Border.all(
+              color: borderColor,
+              width: hasWarn || meal.isHighlyNutritious ? 1.5 : 1.0,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (hasWarn) ...[
+              if (hasWarn)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   margin: const EdgeInsets.only(bottom: 14),
                   decoration: BoxDecoration(
-                    color: (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber).withValues(alpha: 0.1),
+                    color: (hasSevere
+                            ? DashboardThemeColors.accentRed
+                            : DashboardThemeColors.accentAmber)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber).withValues(alpha: 0.25),
+                      color: (hasSevere
+                              ? DashboardThemeColors.accentRed
+                              : DashboardThemeColors.accentAmber)
+                          .withValues(alpha: 0.25),
                     ),
                   ),
                   child: Row(children: [
                     Icon(
-                      hasSevere ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
-                      color: hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber,
+                      hasSevere
+                          ? Icons.warning_amber_rounded
+                          : Icons.info_outline_rounded,
+                      color: hasSevere
+                          ? DashboardThemeColors.accentRed
+                          : DashboardThemeColors.accentAmber,
                       size: 16,
                     ),
                     const SizedBox(width: 8),
@@ -1611,7 +1758,9 @@ class _MealsDashboardState extends State<MealsDashboard>
                       child: Text(
                         meal.warnings.map((w) => w.warningText).join(', '),
                         style: GoogleFonts.inter(
-                          color: hasSevere ? const Color(0xFFFCA5A5) : const Color(0xFFFCD34D),
+                          color: hasSevere
+                              ? const Color(0xFFFCA5A5)
+                              : const Color(0xFFFCD34D),
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1619,7 +1768,6 @@ class _MealsDashboardState extends State<MealsDashboard>
                     ),
                   ]),
                 ),
-              ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1630,9 +1778,14 @@ class _MealsDashboardState extends State<MealsDashboard>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      meal.source == 'image' ? Icons.camera_alt_outlined : Icons.restaurant_outlined,
-                      color: meal.isHighlyNutritious ? DashboardThemeColors.accentEmerald
-                          : (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentLime),
+                      meal.source == 'image'
+                          ? Icons.camera_alt_outlined
+                          : Icons.restaurant_outlined,
+                      color: meal.isHighlyNutritious
+                          ? DashboardThemeColors.accentEmerald
+                          : (hasSevere
+                              ? DashboardThemeColors.accentRed
+                              : DashboardThemeColors.accentLime),
                       size: 20,
                     ),
                   ),
@@ -1654,20 +1807,42 @@ class _MealsDashboardState extends State<MealsDashboard>
                           if (meal.isHighlyNutritious) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.15),
+                                color: DashboardThemeColors.accentEmerald
+                                    .withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text('🌿 NUTRITIOUS',
-                                  style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: DashboardThemeColors.accentEmerald)),
+                              child: Text(
+                                '🌿 NUTRITIOUS',
+                                style: GoogleFonts.inter(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: DashboardThemeColors.accentEmerald,
+                                ),
+                              ),
                             ),
                           ],
                         ]),
                         const SizedBox(height: 2),
-                        Text(meal.foodName, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary)),
+                        Text(
+                          meal.foodName,
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: DashboardThemeColors.textPrimary,
+                          ),
+                        ),
                         const SizedBox(height: 2),
-                        Text(mealTime, style: GoogleFonts.inter(fontSize: 11, color: DashboardThemeColors.textMuted, fontWeight: FontWeight.w500)),
+                        Text(
+                          mealTime,
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: DashboardThemeColors.textMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1675,25 +1850,47 @@ class _MealsDashboardState extends State<MealsDashboard>
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: DashboardThemeColors.background,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: DashboardThemeColors.trackBg),
                         ),
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text('${meal.calories.round()}',
-                              style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary)),
+                          Text(
+                            '${meal.calories.round()}',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: DashboardThemeColors.textPrimary,
+                            ),
+                          ),
                           const SizedBox(width: 2),
-                          Text('kcal', style: GoogleFonts.inter(fontSize: 9, color: DashboardThemeColors.textSecondary, fontWeight: FontWeight.w600)),
+                          Text(
+                            'kcal',
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              color: DashboardThemeColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ]),
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.edit_outlined, size: 11, color: DashboardThemeColors.textMuted),
+                          const Icon(Icons.edit_outlined,
+                              size: 11,
+                              color: DashboardThemeColors.textMuted),
                           const SizedBox(width: 3),
-                          Text('Edit', style: GoogleFonts.inter(fontSize: 10, color: DashboardThemeColors.textMuted)),
+                          Text(
+                            'Edit',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: DashboardThemeColors.textMuted,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -1701,11 +1898,14 @@ class _MealsDashboardState extends State<MealsDashboard>
                 ],
               ),
               const SizedBox(height: 14),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                _buildMacroLabel('Protein', '${meal.protein.round()}g', DashboardThemeColors.accentEmerald),
-                _buildMacroLabel('Carbs',   '${meal.carbs.round()}g',   DashboardThemeColors.accentBlue),
-                _buildMacroLabel('Fats',    '${meal.fat.round()}g',     DashboardThemeColors.accentRed),
-              ]),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _macroLabel('Protein', '${meal.protein.round()}g', DashboardThemeColors.accentEmerald),
+                  _macroLabel('Carbs',   '${meal.carbs.round()}g',   DashboardThemeColors.accentBlue),
+                  _macroLabel('Fats',    '${meal.fat.round()}g',     DashboardThemeColors.accentRed),
+                ],
+              ),
             ],
           ),
         ),
@@ -1713,13 +1913,30 @@ class _MealsDashboardState extends State<MealsDashboard>
     );
   }
 
-
-  Widget _buildMacroLabel(String label, String value, Color color) {
+  static Widget _macroLabel(String label, String value, Color color) {
     return Row(children: [
-      Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      Container(
+        width: 6,
+        height: 6,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
       const SizedBox(width: 6),
-      Text('$label: ', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: DashboardThemeColors.textSecondary)),
-      Text(value, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary)),
+      Text(
+        '$label: ',
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: DashboardThemeColors.textSecondary,
+        ),
+      ),
+      Text(
+        value,
+        style: GoogleFonts.outfit(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: DashboardThemeColors.textPrimary,
+        ),
+      ),
     ]);
   }
 }
