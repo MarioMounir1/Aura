@@ -19,6 +19,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
+import '../data/models/ai_usage_quota.dart';
 import '../../premium/presentation/premium_upgrade_screen.dart';
 import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
@@ -155,6 +156,7 @@ class _MealsDashboardState extends State<MealsDashboard>
   // ignore: unused_field
   String? _errorMessage;
   File? _selectedImage;
+  AiUsageQuota? _quota;
 
   // ── Services ─────────────────────────────────────────────
   final _llamaService   = LocalLlamaService();
@@ -172,6 +174,7 @@ class _MealsDashboardState extends State<MealsDashboard>
   void initState() {
     super.initState();
     _initData();
+    _fetchQuota();
 
     _shimmerController = AnimationController(
       vsync: this,
@@ -184,6 +187,19 @@ class _MealsDashboardState extends State<MealsDashboard>
     _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
       CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
     );
+  }
+
+  Future<void> _fetchQuota() async {
+    try {
+      final quota = await _llamaService.fetchAiUsage();
+      if (mounted) {
+        setState(() {
+          _quota = quota;
+        });
+      }
+    } catch (e) {
+      debugPrint('Quota fetch error: $e');
+    }
   }
 
   @override
@@ -254,11 +270,16 @@ class _MealsDashboardState extends State<MealsDashboard>
     // ── Check Quota Limits First ──
     try {
       final quota = await _llamaService.fetchAiUsage();
+      if (mounted) {
+        setState(() {
+          _quota = quota;
+        });
+      }
       final isExceeded = scanType == 'camera' ? quota.isCameraExceeded : quota.isGalleryExceeded;
       
       if (isExceeded) {
         if (!mounted) return;
-        _showUpgradeDialog(scanType, quota.isPremium);
+        _showUpgradeDialog(scanType, quota);
         return;
       }
     } catch (e) {
@@ -287,6 +308,7 @@ class _MealsDashboardState extends State<MealsDashboard>
         _llamaResult = result;
         _layoutState = LayoutState.resultLoaded;
       });
+      _fetchQuota();
     } on LlamaApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -311,36 +333,42 @@ class _MealsDashboardState extends State<MealsDashboard>
     }
   }
 
-  void _showUpgradeDialog(String scanType, bool isPremium) {
+  void _showUpgradeDialog(String scanType, AiUsageQuota quota) {
+    final isPremium = quota.isPremium;
+    final limit = scanType == 'camera' ? quota.cameraLimit : quota.galleryLimit;
+    final typeLabel = scanType == 'camera' ? 'camera' : 'screenshot';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: DashboardThemeColors.cardBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           isPremium ? 'Daily Limit Reached' : 'Upgrade to Premium',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: Text(
           isPremium 
-            ? 'You have reached your premium limit for $scanType scans today.' 
-            : 'You have used all your free $scanType scans for today. Upgrade to Premium to get more scans!',
-          style: const TextStyle(color: DashboardThemeColors.textMuted),
+            ? 'You have reached your daily limit of $limit $typeLabel scans. Your scans will reset tomorrow at midnight UTC.' 
+            : 'You have used all $limit of your free $typeLabel scans for today. Upgrade to Premium to get up to 7 daily scans for each type!',
+          style: GoogleFonts.inter(color: DashboardThemeColors.textSecondary, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Maybe Later', style: TextStyle(color: DashboardThemeColors.textMuted)),
+            child: Text(isPremium ? 'Got it' : 'Maybe Later', style: GoogleFonts.inter(color: DashboardThemeColors.textMuted)),
           ),
           if (!isPremium)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: DashboardThemeColors.accentEmerald,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () {
                 Navigator.pop(context);
                 PurchaseService.instance.presentPaywall(context);
               },
-              child: const Text('Upgrade Now', style: TextStyle(color: Colors.white)),
+              child: Text('Upgrade Now', style: GoogleFonts.outfit(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
@@ -677,6 +705,7 @@ class _MealsDashboardState extends State<MealsDashboard>
   Widget _buildIdleState() {
     return _SmartScannerSection(
       key: const ValueKey('idle'),
+      quota: _quota,
       onCamera:  () => _pickAndAnalyze(ImageSource.camera),
       onGallery: () => _pickAndAnalyze(ImageSource.gallery),
     );
@@ -1348,17 +1377,41 @@ class _MacroRing extends StatelessWidget {
 // ── Extracted: Smart Scanner Idle State ──────────────────────
 
 class _SmartScannerSection extends StatelessWidget {
+  final AiUsageQuota? quota;
   final VoidCallback onCamera;
   final VoidCallback onGallery;
 
   const _SmartScannerSection({
     super.key,
+    this.quota,
     required this.onCamera,
     required this.onGallery,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cameraUsage = quota?.cameraUsage ?? 0;
+    final cameraLimit = quota?.cameraLimit ?? 2;
+    final remainingCamera = quota?.remainingCamera ?? (cameraLimit - cameraUsage);
+    final isCameraExceeded = quota?.isCameraExceeded ?? (cameraUsage >= cameraLimit);
+    final cameraText = '$cameraUsage/$cameraLimit scans today';
+    final cameraUsageColor = isCameraExceeded
+        ? DashboardThemeColors.accentRed
+        : (remainingCamera == 1
+            ? DashboardThemeColors.accentAmber
+            : DashboardThemeColors.accentEmerald.withValues(alpha: 0.85));
+
+    final galleryUsage = quota?.galleryUsage ?? 0;
+    final galleryLimit = quota?.galleryLimit ?? 2;
+    final remainingGallery = quota?.remainingGallery ?? (galleryLimit - galleryUsage);
+    final isGalleryExceeded = quota?.isGalleryExceeded ?? (galleryUsage >= galleryLimit);
+    final galleryText = '$galleryUsage/$galleryLimit screenshots today';
+    final galleryUsageColor = isGalleryExceeded
+        ? DashboardThemeColors.accentRed
+        : (remainingGallery == 1
+            ? DashboardThemeColors.accentAmber
+            : DashboardThemeColors.accentBlue.withValues(alpha: 0.85));
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1393,6 +1446,8 @@ class _SmartScannerSection extends StatelessWidget {
               icon: Icons.camera_alt_outlined,
               label: 'Snap Meal',
               subtitle: 'Use Camera',
+              usageText: cameraText,
+              usageColor: cameraUsageColor,
               gradient: const LinearGradient(
                 colors: [Color(0xFF064E3B), Color(0xFF065F46)],
                 begin: Alignment.topLeft,
@@ -1406,6 +1461,8 @@ class _SmartScannerSection extends StatelessWidget {
               icon: Icons.image_outlined,
               label: 'Upload Screenshot',
               subtitle: 'From Gallery',
+              usageText: galleryText,
+              usageColor: galleryUsageColor,
               gradient: const LinearGradient(
                 colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
                 begin: Alignment.topLeft,
@@ -1475,6 +1532,8 @@ class _ActionCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String subtitle;
+  final String usageText;
+  final Color usageColor;
   final LinearGradient gradient;
   final Color accentColor;
   final VoidCallback onTap;
@@ -1483,6 +1542,8 @@ class _ActionCard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.subtitle,
+    required this.usageText,
+    required this.usageColor,
     required this.gradient,
     required this.accentColor,
     required this.onTap,
@@ -1494,7 +1555,7 @@ class _ActionCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        height: 150,
+        height: 160,
         decoration: BoxDecoration(
           gradient: gradient,
           borderRadius: BorderRadius.circular(20),
@@ -1509,7 +1570,7 @@ class _ActionCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1538,6 +1599,15 @@ class _ActionCard extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: accentColor.withValues(alpha: 0.85),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    usageText,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: usageColor,
                     ),
                   ),
                 ],
