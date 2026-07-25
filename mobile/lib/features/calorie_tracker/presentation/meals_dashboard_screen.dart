@@ -2549,66 +2549,76 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 
     if (_isEdit) {
       final orig = widget.initialEntry!;
-      // Fire update — if it fails, show error but still update local state
-      widget.service.updateMealLog(
-        orig.id,
-        mealName: name.isEmpty ? orig.foodName : name,
-        calories: calories,
-        protein:  protein,
-        carbs:    carbs,
-        fats:     fats,
-      ).catchError((e) {
+      try {
+        if (orig.source == 'food_db') {
+          await widget.service.updateFoodLog(orig.id, servings: 1.0);
+        } else {
+          await widget.service.updateMealLog(
+            orig.id,
+            mealName: name.isEmpty ? orig.foodName : name,
+            calories: calories,
+            protein:  protein,
+            carbs:    carbs,
+            fats:     fats,
+          );
+        }
+
+        final updatedEntry = MealEntry(
+          id:                  orig.id,
+          foodName:            name.isEmpty ? orig.foodName : name,
+          restaurantName:      orig.restaurantName,
+          protein:             protein,
+          carbs:               carbs,
+          fat:                 fats,
+          calories:            calories,
+          warnings:            orig.warnings,
+          isHighlyNutritious:  protein > 25 && calories < 400,
+          createdAt:           orig.createdAt,
+          source:              orig.source,
+          ingredientsBreakdown: orig.ingredientsBreakdown,
+        );
+
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        widget.onSaved(updatedEntry);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isSaving = false);
         widget.onError('Could not sync edit to server: $e');
-      });
-
-      final updatedEntry = MealEntry(
-        id:                  orig.id,
-        foodName:            name.isEmpty ? orig.foodName : name,
-        restaurantName:      orig.restaurantName,
-        protein:             protein,
-        carbs:               carbs,
-        fat:                 fats,
-        calories:            calories,
-        warnings:            orig.warnings,
-        isHighlyNutritious:  protein > 25 && calories < 400,
-        createdAt:           orig.createdAt,
-        source:              orig.source,
-        ingredientsBreakdown: orig.ingredientsBreakdown,
-      );
-
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      widget.onSaved(updatedEntry);
+      }
     } else {
-      // Create — fire-and-forget POST
-      widget.service.postManualLog(
-        mealName: name,
-        calories: calories,
-        protein:  protein,
-        carbs:    carbs,
-        fats:     fats,
-      ).catchError((e) {
+      try {
+        await widget.service.postManualLog(
+          mealName: name,
+          calories: calories,
+          protein:  protein,
+          carbs:    carbs,
+          fats:     fats,
+        );
+
+        final entry = MealEntry(
+          id:                  DateTime.now().millisecondsSinceEpoch.toString(),
+          foodName:            name.isEmpty ? 'Manual Entry' : name,
+          restaurantName:      'Manual Log',
+          protein:             protein,
+          carbs:               carbs,
+          fat:                 fats,
+          calories:            calories,
+          warnings:            const [],
+          isHighlyNutritious:  protein > 25 && calories < 400,
+          createdAt:           DateTime.now(),
+          source:              'manual',
+          ingredientsBreakdown: const [],
+        );
+
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        widget.onSaved(entry);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _isSaving = false);
         widget.onError('Could not sync to server: $e');
-      });
-
-      final entry = MealEntry(
-        id:                  DateTime.now().millisecondsSinceEpoch.toString(),
-        foodName:            name.isEmpty ? 'Manual Entry' : name,
-        restaurantName:      'Manual Log',
-        protein:             protein,
-        carbs:               carbs,
-        fat:                 fats,
-        calories:            calories,
-        warnings:            const [],
-        isHighlyNutritious:  protein > 25 && calories < 400,
-        createdAt:           DateTime.now(),
-        source:              'manual',
-        ingredientsBreakdown: const [],
-      );
-
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      widget.onSaved(entry);
+      }
     }
   }
 
