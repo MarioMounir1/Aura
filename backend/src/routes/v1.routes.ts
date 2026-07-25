@@ -8,6 +8,7 @@ import { Router } from "express";
 import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler, updateMealLog } from "../controllers/meal.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
+import { scanBarcodeHandler, logBarcodeHandler } from "../controllers/barcode.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
 import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
@@ -18,7 +19,7 @@ import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/wei
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
 import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine, interpretWorkoutSessionRequest, getWeeklyRecap } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
-import { analyzeMealLimiter, authLimiter } from "../middleware/rateLimit.middleware";
+import { analyzeMealLimiter, authLimiter, barcodeLimiter } from "../middleware/rateLimit.middleware";
 
 const router = Router();
 
@@ -269,6 +270,25 @@ router.post("/meals/scan-local", requireAuth, analyzeMealLimiter, scanLocalHandl
  * @body    { mealName?, calories, protein, carbs, fats, mealType? }
  */
 router.post("/meals/manual", requireAuth, manualLogMealHandler);
+
+/**
+ * @route   POST /api/v1/meals/scan-barcode
+ * @desc    Look up a product by barcode via Open Food Facts (no API key needed).
+ *          Returns per-100g nutrition. HTTP 200 with status:0 is treated as NOT FOUND.
+ *          Uses in-memory 6-hour cache — barcode scans do NOT count against AI quota.
+ * @access  Private (JWT required)
+ * @body    { barcode: string }
+ */
+router.post("/meals/scan-barcode", requireAuth, barcodeLimiter, scanBarcodeHandler);
+
+/**
+ * @route   POST /api/v1/meals/log-barcode
+ * @desc    Persist a confirmed barcode meal to MealLog (source: "barcode").
+ *          Does NOT touch aiUsageLog — barcode logging is always unlimited.
+ * @access  Private (JWT required)
+ * @body    { barcode, productName, calories, protein, carbs, fats, servingGrams }
+ */
+router.post("/meals/log-barcode", requireAuth, barcodeLimiter, logBarcodeHandler);
 
 /**
  * @route   GET /api/v1/meals/history
