@@ -5,15 +5,12 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../profile/presentation/bloc/profile_bloc.dart';
-import '../../profile/presentation/bloc/profile_state.dart';
 import 'bloc/dashboard_bloc.dart';
 import 'bloc/dashboard_state.dart';
 import 'bloc/dashboard_event.dart';
 import 'meals_dashboard_screen.dart';
 import 'workout_screen.dart';
 import 'settings_screen.dart';
-import 'widgets/quick_log_bottom_sheet.dart';
 
 class DashboardTabWrapper extends StatelessWidget {
   const DashboardTabWrapper({super.key});
