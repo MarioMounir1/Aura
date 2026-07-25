@@ -230,6 +230,76 @@ async function logMealToDb(
   });
 }
 
+// ── Update Meal Log ────────────────────────────────────────
+
+const UpdateMealLogSchema = z.object({
+  mealName: z.string().min(1).max(200).trim().optional(),
+  calories: z.number().min(0).max(10000).optional(),
+  protein:  z.number().min(0).max(1000).optional(),
+  carbs:    z.number().min(0).max(1000).optional(),
+  fats:     z.number().min(0).max(1000).optional(),
+});
+
+/**
+ * PUT /api/v1/meals/:id
+ * Update a meal log entry (any source — manual, text, image).
+ * Only the fields provided in the request body are updated.
+ */
+export async function updateMealLog(req: Request, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  const { id } = req.params;
+
+  if (!id) {
+    res.status(400).json({ success: false, error: "Meal log ID is required." });
+    return;
+  }
+
+  const parsed = UpdateMealLogSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: "Invalid input", details: parsed.error.flatten() });
+    return;
+  }
+
+  try {
+    const existing = await prisma.mealLog.findUnique({
+      where:  { id },
+      select: { userId: true },
+    });
+
+    if (!existing) {
+      res.status(404).json({ success: false, error: "Meal log not found.", code: "NOT_FOUND" });
+      return;
+    }
+
+    if (existing.userId !== userId) {
+      res.status(403).json({ success: false, error: "You do not have permission to edit this meal log.", code: "FORBIDDEN" });
+      return;
+    }
+
+    const updated = await prisma.mealLog.update({
+      where: { id },
+      data:  parsed.data,
+      select: {
+        id:        true,
+        mealName:  true,
+        calories:  true,
+        protein:   true,
+        carbs:     true,
+        fats:      true,
+        source:    true,
+        loggedAt:  true,
+      },
+    });
+
+    console.log(`✅ [Meal] Updated log ${id}: ${updated.mealName}`);
+    res.status(200).json({ success: true, data: updated });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ [Meal] updateMealLog error:", msg);
+    res.status(500).json({ success: false, error: "Failed to update meal log.", code: "UPDATE_ERROR" });
+  }
+}
+
 // ── Manual Meal Log ────────────────────────────────────────
 
 const ManualLogSchema = z.object({
