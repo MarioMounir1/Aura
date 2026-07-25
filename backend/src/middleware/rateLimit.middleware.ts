@@ -91,3 +91,12 @@ export const authLimiter = createRateLimiter({
   maxRequests: 10,
   windowSeconds: 60,
 });
+
+// Barcode lookup is a free external API call — not Ollama compute.
+// Higher limit, completely separate from analyzeMealLimiter.
+// aiUsageLog is never touched by barcode routes.
+export const barcodeLimiter = createRateLimiter({
+  keyPrefix: "barcode",
+  maxRequests: 60,
+  windowSeconds: 60,
+});
