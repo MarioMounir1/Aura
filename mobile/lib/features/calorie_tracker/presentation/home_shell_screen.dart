@@ -11,8 +11,6 @@ import 'bloc/dashboard_bloc.dart';
 import 'bloc/dashboard_state.dart';
 import 'bloc/dashboard_event.dart';
 import 'meals_dashboard_screen.dart';
-import 'gyms_screen.dart';
-import 'market_screen.dart';
 import 'workout_screen.dart';
 import 'settings_screen.dart';
 import 'widgets/quick_log_bottom_sheet.dart';
@@ -85,8 +83,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   final List<Widget> _screens = [
     const DashboardTabWrapper(),
     const WorkoutScreen(),
-    const MarketScreen(),
-    const GymsScreen(),
     const SettingsScreen(),
   ];
 
@@ -136,9 +132,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         children: [
           _buildNavItem(Icons.home_rounded, 0, false),
           _buildNavItem(Icons.fitness_center_rounded, 1, true),
-          _buildNavItem(Icons.shopping_bag_rounded, 2, false),
-          _buildNavItem(Icons.location_on_rounded, 3, false),
-          _buildNavItem(Icons.person_rounded, 4, false),
+          _buildNavItem(Icons.person_rounded, 2, false),
         ],
       ),
     );
