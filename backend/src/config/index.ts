@@ -39,6 +39,16 @@ export const OLLAMA_CONFIG = {
   temperature: 0.1,
 };
 
+export const AI_SCAN_QUOTA = {
+  freeLimit: 2,
+  premiumLimit: 7,
+};
+
+export function getAiScanLimit(isPremium: boolean): number {
+  return isPremium ? AI_SCAN_QUOTA.premiumLimit : AI_SCAN_QUOTA.freeLimit;
+}
+
+
 export const GEMINI_CONFIG = {
   model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
   temperature: 0.1,
