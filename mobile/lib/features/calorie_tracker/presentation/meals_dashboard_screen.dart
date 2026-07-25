@@ -138,8 +138,7 @@ class MealsDashboard extends StatefulWidget {
   State<MealsDashboard> createState() => _MealsDashboardState();
 }
 
-class _MealsDashboardState extends State<MealsDashboard>
-    with SingleTickerProviderStateMixin {
+class _MealsDashboardState extends State<MealsDashboard> {
   // ── Macro totals ─────────────────────────────────────────
   late double caloriesConsumed;
   late double caloriesTarget;
@@ -167,30 +166,11 @@ class _MealsDashboardState extends State<MealsDashboard>
   final _manualService  = ManualMealService();
   final _barcodeService = BarcodeService();
 
-  // ── Shimmer animation ─────────────────────────────────────
-  late final AnimationController _shimmerController;
-  late final Animation<double>   _shimmerAnim;
-
-  // ── Pulse animation for processing text ───────────────────
-  late final Animation<double> _pulseAnim;
-
   @override
   void initState() {
     super.initState();
     _initData();
     _fetchQuota();
-
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-
-    _shimmerAnim = Tween<double>(begin: -1.5, end: 1.5).animate(
-      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
-    );
-    _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
-    );
   }
 
   Future<void> _fetchQuota() async {
@@ -204,12 +184,6 @@ class _MealsDashboardState extends State<MealsDashboard>
     } catch (e) {
       debugPrint('Quota fetch error: $e');
     }
-  }
-
-  @override
-  void dispose() {
-    _shimmerController.dispose();
-    super.dispose();
   }
 
   @override
@@ -558,7 +532,7 @@ class _MealsDashboardState extends State<MealsDashboard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(),
+                const _DashboardHeader(),
                 const SizedBox(height: 24),
 
                 // ── Daily Performance Rings ─────────────────
@@ -607,87 +581,7 @@ class _MealsDashboardState extends State<MealsDashboard>
     );
   }
 
-  // ── HEADER ────────────────────────────────────────────────
 
-  Widget _buildHeader() {
-    final todayStr = DateFormat('EEEE, d MMMM').format(DateTime.now());
-    String userName = '';
-    try {
-      final profileState = BlocProvider.of<ProfileBloc>(context).state;
-      if (profileState is ProfileLoaded) {
-        userName = profileState.user['name'] ?? '';
-      }
-    } catch (_) {}
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: DashboardThemeColors.accentEmerald,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'LOCAL PROCESSING • ONLINE',
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.6,
-                      color: DashboardThemeColors.accentEmerald,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: DashboardThemeColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                todayStr,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: DashboardThemeColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: DashboardThemeColors.trackBg),
-          ),
-          child: const Icon(
-            Icons.shield_outlined,
-            color: DashboardThemeColors.accentEmerald,
-            size: 24,
-          ),
-        ),
-      ],
-    );
-  }
 
   // (macro rings extracted to _MacroRingsSection below)
 
@@ -696,486 +590,27 @@ class _MealsDashboardState extends State<MealsDashboard>
   Widget _buildAiCanvas() {
     switch (_layoutState) {
       case LayoutState.processing:
-        return _buildProcessingState();
+        return _ProcessingStateWidget(
+          key: const ValueKey('processing'),
+          selectedImage: _selectedImage,
+        );
       case LayoutState.resultLoaded:
-        return _buildResultCard();
+        return _ResultCardWidget(
+          key: const ValueKey('result'),
+          llamaResult: _llamaResult!,
+          selectedImage: _selectedImage,
+          onLog: _logResultToFeed,
+          onDiscard: _discardResult,
+        );
       case LayoutState.idle:
-        return _buildIdleState();
+        return _SmartScannerSection(
+          key: const ValueKey('idle'),
+          quota: _quota,
+          onCamera:  () => _pickAndAnalyze(ImageSource.camera),
+          onGallery: () => _pickAndAnalyze(ImageSource.gallery),
+          onBarcode: _scanBarcode,
+        );
     }
-  }
-
-  // ── STATE 1: IDLE — Two action cards ─────────────────────
-
-  Widget _buildIdleState() {
-    return _SmartScannerSection(
-      key: const ValueKey('idle'),
-      quota: _quota,
-      onCamera:  () => _pickAndAnalyze(ImageSource.camera),
-      onGallery: () => _pickAndAnalyze(ImageSource.gallery),
-      onBarcode: _scanBarcode,
-    );
-  }
-
-  // ── STATE 2: PROCESSING — Shimmer + Pulse ─────────────────
-
-  Widget _buildProcessingState() {
-    return Column(
-      key: const ValueKey('processing'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Preview of selected image (small thumbnail)
-        if (_selectedImage != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.file(
-              _selectedImage!,
-              height: 140,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-        const SizedBox(height: 16),
-
-        // Shimmer loading card
-        AnimatedBuilder(
-          animation: _shimmerController,
-          builder: (_, __) {
-            return Container(
-              width: double.infinity,
-              height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.3),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: ShaderMask(
-                  shaderCallback: (bounds) {
-                    return LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: const [
-                        Color(0xFF111827),
-                        Color(0xFF1F2937),
-                        Color(0xFF10B981),
-                        Color(0xFF1F2937),
-                        Color(0xFF111827),
-                      ],
-                      stops: [
-                        0.0,
-                        (_shimmerAnim.value + 1.5) / 3.0 - 0.3,
-                        (_shimmerAnim.value + 1.5) / 3.0,
-                        (_shimmerAnim.value + 1.5) / 3.0 + 0.3,
-                        1.0,
-                      ].map((s) => s.clamp(0.0, 1.0)).toList(),
-                    ).createShader(bounds);
-                  },
-                  blendMode: BlendMode.srcATop,
-                  child: Container(
-                    color: DashboardThemeColors.cardBackground,
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Shimmer placeholder lines
-                        _shimmerLine(width: 0.5, height: 12),
-                        const SizedBox(height: 12),
-                        _shimmerLine(width: 0.8, height: 20),
-                        const SizedBox(height: 10),
-                        _shimmerLine(width: 0.65, height: 14),
-                        const SizedBox(height: 20),
-                        Row(children: [
-                          _shimmerBox(60, 60),
-                          const SizedBox(width: 12),
-                          _shimmerBox(60, 60),
-                          const SizedBox(width: 12),
-                          _shimmerBox(60, 60),
-                          const SizedBox(width: 12),
-                          _shimmerBox(60, 60),
-                        ]),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-
-        const SizedBox(height: 20),
-
-        // Pulse text label
-        AnimatedBuilder(
-          animation: _pulseAnim,
-          builder: (_, __) => Opacity(
-            opacity: _pulseAnim.value,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.6),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Analyzing meal components locally...',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: DashboardThemeColors.accentEmerald,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _shimmerLine({required double width, required double height}) {
-    return FractionallySizedBox(
-      widthFactor: width,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(6),
-        ),
-      ),
-    );
-  }
-
-  Widget _shimmerBox(double w, double h) {
-    return Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(
-        color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
-      ),
-    );
-  }
-
-  // ── STATE 3: RESULT — Llama Analysis Card ─────────────────
-
-  Widget _buildResultCard() {
-    final result = _llamaResult!;
-    final analysis = result.mealAnalysis;
-    final rec = result.llamaRecommendation;
-
-    return Column(
-      key: const ValueKey('result'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Selected image preview
-        if (_selectedImage != null)
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.file(
-                  _selectedImage!,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              // Gradient overlay
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        DashboardThemeColors.background.withValues(alpha: 0.85),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // "Local AI Verified" badge
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.verified_outlined, size: 12, color: Colors.black),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Locally Verified',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-        const SizedBox(height: 16),
-
-        // ── Llama Analysis Card ──────────────────────────
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.25),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.06),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Card header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.psychology_outlined,
-                        color: DashboardThemeColors.accentEmerald,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            analysis.detectedFood,
-                            style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: DashboardThemeColors.textPrimary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Scan Analysis Result',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: DashboardThemeColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              const Divider(color: DashboardThemeColors.trackBg, height: 1),
-              const SizedBox(height: 20),
-
-              // ── 2×2 Macros Grid ──────────────────────
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 2.2,
-                  children: [
-                    _buildMacroCell('🔥 Calories', '${analysis.calories}', 'kcal', DashboardThemeColors.accentLime),
-                    _buildMacroCell('💪 Protein',  '${analysis.protein}',  'g',    DashboardThemeColors.accentEmerald),
-                    _buildMacroCell('🌾 Carbs',    '${analysis.carbs}',    'g',    DashboardThemeColors.accentBlue),
-                    _buildMacroCell('🫙 Fats',     '${analysis.fats}',     'g',    DashboardThemeColors.accentRed),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ── Contextual Llama Recommendation Banner ──
-              if (rec.message.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: rec.triggerWarning
-                          ? DashboardThemeColors.accentAmber.withValues(alpha: 0.08)
-                          : DashboardThemeColors.accentEmerald.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: rec.triggerWarning
-                            ? DashboardThemeColors.accentAmber.withValues(alpha: 0.3)
-                            : DashboardThemeColors.accentEmerald.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          rec.triggerWarning
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_outline_rounded,
-                          color: rec.triggerWarning
-                              ? DashboardThemeColors.accentAmber
-                              : DashboardThemeColors.accentEmerald,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            rec.message,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              height: 1.5,
-                              color: rec.triggerWarning
-                                  ? const Color(0xFFFCD34D)
-                                  : const Color(0xFF6EE7B7),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 20),
-
-              // ── Action Buttons ──────────────────────────
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _logResultToFeed,
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: Text(
-                          'Log Meal',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: DashboardThemeColors.accentEmerald,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton(
-                      onPressed: _discardResult,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: DashboardThemeColors.textSecondary,
-                        side: const BorderSide(color: DashboardThemeColors.trackBg),
-                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        'Discard',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMacroCell(String emoji, String value, String unit, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            emoji,
-            style: GoogleFonts.inter(fontSize: 11, color: DashboardThemeColors.textMuted),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: DashboardThemeColors.textPrimary,
-                ),
-              ),
-              const SizedBox(width: 3),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Text(
-                  unit,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: DashboardThemeColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
   }
 
   // ── Barcode Scanner Flow ──────────────────────────────────
@@ -1309,6 +744,586 @@ class _MealsDashboardState extends State<MealsDashboard>
 
 }
 // ↑ End of _MealsDashboardState
+
+// ── Dashboard Header ──────────────────────────────────────────
+
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final todayStr = DateFormat('EEEE, d MMMM').format(DateTime.now());
+    String userName = '';
+    try {
+      final profileState = BlocProvider.of<ProfileBloc>(context).state;
+      if (profileState is ProfileLoaded) {
+        userName = profileState.user['name'] ?? '';
+      }
+    } catch (_) {}
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: DashboardThemeColors.accentEmerald,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'LOCAL PROCESSING • ONLINE',
+                    style: GoogleFonts.outfit(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.6,
+                      color: DashboardThemeColors.accentEmerald,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: DashboardThemeColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                todayStr,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: DashboardThemeColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            color: DashboardThemeColors.cardBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: DashboardThemeColors.trackBg),
+          ),
+          child: const Icon(
+            Icons.shield_outlined,
+            color: DashboardThemeColors.accentEmerald,
+            size: 24,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Processing State Widget (Isolated Ticker) ─────────────────
+
+class _ProcessingStateWidget extends StatefulWidget {
+  final File? selectedImage;
+
+  const _ProcessingStateWidget({super.key, this.selectedImage});
+
+  @override
+  State<_ProcessingStateWidget> createState() => _ProcessingStateWidgetState();
+}
+
+class _ProcessingStateWidgetState extends State<_ProcessingStateWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerController;
+  late final Animation<double> _shimmerAnim;
+  late final Animation<double> _pulseAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+
+    _shimmerAnim = Tween<double>(begin: -1.5, end: 1.5).animate(
+      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
+    );
+    _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      key: const ValueKey('processing'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.selectedImage != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.file(
+              widget.selectedImage!,
+              height: 140,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+        const SizedBox(height: 16),
+        AnimatedBuilder(
+          animation: _shimmerController,
+          builder: (_, __) {
+            return Container(
+              width: double.infinity,
+              height: 200,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.3),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: ShaderMask(
+                  shaderCallback: (bounds) {
+                    return LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: const [
+                        Color(0xFF111827),
+                        Color(0xFF1F2937),
+                        Color(0xFF10B981),
+                        Color(0xFF1F2937),
+                        Color(0xFF111827),
+                      ],
+                      stops: [
+                        0.0,
+                        (_shimmerAnim.value + 1.5) / 3.0 - 0.3,
+                        (_shimmerAnim.value + 1.5) / 3.0,
+                        (_shimmerAnim.value + 1.5) / 3.0 + 0.3,
+                        1.0,
+                      ].map((s) => s.clamp(0.0, 1.0)).toList(),
+                    ).createShader(bounds);
+                  },
+                  blendMode: BlendMode.srcATop,
+                  child: Container(
+                    color: DashboardThemeColors.cardBackground,
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _shimmerLine(width: 0.5, height: 12),
+                        const SizedBox(height: 12),
+                        _shimmerLine(width: 0.8, height: 20),
+                        const SizedBox(height: 10),
+                        _shimmerLine(width: 0.65, height: 14),
+                        const SizedBox(height: 20),
+                        Row(children: [
+                          _shimmerBox(60, 60),
+                          const SizedBox(width: 12),
+                          _shimmerBox(60, 60),
+                          const SizedBox(width: 12),
+                          _shimmerBox(60, 60),
+                          const SizedBox(width: 12),
+                          _shimmerBox(60, 60),
+                        ]),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 20),
+        AnimatedBuilder(
+          animation: _pulseAnim,
+          builder: (_, __) => Opacity(
+            opacity: _pulseAnim.value,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentEmerald,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.6),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Analyzing meal components locally...',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: DashboardThemeColors.accentEmerald,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shimmerLine({required double width, required double height}) {
+    return FractionallySizedBox(
+      widthFactor: width,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerBox(double w, double h) {
+    return Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
+  }
+}
+
+// ── Result Card Widget ────────────────────────────────────────
+
+class _ResultCardWidget extends StatelessWidget {
+  final LlamaMealResponse llamaResult;
+  final File? selectedImage;
+  final VoidCallback onLog;
+  final VoidCallback onDiscard;
+
+  const _ResultCardWidget({
+    super.key,
+    required this.llamaResult,
+    this.selectedImage,
+    required this.onLog,
+    required this.onDiscard,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final analysis = llamaResult.mealAnalysis;
+    final rec = llamaResult.llamaRecommendation;
+
+    return Column(
+      key: const ValueKey('result'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (selectedImage != null)
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.file(
+                  selectedImage!,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        DashboardThemeColors.background.withValues(alpha: 0.85),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.verified_outlined, size: 12, color: Colors.black),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Locally Verified',
+                        style: GoogleFonts.outfit(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: DashboardThemeColors.cardBackground,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.25),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.06),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.psychology_outlined,
+                        color: DashboardThemeColors.accentEmerald,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            analysis.detectedFood,
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: DashboardThemeColors.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Scan Analysis Result',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: DashboardThemeColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Divider(color: DashboardThemeColors.trackBg, height: 1),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 2.2,
+                  children: [
+                    _buildMacroCell('🔥 Calories', '${analysis.calories}', 'kcal', DashboardThemeColors.accentLime),
+                    _buildMacroCell('💪 Protein', '${analysis.protein}', 'g', DashboardThemeColors.accentEmerald),
+                    _buildMacroCell('🌾 Carbs', '${analysis.carbs}', 'g', DashboardThemeColors.accentBlue),
+                    _buildMacroCell('🫙 Fats', '${analysis.fats}', 'g', DashboardThemeColors.accentRed),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              if (rec.message.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: rec.triggerWarning
+                          ? DashboardThemeColors.accentAmber.withValues(alpha: 0.08)
+                          : DashboardThemeColors.accentEmerald.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: rec.triggerWarning
+                            ? DashboardThemeColors.accentAmber.withValues(alpha: 0.3)
+                            : DashboardThemeColors.accentEmerald.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          rec.triggerWarning
+                              ? Icons.warning_amber_rounded
+                              : Icons.check_circle_outline_rounded,
+                          color: rec.triggerWarning
+                              ? DashboardThemeColors.accentAmber
+                              : DashboardThemeColors.accentEmerald,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            rec.message,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              height: 1.5,
+                              color: rec.triggerWarning
+                                  ? const Color(0xFFFCD34D)
+                                  : const Color(0xFF6EE7B7),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onLog,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: Text(
+                          'Log Meal',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: DashboardThemeColors.accentEmerald,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    OutlinedButton(
+                      onPressed: onDiscard,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: DashboardThemeColors.textSecondary,
+                        side: const BorderSide(color: DashboardThemeColors.trackBg),
+                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Discard',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMacroCell(String emoji, String value, String unit, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            emoji,
+            style: GoogleFonts.inter(fontSize: 11, color: DashboardThemeColors.textMuted),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: DashboardThemeColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  unit,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: DashboardThemeColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ── Barcode Scanner Overlay (½-screen modal) ─────────────────
 
