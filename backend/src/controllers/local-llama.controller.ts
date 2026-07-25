@@ -14,7 +14,7 @@
 
 import { Request, Response } from "express";
 import { processUpload } from "../middleware/upload.middleware";
-import { OLLAMA_CONFIG } from "../config";
+import { OLLAMA_CONFIG, getAiScanLimit } from "../config";
 import prisma from "../services/prisma.service";
 
 // ── Response Shape (matches Flutter LlamaMealResponse model) ─
@@ -193,7 +193,7 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
       },
     });
 
-    const limit = isPremium ? 7 : 2;
+    const limit = getAiScanLimit(isPremium);
     if (usageCount >= limit) {
       res.status(isPremium ? 429 : 402).json({
         success: false,
@@ -359,7 +359,7 @@ export async function getAiUsageHandler(req: Request, res: Response): Promise<vo
     });
 
     const isPremium = req.user?.isPremium ?? false;
-    const limit = isPremium ? 9999 : 2;
+    const limit = getAiScanLimit(isPremium);
 
     res.status(200).json({
       success: true,
