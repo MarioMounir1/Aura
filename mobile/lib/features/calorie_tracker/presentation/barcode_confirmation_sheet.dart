@@ -20,7 +20,6 @@ import '../data/services/barcode_service.dart';
 
 // Re-use the same color palette as the main dashboard
 class _C {
-  static const bg         = Color(0xFF090C15);
   static const card       = Color(0xFF121824);
   static const surface    = Color(0xFF1B2232);
   static const track      = Color(0xFF222B3F);
@@ -29,7 +28,6 @@ class _C {
   static const blue       = Color(0xFF00BCD4);
   static const amber      = Color(0xFFFFC107);
   static const red        = Color(0xFFF44336);
-  static const orange     = Color(0xFFFF9800);
   static const textPri    = Color(0xFFFFFFFF);
   static const textSec    = Color(0xFF8E929C);
   static const textMuted  = Color(0xFF5D616B);
@@ -298,13 +296,13 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                   const SizedBox(height: 14),
                   Row(
                     children: [
-                      _macroChip('🔥', '${serving.calories.round()}', 'kcal', _C.lime),
+                      _macroChip('🔥', serving.calories.round().toString(), 'kcal', _C.lime),
                       const SizedBox(width: 8),
-                      _macroChip('💪', '${serving.protein.toStringAsFixed(1)}', 'g P', _C.emerald),
+                      _macroChip('💪', serving.protein.toStringAsFixed(1), 'g P', _C.emerald),
                       const SizedBox(width: 8),
-                      _macroChip('🌾', '${serving.carbs.toStringAsFixed(1)}', 'g C', _C.blue),
+                      _macroChip('🌾', serving.carbs.toStringAsFixed(1), 'g C', _C.blue),
                       const SizedBox(width: 8),
-                      _macroChip('🫙', '${serving.fats.toStringAsFixed(1)}', 'g F', _C.red),
+                      _macroChip('🫙', serving.fats.toStringAsFixed(1), 'g F', _C.red),
                     ],
                   ),
                 ],
