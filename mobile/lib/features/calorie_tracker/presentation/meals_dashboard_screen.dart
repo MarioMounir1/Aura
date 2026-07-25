@@ -17,12 +17,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
 import '../data/models/ai_usage_quota.dart';
+import '../data/models/barcode_product.dart';
 import '../../premium/presentation/premium_upgrade_screen.dart';
 import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
+import '../data/services/barcode_service.dart';
+import 'barcode_confirmation_sheet.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../core/widgets/ad_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -162,6 +166,7 @@ class _MealsDashboardState extends State<MealsDashboard>
   final _llamaService   = LocalLlamaService();
   final _imagePicker    = ImagePicker();
   final _manualService  = ManualMealService();
+  final _barcodeService = BarcodeService();
 
   // ── Shimmer animation ─────────────────────────────────────
   late final AnimationController _shimmerController;
@@ -708,6 +713,7 @@ class _MealsDashboardState extends State<MealsDashboard>
       quota: _quota,
       onCamera:  () => _pickAndAnalyze(ImageSource.camera),
       onGallery: () => _pickAndAnalyze(ImageSource.gallery),
+      onBarcode: _scanBarcode,
     );
   }
 
@@ -1173,8 +1179,295 @@ class _MealsDashboardState extends State<MealsDashboard>
     );
   }
 
+  // ── Barcode Scanner Flow ──────────────────────────────────
+
+  Future<void> _scanBarcode() async {
+    // Step 1: Open camera-based barcode scanner overlay
+    String? detectedBarcode;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _BarcodeScannerOverlay(
+        onDetected: (code) {
+          detectedBarcode = code;
+          Navigator.of(ctx).pop();
+        },
+        onCancel: () => Navigator.of(ctx).pop(),
+      ),
+    );
+
+    if (detectedBarcode == null || detectedBarcode!.isEmpty) return;
+    if (!mounted) return;
+
+    // Step 2: Show a brief loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1F1F1F),
+        duration: const Duration(seconds: 5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 16, height: 16,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: DashboardThemeColors.accentAmber),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Looking up barcode...',
+              style: GoogleFonts.inter(
+                  fontSize: 12, color: DashboardThemeColors.textPrimary),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Step 3: Query the backend
+    BarcodeProduct? product;
+    try {
+      product = await _barcodeService.lookupBarcode(detectedBarcode!);
+    } on BarcodeNotFoundException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      // ── NOT FOUND → fall back to Ollama photo scan ────────
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF1F1F1F),
+          duration: const Duration(seconds: 4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: Row(
+            children: [
+              const Icon(Icons.info_outline,
+                  color: DashboardThemeColors.accentAmber, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Not in our database — let's scan the label instead.",
+                  style: GoogleFonts.inter(
+                      fontSize: 12, color: DashboardThemeColors.textPrimary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await Future.delayed(const Duration(milliseconds: 600));
+      if (mounted) _pickAndAnalyze(ImageSource.camera);
+      return;
+    } on BarcodeNetworkException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackbar('Barcode lookup failed: ${e.message}');
+      return;
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      _showErrorSnackbar('Unexpected error: $e');
+      return;
+    }
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    // Step 4: Show confirmation sheet
+    final serving = await showModalBottomSheet<BarcodeServing>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => BarcodeConfirmationSheet(
+        product: product!,
+        service: _barcodeService,
+      ),
+    );
+
+    if (serving == null || !mounted) return;
+
+    // Step 5: Add to today's feed
+    final entry = MealEntry(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      foodName: serving.product.productName,
+      restaurantName: 'Barcode Scan',
+      protein: serving.protein,
+      carbs: serving.carbs,
+      fat: serving.fats,
+      calories: serving.calories,
+      warnings: const [],
+      isHighlyNutritious: serving.protein >= 20 && serving.calories < 400,
+      createdAt: DateTime.now(),
+      source: 'barcode',
+      ingredientsBreakdown: const [],
+    );
+
+    setState(() {
+      logs.insert(0, entry);
+      _recalcTotals();
+    });
+  }
+
 }
 // ↑ End of _MealsDashboardState
+
+// ── Barcode Scanner Overlay (½-screen modal) ─────────────────
+
+/// Full-screen-ish camera overlay that reads barcodes via mobile_scanner.
+/// Pops immediately on first detection, returning the scanned barcode string.
+class _BarcodeScannerOverlay extends StatefulWidget {
+  final void Function(String barcode) onDetected;
+  final VoidCallback onCancel;
+
+  const _BarcodeScannerOverlay({
+    required this.onDetected,
+    required this.onCancel,
+  });
+
+  @override
+  State<_BarcodeScannerOverlay> createState() => _BarcodeScannerOverlayState();
+}
+
+class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> {
+  final MobileScannerController _controller = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+  );
+  bool _detected = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.80,
+      decoration: const BoxDecoration(
+        color: DashboardThemeColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          const SizedBox(height: 12),
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: DashboardThemeColors.trackBg,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentAmber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.barcode_reader,
+                      color: DashboardThemeColors.accentAmber, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Scan Barcode',
+                          style: GoogleFonts.outfit(
+                            fontSize: 17, fontWeight: FontWeight.bold,
+                            color: DashboardThemeColors.textPrimary,
+                          )),
+                      Text('Point camera at a product barcode',
+                          style: GoogleFonts.inter(
+                            fontSize: 12, color: DashboardThemeColors.textSecondary,
+                          )),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      color: DashboardThemeColors.textSecondary),
+                  onPressed: widget.onCancel,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Camera view
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Stack(
+                  children: [
+                    MobileScanner(
+                      controller: _controller,
+                      onDetect: (capture) {
+                        if (_detected) return;
+                        final barcode = capture.barcodes.firstOrNull;
+                        final rawValue = barcode?.rawValue;
+                        if (rawValue != null && rawValue.isNotEmpty) {
+                          _detected = true;
+                          widget.onDetected(rawValue);
+                        }
+                      },
+                    ),
+                    // Aiming reticle overlay
+                    Center(
+                      child: Container(
+                        width: 240,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: DashboardThemeColors.accentAmber,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    // Bottom hint
+                    Positioned(
+                      bottom: 20,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.65),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'Align barcode inside the frame',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: DashboardThemeColors.accentAmber,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ── Extracted: Daily Performance Rings ───────────────────────
 
@@ -1380,12 +1673,14 @@ class _SmartScannerSection extends StatelessWidget {
   final AiUsageQuota? quota;
   final VoidCallback onCamera;
   final VoidCallback onGallery;
+  final VoidCallback onBarcode;
 
   const _SmartScannerSection({
     super.key,
     this.quota,
     required this.onCamera,
     required this.onGallery,
+    required this.onBarcode,
   });
 
   @override
@@ -1472,6 +1767,94 @@ class _SmartScannerSection extends StatelessWidget {
               onTap: onGallery,
             )),
           ],
+        ),
+        const SizedBox(height: 14),
+        // ── Barcode Tile ──────────────────────────────────
+        GestureDetector(
+          onTap: onBarcode,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF451A03), Color(0xFF92400E)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: DashboardThemeColors.accentAmber.withValues(alpha: 0.35),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: DashboardThemeColors.accentAmber.withValues(alpha: 0.10),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentAmber.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.barcode_reader,
+                    color: DashboardThemeColors.accentAmber,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Scan Barcode',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: DashboardThemeColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Instant nutrition from packaged foods',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: DashboardThemeColors.accentAmber.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentAmber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Unlimited',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: DashboardThemeColors.accentAmber,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 13,
+                  color: DashboardThemeColors.accentAmber,
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         Container(
