@@ -6,13 +6,13 @@
 
 import { Router } from "express";
 import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook } from "../controllers/user.controller";
-import { analyzeMealHandler, manualLogMealHandler } from "../controllers/meal.controller";
+import { analyzeMealHandler, manualLogMealHandler, updateMealLog } from "../controllers/meal.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
 import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
 import { searchFoods, getFoodById, getFoodCategories } from "../controllers/food.controller";
-import { logFood, getTodayFoodLogs, deleteFoodLog } from "../controllers/food-log.controller";
+import { logFood, getTodayFoodLogs, deleteFoodLog, updateFoodLog } from "../controllers/food-log.controller";
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
@@ -142,6 +142,14 @@ router.get("/food-logs/today", requireAuth, getTodayFoodLogs);
  * @access  Private (JWT required, ownership enforced)
  */
 router.delete("/food-logs/:id", requireAuth, deleteFoodLog);
+
+/**
+ * @route   PUT /api/v1/food-logs/:id
+ * @desc    Update a food log entry (servings and/or mealType)
+ * @access  Private (JWT required, ownership enforced)
+ * @body    { servings?, mealType? }
+ */
+router.put("/food-logs/:id", requireAuth, updateFoodLog);
 
 // ── Water Tracking Routes ──────────────────────────────────
 
@@ -283,6 +291,14 @@ router.get("/meals/suggestions", requireAuth, getSuggestions);
  * @access  Private (JWT required, ownership enforced)
  */
 router.delete("/meals/:id", requireAuth, deleteMealLog);
+
+/**
+ * @route   PUT /api/v1/meals/:id
+ * @desc    Update a meal log entry (mealName, calories, protein, carbs, fats)
+ * @access  Private (JWT required, ownership enforced)
+ * @body    { mealName?, calories?, protein?, carbs?, fats? }
+ */
+router.put("/meals/:id", requireAuth, updateMealLog);
 
 // ── Workout Routes ──────────────────────────────────────────
 
