@@ -4,7 +4,7 @@
   <img src="mobile/assets/images/logo.png" width="180" alt="Aura Logo" />
 </p>
 
-> **A premium, full-stack AI-powered nutrition & fitness ecosystem. Track calories, analyze meals with Google Gemini or a local Llama vision model, log water & weight, plan workouts, and get AI-powered macro suggestions — all from one beautiful dark-mode mobile app.**
+> **A premium, full-stack AI-powered nutrition & fitness ecosystem. Track calories, analyze meals with Google Gemini or a local Llama vision model, scan product barcodes, log water & weight, plan workouts with NLP commands, and get AI-powered macro suggestions — all from one beautiful dark-mode mobile app.**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
@@ -17,10 +17,10 @@
 
 ## 📖 Overview
 
-**Aura** is an elite, hybrid-AI fitness suite designed to solve the challenge of tracking calories and macros in the Egyptian and international food markets. The ecosystem is composed of two primary pillars:
+**Aura** is an elite, hybrid-AI fitness suite designed to solve the challenge of tracking calories and macros in international and local markets. The ecosystem is composed of two primary pillars:
 
-1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) with full RTL layout support. Features include an active workout tracker, water & weight logging, a food search database, weekly meal plans, AI meal analysis, a dedicated Local AI Meal Scan interface, and one-tap **Google & Apple Sign-In**.
-2. **Multimodal REST Backend (`backend/`)** — A production-grade Express API (v2.0.0) built with TypeScript and Prisma. Orchestrates queries to Google Gemini and local Ollama inference models, manages user authentication (JWT + Social OAuth), tracks all user data in PostgreSQL, and enforces rate limiting via Redis.
+1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) with full RTL layout support. Features include camera barcode scanning, an active workout tracker with NLP commands, water & weight logging, a food search database, weekly meal plans, AI meal analysis, a dedicated Local AI Meal Scan interface, and one-tap **Google & Apple Sign-In**.
+2. **Multimodal REST Backend (`backend/`)** — A production-grade Express API (v2.0.0) built with TypeScript and Prisma. Orchestrates queries to Google Gemini, Open Food Facts, and local Ollama inference models, manages user authentication (JWT + Social OAuth), handles RevenueCat webhooks & subscription quotas, tracks user data in PostgreSQL, and enforces rate limiting via Redis.
 
 ---
 
@@ -47,8 +47,8 @@
          │                   │                    │
          ▼                   ▼                    ▼
 ┌──────────────────┐┌──────────────────┐┌──────────────────┐
-│    PostgreSQL    ││  Google Gemini   ││   Local Ollama   │
-│  (Users, Meals, ││   (Flash/Pro)    ││ (llava / llama3) │
+│    PostgreSQL    ││  Google Gemini / ││   Local Ollama   │
+│  (Users, Meals, ││ Open Food Facts  ││ (llava / llama3) │
 │  Water, Weight, │└──────────────────┘└──────────────────┘
 │  Workouts, Plans)│
 └──────────────────┘
@@ -56,20 +56,21 @@
 
 ---
 
-## 🚀 Key Features
+## ✨ Key Features
 
 ### 📱 Mobile App
 - 🔐 **Multi-method Auth** — Email/password + **Sign in with Google** (Android & iOS) + **Sign in with Apple** (iOS only)
 - 🧭 **Onboarding & Profile Setup** — Height, weight, age, gender, activity level, and fitness goal. Auto-calculates TDEE and macro targets
 - 📊 **Dashboard** — Live macro rings, calorie progress, today's food log summary vs daily goals
 - 🥗 **AI Meal Analysis** — Analyze meals by text description, restaurant name, or photo (uses Google Gemini)
+- 📷 **Barcode Scanning** — Live camera barcode scanner powered by `mobile_scanner`. Fetches product information via Open Food Facts with live serving size calculator, manual override, and offline AI fallback. Barcode logging is free & unlimited
 - 🦙 **Offline Local AI Scan** — Snap or upload a plate photo — inference runs entirely on-device via Ollama (`llava` / `llama3.2-vision`). Free tier includes 2 free scans daily; unlimited for Premium
 - 💳 **RevenueCat In-App Subscriptions** — Seamless native in-app purchases via RevenueCat SDK (`purchases_flutter`). Displays custom dark glassmorphic paywall sheet (`CustomPaywallSheet`), strictly verifying active entitlements before upgrading
 - 🔍 **Egyptian Food Database Search** — Bilingual (AR/EN) searchable database with categories, serving sizes, and full macro details
 - 💧 **Water Tracking** — Log intake in ml, see daily progress vs goal with an hourly breakdown
 - ⚖️ **Weight Logging** — Track weight history with trend analysis (delta, min/max/avg over 7–365 days)
 - 🍽️ **Weekly Meal Plans** — Auto-generate a personalized 7-day meal plan based on your calorie goal. Mark entries as eaten
-- 🏋️ **Workout Hub** — Configure a training split (3–6 days/week: Full Body, PPL, Upper/Lower, Bro Split, Arnold Split). View today's session, log sets with warm-up / working / top / back-off labels, and track progression vs last week
+- 🏋️ **Workout Hub & NLP Interpreter** — Configure training splits (3–6 days/week: Full Body, PPL, Upper/Lower, Bro Split, Arnold Split). Natural language workout commands ("replace bench press with incline dumbell"), exercise alternatives, exercise swapping, custom session overrides, live set logging with warm-up / working / top / back-off labels, and AI weekly recaps
 - 💡 **AI Macro Suggestions** — Get personalized supplement and food suggestions to hit daily macro targets
 - 🌍 **AR/EN Localization + RTL** — Full bilingual support with dynamic RTL layout switching
 - ⚙️ **Settings** — Language toggle, profile editing, goal updates, subscription management
@@ -77,14 +78,15 @@
 ### 🛠️ Backend API
 - ✅ **Full JWT Authentication** with bcrypt password hashing
 - 🔑 **Social OAuth** — Google Sign-In token verification + Apple identity token decoding with account linking
-- 💳 **Subscription Verification & Quota API** — Server-side subscription sync (`/users/subscribe`, `/users/unsubscribe`) integrated with RevenueCat secret key validation; enforces 2 daily free AI scan limits
+- 💳 **Subscription Verification & Quota API** — Server-side subscription sync (`/users/subscribe`, `/users/unsubscribe`) and RevenueCat webhook integration (`/revenuecat/webhook`); enforces 2 daily free AI scan limits
+- 📦 **Barcode Engine** — Open Food Facts API product search with 6-hour caching (`/meals/scan-barcode`) and unlimited barcode logging (`/meals/log-barcode`)
 - 📦 **Food Database** — Search by name (AR/EN), filter by category, paginated results
 - 📋 **Food Logs** — Log items from the database; combined daily summary with totals vs goals
 - 🤖 **Dual AI Engine** — Gemini for cloud meal analysis; Ollama for private offline vision inference
 - 📅 **Meal Plan Engine** — Generate and manage weekly meal plans from the food database
-- 🏋️ **Workout Routine API** — Save training split config; serve today's session with historical context
+- 🏋️ **Workout Routine & NLP API** — Save training split config, serve sessions, swap exercises, process NLP session commands, override daily session types, and generate weekly recap AI summaries
 - 📈 **Weight & Water History** — Full log history with statistics
-- 🔒 **Rate Limiting** — Redis-backed rate limiter on AI endpoints (30 req/min per user)
+- 🔒 **Rate Limiting** — Redis-backed rate limiters on AI and barcode endpoints
 - 🐳 **Docker Support** — `Dockerfile` + `docker-compose.yml` for containerized deployment
 - 🧪 **Test Suite** — Jest + Supertest integration tests
 
@@ -100,9 +102,10 @@ Aura/
 │   │   ├── routes/
 │   │   │   └── v1.routes.ts        # All /api/v1 endpoints
 │   │   ├── controllers/            # Business logic per domain
-│   │   │   ├── user.controller.ts  # Auth (email, Google, Apple) + profile
+│   │   │   ├── user.controller.ts  # Auth (email, Google, Apple) + profile + subscriptions
 │   │   │   ├── meal.controller.ts
 │   │   │   ├── local-llama.controller.ts
+│   │   │   ├── barcode.controller.ts  # OpenFoodFacts lookup & barcode logging
 │   │   │   ├── history.controller.ts
 │   │   │   ├── suggestion.controller.ts
 │   │   │   ├── profile.controller.ts
@@ -111,7 +114,7 @@ Aura/
 │   │   │   ├── water.controller.ts
 │   │   │   ├── weight.controller.ts
 │   │   │   ├── meal-plan.controller.ts
-│   │   │   └── workout.controller.ts
+│   │   │   └── workout.controller.ts  # Routine, sessions, NLP interpreter, recap
 │   │   ├── middleware/             # Auth, rate limiting, validation, error handling
 │   │   ├── services/               # Prisma client, AI service wrappers
 │   │   └── types/                  # Shared TypeScript types
@@ -138,14 +141,7 @@ Aura/
     │   │   └── widgets/            # Shared reusable widgets
     │   └── features/
     │       ├── auth/               # Login · Register · Google · Apple · AuthBloc
-    │       │   ├── data/
-    │       │   │   └── repositories/auth_repository_impl.dart
-    │       │   ├── domain/
-    │       │   │   └── repositories/auth_repository.dart
-    │       │   └── presentation/
-    │       │       ├── login_screen.dart     # Email + Google + Apple buttons
-    │       │       ├── register_screen.dart  # Email + Google + Apple buttons
-    │       │       └── bloc/                 # AuthBloc, AuthEvent, AuthState
+    │       ├── premium/            # RevenueCat paywalls & entitlement cubits
     │       ├── profile/            # Onboarding · ProfileBloc · TDEE setup
     │       └── calorie_tracker/    # All tracker features + BLoCs
     │           ├── presentation/
@@ -165,7 +161,7 @@ Aura/
     │           │   ├── gyms_screen.dart
     │           │   └── market_screen.dart
     │           └── bloc/           # CalorieTrackerBloc, DashboardBloc, FoodSearchBloc,
-    │                               # WaterBloc, WeightBloc, MealPlanBloc
+    │                               # WaterBloc, WeightBloc, MealPlanBloc, WorkoutBloc
     └── pubspec.yaml
 ```
 
@@ -273,18 +269,23 @@ docker-compose up --build
 
 ## 📡 Full API Reference (`/api/v1`)
 
-All endpoints below (except Auth) require:
+All endpoints below (except Auth and Webhooks) require:
 ```
 Authorization: Bearer <jwt_token>
 ```
 
-### 🔐 Auth
+### 🔐 Auth & Subscriptions
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/auth/register` | Create a new account (email + password) |
+| `POST` | `/auth/signup` | Alias for register |
 | `POST` | `/auth/login` | Authenticate with email & password → JWT |
 | `POST` | `/auth/google` | Sign in / register with Google ID token → JWT |
 | `POST` | `/auth/apple` | Sign in / register with Apple identity token → JWT |
+| `POST` | `/users/me/upgrade` | Upgrade user account to Premium |
+| `POST` | `/users/subscribe` | Sync active RevenueCat subscription |
+| `DELETE`| `/users/subscribe` | Cancel subscription status |
+| `POST` | `/revenuecat/webhook` | RevenueCat webhook endpoint for server sync |
 
 > **Account Linking:** If a Google or Apple email matches an existing account, the social ID is automatically linked — no duplicate accounts.
 
@@ -296,14 +297,18 @@ Authorization: Bearer <jwt_token>
 | `PUT` | `/users/profile` | Update physical profile (recalculates TDEE) |
 | `GET` | `/users/tdee` | Get TDEE breakdown (Mifflin-St Jeor formula) |
 
-### 🥗 AI Meal Analysis
+### 🥗 AI Meal Analysis & Barcode
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/meals/analyze` | Analyze meal via text or image (Gemini) |
 | `POST` | `/meals/scan-local` | Analyze meal image using local Ollama vision |
+| `POST` | `/meals/scan-barcode` | Look up product nutrition by barcode (Open Food Facts) |
+| `POST` | `/meals/log-barcode` | Persist confirmed barcode meal (unlimited quota) |
+| `GET` | `/meals/usage` | Get today's AI scan usage vs daily free limit |
 | `POST` | `/meals/manual` | Manually log a meal with known macros |
 | `GET` | `/meals/history` | Paginated meal log history |
 | `GET` | `/meals/suggestions` | AI macro suggestions & supplement recommendations |
+| `PUT` | `/meals/:id` | Update meal log entry |
 | `DELETE` | `/meals/:id` | Delete a meal log entry |
 
 ### 🔍 Food Database
@@ -318,6 +323,7 @@ Authorization: Bearer <jwt_token>
 |--------|----------|-------------|
 | `POST` | `/food-logs` | Log a database food item for today |
 | `GET` | `/food-logs/today` | Today's combined food log summary vs goals |
+| `PUT` | `/food-logs/:id` | Update food log entry quantity or meal type |
 | `DELETE` | `/food-logs/:id` | Delete a food log entry |
 
 ### 💧 Water Tracking
@@ -342,11 +348,22 @@ Authorization: Bearer <jwt_token>
 | `POST` | `/meal-plans/generate` | Auto-generate weekly plan from calorie goal |
 | `PUT` | `/meal-plans/:id/eaten` | Toggle meal plan entry as eaten |
 
-### 🏋️ Workouts
+### 🏋️ Workouts & AI Commands
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `GET` | `/workouts/exercises` | List all available workout exercises |
 | `POST` | `/workouts/setup` | Save training split config (days/week, split type) |
 | `GET` | `/workouts/routine` | Get active workout routine + today's session |
+| `POST` | `/workouts/session/start` | Start active workout session |
+| `POST` | `/workouts/session/exercise` | Add exercise to active session |
+| `POST` | `/workouts/session/set` | Log a set (reps, weight, set type) |
+| `POST` | `/workouts/session/:id/finish` | Complete and log workout session |
+| `GET` | `/workouts/exercises/:id/alternatives` | Get suggested alternative exercises |
+| `POST` | `/workouts/session/swap` | Swap exercise in session with an alternative |
+| `POST` | `/workouts/session/override` | Override day session type (Legs, Rest, etc.) |
+| `POST` | `/workouts/session/interpret` | Interpret NLP workout commands ("swap bench press") |
+| `GET` | `/workouts/weekly-recap` | Get AI-generated weekly recap summary |
+| `GET` | `/workouts/recommend` | Get ranked routine recommendations for user |
 
 ---
 
@@ -449,6 +466,8 @@ The app ships with full **Arabic & English** localization via Flutter's `flutter
 |---------|---------|
 | `flutter_bloc` | BLoC state management |
 | `dio` | HTTP client with interceptors |
+| `mobile_scanner` | Live camera barcode scanning |
+| `purchases_flutter` | Native RevenueCat in-app subscriptions |
 | `google_sign_in` | Native Google OAuth (Android & iOS) |
 | `sign_in_with_apple` | Native Apple Sign-In (iOS only) |
 | `hive_flutter` | Offline meal log cache |
