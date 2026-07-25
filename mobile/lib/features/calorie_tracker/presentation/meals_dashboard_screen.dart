@@ -13,6 +13,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -386,6 +387,95 @@ class _MealsDashboardState extends State<MealsDashboard>
     );
   }
 
+  void _showEditSheet(MealEntry meal) {
+    final idx = logs.indexOf(meal);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _ManualLogSheet(
+        initialEntry: meal,
+        onSaved: (updated) {
+          setState(() {
+            if (idx >= 0 && idx < logs.length) {
+              logs[idx] = updated;
+            } else {
+              logs.insert(0, updated);
+            }
+            _recalcTotals();
+          });
+        },
+        service: _manualService,
+        onError: _showErrorSnackbar,
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteEntry(MealEntry meal, int idx) async {
+    // 1. Optimistic remove
+    setState(() {
+      logs.removeAt(idx);
+      _recalcTotals();
+    });
+
+    bool undone = false;
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF1F1F1F),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+        content: Row(
+          children: [
+            const Icon(Icons.delete_outline, color: DashboardThemeColors.accentRed, size: 18),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Removed "${meal.foodName}"',
+                style: GoogleFonts.inter(fontSize: 12, color: DashboardThemeColors.textPrimary),
+              ),
+            ),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: DashboardThemeColors.accentEmerald,
+          onPressed: () {
+            undone = true;
+            setState(() {
+              final insertAt = idx.clamp(0, logs.length);
+              logs.insert(insertAt, meal);
+              _recalcTotals();
+            });
+          },
+        ),
+      ),
+    ).closed.then((_) async {
+      if (undone) return;
+      // Fire actual DELETE only after undo window closes without undo
+      try {
+        if (meal.source == 'food_db') {
+          await _manualService.deleteFoodLog(meal.id);
+        } else {
+          await _manualService.deleteMealLog(meal.id);
+        }
+      } catch (e) {
+        // Re-insert on failure
+        if (mounted) {
+          setState(() {
+            final insertAt = idx.clamp(0, logs.length);
+            logs.insert(insertAt, meal);
+            _recalcTotals();
+          });
+          _showErrorSnackbar('Delete failed: $e');
+        }
+      }
+    });
+  }
+
+
   void _showErrorSnackbar(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -481,51 +571,56 @@ class _MealsDashboardState extends State<MealsDashboard>
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald,
-                    shape: BoxShape.circle,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: DashboardThemeColors.accentEmerald,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  'LOCAL PROCESSING • ONLINE',
-                  style: GoogleFonts.outfit(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.6,
-                    color: DashboardThemeColors.accentEmerald,
+                  const SizedBox(width: 6),
+                  Text(
+                    'LOCAL PROCESSING • ONLINE',
+                    style: GoogleFonts.outfit(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.6,
+                      color: DashboardThemeColors.accentEmerald,
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: DashboardThemeColors.textPrimary,
                 ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: DashboardThemeColors.textPrimary,
               ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              todayStr,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: DashboardThemeColors.textSecondary,
+              const SizedBox(height: 2),
+              Text(
+                todayStr,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: DashboardThemeColors.textSecondary,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        const SizedBox(width: 12),
         Container(
           padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(
@@ -1445,7 +1540,8 @@ class _MealsDashboardState extends State<MealsDashboard>
   }
 
   Widget _buildMealLogCard(MealEntry meal) {
-    final mealTime  = DateFormat('h:mm a').format(meal.createdAt.toLocal());
+    final idx      = logs.indexOf(meal);
+    final mealTime = DateFormat('h:mm a').format(meal.createdAt.toLocal());
     final hasSevere = meal.warnings.any((w) => w.isSevere);
     final hasWarn   = meal.warnings.isNotEmpty;
     Color borderColor = DashboardThemeColors.trackBg;
@@ -1457,125 +1553,166 @@ class _MealsDashboardState extends State<MealsDashboard>
       borderColor = DashboardThemeColors.accentEmerald;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: DashboardThemeColors.cardBackground,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderColor, width: hasWarn || meal.isHighlyNutritious ? 1.5 : 1.0),
+    return Dismissible(
+      key: ValueKey(meal.id),
+      direction: DismissDirection.endToStart,
+      // Prevent auto-removal — we handle state ourselves
+      confirmDismiss: (_) async {
+        _handleDeleteEntry(meal, idx);
+        return false; // keep widget; we remove manually above
+      },
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        decoration: BoxDecoration(
+          color: DashboardThemeColors.accentRed.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: DashboardThemeColors.accentRed.withValues(alpha: 0.3)),
+        ),
+        child: const Icon(
+          Icons.delete_sweep_outlined,
+          color: DashboardThemeColors.accentRed,
+          size: 26,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasWarn) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(
-                color: (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber).withValues(alpha: 0.25),
-                ),
-              ),
-              child: Row(children: [
-                Icon(
-                  hasSevere ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
-                  color: hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber,
-                  size: 16,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    meal.warnings.map((w) => w.warningText).join(', '),
-                    style: GoogleFonts.inter(
-                      color: hasSevere ? const Color(0xFFFCA5A5) : const Color(0xFFFCD34D),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-          ],
-          Row(
+      child: GestureDetector(
+        onTap: () => _showEditSheet(meal),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: DashboardThemeColors.cardBackground,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor, width: hasWarn || meal.isHighlyNutritious ? 1.5 : 1.0),
+          ),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: DashboardThemeColors.background,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  meal.source == 'image' ? Icons.camera_alt_outlined : Icons.restaurant_outlined,
-                  color: meal.isHighlyNutritious ? DashboardThemeColors.accentEmerald
-                      : (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentLime),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Text(
-                        meal.restaurantName.toUpperCase(),
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: DashboardThemeColors.accentEmerald,
-                          letterSpacing: 1.0,
+              if (hasWarn) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber).withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(children: [
+                    Icon(
+                      hasSevere ? Icons.warning_amber_rounded : Icons.info_outline_rounded,
+                      color: hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentAmber,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        meal.warnings.map((w) => w.warningText).join(', '),
+                        style: GoogleFonts.inter(
+                          color: hasSevere ? const Color(0xFFFCA5A5) : const Color(0xFFFCD34D),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (meal.isHighlyNutritious) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                    ),
+                  ]),
+                ),
+              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: DashboardThemeColors.background,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      meal.source == 'image' ? Icons.camera_alt_outlined : Icons.restaurant_outlined,
+                      color: meal.isHighlyNutritious ? DashboardThemeColors.accentEmerald
+                          : (hasSevere ? DashboardThemeColors.accentRed : DashboardThemeColors.accentLime),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Text(
+                            meal.restaurantName.toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: DashboardThemeColors.accentEmerald,
+                              letterSpacing: 1.0,
+                            ),
                           ),
-                          child: Text('🌿 NUTRITIOUS',
-                              style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: DashboardThemeColors.accentEmerald)),
-                        ),
+                          if (meal.isHighlyNutritious) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text('🌿 NUTRITIOUS',
+                                  style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: DashboardThemeColors.accentEmerald)),
+                            ),
+                          ],
+                        ]),
+                        const SizedBox(height: 2),
+                        Text(meal.foodName, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary)),
+                        const SizedBox(height: 2),
+                        Text(mealTime, style: GoogleFonts.inter(fontSize: 11, color: DashboardThemeColors.textMuted, fontWeight: FontWeight.w500)),
                       ],
-                    ]),
-                    const SizedBox(height: 2),
-                    Text(meal.foodName, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary)),
-                    const SizedBox(height: 2),
-                    Text(mealTime, style: GoogleFonts.inter(fontSize: 11, color: DashboardThemeColors.textMuted, fontWeight: FontWeight.w500)),
-                  ],
-                ),
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: DashboardThemeColors.background,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: DashboardThemeColors.trackBg),
+                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('${meal.calories.round()}',
+                              style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary)),
+                          const SizedBox(width: 2),
+                          Text('kcal', style: GoogleFonts.inter(fontSize: 9, color: DashboardThemeColors.textSecondary, fontWeight: FontWeight.w600)),
+                        ]),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.edit_outlined, size: 11, color: DashboardThemeColors.textMuted),
+                          const SizedBox(width: 3),
+                          Text('Edit', style: GoogleFonts.inter(fontSize: 10, color: DashboardThemeColors.textMuted)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: DashboardThemeColors.background,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: DashboardThemeColors.trackBg),
-                ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text('${meal.calories.round()}',
-                      style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary)),
-                  const SizedBox(width: 2),
-                  Text('kcal', style: GoogleFonts.inter(fontSize: 9, color: DashboardThemeColors.textSecondary, fontWeight: FontWeight.w600)),
-                ]),
-              ),
+              const SizedBox(height: 14),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                _buildMacroLabel('Protein', '${meal.protein.round()}g', DashboardThemeColors.accentEmerald),
+                _buildMacroLabel('Carbs',   '${meal.carbs.round()}g',   DashboardThemeColors.accentBlue),
+                _buildMacroLabel('Fats',    '${meal.fat.round()}g',     DashboardThemeColors.accentRed),
+              ]),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            _buildMacroLabel('Protein', '${meal.protein.round()}g', DashboardThemeColors.accentEmerald),
-            _buildMacroLabel('Carbs',   '${meal.carbs.round()}g',   DashboardThemeColors.accentBlue),
-            _buildMacroLabel('Fats',    '${meal.fat.round()}g',     DashboardThemeColors.accentRed),
-          ]),
-        ],
+        ),
       ),
     );
   }
+
 
   Widget _buildMacroLabel(String label, String value, Color color) {
     return Row(children: [
@@ -1587,10 +1724,37 @@ class _MealsDashboardState extends State<MealsDashboard>
   }
 }
 
-// ── Manual Meal Service (Dio POST to /meals/manual) ───────────
+// ── Manual Meal Service (Dio POST/PUT/DELETE to /meals & /food-logs) ──────────
 
 class ManualMealService {
   static const Duration _timeout = Duration(seconds: 20);
+  late final Dio _dio;
+
+  ManualMealService() {
+    const secureStorage = FlutterSecureStorage();
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConstants.apiV1,
+        connectTimeout: _timeout,
+        receiveTimeout: _timeout,
+        headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+      ),
+    );
+    // Inject JWT on every request — same pattern as LocalLlamaService
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await secureStorage.read(key: AppConstants.tokenKey);
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+      ),
+    );
+  }
+
+  // ── Create ─────────────────────────────────────────────────
 
   Future<void> postManualLog({
     required String mealName,
@@ -1599,19 +1763,7 @@ class ManualMealService {
     required double carbs,
     required double fats,
   }) async {
-    // We reuse the same DIO setup from LocalLlamaService (shared base URL)
-    // but with a simple JSON body — no auth required for local dev.
-    // In production, add the same JWT interceptor as LocalLlamaService.
-    final dio = Dio(
-      BaseOptions(
-        baseUrl: AppConstants.apiV1,
-        connectTimeout: _timeout,
-        receiveTimeout: _timeout,
-        headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
-      ),
-    );
-
-    await dio.post<dynamic>(
+    await _dio.post<dynamic>(
       '/meals/manual',
       data: {
         'mealName': mealName.isEmpty ? 'Manual Entry' : mealName,
@@ -1623,7 +1775,46 @@ class ManualMealService {
       },
     );
   }
+
+  // ── Update MealLog (manual / ai scan) ─────────────────────
+
+  Future<void> updateMealLog(
+    String id, {
+    required String mealName,
+    required double calories,
+    required double protein,
+    required double carbs,
+    required double fats,
+  }) async {
+    await _dio.put<dynamic>(
+      '/meals/$id',
+      data: {
+        'mealName': mealName.isEmpty ? 'Manual Entry' : mealName,
+        'calories': calories,
+        'protein': protein,
+        'carbs': carbs,
+        'fats': fats,
+      },
+    );
+  }
+
+  // ── Update FoodLog (db-search entries — servings only) ────
+
+  Future<void> updateFoodLog(String id, {required double servings}) async {
+    await _dio.put<dynamic>('/food-logs/$id', data: {'servings': servings});
+  }
+
+  // ── Delete ─────────────────────────────────────────────────
+
+  Future<void> deleteMealLog(String id) async {
+    await _dio.delete<dynamic>('/meals/$id');
+  }
+
+  Future<void> deleteFoodLog(String id) async {
+    await _dio.delete<dynamic>('/food-logs/$id');
+  }
 }
+
 
 // ── Manual Log Bottom Sheet Widget ───────────────────────────
 
@@ -1631,11 +1822,13 @@ class _ManualLogSheet extends StatefulWidget {
   final void Function(MealEntry entry) onSaved;
   final ManualMealService service;
   final void Function(String) onError;
+  final MealEntry? initialEntry; // non-null → edit mode
 
   const _ManualLogSheet({
     required this.onSaved,
     required this.service,
     required this.onError,
+    this.initialEntry,
   });
 
   @override
@@ -1650,6 +1843,20 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
   final _carbsCtrl    = TextEditingController();
   final _fatsCtrl     = TextEditingController();
   bool _isSaving      = false;
+  bool get _isEdit    => widget.initialEntry != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.initialEntry;
+    if (e != null) {
+      _mealNameCtrl.text = e.foodName;
+      _caloriesCtrl.text = e.calories.round().toString();
+      _proteinCtrl.text  = e.protein.round().toString();
+      _carbsCtrl.text    = e.carbs.round().toString();
+      _fatsCtrl.text     = e.fat.round().toString();
+    }
+  }
 
   @override
   void dispose() {
@@ -1671,36 +1878,69 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
     final fats     = double.parse(_fatsCtrl.text.trim());
     final name     = _mealNameCtrl.text.trim();
 
-    // Fire-and-forget POST — local state updates immediately
-    // If the server call fails, we still update the UI (offline-first)
-    widget.service.postManualLog(
-      mealName: name,
-      calories: calories,
-      protein: protein,
-      carbs: carbs,
-      fats: fats,
-    ).catchError((e) {
-      widget.onError('Could not sync to server: $e');
-    });
+    if (_isEdit) {
+      final orig = widget.initialEntry!;
+      // Fire update — if it fails, show error but still update local state
+      widget.service.updateMealLog(
+        orig.id,
+        mealName: name.isEmpty ? orig.foodName : name,
+        calories: calories,
+        protein:  protein,
+        carbs:    carbs,
+        fats:     fats,
+      ).catchError((e) {
+        widget.onError('Could not sync edit to server: $e');
+      });
 
-    final entry = MealEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      foodName: name.isEmpty ? 'Manual Entry' : name,
-      restaurantName: 'Manual Log',
-      protein: protein,
-      carbs: carbs,
-      fat: fats,
-      calories: calories,
-      warnings: const [],
-      isHighlyNutritious: protein > 25 && calories < 400,
-      createdAt: DateTime.now(),
-      source: 'manual',
-      ingredientsBreakdown: const [],
-    );
+      final updatedEntry = MealEntry(
+        id:                  orig.id,
+        foodName:            name.isEmpty ? orig.foodName : name,
+        restaurantName:      orig.restaurantName,
+        protein:             protein,
+        carbs:               carbs,
+        fat:                 fats,
+        calories:            calories,
+        warnings:            orig.warnings,
+        isHighlyNutritious:  protein > 25 && calories < 400,
+        createdAt:           orig.createdAt,
+        source:              orig.source,
+        ingredientsBreakdown: orig.ingredientsBreakdown,
+      );
 
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    widget.onSaved(entry);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onSaved(updatedEntry);
+    } else {
+      // Create — fire-and-forget POST
+      widget.service.postManualLog(
+        mealName: name,
+        calories: calories,
+        protein:  protein,
+        carbs:    carbs,
+        fats:     fats,
+      ).catchError((e) {
+        widget.onError('Could not sync to server: $e');
+      });
+
+      final entry = MealEntry(
+        id:                  DateTime.now().millisecondsSinceEpoch.toString(),
+        foodName:            name.isEmpty ? 'Manual Entry' : name,
+        restaurantName:      'Manual Log',
+        protein:             protein,
+        carbs:               carbs,
+        fat:                 fats,
+        calories:            calories,
+        warnings:            const [],
+        isHighlyNutritious:  protein > 25 && calories < 400,
+        createdAt:           DateTime.now(),
+        source:              'manual',
+        ingredientsBreakdown: const [],
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onSaved(entry);
+    }
   }
 
   @override
@@ -1737,12 +1977,17 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.12),
+                    color: (_isEdit
+                        ? DashboardThemeColors.accentBlue
+                        : DashboardThemeColors.accentEmerald
+                    ).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
-                    Icons.edit_note_rounded,
-                    color: DashboardThemeColors.accentEmerald,
+                  child: Icon(
+                    _isEdit ? Icons.edit_rounded : Icons.edit_note_rounded,
+                    color: _isEdit
+                        ? DashboardThemeColors.accentBlue
+                        : DashboardThemeColors.accentEmerald,
                     size: 20,
                   ),
                 ),
@@ -1751,7 +1996,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Manual Macro Log',
+                      _isEdit ? 'Edit Meal' : 'Manual Macro Log',
                       style: GoogleFonts.outfit(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -1759,7 +2004,9 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                       ),
                     ),
                     Text(
-                      'Log a meal by entering macros directly',
+                      _isEdit
+                          ? 'Update macros for this entry'
+                          : 'Log a meal by entering macros directly',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         color: DashboardThemeColors.textMuted,
@@ -1772,7 +2019,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 
             const SizedBox(height: 24),
 
-            // ── Meal name (optional) ─────────────────────
+            // ── Meal name ─────────────────────────────────
             _MacroField(
               controller: _mealNameCtrl,
               label: 'Meal Name',
@@ -1860,16 +2107,18 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                           color: Colors.black,
                         ),
                       )
-                    : const Icon(Icons.check_rounded, size: 18),
+                    : Icon(_isEdit ? Icons.save_outlined : Icons.check_rounded, size: 18),
                 label: Text(
-                  _isSaving ? 'Saving...' : 'Save Log',
+                  _isSaving ? 'Saving...' : (_isEdit ? 'Save Changes' : 'Save Log'),
                   style: GoogleFonts.outfit(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: DashboardThemeColors.accentEmerald,
+                  backgroundColor: _isEdit
+                      ? DashboardThemeColors.accentBlue
+                      : DashboardThemeColors.accentEmerald,
                   foregroundColor: Colors.black,
                   disabledBackgroundColor:
                       DashboardThemeColors.accentEmerald.withValues(alpha: 0.5),
@@ -1897,6 +2146,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 }
 
 // ── Reusable Macro Input Field ────────────────────────────────
+
 
 class _MacroField extends StatelessWidget {
   final TextEditingController controller;
