@@ -108,6 +108,8 @@ class TrackerRepositoryImpl implements TrackerRepository {
     required double carbs,
     required double fats,
     String? mealType,
+    String? source,
+    Map<String, dynamic>? rawAiResponse,
   }) async {
     try {
       final data = {
@@ -117,6 +119,8 @@ class TrackerRepositoryImpl implements TrackerRepository {
         'carbs': carbs,
         'fats': fats,
         if (mealType != null) 'mealType': mealType,
+        if (source != null) 'source': source,
+        if (rawAiResponse != null) 'rawAiResponse': rawAiResponse,
       };
       final response = await apiClient.dio.post('/meals/manual', data: data);
       return Right(response.data as Map<String, dynamic>);
