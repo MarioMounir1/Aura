@@ -311,16 +311,6 @@ class AuthWrapper extends StatelessWidget {
                       ),
                     );
                   }
-                  if (profileState is ProfileLoading) {
-                    return const Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                      ),
-                    );
-                  }
                   if (profileState is ProfileLoaded) {
                     if (profileState.isOnboardingCompleted) {
                       final userId = profileState.user['id'] as String? ?? 'user';
