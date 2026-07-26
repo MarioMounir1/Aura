@@ -1168,18 +1168,23 @@ class _ResultCardWidget extends StatelessWidget {
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 2.2,
+                child: Column(
                   children: [
-                    _buildMacroCell('🔥 Calories', '${analysis.calories}', 'kcal', DashboardThemeColors.accentLime),
-                    _buildMacroCell('💪 Protein', '${analysis.protein}', 'g', DashboardThemeColors.accentEmerald),
-                    _buildMacroCell('🌾 Carbs', '${analysis.carbs}', 'g', DashboardThemeColors.accentBlue),
-                    _buildMacroCell('🫙 Fats', '${analysis.fats}', 'g', DashboardThemeColors.accentRed),
+                    Row(
+                      children: [
+                        Expanded(child: _buildMacroCell('🔥 Calories', '${analysis.calories}', 'kcal', DashboardThemeColors.accentLime)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _buildMacroCell('💪 Protein', '${analysis.protein}', 'g', DashboardThemeColors.accentEmerald)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(child: _buildMacroCell('🌾 Carbs', '${analysis.carbs}', 'g', DashboardThemeColors.accentBlue)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _buildMacroCell('🫙 Fats', '${analysis.fats}', 'g', DashboardThemeColors.accentRed)),
+                      ],
+                    ),
                   ],
                 ),
               ),
