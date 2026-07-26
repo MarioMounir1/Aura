@@ -7,7 +7,7 @@ class AppConstants {
   // API
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000', // Android emulator localhost
+    defaultValue: 'http://localhost:3000', // Uses adb reverse on physical Android devices
   );
   static const String apiV1 = '$baseUrl/api/v1';
 
