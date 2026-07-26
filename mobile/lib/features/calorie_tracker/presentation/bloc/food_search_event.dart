@@ -36,13 +36,19 @@ class LogFoodItemEvent extends FoodSearchEvent {
   final String foodItemId;
   final double servings;
   final String mealType;
+  final Map<String, dynamic>? foodItemData;
 
   const LogFoodItemEvent({
     required this.foodItemId,
     required this.servings,
     required this.mealType,
+    this.foodItemData,
   });
 
   @override
-  List<Object?> get props => [foodItemId, servings, mealType];
+  List<Object?> get props => [foodItemId, servings, mealType, foodItemData];
+}
+
+class ResetFoodSearchEvent extends FoodSearchEvent {
+  const ResetFoodSearchEvent();
 }
