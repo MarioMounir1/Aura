@@ -185,72 +185,80 @@ export async function searchFoods(req: Request, res: Response): Promise<void> {
       dataSource: (item as any).dataSource || (item.isVerified ? "verified" : "external"),
     }));
 
-    // ── Step 2: Query Open Food Facts if local results are sparse ─
+    // ── Step 2: Query Open Food Facts (search-a-licious API) ─
     if (finalItems.length < limit) {
-      const offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
+      const searchUrl = `https://search.openfoodfacts.org/search?q=${encodeURIComponent(
         q
-      )}&json=1&page=${page}&page_size=${limit}`;
+      )}&page_size=${limit}&page=${page}`;
 
       try {
-        const response = await fetch(offUrl, {
+        const response = await fetch(searchUrl, {
           headers: {
             "User-Agent": "Aura-FitnessApp/1.0 (contact@aura.app)",
           },
           signal: AbortSignal.timeout(8000),
         });
-        if (response.ok) {
-          const offData = await response.json();
-          const products = Array.isArray(offData.products) ? offData.products : [];
 
-          const offItems = products.map((product: any, idx: number) => {
-            const nutriments = product.nutriments ?? {};
-            const code = product.code || product._id || `${Date.now()}_${idx}`;
-            const rawNameEn =
-              (product.product_name_en as string | undefined)?.trim() ||
-              (product.product_name as string | undefined)?.trim() ||
-              "Unknown Product";
-            const rawNameAr =
-              (product.product_name_ar as string | undefined)?.trim() || rawNameEn;
+        if (!response.ok) {
+          console.warn(`⚠️ [FoodSearch] search-a-licious API returned HTTP ${response.status}`);
+        } else {
+          const searchData = (await response.json().catch(() => null)) as any;
 
-            const calories = safeNum(
-              nutriments["energy-kcal_100g"] ??
-                (nutriments["energy-kj_100g"] != null
-                  ? Number(nutriments["energy-kj_100g"]) / 4.184
-                  : nutriments["energy_100g"])
-            );
+          if (!searchData || !Array.isArray(searchData.hits)) {
+            console.warn(`⚠️ [FoodSearch] search-a-licious returned unexpected response format (hits array missing)`);
+          } else {
+            const hits = searchData.hits;
+            console.log(`🌐 [FoodSearch] search-a-licious returned ${hits.length} hit(s) for "${q}"`);
 
-            const servingQuantity = safeNum(product.serving_quantity);
+            const offItems = hits.map((product: any, idx: number) => {
+              const nutriments = product.nutriments ?? {};
+              const code = product.code || product._id || product.id || `${Date.now()}_${idx}`;
+              const rawNameEn =
+                (product.product_name_en as string | undefined)?.trim() ||
+                (product.product_name as string | undefined)?.trim() ||
+                "Unknown Product";
+              const rawNameAr =
+                (product.product_name_ar as string | undefined)?.trim() || rawNameEn;
 
-            return {
-              id:          `off_${code}`,
-              nameEn:      rawNameEn,
-              nameAr:      rawNameAr,
-              calories,
-              protein:     safeNum(nutriments["proteins_100g"]),
-              carbs:       safeNum(nutriments["carbohydrates_100g"]),
-              fats:        safeNum(nutriments["fat_100g"]),
-              fiber:       safeNum(nutriments["fiber_100g"]),
-              servingSize: servingQuantity > 0 ? servingQuantity : 100,
-              servingUnit: (product.serving_quantity_unit as string | undefined)?.trim() || "g",
-              category:    category || "General",
-              isVerified:  false,
-              source:      "external",
-              dataSource:  "external",
-            };
-          });
+              const calories = safeNum(
+                nutriments["energy-kcal_100g"] ??
+                  (nutriments["energy-kj_100g"] != null
+                    ? Number(nutriments["energy-kj_100g"]) / 4.184
+                    : nutriments["energy_100g"])
+              );
 
-          // Merge local DB items with OFF items, avoiding duplicates
-          for (const offItem of offItems) {
-            const isDuplicate = finalItems.some(
-              (existing) => existing.nameEn.toLowerCase() === offItem.nameEn.toLowerCase()
-            );
-            if (!isDuplicate) {
-              finalItems.push(offItem);
+              const servingQuantity = safeNum(product.serving_quantity);
+
+              return {
+                id:          `off_${code}`,
+                nameEn:      rawNameEn,
+                nameAr:      rawNameAr,
+                calories,
+                protein:     safeNum(nutriments["proteins_100g"]),
+                carbs:       safeNum(nutriments["carbohydrates_100g"]),
+                fats:        safeNum(nutriments["fat_100g"]),
+                fiber:       safeNum(nutriments["fiber_100g"]),
+                servingSize: servingQuantity > 0 ? servingQuantity : 100,
+                servingUnit: (product.serving_quantity_unit as string | undefined)?.trim() || "g",
+                category:    category || "General",
+                isVerified:  false,
+                source:      "external",
+                dataSource:  "external",
+              };
+            });
+
+            for (const offItem of offItems) {
+              const isDuplicate = finalItems.some(
+                (existing) => existing.nameEn.toLowerCase() === offItem.nameEn.toLowerCase()
+              );
+              if (!isDuplicate) {
+                finalItems.push(offItem);
+              }
             }
           }
         }
       } catch (err) {
-        console.error("❌ [FoodSearch] OFF search error:", err);
+        console.error("❌ [FoodSearch] search-a-licious API call failed:", err);
       }
     }
 
