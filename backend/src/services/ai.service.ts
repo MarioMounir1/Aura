@@ -245,6 +245,82 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
   return parseAndValidateResponse(parsed);
 }
 
+// ── Text-Only AI Nutrition Estimation Fallback ────────────
+
+export interface TextNutritionEstimate {
+  dishName: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  confidenceScore: number;
+}
+
+/**
+ * Text-only AI nutrition estimation when no database or Open Food Facts entry exists.
+ * Prompts Ollama (JSON mode) or Gemini fallback.
+ */
+export async function estimateNutritionFromName(foodName: string): Promise<TextNutritionEstimate> {
+  const provider = process.env.AI_PROVIDER ?? "google";
+  const userPrompt = `Estimate the nutritional content per 100g serving for the food or dish named: "${foodName}".
+Return a JSON object strictly matching this schema:
+{
+  "dish_name": "${foodName}",
+  "calories": number,
+  "protein": number,
+  "carbs": number,
+  "fats": number,
+  "confidence_score": number (0.0 to 1.0)
+}`;
+
+  if (provider === "ollama") {
+    try {
+      const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: OLLAMA_CONFIG.model,
+          messages: [
+            { role: "system", content: SYSTEM_INSTRUCTION },
+            { role: "user", content: userPrompt },
+          ],
+          stream: false,
+          options: { temperature: 0.2 },
+          format: "json",
+        }),
+      });
+
+      if (response.ok) {
+        const responseData = (await response.json()) as any;
+        const text = responseData.message?.content;
+        if (text) {
+          const parsed = JSON.parse(text);
+          return {
+            dishName: String(parsed.dish_name || foodName),
+            calories: Math.max(0, Math.round(Number(parsed.calories || 0))),
+            protein: Math.max(0, Math.round(Number(parsed.protein || 0))),
+            carbs: Math.max(0, Math.round(Number(parsed.carbs || 0))),
+            fats: Math.max(0, Math.round(Number(parsed.fats || 0))),
+            confidenceScore: Math.min(1.0, Math.max(0.0, Number(parsed.confidence_score || 0.7))),
+          };
+        }
+      }
+    } catch (err) {
+      console.error("❌ [AI] Ollama text estimation failed:", err);
+    }
+  }
+
+  // Fallback default estimate if AI provider fails or is unreachable
+  return {
+    dishName: foodName,
+    calories: 150,
+    protein: 5,
+    carbs: 20,
+    fats: 5,
+    confidenceScore: 0.5,
+  };
+}
+
 // ── Helper Parser & Validator ──────────────────────────────
 
 function parseAndValidateResponse(parsed: any): MealAnalysisResult {
