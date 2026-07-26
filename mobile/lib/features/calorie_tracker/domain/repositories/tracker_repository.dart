@@ -30,6 +30,8 @@ abstract class TrackerRepository {
     required double carbs,
     required double fats,
     String? mealType,
+    String? source,
+    Map<String, dynamic>? rawAiResponse,
   });
 
   // ── Water ──
