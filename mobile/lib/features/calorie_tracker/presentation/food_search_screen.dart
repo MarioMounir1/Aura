@@ -171,6 +171,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                                     final double size = (item['servingSize'] as num?)?.toDouble() ?? 100.0;
                                     final String unit = item['servingUnit'] as String? ?? 'g';
                                     final bool isVerified = item['isVerified'] == true;
+                                    final String dataSource = item['dataSource'] as String? ?? (isVerified ? 'verified' : (item['source'] as String? ?? 'external'));
                                     final num protein = item['protein'] as num? ?? 0;
                                     final num carbs = item['carbs'] as num? ?? 0;
                                     final num fats = item['fats'] as num? ?? 0;
@@ -192,7 +193,35 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                                                 style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                               ),
                                             ),
-                                            if (isVerified)
+                                            const SizedBox(width: 6),
+                                            if (dataSource == 'ai-estimated')
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.warning.withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                                                ),
+                                                child: const Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.auto_awesome, color: AppColors.warning, size: 11),
+                                                    SizedBox(width: 3),
+                                                    Text('AI Estimated', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.warning)),
+                                                  ],
+                                                ),
+                                              )
+                                            else if (dataSource == 'external')
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.accent.withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: AppColors.accent.withOpacity(0.3)),
+                                                ),
+                                                child: const Text('OFF Global', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.accent)),
+                                              )
+                                            else if (isVerified || dataSource == 'verified')
                                               const Icon(Icons.verified_rounded, color: AppColors.primary, size: 18),
                                           ],
                                         ),
