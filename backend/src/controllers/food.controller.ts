@@ -49,6 +49,69 @@ function safeNum(value: unknown): number {
   return isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
 }
 
+import { estimateNutritionFromName } from "../services/ai.service";
+
+// ── Rate Limiter for AI Text Estimation ─────────────────────────
+
+const aiEstTracker = new Map<string, number[]>();
+const AI_EST_WINDOW_MS = 60 * 1000; // 1 minute
+const AI_EST_MAX_REQUESTS = 10; // max 10 AI text estimations per minute per user/IP
+
+function isAiEstRateLimited(key: string): boolean {
+  const now = Date.now();
+  const timestamps = (aiEstTracker.get(key) || []).filter(t => now - t < AI_EST_WINDOW_MS);
+  if (timestamps.length >= AI_EST_MAX_REQUESTS) {
+    return true;
+  }
+  timestamps.push(now);
+  aiEstTracker.set(key, timestamps);
+  return false;
+}
+
+// ── Auto-Persist Helper ────────────────────────────────────────
+
+async function autoPersistFoodItems(items: Array<any>): Promise<void> {
+  for (const item of items) {
+    if (item.source === "local" || item.dataSource === "verified") continue;
+    try {
+      const existing = await prisma.foodItem.findFirst({
+        where: {
+          OR: [
+            { nameEn: { equals: item.nameEn, mode: "insensitive" } },
+            { nameAr: { equals: item.nameAr, mode: "insensitive" } },
+          ],
+        },
+      });
+
+      if (!existing) {
+        const created = await prisma.foodItem.create({
+          data: {
+            nameEn:      item.nameEn,
+            nameAr:      item.nameAr,
+            calories:    item.calories,
+            protein:     item.protein,
+            carbs:       item.carbs,
+            fats:        item.fats,
+            fiber:       item.fiber || 0,
+            servingSize: item.servingSize || 100,
+            servingUnit: item.servingUnit || "g",
+            category:    item.category || "General",
+            isVerified:  false,
+            dataSource:  item.dataSource || item.source || "external",
+          },
+        });
+        item.id = created.id;
+        console.log(`🌱 [FoodSearch] Auto-persisted ${item.dataSource || item.source} food item: "${item.nameEn}" (${created.id})`);
+      } else {
+        item.id = existing.id;
+        item.dataSource = (existing as any).dataSource || "verified";
+      }
+    } catch (err) {
+      console.error("❌ [FoodSearch] Auto-persist error:", err);
+    }
+  }
+}
+
 // ── GET /api/v1/foods/search ─────────────────────────────────
 
 export async function searchFoods(req: Request, res: Response): Promise<void> {
@@ -75,7 +138,7 @@ export async function searchFoods(req: Request, res: Response): Promise<void> {
 
     const skip = (page - 1) * limit;
 
-    // ── 1. Local Database Query ───────────────────────────────
+    // ── Step 1: Query Local Database ─────────────────────────
     const whereClause = {
       AND: [
         {
@@ -88,7 +151,7 @@ export async function searchFoods(req: Request, res: Response): Promise<void> {
       ],
     };
 
-    const localQueryPromise = Promise.all([
+    const [localItems, localTotal] = await Promise.all([
       prisma.foodItem.findMany({
         where:   whereClause,
         orderBy: [
@@ -110,90 +173,127 @@ export async function searchFoods(req: Request, res: Response): Promise<void> {
           servingUnit: true,
           category:    true,
           isVerified:  true,
+          dataSource:  true,
         },
       }),
       prisma.foodItem.count({ where: whereClause }),
     ]);
 
-    // ── 2. Open Food Facts Text Search Query ──────────────────
-    const offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
-      q
-    )}&json=1&page=${page}&page_size=${limit}`;
+    let finalItems: any[] = localItems.map((item) => ({
+      ...item,
+      source: "local" as const,
+      dataSource: (item as any).dataSource || (item.isVerified ? "verified" : "external"),
+    }));
 
-    const offQueryPromise = (async () => {
+    // ── Step 2: Query Open Food Facts if local results are sparse ─
+    if (finalItems.length < limit) {
+      const offUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
+        q
+      )}&json=1&page=${page}&page_size=${limit}`;
+
       try {
         const response = await fetch(offUrl, {
           headers: {
             "User-Agent": "Aura-FitnessApp/1.0 (contact@aura.app)",
           },
-          signal: AbortSignal.timeout(8000), // 8 sec timeout
+          signal: AbortSignal.timeout(8000),
         });
-        if (!response.ok) return [];
-        const offData = await response.json();
-        const products = Array.isArray(offData.products) ? offData.products : [];
+        if (response.ok) {
+          const offData = await response.json();
+          const products = Array.isArray(offData.products) ? offData.products : [];
 
-        return products.map((product: any, idx: number) => {
-          const nutriments = product.nutriments ?? {};
-          const code = product.code || product._id || `${Date.now()}_${idx}`;
-          const rawNameEn =
-            (product.product_name_en as string | undefined)?.trim() ||
-            (product.product_name as string | undefined)?.trim() ||
-            "Unknown Product";
-          const rawNameAr =
-            (product.product_name_ar as string | undefined)?.trim() || rawNameEn;
+          const offItems = products.map((product: any, idx: number) => {
+            const nutriments = product.nutriments ?? {};
+            const code = product.code || product._id || `${Date.now()}_${idx}`;
+            const rawNameEn =
+              (product.product_name_en as string | undefined)?.trim() ||
+              (product.product_name as string | undefined)?.trim() ||
+              "Unknown Product";
+            const rawNameAr =
+              (product.product_name_ar as string | undefined)?.trim() || rawNameEn;
 
-          const calories = safeNum(
-            nutriments["energy-kcal_100g"] ??
-              (nutriments["energy-kj_100g"] != null
-                ? Number(nutriments["energy-kj_100g"]) / 4.184
-                : nutriments["energy_100g"])
-          );
+            const calories = safeNum(
+              nutriments["energy-kcal_100g"] ??
+                (nutriments["energy-kj_100g"] != null
+                  ? Number(nutriments["energy-kj_100g"]) / 4.184
+                  : nutriments["energy_100g"])
+            );
 
-          const servingQuantity = safeNum(product.serving_quantity);
+            const servingQuantity = safeNum(product.serving_quantity);
 
-          return {
-            id:          `off_${code}`,
-            nameEn:      rawNameEn,
-            nameAr:      rawNameAr,
-            calories,
-            protein:     safeNum(nutriments["proteins_100g"]),
-            carbs:       safeNum(nutriments["carbohydrates_100g"]),
-            fats:        safeNum(nutriments["fat_100g"]),
-            fiber:       safeNum(nutriments["fiber_100g"]),
-            servingSize: servingQuantity > 0 ? servingQuantity : 100,
-            servingUnit: (product.serving_quantity_unit as string | undefined)?.trim() || "g",
+            return {
+              id:          `off_${code}`,
+              nameEn:      rawNameEn,
+              nameAr:      rawNameAr,
+              calories,
+              protein:     safeNum(nutriments["proteins_100g"]),
+              carbs:       safeNum(nutriments["carbohydrates_100g"]),
+              fats:        safeNum(nutriments["fat_100g"]),
+              fiber:       safeNum(nutriments["fiber_100g"]),
+              servingSize: servingQuantity > 0 ? servingQuantity : 100,
+              servingUnit: (product.serving_quantity_unit as string | undefined)?.trim() || "g",
+              category:    category || "General",
+              isVerified:  false,
+              source:      "external",
+              dataSource:  "external",
+            };
+          });
+
+          // Merge local DB items with OFF items, avoiding duplicates
+          for (const offItem of offItems) {
+            const isDuplicate = finalItems.some(
+              (existing) => existing.nameEn.toLowerCase() === offItem.nameEn.toLowerCase()
+            );
+            if (!isDuplicate) {
+              finalItems.push(offItem);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("❌ [FoodSearch] OFF search error:", err);
+      }
+    }
+
+    // ── Step 3: AI Text Estimation Fallback if zero items ───────
+    if (finalItems.length === 0) {
+      const clientIp = req.ip || "anonymous";
+      if (!isAiEstRateLimited(clientIp)) {
+        console.log(`🤖 [FoodSearch] Triggering AI text estimation for obscure food: "${q}"`);
+        try {
+          const estimate = await estimateNutritionFromName(q);
+          const aiItem = {
+            id:          `ai_${Date.now()}`,
+            nameEn:      estimate.dishName,
+            nameAr:      estimate.dishName,
+            calories:    estimate.calories,
+            protein:     estimate.protein,
+            carbs:       estimate.carbs,
+            fats:        estimate.fats,
+            fiber:       0,
+            servingSize: 100,
+            servingUnit: "g",
             category:    category || "General",
             isVerified:  false,
             source:      "external",
-            rawProduct: {
-              code,
-              brands: product.brands,
-              nutriments,
-            },
+            dataSource:  "ai-estimated",
+            confidenceScore: estimate.confidenceScore,
           };
-        });
-      } catch (err) {
-        console.error("❌ [FoodSearch] Open Food Facts search failed:", err);
-        return [];
+          finalItems.push(aiItem);
+        } catch (err) {
+          console.error("❌ [FoodSearch] AI estimation fallback error:", err);
+        }
+      } else {
+        console.warn(`⚠️ [FoodSearch] AI estimation rate limit reached for IP: ${clientIp}`);
       }
-    })();
+    }
 
-    const [[localItems, localTotal], offItems] = await Promise.all([
-      localQueryPromise,
-      offQueryPromise,
-    ]);
+    // ── Auto-persist external & AI items to local FoodItem DB ─
+    await autoPersistFoodItems(finalItems);
 
-    const formattedLocalItems = localItems.map((item) => ({
-      ...item,
-      source: "local" as const,
-    }));
-
-    // Merge: Open Food Facts primary + local DB items
-    const mergedItems = [...offItems, ...formattedLocalItems];
-    const total = localTotal + offItems.length;
+    const total = localTotal + finalItems.length;
 
     const responsePayload = {
-      items: mergedItems,
+      items: finalItems,
       meta: {
         query: q,
         lang,
