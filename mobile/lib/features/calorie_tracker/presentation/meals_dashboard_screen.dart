@@ -1783,6 +1783,94 @@ class _SmartScannerSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
+        // ── Search Database Tile ──────────────────────────────
+        GestureDetector(
+          onTap: () => Navigator.of(context).pushNamed('/foods/search'),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF0F382C), Color(0xFF134E4A)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.35),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.10),
+                  blurRadius: 14,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.search_rounded,
+                    color: DashboardThemeColors.accentEmerald,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Search Food Database',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: DashboardThemeColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Global search across millions of products & foods',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Global',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: DashboardThemeColors.accentEmerald,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 13,
+                  color: DashboardThemeColors.accentEmerald,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
         // ── Barcode Tile ──────────────────────────────────
         GestureDetector(
           onTap: onBarcode,
@@ -2066,17 +2154,33 @@ class _FeedSection extends StatelessWidget {
                 ),
               ),
             ]),
-            TextButton.icon(
-              onPressed: onSnap,
-              icon: const Icon(Icons.add_photo_alternate_outlined, size: 16, color: DashboardThemeColors.accentLime),
-              label: Text(
-                'Snap',
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: DashboardThemeColors.accentLime,
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).pushNamed('/foods/search'),
+                  icon: const Icon(Icons.search_rounded, size: 16, color: DashboardThemeColors.accentEmerald),
+                  label: Text(
+                    'Search',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: DashboardThemeColors.accentEmerald,
+                    ),
+                  ),
                 ),
-              ),
+                TextButton.icon(
+                  onPressed: onSnap,
+                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 16, color: DashboardThemeColors.accentLime),
+                  label: Text(
+                    'Snap',
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: DashboardThemeColors.accentLime,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
