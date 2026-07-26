@@ -45,6 +45,18 @@ export interface OllamaCallOptions {
   numPredict?: number;
 }
 
+// ── Helper: Ollama Circuit Breaker State ────────────────────
+let isOllamaOffline = false;
+let lastOllamaCheck = 0;
+const OLLAMA_OFFLINE_COOLDOWN_MS = 60000; // 1 min cooldown before retrying Ollama connection
+
+function isOllamaCurrentlyOffline(): boolean {
+  if (isOllamaOffline && (Date.now() - lastOllamaCheck < OLLAMA_OFFLINE_COOLDOWN_MS)) {
+    return true;
+  }
+  return false;
+}
+
 // ── Helper: Ollama Chat Call with Timeout, Logging & Source Metadata ──────
 
 async function callOllamaChatDetailed(
@@ -59,7 +71,7 @@ async function callOllamaChatDetailed(
   const numPredict = options?.numPredict ?? 80;
   const startTime = Date.now();
 
-  if (provider === "none") {
+  if (provider === "none" || isOllamaCurrentlyOffline()) {
     return { value: fallback, source: "error", elapsedMs: 0 };
   }
 
@@ -89,6 +101,8 @@ async function callOllamaChatDetailed(
     const elapsedMs = Date.now() - startTime;
 
     if (!response.ok) {
+      isOllamaOffline = true;
+      lastOllamaCheck = Date.now();
       console.warn(`⚠️ [Ollama Error] '${callerName}' failed with HTTP ${response.status} after ${elapsedMs}ms.`);
       return { value: fallback, source: "error", elapsedMs };
     }
@@ -102,10 +116,13 @@ async function callOllamaChatDetailed(
       return { value: fallback, source: "error", elapsedMs, evalCount };
     }
 
+    isOllamaOffline = false;
     const cleaned = content.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
     return { value: cleaned || fallback, source: "model", elapsedMs, evalCount };
   } catch (err: any) {
     clearTimeout(timeoutId);
+    isOllamaOffline = true;
+    lastOllamaCheck = Date.now();
     const elapsedMs = Date.now() - startTime;
     if (err?.name === "AbortError") {
       console.warn(`⚠️ [Ollama Timeout] '${callerName}' timed out after ${elapsedMs}ms (limit: ${timeoutMs}ms).`);
