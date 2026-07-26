@@ -161,12 +161,19 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 16),
                                   itemCount: state.items.length,
                                   itemBuilder: (context, index) {
-                                    final item = state.items[index];
-                                    final String name = isArabic ? item['nameAr'] : item['nameEn'];
-                                    final double cal = (item['calories'] as num).toDouble();
-                                    final double size = (item['servingSize'] as num).toDouble();
-                                    final String unit = item['servingUnit'];
+                                    final item = state.items[index] as Map<String, dynamic>;
+                                    final String nameEn = item['nameEn'] as String? ?? '';
+                                    final String nameAr = item['nameAr'] as String? ?? '';
+                                    final String name = isArabic
+                                        ? (nameAr.isNotEmpty ? nameAr : nameEn)
+                                        : (nameEn.isNotEmpty ? nameEn : nameAr);
+                                    final double cal = (item['calories'] as num?)?.toDouble() ?? 0.0;
+                                    final double size = (item['servingSize'] as num?)?.toDouble() ?? 100.0;
+                                    final String unit = item['servingUnit'] as String? ?? 'g';
                                     final bool isVerified = item['isVerified'] == true;
+                                    final num protein = item['protein'] as num? ?? 0;
+                                    final num carbs = item['carbs'] as num? ?? 0;
+                                    final num fats = item['fats'] as num? ?? 0;
 
                                     return Container(
                                       margin: const EdgeInsets.only(bottom: 12),
@@ -181,7 +188,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                                           children: [
                                             Expanded(
                                               child: Text(
-                                                name,
+                                                name.isNotEmpty ? name : 'Unknown Item',
                                                 style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                               ),
                                             ),
@@ -200,11 +207,11 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                                             const SizedBox(height: 4),
                                             Row(
                                               children: [
-                                                _buildMacroLabel('P: ${item['protein']}g', AppColors.protein),
+                                                _buildMacroLabel('P: ${protein}g', AppColors.protein),
                                                 const SizedBox(width: 8),
-                                                _buildMacroLabel('C: ${item['carbs']}g', AppColors.carbs),
+                                                _buildMacroLabel('C: ${carbs}g', AppColors.carbs),
                                                 const SizedBox(width: 8),
-                                                _buildMacroLabel('F: ${item['fats']}g', AppColors.fats),
+                                                _buildMacroLabel('F: ${fats}g', AppColors.fats),
                                               ],
                                             ),
                                           ],
@@ -342,7 +349,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                         ],
                       ),
                       Text(
-                        l10n.foodCaloriesPer(double.parse(((item['calories'] as num) * servings).toStringAsFixed(1))),
+                        l10n.foodCaloriesPer(double.parse((((item['calories'] as num?)?.toDouble() ?? 0.0) * servings).toStringAsFixed(1))),
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.accent),
                       ),
                     ],
@@ -391,9 +398,10 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                       onPressed: () {
                         context.read<FoodSearchBloc>().add(
                               LogFoodItemEvent(
-                                foodItemId: item['id'],
+                                foodItemId: item['id'] as String? ?? '',
                                 servings: servings,
                                 mealType: mealType,
+                                foodItemData: item,
                               ),
                             );
                         Navigator.pop(sheetContext);
