@@ -182,6 +182,7 @@ model FoodItem {
   servingUnit String     @default("g")
   category    String
   isVerified  Boolean    @default(false)
+  dataSource  String     @default("verified")
 
   foodLogs    FoodLog[]
   mealPlans   MealPlan[]
