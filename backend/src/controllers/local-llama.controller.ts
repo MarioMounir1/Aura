@@ -16,6 +16,7 @@ import { Request, Response } from "express";
 import { processUpload } from "../middleware/upload.middleware";
 import { OLLAMA_CONFIG, getAiScanLimit } from "../config";
 import prisma from "../services/prisma.service";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // ── Response Shape (matches Flutter LlamaMealResponse model) ─
 
@@ -39,24 +40,31 @@ export interface LlamaMealResponse {
   llamaRecommendation: LlamaRecommendation;
 }
 
-// ── Ollama Vision Prompt ─────────────────────────────────────
+// ── Vision Prompt ────────────────────────────────────────────
 
-const VISION_SYSTEM_PROMPT = `You are an expert nutritionist AI running locally. 
-Analyze the food image provided and return ONLY a raw JSON object with NO markdown, NO explanation.
+const VISION_SYSTEM_PROMPT = `You are a world-class nutritionist AI with expertise in Egyptian, Middle Eastern, and international food brands.
+Analyze the food or drink in the provided image and return ONLY a raw JSON object — no markdown, no explanations, no text outside the JSON.
 
-Required JSON structure:
+CRITICAL rules for packaged/branded items (cans, bottles, boxes):
+- Read the visible brand name and product name on the label (e.g., "Pepsi", "Coca-Cola", "Diet Coke", "Red Bull", "Sprite")
+- Use the ACTUAL known nutritional values for that product (e.g., Pepsi 330ml = 150 kcal, Diet Coke 330ml = 1 kcal)
+- If the product is a diet or zero-sugar variant, calories must reflect that (near 0)
+- Never guess — use real product database knowledge
+
+CRITICAL rules for home/restaurant food:
+- Estimate realistic full portion sizes as served
+- Be specific (e.g. "Grilled Chicken Breast 150g with Rice 200g" not just "chicken")
+
+Required JSON structure (integers only):
 {
-  "detectedFood": "string — precise name of the meal/dish",
+  "detectedFood": "Precise brand and product name or dish name",
   "calories": integer,
-  "protein": integer (grams),
-  "carbs": integer (grams),
-  "fats": integer (grams)
+  "protein": integer,
+  "carbs": integer,
+  "fats": integer
 }
 
-Rules:
-- Be specific about the dish name (e.g. "Homemade Rice and Chicken Plate" not just "Chicken")
-- Estimate realistic restaurant/home portions
-- Never return prose or markdown — only the JSON object`;
+Never return prose or markdown — only the JSON object.`;
 
 // ── Recommendation Engine ────────────────────────────────────
 
@@ -213,53 +221,74 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
   const base64Image = file.buffer.toString("base64");
   const mimeType    = file.mimetype; // e.g. "image/jpeg"
 
-  // ── Step 3: Call local Ollama vision model ───────────────
-  const visionModel = process.env.OLLAMA_VISION_MODEL ?? "llava";
-  console.log(`🦙 [LocalLlama] Analyzing image with model: ${visionModel} (${(file.size / 1024).toFixed(1)} KB)`);
+  // ── Step 3: Call AI vision model (Gemini preferred, Ollama fallback) ───────
+  const geminiApiKey = process.env.GEMINI_API_KEY ?? "";
+  const useGemini = geminiApiKey.length > 0;
 
   let rawContent: string;
-  try {
-    const ollamaRes = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: visionModel,
-        prompt: VISION_SYSTEM_PROMPT,
-        images: [base64Image],
-        stream: false,
-        options: {
-          temperature: 0.1,
-          num_predict: 256,
-        },
-      }),
-      signal: AbortSignal.timeout(120_000), // 2-minute timeout for local inference
-    });
 
-    if (!ollamaRes.ok) {
-      const errText = await ollamaRes.text().catch(() => "");
-      throw new Error(`Ollama responded with ${ollamaRes.status}: ${errText.slice(0, 300)}`);
+  if (useGemini) {
+    // ── Fast path: Google Gemini Vision ─────────────────────
+    const geminiModelName = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+    console.log(`⚡ [Scan] Using Gemini Vision (${geminiModelName}) — ${(file.size / 1024).toFixed(1)} KB`);
+    try {
+      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const model = genAI.getGenerativeModel({ model: geminiModelName });
+      const imagePart = {
+        inlineData: { data: base64Image, mimeType: mimeType as "image/jpeg" | "image/png" | "image/webp" },
+      };
+      const result = await model.generateContent([VISION_SYSTEM_PROMPT, imagePart]);
+      rawContent = result.response.text().trim();
+      if (!rawContent) throw new Error("Gemini returned an empty response.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gemini vision failed";
+      console.error("❌ [Scan] Gemini error:", msg);
+      res.status(502).json({
+        success: false,
+        source: "local_llama_inference",
+        error: `Vision analysis failed: ${msg}`,
+        code: "GEMINI_ERROR",
+      });
+      return;
     }
-
-    const ollamaData = (await ollamaRes.json()) as any;
-    rawContent = ollamaData.response ?? ollamaData.message?.content ?? "";
-
-    if (!rawContent) {
-      throw new Error("Ollama returned an empty response body.");
+  } else {
+    // ── Fallback: Local Ollama vision model ──────────────────
+    const visionModel = process.env.OLLAMA_VISION_MODEL ?? "llava";
+    console.log(`🦙 [Scan] Using Ollama (${visionModel}) — ${(file.size / 1024).toFixed(1)} KB`);
+    try {
+      const ollamaRes = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: visionModel,
+          prompt: VISION_SYSTEM_PROMPT,
+          images: [base64Image],
+          stream: false,
+          options: { temperature: 0.1, num_predict: 200 },
+        }),
+        signal: AbortSignal.timeout(60_000), // 60-second timeout
+      });
+      if (!ollamaRes.ok) {
+        const errText = await ollamaRes.text().catch(() => "");
+        throw new Error(`Ollama responded with ${ollamaRes.status}: ${errText.slice(0, 300)}`);
+      }
+      const ollamaData = (await ollamaRes.json()) as any;
+      rawContent = ollamaData.response ?? ollamaData.message?.content ?? "";
+      if (!rawContent) throw new Error("Ollama returned an empty response body.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Ollama inference failed";
+      console.error("❌ [Scan] Ollama error:", msg);
+      const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort");
+      res.status(isTimeout ? 504 : 502).json({
+        success: false,
+        source: "local_llama_inference",
+        error: isTimeout
+          ? "Vision model timed out. Ensure Ollama is running and the vision model is loaded."
+          : `Vision inference failed: ${msg}`,
+        code: isTimeout ? "LLAMA_TIMEOUT" : "LLAMA_ERROR",
+      });
+      return;
     }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Ollama inference failed";
-    console.error("❌ [LocalLlama] Ollama error:", msg);
-
-    const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort");
-    res.status(isTimeout ? 504 : 502).json({
-      success: false,
-      source: "local_llama_inference",
-      error: isTimeout
-        ? "Local Llama model timed out. Ensure Ollama is running and the vision model is loaded."
-        : `Local Llama inference failed: ${msg}`,
-      code: isTimeout ? "LLAMA_TIMEOUT" : "LLAMA_ERROR",
-    });
-    return;
   }
 
   // ── Step 4: Parse structured macro data ─────────────────
