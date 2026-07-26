@@ -16,7 +16,6 @@ import { Request, Response } from "express";
 import { processUpload } from "../middleware/upload.middleware";
 import { OLLAMA_CONFIG, getAiScanLimit } from "../config";
 import prisma from "../services/prisma.service";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // ── Response Shape (matches Flutter LlamaMealResponse model) ─
 
@@ -42,29 +41,24 @@ export interface LlamaMealResponse {
 
 // ── Vision Prompt ────────────────────────────────────────────
 
-const VISION_SYSTEM_PROMPT = `You are a world-class nutritionist AI with expertise in Egyptian, Middle Eastern, and international food brands.
-Analyze the food or drink in the provided image and return ONLY a raw JSON object — no markdown, no explanations, no text outside the JSON.
+const VISION_SYSTEM_PROMPT = `You are an expert nutritionist AI running locally.
+Analyze the food or drink image provided and return ONLY a raw JSON object with NO markdown, NO explanation.
 
-CRITICAL rules for packaged/branded items (cans, bottles, boxes):
-- Read the visible brand name and product name on the label (e.g., "Pepsi", "Coca-Cola", "Diet Coke", "Red Bull", "Sprite")
-- Use the ACTUAL known nutritional values for that product (e.g., Pepsi 330ml = 150 kcal, Diet Coke 330ml = 1 kcal)
-- If the product is a diet or zero-sugar variant, calories must reflect that (near 0)
-- Never guess — use real product database knowledge
+CRITICAL RULES:
+1. DIET / ZERO SUGAR DRINKS: If you detect Diet Coke, Coke Zero, Pepsi Max, Diet Pepsi, Zero Sugar, Sprite Zero, or any Light/Diet beverage, calories MUST be 0 (or 1) and carbs MUST be 0. NEVER return 150 calories for a diet/zero drink!
+2. REGULAR PACKAGED FOOD/DRINKS: Read brand label. Regular 330ml soda = 150 kcal. Diet soda = 0 kcal.
+3. HOME/RESTAURANT MEALS: Estimate realistic portion sizes.
 
-CRITICAL rules for home/restaurant food:
-- Estimate realistic full portion sizes as served
-- Be specific (e.g. "Grilled Chicken Breast 150g with Rice 200g" not just "chicken")
-
-Required JSON structure (integers only):
+Required JSON format:
 {
-  "detectedFood": "Precise brand and product name or dish name",
+  "detectedFood": "exact food or drink name (e.g. Diet Coke 330ml Can)",
   "calories": integer,
   "protein": integer,
   "carbs": integer,
   "fats": integer
 }
 
-Never return prose or markdown — only the JSON object.`;
+Never return prose or markdown wrapper — output only the JSON object.`;
 
 // ── Recommendation Engine ────────────────────────────────────
 
@@ -74,7 +68,6 @@ function generateRecommendation(
 ): LlamaRecommendation {
   const { calories, protein, carbs, fats } = analysis;
 
-  // High-carb, low-protein: protein deficit warning
   if (carbs > 70 && protein < 30) {
     const deficit = Math.round(userProteinGoal * 0.2);
     return {
@@ -83,7 +76,6 @@ function generateRecommendation(
     };
   }
 
-  // Very high calories: caloric warning
   if (calories > 800) {
     return {
       triggerWarning: true,
@@ -91,7 +83,6 @@ function generateRecommendation(
     };
   }
 
-  // High fat content
   if (fats > 30) {
     return {
       triggerWarning: true,
@@ -99,7 +90,6 @@ function generateRecommendation(
     };
   }
 
-  // High protein, clean meal
   if (protein >= 30 && calories < 600) {
     return {
       triggerWarning: false,
@@ -107,14 +97,13 @@ function generateRecommendation(
     };
   }
 
-  // Balanced meal
   return {
     triggerWarning: false,
     message: `Llama says: This looks like a balanced meal. Your macros are within healthy ranges — Calories: ${calories} kcal, Protein: ${protein}g, Carbs: ${carbs}g, Fats: ${fats}g.`,
   };
 }
 
-// ── Parse Ollama Text Response (handles dirty JSON) ──────────
+// ── Parse Ollama Text Response (handles dirty JSON & sanitizes diet drinks) ──
 
 function parseOllamaResponse(raw: string): LlamaMealAnalysis {
   let text = raw.trim();
@@ -135,13 +124,26 @@ function parseOllamaResponse(raw: string): LlamaMealAnalysis {
     throw new Error(`Failed to parse Ollama JSON: ${jsonMatch[0].slice(0, 200)}`);
   }
 
-  const detectedFood = String(parsed.detectedFood ?? parsed.dish_name ?? parsed.food ?? "Unknown Meal");
-  const calories     = Math.round(Number(parsed.calories ?? 0));
-  const protein      = Math.round(Number(parsed.protein ?? 0));
-  const carbs        = Math.round(Number(parsed.carbs ?? parsed.carbohydrates ?? 0));
-  const fats         = Math.round(Number(parsed.fats ?? parsed.fat ?? 0));
+  let detectedFood = String(parsed.detectedFood ?? parsed.dish_name ?? parsed.food ?? "Unknown Meal");
+  let calories     = Math.round(Number(parsed.calories ?? 0));
+  let protein      = Math.round(Number(parsed.protein ?? 0));
+  let carbs        = Math.round(Number(parsed.carbs ?? parsed.carbohydrates ?? 0));
+  let fats         = Math.round(Number(parsed.fats ?? parsed.fat ?? 0));
 
-  if (calories === 0 && protein === 0 && carbs === 0 && fats === 0) {
+  // ── Smart Diet / Zero Sugar Calorie Sanitizer ─────────────
+  const lowerName = (detectedFood + " " + text).toLowerCase();
+  const isDietDrink = /(diet|zero|max|light|no sugar|sugar free|zero sugar)/i.test(lowerName) && 
+                      /(coke|coca|pepsi|soda|cola|sprite|7up|seven up|dr pepper|fanta|drink|can|beverage)/i.test(lowerName);
+
+  if (isDietDrink) {
+    console.log(`🥤 [LocalLlama] Detected Diet/Zero beverage: "${detectedFood}". Overriding calories from ${calories} -> 1 kcal`);
+    calories = 1;
+    carbs = 0;
+    fats = 0;
+    protein = 0;
+  }
+
+  if (calories === 0 && protein === 0 && carbs === 0 && fats === 0 && !isDietDrink) {
     throw new Error("Ollama returned all-zero macros — likely failed to identify the food.");
   }
 
@@ -221,74 +223,47 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
   const base64Image = file.buffer.toString("base64");
   const mimeType    = file.mimetype; // e.g. "image/jpeg"
 
-  // ── Step 3: Call AI vision model (Gemini preferred, Ollama fallback) ───────
-  const geminiApiKey = process.env.GEMINI_API_KEY ?? "";
-  const useGemini = geminiApiKey.length > 0;
+  // ── Step 3: Call local Ollama vision model (llava) ────────
+  const visionModel = process.env.OLLAMA_VISION_MODEL ?? "llava";
+  console.log(`🦙 [LocalLlama] Analyzing image with model: ${visionModel} (${(file.size / 1024).toFixed(1)} KB)`);
 
   let rawContent: string;
+  try {
+    const ollamaRes = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: visionModel,
+        prompt: VISION_SYSTEM_PROMPT,
+        images: [base64Image],
+        stream: false,
+        options: { temperature: 0.1, num_predict: 200 },
+      }),
+      signal: AbortSignal.timeout(120_000), // 2-minute timeout for local inference
+    });
 
-  if (useGemini) {
-    // ── Fast path: Google Gemini Vision ─────────────────────
-    const geminiModelName = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
-    console.log(`⚡ [Scan] Using Gemini Vision (${geminiModelName}) — ${(file.size / 1024).toFixed(1)} KB`);
-    try {
-      const genAI = new GoogleGenerativeAI(geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: geminiModelName });
-      const imagePart = {
-        inlineData: { data: base64Image, mimeType: mimeType as "image/jpeg" | "image/png" | "image/webp" },
-      };
-      const result = await model.generateContent([VISION_SYSTEM_PROMPT, imagePart]);
-      rawContent = result.response.text().trim();
-      if (!rawContent) throw new Error("Gemini returned an empty response.");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gemini vision failed";
-      console.error("❌ [Scan] Gemini error:", msg);
-      res.status(502).json({
-        success: false,
-        source: "local_llama_inference",
-        error: `Vision analysis failed: ${msg}`,
-        code: "GEMINI_ERROR",
-      });
-      return;
+    if (!ollamaRes.ok) {
+      const errText = await ollamaRes.text().catch(() => "");
+      throw new Error(`Ollama responded with ${ollamaRes.status}: ${errText.slice(0, 300)}`);
     }
-  } else {
-    // ── Fallback: Local Ollama vision model ──────────────────
-    const visionModel = process.env.OLLAMA_VISION_MODEL ?? "llava";
-    console.log(`🦙 [Scan] Using Ollama (${visionModel}) — ${(file.size / 1024).toFixed(1)} KB`);
-    try {
-      const ollamaRes = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: visionModel,
-          prompt: VISION_SYSTEM_PROMPT,
-          images: [base64Image],
-          stream: false,
-          options: { temperature: 0.1, num_predict: 200 },
-        }),
-        signal: AbortSignal.timeout(60_000), // 60-second timeout
-      });
-      if (!ollamaRes.ok) {
-        const errText = await ollamaRes.text().catch(() => "");
-        throw new Error(`Ollama responded with ${ollamaRes.status}: ${errText.slice(0, 300)}`);
-      }
-      const ollamaData = (await ollamaRes.json()) as any;
-      rawContent = ollamaData.response ?? ollamaData.message?.content ?? "";
-      if (!rawContent) throw new Error("Ollama returned an empty response body.");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Ollama inference failed";
-      console.error("❌ [Scan] Ollama error:", msg);
-      const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort");
-      res.status(isTimeout ? 504 : 502).json({
-        success: false,
-        source: "local_llama_inference",
-        error: isTimeout
-          ? "Vision model timed out. Ensure Ollama is running and the vision model is loaded."
-          : `Vision inference failed: ${msg}`,
-        code: isTimeout ? "LLAMA_TIMEOUT" : "LLAMA_ERROR",
-      });
-      return;
-    }
+
+    const ollamaData = (await ollamaRes.json()) as any;
+    rawContent = ollamaData.response ?? ollamaData.message?.content ?? "";
+
+    if (!rawContent) throw new Error("Ollama returned an empty response body.");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Ollama inference failed";
+    console.error("❌ [LocalLlama] Ollama error:", msg);
+    const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort");
+    res.status(isTimeout ? 504 : 502).json({
+      success: false,
+      source: "local_llama_inference",
+      error: isTimeout
+        ? "Local Llama model timed out. Ensure Ollama is running and llava is loaded."
+        : `Local Llama inference failed: ${msg}`,
+      code: isTimeout ? "LLAMA_TIMEOUT" : "LLAMA_ERROR",
+    });
+    return;
   }
 
   // ── Step 4: Parse structured macro data ─────────────────
