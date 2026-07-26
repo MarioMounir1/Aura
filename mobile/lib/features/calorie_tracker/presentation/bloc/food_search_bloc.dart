@@ -137,38 +137,39 @@ class FoodSearchBloc extends Bloc<FoodSearchEvent, FoodSearchState> {
     final isExternal = event.foodItemData != null &&
         (event.foodItemData!['source'] == 'external' || event.foodItemId.startsWith('off_'));
 
-    final result = isExternal
-        ? await () async {
-            final item = event.foodItemData!;
-            final double calories = ((item['calories'] as num?)?.toDouble() ?? 0.0) * event.servings;
-            final double protein  = ((item['protein']  as num?)?.toDouble() ?? 0.0) * event.servings;
-            final double carbs    = ((item['carbs']    as num?)?.toDouble() ?? 0.0) * event.servings;
-            final double fats     = ((item['fats']     as num?)?.toDouble() ?? 0.0) * event.servings;
-            final String mealName = item['nameEn'] ?? item['nameAr'] ?? 'Food Search Item';
+    final dynamic result;
+    if (isExternal) {
+      final item = event.foodItemData!;
+      final double calories = ((item['calories'] as num?)?.toDouble() ?? 0.0) * event.servings;
+      final double protein  = ((item['protein']  as num?)?.toDouble() ?? 0.0) * event.servings;
+      final double carbs    = ((item['carbs']    as num?)?.toDouble() ?? 0.0) * event.servings;
+      final double fats     = ((item['fats']     as num?)?.toDouble() ?? 0.0) * event.servings;
+      final String mealName = item['nameEn'] ?? item['nameAr'] ?? 'Food Search Item';
 
-            return repository.logManualMeal(
-              mealName: mealName,
-              calories: calories,
-              protein: protein,
-              carbs: carbs,
-              fats: fats,
-              mealType: event.mealType,
-              source: 'food-search',
-              rawAiResponse: {
-                'externalId': event.foodItemId,
-                'productName': mealName,
-                'servings': event.servings,
-                'servingSize': item['servingSize'],
-                'servingUnit': item['servingUnit'],
-                'source': 'open_food_facts',
-              },
-            );
-          }()
-        : await repository.logFood(
-            foodItemId: event.foodItemId,
-            servings: event.servings,
-            mealType: event.mealType,
-          );
+      result = await repository.logManualMeal(
+        mealName: mealName,
+        calories: calories,
+        protein: protein,
+        carbs: carbs,
+        fats: fats,
+        mealType: event.mealType,
+        source: 'food-search',
+        rawAiResponse: {
+          'externalId': event.foodItemId,
+          'productName': mealName,
+          'servings': event.servings,
+          'servingSize': item['servingSize'],
+          'servingUnit': item['servingUnit'],
+          'source': 'open_food_facts',
+        },
+      );
+    } else {
+      result = await repository.logFood(
+        foodItemId: event.foodItemId,
+        servings: event.servings,
+        mealType: event.mealType,
+      );
+    }
 
     result.fold(
       (failure) => emit(FoodSearchFailure(failure.message)),
