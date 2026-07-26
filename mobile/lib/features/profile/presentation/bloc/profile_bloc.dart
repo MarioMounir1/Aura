@@ -97,7 +97,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     UpdateProfileEvent event,
     Emitter<ProfileState> emit,
   ) async {
-    emit(ProfileLoading());
+    if (state is! ProfileLoaded) {
+      emit(ProfileLoading());
+    }
     final result = await repository.updateProfile(
       name: event.name,
       age: event.age,
