@@ -8,7 +8,7 @@ import { Router } from "express";
 import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler, updateMealLog } from "../controllers/meal.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
-import { scanBarcodeHandler, logBarcodeHandler } from "../controllers/barcode.controller";
+import { scanBarcodeHandler, logBarcodeHandler, estimateBarcodeHandler } from "../controllers/barcode.controller";
 import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
 import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
@@ -280,6 +280,15 @@ router.post("/meals/manual", requireAuth, manualLogMealHandler);
  * @body    { barcode: string }
  */
 router.post("/meals/scan-barcode", requireAuth, barcodeLimiter, scanBarcodeHandler);
+
+/**
+ * @route   POST /api/v1/meals/estimate-barcode
+ * @desc    Estimate nutrition for a missing barcode product using text AI
+ *          and map the barcode to FoodItem in database.
+ * @access  Private (JWT required)
+ * @body    { barcode: string, productName: string }
+ */
+router.post("/meals/estimate-barcode", requireAuth, barcodeLimiter, estimateBarcodeHandler);
 
 /**
  * @route   POST /api/v1/meals/log-barcode
