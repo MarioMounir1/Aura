@@ -37,6 +37,7 @@ abstract class AppColors {
   static const Color lime          = Color(0xFFCDDC39);
 
   // Aliases for dashboard and workout screens compatibility
+  static const Color primary        = accent;
   static const Color bg             = background;
   static const Color cardBackground = card;
   static const Color cardSurface    = surface;
