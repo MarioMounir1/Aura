@@ -16,6 +16,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
+import { estimateNutritionFromName } from "../services/ai.service";
 
 // ── In-Memory Barcode Cache ────────────────────────────────────
 
@@ -47,6 +48,7 @@ function setCache(barcode: string, data: BarcodeNutrition): void {
 interface BarcodeNutrition {
   barcode: string;
   productName: string;
+  dataSource?: string;
   /** All values are per 100 g of product */
   per100g: {
     calories: number;
@@ -68,6 +70,19 @@ const ScanBarcodeSchema = z.object({
         .min(4, "Barcode must be at least 4 digits")
         .max(20, "Barcode must be at most 20 digits")
     ),
+});
+
+const EstimateBarcodeSchema = z.object({
+  barcode: z
+    .string()
+    .transform((val) => val.trim().replace(/[^\d]/g, ""))
+    .pipe(
+      z
+        .string()
+        .min(4, "Barcode must be at least 4 digits")
+        .max(20, "Barcode must be at most 20 digits")
+    ),
+  productName: z.string().min(1, "Product name is required").max(300).trim(),
 });
 
 const LogBarcodeSchema = z.object({
@@ -95,9 +110,8 @@ function safeNum(value: unknown): number {
  * POST /api/v1/meals/scan-barcode
  * Body: { barcode: string }
  *
- * Returns per-100g nutrition from Open Food Facts.
- * Responds 404 if barcode is not found (status:0 or HTTP 404 in OFF API).
- * Does NOT write to MealLog — that's the log-barcode endpoint's job.
+ * Returns per-100g nutrition from local DB or Open Food Facts.
+ * Responds 404 if barcode is not found.
  */
 export async function scanBarcodeHandler(
   req: Request,
@@ -115,6 +129,36 @@ export async function scanBarcodeHandler(
   }
 
   const { barcode } = parsed.data;
+
+  // ── Step 0: Check Local Database for mapped barcode ──────────
+  try {
+    const dbItem = await prisma.foodItem.findUnique({
+      where: { barcode },
+    });
+    if (dbItem) {
+      const dbNutrition: BarcodeNutrition = {
+        barcode,
+        productName: dbItem.nameEn,
+        dataSource: dbItem.dataSource,
+        per100g: {
+          calories: dbItem.calories,
+          protein: dbItem.protein,
+          carbs: dbItem.carbs,
+          fats: dbItem.fats,
+        },
+      };
+      setCache(barcode, dbNutrition);
+      console.log(`✅ [Barcode] Database HIT: ${barcode} — ${dbItem.nameEn} (${dbItem.dataSource})`);
+      res.status(200).json({
+        success: true,
+        source: "local_db",
+        data: dbNutrition,
+      });
+      return;
+    }
+  } catch (dbErr) {
+    console.warn(`⚠️ [Barcode] Local DB check error for ${barcode}:`, dbErr);
+  }
 
   // ── Cache check ─────────────────────────────────────────────
   const cached = getCached(barcode);
@@ -312,5 +356,122 @@ export async function logBarcodeHandler(
       barcode,
       loggedAt: new Date().toISOString(),
     },
+  });
+}
+
+// ── Handler 3: Estimate Nutrition for Missing Barcode Product ──
+
+/**
+ * POST /api/v1/meals/estimate-barcode
+ * Body: { barcode: string, productName: string }
+ *
+ * Runs user-provided product name through text-only AI nutrition estimation
+ * (estimateNutritionFromName), saves to FoodItem database with barcode mapping,
+ * and caches for instant future lookups.
+ */
+export async function estimateBarcodeHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const parsed = EstimateBarcodeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Invalid input",
+      details: parsed.error.flatten().fieldErrors,
+      code: "VALIDATION_ERROR",
+    });
+    return;
+  }
+
+  const { barcode, productName } = parsed.data;
+
+  // 1. Check if already mapped in DB
+  try {
+    const existing = await prisma.foodItem.findUnique({
+      where: { barcode },
+    });
+    if (existing) {
+      const existingNutrition: BarcodeNutrition = {
+        barcode,
+        productName: existing.nameEn,
+        dataSource: existing.dataSource,
+        per100g: {
+          calories: existing.calories,
+          protein: existing.protein,
+          carbs: existing.carbs,
+          fats: existing.fats,
+        },
+      };
+      setCache(barcode, existingNutrition);
+      res.status(200).json({
+        success: true,
+        source: "local_db",
+        data: existingNutrition,
+      });
+      return;
+    }
+  } catch (err) {
+    console.warn(`⚠️ [Barcode] DB check error before estimation for ${barcode}:`, err);
+  }
+
+  // 2. Run text-only AI nutrition estimation
+  console.log(`🤖 [Barcode] Estimating nutrition via text AI for: "${productName}" (${barcode})`);
+  let estimate;
+  try {
+    estimate = await estimateNutritionFromName(productName);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "AI estimation failed";
+    console.error(`❌ [Barcode] AI estimation failed for "${productName}":`, msg);
+    res.status(500).json({
+      success: false,
+      error: `Nutrition estimation failed: ${msg}`,
+      code: "ESTIMATION_ERROR",
+    });
+    return;
+  }
+
+  // 3. Save to FoodItem table with barcode mapping
+  try {
+    const createdItem = await prisma.foodItem.create({
+      data: {
+        nameEn: productName,
+        nameAr: productName,
+        calories: estimate.calories,
+        protein: estimate.protein,
+        carbs: estimate.carbs,
+        fats: estimate.fats,
+        fiber: 0,
+        servingSize: 100,
+        servingUnit: "g",
+        category: "General",
+        isVerified: false,
+        dataSource: "ai-estimated",
+        barcode: barcode,
+      },
+    });
+    console.log(`🌱 [Barcode] Auto-persisted barcode mapping: "${productName}" -> barcode:${barcode} (${createdItem.id})`);
+  } catch (err: unknown) {
+    console.error("❌ [Barcode] Failed to persist food item mapping:", err);
+  }
+
+  const nutrition: BarcodeNutrition = {
+    barcode,
+    productName: estimate.dishName || productName,
+    dataSource: "ai-estimated",
+    per100g: {
+      calories: estimate.calories,
+      protein: estimate.protein,
+      carbs: estimate.carbs,
+      fats: estimate.fats,
+    },
+  };
+
+  setCache(barcode, nutrition);
+
+  res.status(200).json({
+    success: true,
+    source: "ai-estimated",
+    data: nutrition,
   });
 }
