@@ -47,7 +47,7 @@ class AppMetricRing extends StatelessWidget {
             painter: _RingPainter(
               progress: clampedProgress,
               color: roleColor,
-              trackColor: theme.borderMid.withValues(alpha: 0.5),
+              trackColor: theme.border,
               strokeWidth: strokeWidth,
             ),
           ),
