@@ -8,25 +8,40 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get darkTheme {
-    return ThemeData.dark().copyWith(
+  static ThemeData get lightTheme {
+    final base = ThemeData.light();
+    return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: const ColorScheme.light(
         surface: AppColors.card,
-        primary: AppColors.accent,
-        secondary: AppColors.lime,
+        primary: AppColors.primaryAccent,
+        secondary: AppColors.cyan,
         error: AppColors.error,
       ),
+      extensions: const [
+        AuraThemeExtension.light,
+      ],
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        titleTextStyle: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       textTheme: GoogleFonts.interTextTheme(
-        ThemeData.dark().textTheme,
+        base.textTheme,
       ).apply(
         bodyColor: AppColors.textPrimary,
         displayColor: AppColors.textPrimary,
       ),
     );
   }
+
+  /// Default theme set to lightTheme as per design spec
+  static ThemeData get darkTheme => lightTheme;
 }
+
