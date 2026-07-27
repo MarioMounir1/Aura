@@ -15,23 +15,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../data/models/barcode_product.dart';
 import '../data/services/barcode_service.dart';
 
-// Re-use the same color palette as the main dashboard
-class _C {
-  static const card       = Color(0xFF121824);
-  static const surface    = Color(0xFF1B2232);
-  static const track      = Color(0xFF222B3F);
-  static const emerald    = Color(0xFF4CAF50);
-  static const lime       = Color(0xFFCDDC39);
-  static const blue       = Color(0xFF00BCD4);
-  static const amber      = Color(0xFFFFC107);
-  static const red        = Color(0xFFF44336);
-  static const textPri    = Color(0xFFFFFFFF);
-  static const textSec    = Color(0xFF8E929C);
-  static const textMuted  = Color(0xFF5D616B);
-}
+typedef _C = AppColors;
 
 class BarcodeConfirmationSheet extends StatefulWidget {
   final BarcodeProduct product;
@@ -170,10 +158,18 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(Icons.verified_outlined, size: 11, color: _C.amber),
+                          Icon(
+                            widget.product.dataSource == 'ai-estimated'
+                                ? Icons.auto_awesome
+                                : Icons.verified_outlined,
+                            size: 11,
+                            color: _C.amber,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            'Open Food Facts · per 100g',
+                            widget.product.dataSource == 'ai-estimated'
+                                ? 'AI Estimated · per 100g'
+                                : 'Open Food Facts · per 100g',
                             style: GoogleFonts.inter(fontSize: 11, color: _C.textMuted),
                           ),
                         ],
