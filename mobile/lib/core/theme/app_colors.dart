@@ -1,9 +1,9 @@
 // lib/core/theme/app_colors.dart
-// Aura — Centralized App-Wide Color Design Tokens & Light Theme Extension
+// Aura — Centralized App-Wide Color Design Tokens & Dark Theme Extension
 
 import 'package:flutter/material.dart';
 
-/// ThemeExtension for Aura's design system tokens to support seamless light/dark mode toggling.
+/// ThemeExtension for Aura's design system tokens to support seamless dark/light mode toggling.
 @immutable
 class AuraThemeExtension extends ThemeExtension<AuraThemeExtension> {
   final Color background;
@@ -50,40 +50,42 @@ class AuraThemeExtension extends ThemeExtension<AuraThemeExtension> {
     required this.scanBarcodeGradient,
   });
 
-  static const AuraThemeExtension light = AuraThemeExtension(
-    background: Color(0xFFFFFFFF),
-    card: Color(0xFFE1EEFD),
-    surface: Color(0xFFE1EEFD),
-    surfaceVariant: Color(0xFFDDE6F4),
-    border: Color(0xFFDDE6F4),
-    borderMid: Color(0xFFCBD5E1),
-    textPrimary: Color(0xFF0F172A),
-    textSecondary: Color(0xFF475569),
-    textMuted: Color(0xFF94A3B8),
-    primary: Color(0xFF1479EA),
+  static const AuraThemeExtension dark = AuraThemeExtension(
+    background: Color(0xFF090C15),
+    card: Color(0xFF121824),
+    surface: Color(0xFF1B2232),
+    surfaceVariant: Color(0xFF1B2232),
+    border: Color(0xFF222B3F),
+    borderMid: Color(0xFF374151),
+    textPrimary: Color(0xFFFFFFFF),
+    textSecondary: Color(0xFF8E929C),
+    textMuted: Color(0xFF5D616B),
+    primary: Color(0xFF00BCD4),
     accentCyan: Color(0xFF00BCD4),
-    success: Color(0xFF10B981),
-    warning: Color(0xFFF59E0B),
-    error: Color(0xFFEF4444),
-    protein: Color(0xFF10B981),
-    carbs: Color(0xFF1479EA),
-    fats: Color(0xFFF59E0B),
+    success: Color(0xFF4CAF50),
+    warning: Color(0xFFFFC107),
+    error: Color(0xFFF44336),
+    protein: Color(0xFF4CAF50),
+    carbs: Color(0xFF00BCD4),
+    fats: Color(0xFFF44336),
     snapMealGradient: LinearGradient(
-      colors: [Color(0xFF10B981), Color(0xFF059669)],
+      colors: [Color(0xFF064E3B), Color(0xFF065F46)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     uploadScreenshotGradient: LinearGradient(
-      colors: [Color(0xFF1479EA), Color(0xFF0D5CB6)],
+      colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     scanBarcodeGradient: LinearGradient(
-      colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+      colors: [Color(0xFF451A03), Color(0xFF92400E)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
   );
+
+  static const AuraThemeExtension light = dark;
 
   @override
   AuraThemeExtension copyWith({
@@ -162,55 +164,55 @@ class AuraThemeExtension extends ThemeExtension<AuraThemeExtension> {
 
 extension AuraThemeBuildContext on BuildContext {
   AuraThemeExtension get auraTheme =>
-      Theme.of(this).extension<AuraThemeExtension>() ?? AuraThemeExtension.light;
+      Theme.of(this).extension<AuraThemeExtension>() ?? AuraThemeExtension.dark;
 }
 
 abstract class AppColors {
-  // ── Backgrounds & Surfaces (Light Mode Defaults) ─────────────
-  static const Color background     = Color(0xFFFFFFFF);
-  static const Color card           = Color(0xFFE1EEFD);
-  static const Color surface        = Color(0xFFE1EEFD);
-  static const Color border         = Color(0xFFDDE6F4);
-  static const Color borderMid      = Color(0xFFCBD5E1);
+  // ── Backgrounds & Surfaces (Dark Mode Specs) ─────────────────
+  static const Color background     = Color(0xFF090C15);
+  static const Color card           = Color(0xFF121824);
+  static const Color surface        = Color(0xFF1B2232);
+  static const Color border         = Color(0xFF222B3F);
+  static const Color borderMid      = Color(0xFF374151);
 
   // ── Typography ──────────────────────────────────────────────
-  static const Color textPrimary   = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF475569);
-  static const Color textMuted     = Color(0xFF94A3B8);
+  static const Color textPrimary   = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFF8E929C);
+  static const Color textMuted     = Color(0xFF5D616B);
 
   // ── Primary Brand & Signature Accents ────────────────────────
-  static const Color primaryAccent = Color(0xFF1479EA); // Verified Primary Blue
-  static const Color accent        = Color(0xFF00BCD4); // Signature Cyan (CTAs/Streaks)
+  static const Color primaryAccent = Color(0xFF00BCD4); // Cyan Accent
+  static const Color accent        = Color(0xFF00BCD4);
   static const Color cyan          = Color(0xFF00BCD4);
-  static const Color primary       = primaryAccent;
-  static const Color lime          = Color(0xFF84CC16);
+  static const Color primary       = Color(0xFF00BCD4);
+  static const Color lime          = Color(0xFFCDDC39);
 
   // ── Semantic Roles ──────────────────────────────────────────
-  static const Color success       = Color(0xFF10B981);
-  static const Color emerald       = Color(0xFF10B981);
-  static const Color warning       = Color(0xFFF59E0B);
-  static const Color amber         = Color(0xFFF59E0B);
-  static const Color error         = Color(0xFFEF4444);
-  static const Color danger        = Color(0xFFEF4444);
+  static const Color success       = Color(0xFF4CAF50);
+  static const Color emerald       = Color(0xFF4CAF50);
+  static const Color warning       = Color(0xFFFFC107);
+  static const Color amber         = Color(0xFFFFC107);
+  static const Color error         = Color(0xFFF44336);
+  static const Color danger        = Color(0xFFF44336);
 
   // ── Macro Nutrients ──────────────────────────────────────────
-  static const Color protein       = Color(0xFF10B981);
-  static const Color carbs         = Color(0xFF1479EA);
-  static const Color fats          = Color(0xFFF59E0B);
+  static const Color protein       = Color(0xFF4CAF50);
+  static const Color carbs         = Color(0xFF00BCD4);
+  static const Color fats          = Color(0xFFF44336);
 
   // ── Action Tile Gradients ────────────────────────────────────
   static const LinearGradient snapMealGradient = LinearGradient(
-    colors: [Color(0xFF10B981), Color(0xFF059669)],
+    colors: [Color(0xFF064E3B), Color(0xFF065F46)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
   static const LinearGradient uploadScreenshotGradient = LinearGradient(
-    colors: [Color(0xFF1479EA), Color(0xFF0D5CB6)],
+    colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
   static const LinearGradient scanBarcodeGradient = LinearGradient(
-    colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+    colors: [Color(0xFF451A03), Color(0xFF92400E)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -220,32 +222,33 @@ abstract class AppColors {
   static const Color cardBackground = card;
   static const Color cardSurface    = surface;
   static const Color cardElev       = surface;
-  static const Color surfaceVariant = Color(0xFFDDE6F4);
+  static const Color surfaceVariant = surface;
   static const Color textPri        = textPrimary;
   static const Color textSec        = textSecondary;
   static const Color textMut        = textMuted;
   static const Color accentEmerald  = emerald;
   static const Color accentLime     = lime;
-  static const Color accentBlue     = primaryAccent;
+  static const Color accentBlue     = cyan;
   static const Color accentCyan     = cyan;
   static const Color accentRed      = error;
   static const Color accentAmber    = amber;
   static const Color trackBg        = border;
   static const Color track          = border;
-  static const Color bgSecondary    = card;
+  static const Color bgSecondary    = surface;
   static const Color borderSubtle   = border;
   static const Color red            = error;
-  static const Color blue           = primaryAccent;
+  static const Color blue           = cyan;
   static const LinearGradient cardGradient = LinearGradient(
-    colors: [Color(0xFFFFFFFF), Color(0xFFE1EEFD)],
+    colors: [card, surface],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-  static const Color primaryDark    = Color(0xFF0D5CB6);
+  static const Color primaryDark    = Color(0xFF008BA3);
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primaryAccent, Color(0xFF0D5CB6)],
+    colors: [cyan, Color(0xFF008BA3)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 }
+
 
