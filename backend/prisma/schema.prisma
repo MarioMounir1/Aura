@@ -183,6 +183,7 @@ model FoodItem {
   category    String
   isVerified  Boolean    @default(false)
   dataSource  String     @default("verified")
+  barcode     String?    @unique
 
   foodLogs    FoodLog[]
   mealPlans   MealPlan[]
@@ -193,6 +194,7 @@ model FoodItem {
   @@index([nameEn])
   @@index([nameAr])
   @@index([category])
+  @@index([barcode])
 }
 
 // -- Food Log (Daily logging from food database) -------------
