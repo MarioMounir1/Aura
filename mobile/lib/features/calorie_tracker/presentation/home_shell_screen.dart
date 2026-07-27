@@ -115,10 +115,10 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
       decoration: BoxDecoration(
         color: theme.card,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: theme.borderMid.withValues(alpha: 0.6), width: 1.0),
+        border: Border.all(color: theme.border, width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.35),
             blurRadius: 16,
             spreadRadius: 1,
             offset: const Offset(0, 4),
