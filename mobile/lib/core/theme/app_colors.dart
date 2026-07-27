@@ -66,4 +66,10 @@ abstract class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+  static const Color primaryDark    = Color(0xFF008BA3);
+  static const LinearGradient primaryGradient = LinearGradient(
+    colors: [cyan, Color(0xFF008BA3)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
