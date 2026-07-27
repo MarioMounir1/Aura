@@ -941,7 +941,55 @@ class _ProcessingStateWidgetState extends State<_ProcessingStateWidget>
                     boxShadow: [
                       BoxShadow(
                         color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.6),
-                        blurRadius// ── Result Card Widget (Redesigned per aura_design_spec.md Section 2) ──
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Analyzing meal components locally...',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: DashboardThemeColors.accentEmerald,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shimmerLine({required double width, required double height}) {
+    return FractionallySizedBox(
+      widthFactor: width,
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(6),
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerBox(double w, double h) {
+    return Container(
+      width: w,
+      height: h,
+      decoration: BoxDecoration(
+        color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
+  }
+}
+
+// ── Result Card Widget (Redesigned per aura_design_spec.md Section 2) ──
 
 class _ResultCardWidget extends StatefulWidget {
   final LlamaMealResponse llamaResult;
@@ -1158,9 +1206,9 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
-                            color: theme.surfaceVariant.withValues(alpha: 0.6),
+                            color: theme.surface,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: theme.borderMid),
+                            border: Border.all(color: theme.border),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1278,9 +1326,9 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: theme.surfaceVariant.withValues(alpha: 0.5),
+                    color: theme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.borderMid.withValues(alpha: 0.6)),
+                    border: Border.all(color: theme.border),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1320,7 +1368,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                         child: LinearProgressIndicator(
                           value: (healthScore / 100).clamp(0.0, 1.0),
                           minHeight: 6,
-                          backgroundColor: theme.borderMid.withValues(alpha: 0.4),
+                          backgroundColor: theme.border,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             healthScore >= 70
                                 ? AppColors.success
@@ -1343,13 +1391,13 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: rec.triggerWarning
-                          ? AppColors.warning.withValues(alpha: 0.08)
-                          : theme.primary.withValues(alpha: 0.08),
+                          ? AppColors.warning.withValues(alpha: 0.12)
+                          : theme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: rec.triggerWarning
-                            ? AppColors.warning.withValues(alpha: 0.3)
-                            : theme.primary.withValues(alpha: 0.3),
+                            ? AppColors.warning.withValues(alpha: 0.4)
+                            : theme.primary.withValues(alpha: 0.4),
                       ),
                     ),
                     child: Column(
@@ -1381,7 +1429,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             height: 1.4,
-                            color: theme.textSecondary,
+                            color: theme.textPrimary,
                           ),
                         ),
                       ],
@@ -1425,7 +1473,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.background,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -1446,12 +1494,12 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: theme.card.withValues(alpha: 0.95),
+        color: theme.surface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: theme.primary.withValues(alpha: 0.6), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1478,16 +1526,16 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.surfaceVariant.withValues(alpha: 0.5),
+        color: theme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.borderMid.withValues(alpha: 0.6)),
+        border: Border.all(color: theme.border),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
+              color: iconColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: iconColor, size: 18),
@@ -1516,86 +1564,6 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-                       style: ElevatedButton.styleFrom(
-                          backgroundColor: DashboardThemeColors.accentEmerald,
-                          foregroundColor: Colors.black,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton(
-                      onPressed: onDiscard,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: DashboardThemeColors.textSecondary,
-                        side: const BorderSide(color: DashboardThemeColors.trackBg),
-                        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text(
-                        'Discard',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMacroCell(String emoji, String value, String unit, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            emoji,
-            style: GoogleFonts.inter(fontSize: 11, color: DashboardThemeColors.textMuted),
-          ),
-          const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: DashboardThemeColors.textPrimary,
-                ),
-              ),
-              const SizedBox(width: 3),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Text(
-                  unit,
-                  style: GoogleFonts.inter(
-                    fontSize: 10,
-                    color: DashboardThemeColors.textSecondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
