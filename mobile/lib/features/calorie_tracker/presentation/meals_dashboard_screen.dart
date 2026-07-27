@@ -28,6 +28,8 @@ import '../data/services/barcode_service.dart';
 import 'barcode_confirmation_sheet.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/constants.dart';
+import '../../../../core/widgets/app_metric_ring.dart';
+import '../../../../core/widgets/app_action_tile.dart';
 import '../../../core/widgets/ad_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
@@ -500,18 +502,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
       isPremium = profileState.isPremium;
     }
 
-    return Theme(
-      data: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: DashboardThemeColors.background,
-        colorScheme: const ColorScheme.dark(
-          primary: DashboardThemeColors.accentEmerald,
-          secondary: DashboardThemeColors.accentLime,
-          surface: DashboardThemeColors.cardBackground,
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: DashboardThemeColors.background,
-        body: SafeArea(
+    return Scaffold(
+      backgroundColor: DashboardThemeColors.background,
+      body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -563,8 +556,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
 
@@ -1497,27 +1489,37 @@ class _MacroRingsSection extends StatelessWidget {
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.auraTheme;
+    final calProgress = caloriesTarget > 0 ? (caloriesConsumed / caloriesTarget).clamp(0.0, 1.0) : 0.0;
+    final calRemaining = (caloriesTarget - caloriesConsumed).round();
+    final remainingText = calRemaining >= 0 ? '$calRemaining kcal left' : '${-calRemaining} kcal over';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
-        splashColor: DashboardThemeColors.accentEmerald.withValues(alpha: 0.06),
-        highlightColor: DashboardThemeColors.accentEmerald.withValues(alpha: 0.03),
+        splashColor: theme.primary.withValues(alpha: 0.06),
+        highlightColor: theme.primary.withValues(alpha: 0.03),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
+            color: theme.card,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: DashboardThemeColors.trackBg),
+            border: Border.all(color: theme.borderMid.withValues(alpha: 0.6)),
             boxShadow: [
               BoxShadow(
-                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header Row with Title and Signature Cyan Streak Badge
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1528,7 +1530,7 @@ class _MacroRingsSection extends StatelessWidget {
                         style: GoogleFonts.outfit(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: DashboardThemeColors.textPrimary,
+                          color: theme.textPrimary,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -1536,44 +1538,95 @@ class _MacroRingsSection extends StatelessWidget {
                         message: 'Tap to log manually',
                         child: Icon(
                           Icons.edit_note_rounded,
-                          size: 16,
-                          color: DashboardThemeColors.textMuted,
+                          size: 18,
+                          color: AppColors.cyan,
                         ),
                       ),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.cyan.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4)),
                     ),
-                    child: Text(
-                      '${caloriesTarget > 0 ? ((caloriesConsumed / caloriesTarget) * 100).round() : 0}% Target',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: DashboardThemeColors.accentEmerald,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.local_fire_department_rounded, size: 14, color: AppColors.cyan),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${caloriesTarget > 0 ? ((caloriesConsumed / caloriesTarget) * 100).round() : 0}% Target',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.cyan,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
-              LayoutBuilder(builder: (ctx, constraints) {
-                const spacing = 12.0;
-                final itemW = (constraints.maxWidth - spacing * 3) / 4;
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _MacroRing(label: 'Calories', consumed: caloriesConsumed, target: caloriesTarget, unit: 'kcal', color: DashboardThemeColors.accentEmerald, width: itemW),
-                    _MacroRing(label: 'Protein',  consumed: proteinConsumed,  target: proteinTarget,  unit: 'g',    color: DashboardThemeColors.accentBlue,    width: itemW),
-                    _MacroRing(label: 'Carbs',    consumed: carbsConsumed,    target: carbsTarget,    unit: 'g',    color: DashboardThemeColors.accentAmber,   width: itemW),
-                    _MacroRing(label: 'Fats',     consumed: fatsConsumed,     target: fatsTarget,     unit: 'g',    color: DashboardThemeColors.accentRed,     width: itemW),
-                  ],
-                );
-              }),
+              const SizedBox(height: 20),
+
+              // ── 1. DOMINANT PRIMARY CALORIE RING ──────────────────
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: calProgress),
+                duration: const Duration(milliseconds: 1400),
+                curve: Curves.easeOutCubic,
+                builder: (_, v, __) => AppMetricRing(
+                  value: '${caloriesConsumed.round()}',
+                  label: remainingText,
+                  progress: v,
+                  roleColor: AppColors.primaryAccent,
+                  size: 140.0,
+                  strokeWidth: 10.0,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Goal: ${caloriesTarget.round()} kcal',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ── 2. SECONDARY MACRO ELEMENTS (COMPACT CHIPS) ────────
+              Row(
+                children: [
+                  Expanded(
+                    child: _MacroChip(
+                      label: 'Protein',
+                      consumed: proteinConsumed,
+                      target: proteinTarget,
+                      color: AppColors.protein,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MacroChip(
+                      label: 'Carbs',
+                      consumed: carbsConsumed,
+                      target: carbsTarget,
+                      color: AppColors.carbs,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MacroChip(
+                      label: 'Fats',
+                      consumed: fatsConsumed,
+                      target: fatsTarget,
+                      color: AppColors.fats,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -1582,81 +1635,73 @@ class _MacroRingsSection extends StatelessWidget {
   }
 }
 
-class _MacroRing extends StatelessWidget {
+class _MacroChip extends StatelessWidget {
   final String label;
   final double consumed;
   final double target;
-  final String unit;
   final Color color;
-  final double width;
 
-  const _MacroRing({
+  const _MacroChip({
     required this.label,
     required this.consumed,
     required this.target,
-    required this.unit,
     required this.color,
-    required this.width,
   });
 
   @override
   Widget build(BuildContext context) {
-    final pct        = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
-    final innerLabel = label.toLowerCase() == 'calories' ? unit : 'g $label';
-    return SizedBox(
-      width: width,
+    final theme = context.auraTheme;
+    final pct = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: pct),
-            duration: const Duration(milliseconds: 1400),
-            curve: Curves.easeOutCubic,
-            builder: (_, v, __) => CustomPaint(
-              size: Size(width, width),
-              painter: CustomCircularProgressPainter(
-                progress: v,
-                color: color,
-                trackColor: color.withValues(alpha: 0.15),
-                strokeWidth: 7.0,
-              ),
-              child: SizedBox(
-                width: width,
-                height: width,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '${consumed.round()}',
-                        style: GoogleFonts.outfit(
-                          fontSize: width > 75 ? 18 : 15,
-                          fontWeight: FontWeight.w800,
-                          color: DashboardThemeColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        innerLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: DashboardThemeColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: color,
                 ),
               ),
+              Text(
+                '${(pct * 100).round()}%',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 4,
+              backgroundColor: color.withValues(alpha: 0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
-            '/ ${target.round()} $unit',
+            '${consumed.round()} / ${target.round()}g',
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: DashboardThemeColors.textSecondary.withValues(alpha: 0.8),
+              color: theme.textPrimary,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -1734,212 +1779,46 @@ class _SmartScannerSection extends StatelessWidget {
         const SizedBox(height: 20),
         Row(
           children: [
-            Expanded(child: _ActionCard(
-              icon: Icons.camera_alt_outlined,
-              label: 'Snap Meal',
-              subtitle: 'Use Camera',
-              usageText: cameraText,
-              usageColor: cameraUsageColor,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF064E3B), Color(0xFF065F46)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            Expanded(
+              child: AppActionTile(
+                title: 'Snap Meal',
+                subtitle: 'Camera · $cameraText',
+                icon: Icons.camera_alt_outlined,
+                gradient: AppColors.snapMealGradient,
+                onTap: onCamera,
+                isFilled: true,
               ),
-              accentColor: DashboardThemeColors.accentEmerald,
-              onTap: onCamera,
-            )),
-            const SizedBox(width: 14),
-            Expanded(child: _ActionCard(
-              icon: Icons.image_outlined,
-              label: 'Upload Screenshot',
-              subtitle: 'From Gallery',
-              usageText: galleryText,
-              usageColor: galleryUsageColor,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: AppActionTile(
+                title: 'Upload Screenshot',
+                subtitle: 'Gallery · $galleryText',
+                icon: Icons.image_outlined,
+                gradient: AppColors.uploadScreenshotGradient,
+                onTap: onGallery,
+                isFilled: true,
               ),
-              accentColor: DashboardThemeColors.accentBlue,
-              onTap: onGallery,
-            )),
+            ),
           ],
         ),
-        const SizedBox(height: 14),
-        // ── Search Database Tile ──────────────────────────────
-        GestureDetector(
+        const SizedBox(height: 12),
+        AppActionTile(
+          title: 'Search Food',
+          subtitle: 'Global search across millions of products & foods · Global',
+          icon: Icons.search_rounded,
+          color: AppColors.primaryAccent,
           onTap: () => Navigator.of(context).pushNamed('/foods/search'),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0F382C), Color(0xFF134E4A)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.35),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.10),
-                  blurRadius: 14,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: const Icon(
-                    Icons.search_rounded,
-                    color: DashboardThemeColors.accentEmerald,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Search Food',
-                        style: GoogleFonts.outfit(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: DashboardThemeColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Global search across millions of products & foods',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.85),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Global',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: DashboardThemeColors.accentEmerald,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 13,
-                  color: DashboardThemeColors.accentEmerald,
-                ),
-              ],
-            ),
-          ),
+          isFilled: false,
         ),
-        const SizedBox(height: 14),
-        // ── Barcode Tile ──────────────────────────────────
-        GestureDetector(
+        const SizedBox(height: 12),
+        AppActionTile(
+          title: 'Scan Barcode',
+          subtitle: 'Instant nutrition from packaged foods · Unlimited',
+          icon: Icons.barcode_reader,
+          gradient: AppColors.scanBarcodeGradient,
           onTap: onBarcode,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF451A03), Color(0xFF92400E)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: DashboardThemeColors.accentAmber.withValues(alpha: 0.35),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: DashboardThemeColors.accentAmber.withValues(alpha: 0.10),
-                  blurRadius: 14,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentAmber.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: const Icon(
-                    Icons.barcode_reader,
-                    color: DashboardThemeColors.accentAmber,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Scan Barcode',
-                        style: GoogleFonts.outfit(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: DashboardThemeColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Instant nutrition from packaged foods',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: DashboardThemeColors.accentAmber.withValues(alpha: 0.85),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentAmber.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Unlimited',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: DashboardThemeColors.accentAmber,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 13,
-                  color: DashboardThemeColors.accentAmber,
-                ),
-              ],
-            ),
-          ),
+          isFilled: true,
         ),
         const SizedBox(height: 16),
         Container(
