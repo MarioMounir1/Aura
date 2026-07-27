@@ -30,13 +30,14 @@ class AppMetricRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.auraTheme;
     final clampedProgress = progress.clamp(0.0, 1.0);
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: roleColor.withValues(alpha: 0.1),
+        color: roleColor.withValues(alpha: 0.12),
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -46,7 +47,7 @@ class AppMetricRing extends StatelessWidget {
             painter: _RingPainter(
               progress: clampedProgress,
               color: roleColor,
-              trackColor: AppColors.border.withValues(alpha: 0.5),
+              trackColor: theme.borderMid.withValues(alpha: 0.5),
               strokeWidth: strokeWidth,
             ),
           ),
@@ -60,7 +61,7 @@ class AppMetricRing extends StatelessWidget {
                     GoogleFonts.outfit(
                       fontSize: size * 0.26,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: theme.textPrimary,
                     ),
               ),
               if (label != null) ...[
@@ -70,7 +71,7 @@ class AppMetricRing extends StatelessWidget {
                   style: labelStyle ??
                       GoogleFonts.inter(
                         fontSize: size * 0.13,
-                        color: AppColors.textSecondary,
+                        color: theme.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                 ),
@@ -134,3 +135,4 @@ class _RingPainter extends CustomPainter {
       old.trackColor != trackColor ||
       old.strokeWidth != strokeWidth;
 }
+
