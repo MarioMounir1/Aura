@@ -85,8 +85,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.auraTheme;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.background,
       body: Stack(
         children: [
           IndexedStack(
@@ -97,30 +98,30 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
             ),
           ),
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: _buildCustomNavBar(),
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: _buildCustomNavBar(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCustomNavBar() {
+  Widget _buildCustomNavBar(BuildContext context) {
+    final theme = context.auraTheme;
     return Container(
-      height: 70,
+      height: 64,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
+        color: theme.card,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: theme.borderMid.withValues(alpha: 0.6), width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -136,8 +137,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   }
 
   Widget _buildNavItem(IconData icon, int index, bool hasHalo) {
+    final theme = context.auraTheme;
     final isSelected = _currentIndex == index;
-    final color = isSelected ? AppColors.primary : AppColors.textSecondary.withValues(alpha: 0.6);
+    final color = isSelected ? theme.primary : theme.textSecondary.withValues(alpha: 0.6);
 
     return GestureDetector(
       onTap: () {
@@ -149,7 +151,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 60,
-        height: 70,
+        height: 64,
         child: Center(
           child: Container(
             decoration: isSelected && hasHalo
@@ -157,7 +159,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
+                        color: theme.primary.withValues(alpha: 0.3),
                         blurRadius: 15,
                         spreadRadius: 2,
                       ),
@@ -171,3 +173,4 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
     );
   }
 }
+
