@@ -60,14 +60,14 @@ class AppActionTile extends StatelessWidget {
       iconAndTitleColor = color.computeLuminance() > 0.5 ? theme.textPrimary : Colors.white;
       subtitleColor = iconAndTitleColor.withValues(alpha: 0.8);
     } else {
-      // Secondary / Flatter tile style for Light Theme (e.g., Search Food)
+      // Secondary / Flatter tile style (e.g., Search Food)
       decoration = BoxDecoration(
-        color: theme.surfaceVariant.withValues(alpha: 0.6),
+        color: theme.surface,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: theme.borderMid, width: 1),
+        border: Border.all(color: theme.border, width: 1),
       );
       iconAndTitleColor = (color == AppColors.cyan || color == AppColors.primaryAccent)
-          ? theme.primary
+          ? theme.accentCyan
           : color;
       subtitleColor = theme.textSecondary;
     }
