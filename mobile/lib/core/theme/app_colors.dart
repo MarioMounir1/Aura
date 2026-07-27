@@ -36,9 +36,14 @@ abstract class AppColors {
   /// Secondary Accent / Highlight role (Lime)
   static const Color lime          = Color(0xFFCDDC39);
 
-  // Aliases for dashboard compatibility
+  // Aliases for dashboard and workout screens compatibility
+  static const Color bg             = background;
   static const Color cardBackground = card;
   static const Color cardSurface    = surface;
+  static const Color cardElev       = surface;
+  static const Color textPri        = textPrimary;
+  static const Color textSec        = textSecondary;
+  static const Color textMut        = textMuted;
   static const Color accentEmerald  = emerald;
   static const Color accentLime     = lime;
   static const Color accentBlue     = cyan;
