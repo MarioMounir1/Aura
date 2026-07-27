@@ -61,13 +61,17 @@ interface BarcodeNutrition {
 const ScanBarcodeSchema = z.object({
   barcode: z
     .string()
-    .min(4, "Barcode must be at least 4 characters")
-    .max(20, "Barcode must be at most 20 characters")
-    .regex(/^\d+$/, "Barcode must contain only digits"),
+    .transform((val) => val.trim().replace(/[^\d]/g, "")) // Strip non-digit characters (spaces, dashes)
+    .pipe(
+      z
+        .string()
+        .min(4, "Barcode must be at least 4 digits")
+        .max(20, "Barcode must be at most 20 digits")
+    ),
 });
 
 const LogBarcodeSchema = z.object({
-  barcode: z.string().min(4).max(20).regex(/^\d+$/),
+  barcode: z.string().min(4).max(20),
   productName: z.string().min(1).max(300).trim(),
   /** Pre-calculated macros for the chosen serving size (not per-100g) */
   calories: z.number().min(0).max(10000),
@@ -92,7 +96,7 @@ function safeNum(value: unknown): number {
  * Body: { barcode: string }
  *
  * Returns per-100g nutrition from Open Food Facts.
- * Responds 404 if barcode is not found (status:0 in OFF API).
+ * Responds 404 if barcode is not found (status:0 or HTTP 404 in OFF API).
  * Does NOT write to MealLog — that's the log-barcode endpoint's job.
  */
 export async function scanBarcodeHandler(
@@ -124,17 +128,35 @@ export async function scanBarcodeHandler(
     return;
   }
 
-  // ── Fetch from Open Food Facts ───────────────────────────────
-  const offUrl = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`;
+  // ── Fetch from Open Food Facts (v2 with v0 fallback) ────────
+  const offV2Url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`;
+  const offV0Url = `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(barcode)}.json`;
 
-  let offData: any;
+  let offData: any = null;
   try {
-    const response = await fetch(offUrl, {
-      headers: {
-        "User-Agent": "Aura-FitnessApp/1.0 (contact@aura.app)",
-      },
-      signal: AbortSignal.timeout(10_000), // 10-second timeout
+    let response = await fetch(offV2Url, {
+      headers: { "User-Agent": "Aura-FitnessApp/1.0 (contact@aura.app)" },
+      signal: AbortSignal.timeout(8_000),
     });
+
+    if (response.status === 404) {
+      // Try v0 endpoint fallback before declaring 404
+      response = await fetch(offV0Url, {
+        headers: { "User-Agent": "Aura-FitnessApp/1.0 (contact@aura.app)" },
+        signal: AbortSignal.timeout(8_000),
+      });
+    }
+
+    if (response.status === 404) {
+      console.log(`🔍 [Barcode] Product not found in Open Food Facts: ${barcode}`);
+      res.status(404).json({
+        success: false,
+        error: "Product not found in Open Food Facts database.",
+        code: "BARCODE_NOT_FOUND",
+        hint: "Try scanning the product label with the AI photo scanner instead.",
+      });
+      return;
+    }
 
     if (!response.ok) {
       throw new Error(`Open Food Facts responded with HTTP ${response.status}`);
@@ -157,8 +179,7 @@ export async function scanBarcodeHandler(
 
   // ── CRITICAL: explicit status:0 check ──────────────────────
   // OFF returns HTTP 200 with status:0 for unrecognized barcodes.
-  // We must NEVER treat this as a valid product lookup.
-  if (offData.status !== 1) {
+  if (!offData || offData.status !== 1) {
     console.log(`🔍 [Barcode] Not found in OFF database: ${barcode}`);
     res.status(404).json({
       success: false,
