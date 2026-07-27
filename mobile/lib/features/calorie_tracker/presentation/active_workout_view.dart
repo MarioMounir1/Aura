@@ -4,28 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../data/models/workout_models.dart';
 import '../domain/repositories/workout_repository.dart';
 import 'bloc/workout_bloc.dart';
 import 'bloc/workout_event.dart';
 import 'bloc/workout_state.dart';
 
-// ── Design Tokens ──────────────────────────────────────────────
-class _C {
-  _C._();
-  static const Color bg        = Color(0xFF090C15);
-  static const Color card      = Color(0xFF121824);
-  static const Color cardElev  = Color(0xFF1B2232);
-  static const Color border    = Color(0xFF222B3F);
-  static const Color borderMid = Color(0xFF374151);
-  static const Color cyan      = Color(0xFF00E5FF);
-  static const Color textPri   = Color(0xFFF3F4F6);
-  static const Color textSec   = Color(0xFF9CA3AF);
-  static const Color textMut   = Color(0xFF6B7280);
-  static const Color error     = Color(0xFFEF4444);
-  static const Color success   = Color(0xFF10B981);
-  static const Color amber     = Color(0xFFF59E0B);
-}
+typedef _C = AppColors;
 
 // ═══════════════════════════════════════════════════════════════
 // Active Workout View (Dynamic)
