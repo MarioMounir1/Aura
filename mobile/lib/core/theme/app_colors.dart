@@ -58,4 +58,12 @@ abstract class AppColors {
   static const Color borderSubtle   = border;
   static const Color red            = error;
   static const Color blue           = cyan;
+  static const Color protein         = emerald;
+  static const Color carbs           = cyan;
+  static const Color fats            = error;
+  static const LinearGradient cardGradient = LinearGradient(
+    colors: [card, surface],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 }
