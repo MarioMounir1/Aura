@@ -26,6 +26,7 @@ import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
 import '../data/services/barcode_service.dart';
 import 'barcode_confirmation_sheet.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../core/widgets/ad_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -36,24 +37,9 @@ import '../../profile/presentation/bloc/profile_state.dart';
 
 enum LayoutState { idle, processing, resultLoaded }
 
-// ── Theme Constants ───────────────────────────────────────────
+// ── Theme Constants (Delegated to AppColors) ─────────────────
 
-class DashboardThemeColors {
-  DashboardThemeColors._();
-
-  static const Color background     = Color(0xFF090C15);
-  static const Color cardBackground = Color(0xFF121824);
-  static const Color cardSurface    = Color(0xFF1B2232);
-  static const Color accentEmerald  = Color(0xFF4CAF50);
-  static const Color accentLime     = Color(0xFFCDDC39);
-  static const Color accentBlue     = Color(0xFF00BCD4);
-  static const Color accentRed      = Color(0xFFF44336);
-  static const Color accentAmber    = Color(0xFFFFC107);
-  static const Color textPrimary    = Color(0xFFFFFFFF);
-  static const Color textSecondary  = Color(0xFF8E929C);
-  static const Color textMuted      = Color(0xFF5D616B);
-  static const Color trackBg        = Color(0xFF222B3F);
-}
+typedef DashboardThemeColors = AppColors;
 
 // ── Existing MealWarning / MealEntry models (preserved) ───────
 
@@ -666,32 +652,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
     } on BarcodeNotFoundException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      // ── NOT FOUND → fall back to Ollama photo scan ────────
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF1F1F1F),
-          duration: const Duration(seconds: 4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: Row(
-            children: [
-              const Icon(Icons.info_outline,
-                  color: DashboardThemeColors.accentAmber, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Not in our database — let's scan the label instead.",
-                  style: GoogleFonts.inter(
-                      fontSize: 12, color: DashboardThemeColors.textPrimary),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-      await Future.delayed(const Duration(milliseconds: 600));
-      if (mounted) _pickAndAnalyze(ImageSource.camera);
-      return;
+      // ── NOT FOUND → prompt user for product name & AI estimate ──
+      product = await _promptForBarcodeEstimation(context, detectedBarcode!);
+      if (product == null || !mounted) return;
     } on BarcodeNetworkException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -740,6 +703,21 @@ class _MealsDashboardState extends State<MealsDashboard> {
       logs.insert(0, entry);
       _recalcTotals();
     });
+  }
+
+  Future<BarcodeProduct?> _promptForBarcodeEstimation(
+    BuildContext context,
+    String barcode,
+  ) async {
+    return showModalBottomSheet<BarcodeProduct>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _BarcodeNamePromptSheet(
+        barcode: barcode,
+        service: _barcodeService,
+      ),
+    );
   }
 
 }
@@ -3091,4 +3069,177 @@ class CustomCircularProgressPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomCircularProgressPainter old) =>
       old.progress != progress || old.color != color ||
       old.trackColor != trackColor || old.strokeWidth != strokeWidth;
+}
+
+class _BarcodeNamePromptSheet extends StatefulWidget {
+  final String barcode;
+  final BarcodeService service;
+
+  const _BarcodeNamePromptSheet({
+    required this.barcode,
+    required this.service,
+  });
+
+  @override
+  State<_BarcodeNamePromptSheet> createState() => _BarcodeNamePromptSheetState();
+}
+
+class _BarcodeNamePromptSheetState extends State<_BarcodeNamePromptSheet> {
+  final _nameController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isEstimating = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate() || _isEstimating) return;
+    setState(() => _isEstimating = true);
+
+    try {
+      final product = await widget.service.estimateBarcode(
+        barcode: widget.barcode,
+        productName: _nameController.text.trim(),
+      );
+      if (mounted) Navigator.of(context).pop(product);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isEstimating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFF1F1F1F),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text(
+              'Estimation failed: $e',
+              style: GoogleFonts.inter(fontSize: 12, color: Colors.white),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: DashboardThemeColors.bgSecondary,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DashboardThemeColors.borderSubtle,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: DashboardThemeColors.accentAmber.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.auto_awesome, color: DashboardThemeColors.accentAmber, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Product Not Found',
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: DashboardThemeColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Enter product name for AI nutrition estimation',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: DashboardThemeColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _nameController,
+              autofocus: true,
+              style: GoogleFonts.inter(color: DashboardThemeColors.textPrimary),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Please enter a product name';
+                return null;
+              },
+              decoration: InputDecoration(
+                hintText: 'e.g. Greek Yogurt 200g',
+                hintStyle: GoogleFonts.inter(color: DashboardThemeColors.textMuted),
+                filled: true,
+                fillColor: DashboardThemeColors.cardBackground,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: DashboardThemeColors.accentCyan, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isEstimating ? null : _submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DashboardThemeColors.accentCyan,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _isEstimating
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
+                      )
+                    : Text(
+                        'Estimate Nutrition with AI',
+                        style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
