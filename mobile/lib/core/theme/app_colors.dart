@@ -1,60 +1,50 @@
 // lib/core/theme/app_colors.dart
-// Calc-Calories — Color Palette
+// Aura — Centralized App-Wide Color Design Tokens
 
 import 'package:flutter/material.dart';
 
-class AppColors {
-  AppColors._();
+abstract class AppColors {
+  // ── Backgrounds & Surfaces ──────────────────────────────────
+  static const Color background     = Color(0xFF090C15);
+  static const Color card           = Color(0xFF121824);
+  static const Color surface        = Color(0xFF1B2232);
+  static const Color border         = Color(0xFF222B3F);
+  static const Color borderMid      = Color(0xFF374151);
 
-  // ── Primary Brand (Electric Cyan accents) ─────────────
-  static const Color primary = Color(0xFF00BCD4);       // Electric Cyan
-  static const Color primaryDark = Color(0xFF0097A7);
-  static const Color primaryLight = Color(0xFF80DEEA);
-  static const Color primarySurface = Color(0xFF006064); 
+  // ── Typography ──────────────────────────────────────────────
+  static const Color textPrimary   = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFF8E929C);
+  static const Color textMuted     = Color(0xFF5D616B);
 
-  // ── Background (Deep velvety navy/slate) ────────────
-  static const Color background = Color(0xFF090C15);     // Deep Dark Slate
-  static const Color surface = Color(0xFF121824);        // Card background
-  static const Color surfaceVariant = Color(0xFF1B2232); // Elevated surface
-  static const Color border = Color(0xFF222B3F);
+  // ── Semantic Roles ──────────────────────────────────────────
+  /// Success / Positive metric role (Emerald Green)
+  static const Color success       = Color(0xFF4CAF50);
+  static const Color emerald       = Color(0xFF4CAF50);
 
-  // ── Accent ────────────────────────────────────────────
-  static const Color accent = Color(0xFF00BCD4);         // Electric Cyan accent
-  static const Color accentLight = Color(0xFF4DD0E1);
+  /// Warning / Caution role (Vibrant Gold Amber - #FFC107)
+  static const Color warning       = Color(0xFFFFC107);
+  static const Color amber         = Color(0xFFFFC107);
 
-  // ── Macros Colors ─────────────────────────────────────
-  static const Color calories = Color(0xFF00BCD4);       // Electric Cyan
-  static const Color protein = Color(0xFF2196F3);        // Blue
-  static const Color carbs = Color(0xFFFFC107);          // Soft Gold
-  static const Color fats = Color(0xFFFF5722);           // Muted Orange/Crimson
+  /// Error / Danger role (Red)
+  static const Color error         = Color(0xFFF44336);
+  static const Color danger        = Color(0xFFF44336);
 
-  // ── Text ──────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFFFFFFFF);    // Crisp White
-  static const Color textSecondary = Color(0xFF8E929C);  // Muted Grey
-  static const Color textMuted = Color(0xFF5D616B);
+  /// Primary Accent role (Cyan)
+  static const Color accent        = Color(0xFF00BCD4);
+  static const Color cyan          = Color(0xFF00BCD4);
 
-  // ── Status ────────────────────────────────────────────
-  static const Color success = Color(0xFF4CAF50);
-  static const Color warning = Color(0xFFFFC107);
-  static const Color error = Color(0xFFF44336);
-  static const Color info = Color(0xFF00BCD4);
+  /// Secondary Accent / Highlight role (Lime)
+  static const Color lime          = Color(0xFFCDDC39);
 
-  // ── Gradients ─────────────────────────────────────────
-  static const LinearGradient primaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF00BCD4), Color(0xFF0097A7)], // Flowing cyan gradient
-  );
-
-  static const LinearGradient backgroundGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFF090C15), Color(0xFF121824)],
-  );
-
-  static const LinearGradient cardGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF121824), Color(0xFF1B2232)],
-  );
+  // Aliases for dashboard compatibility
+  static const Color cardBackground = card;
+  static const Color cardSurface    = surface;
+  static const Color accentEmerald  = emerald;
+  static const Color accentLime     = lime;
+  static const Color accentBlue     = cyan;
+  static const Color accentRed      = error;
+  static const Color accentAmber    = amber;
+  static const Color trackBg        = border;
+  static const Color bgSecondary    = surface;
+  static const Color borderSubtle   = border;
 }
