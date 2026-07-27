@@ -941,57 +941,9 @@ class _ProcessingStateWidgetState extends State<_ProcessingStateWidget>
                     boxShadow: [
                       BoxShadow(
                         color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.6),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  'Analyzing meal components locally...',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: DashboardThemeColors.accentEmerald,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+                        blurRadius// ── Result Card Widget (Redesigned per aura_design_spec.md Section 2) ──
 
-  Widget _shimmerLine({required double width, required double height}) {
-    return FractionallySizedBox(
-      widthFactor: width,
-      child: Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(6),
-        ),
-      ),
-    );
-  }
-
-  Widget _shimmerBox(double w, double h) {
-    return Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(
-        color: DashboardThemeColors.trackBg.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
-      ),
-    );
-  }
-}
-
-// ── Result Card Widget ────────────────────────────────────────
-
-class _ResultCardWidget extends StatelessWidget {
+class _ResultCardWidget extends StatefulWidget {
   final LlamaMealResponse llamaResult;
   final File? selectedImage;
   final VoidCallback onLog;
@@ -1006,81 +958,166 @@ class _ResultCardWidget extends StatelessWidget {
   });
 
   @override
+  State<_ResultCardWidget> createState() => _ResultCardWidgetState();
+}
+
+class _ResultCardWidgetState extends State<_ResultCardWidget> {
+  double _servingMultiplier = 1.0;
+
+  String _getCategoryBadgeText() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 11) return 'BREAKFAST';
+    if (hour >= 11 && hour < 16) return 'LUNCH';
+    if (hour >= 16 && hour < 22) return 'DINNER';
+    return 'SNACK';
+  }
+
+  int _calculateHealthScore(LlamaMealAnalysis analysis) {
+    if (analysis.calories <= 0) return 75;
+    final pCal = (analysis.protein * 4) / analysis.calories;
+    final cCal = (analysis.carbs * 4) / analysis.calories;
+    final fCal = (analysis.fats * 9) / analysis.calories;
+
+    double score = 50.0;
+    score += (pCal * 100).clamp(0, 30);
+    if (cCal >= 0.3 && cCal <= 0.6) score += 15;
+    if (fCal >= 0.15 && fCal <= 0.35) score += 15;
+    if (analysis.calories < 650) score += 10;
+
+    return score.round().clamp(20, 98);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final analysis = llamaResult.mealAnalysis;
-    final rec = llamaResult.llamaRecommendation;
+    final theme = context.auraTheme;
+    final analysis = widget.llamaResult.mealAnalysis;
+    final rec = widget.llamaResult.llamaRecommendation;
+
+    final scaledCalories = (analysis.calories * _servingMultiplier).round();
+    final scaledProtein  = (analysis.protein * _servingMultiplier).round();
+    final scaledCarbs    = (analysis.carbs * _servingMultiplier).round();
+    final scaledFats     = (analysis.fats * _servingMultiplier).round();
+
+    final healthScore = _calculateHealthScore(analysis);
+    final categoryText = _getCategoryBadgeText();
+
+    // Generate ingredient pill items for photo overlay
+    final rawNameParts = analysis.detectedFood.split(RegExp(r'[,&+]| and '));
+    final List<String> tagItems = [];
+    if (rawNameParts.length > 1) {
+      for (var p in rawNameParts) {
+        final trimmed = p.trim();
+        if (trimmed.isNotEmpty) tagItems.add(trimmed);
+      }
+    }
+    if (tagItems.isEmpty) {
+      tagItems.addAll([
+        analysis.detectedFood.split(' ').take(2).join(' '),
+        'Protein · ${scaledProtein}g',
+        'Carbs · ${scaledCarbs}g',
+      ]);
+    }
 
     return Column(
       key: const ValueKey('result'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (selectedImage != null)
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.file(
-                  selectedImage!,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+        // ── 1. PHOTO HEADER WITH FLOATING ANNOTATION TAGS ──────────
+        if (widget.selectedImage != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              height: 220,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: theme.borderMid, width: 1),
               ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        DashboardThemeColors.background.withValues(alpha: 0.85),
-                      ],
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.file(
+                      widget.selectedImage!,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.verified_outlined, size: 12, color: Colors.black),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Locally Verified',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.15),
+                            Colors.black.withValues(alpha: 0.55),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  // Verified Badge top-right
+                  Positioned(
+                    top: 14,
+                    right: 14,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: theme.card.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppColors.cyan.withValues(alpha: 0.6)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.verified_outlined, size: 13, color: AppColors.cyan),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Locally Verified',
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: theme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Floating Ingredient Tags Overlaid on Image
+                  if (tagItems.isNotEmpty)
+                    Positioned(
+                      top: 24,
+                      left: 16,
+                      child: _buildFloatingTag(tagItems[0], theme),
+                    ),
+                  if (tagItems.length > 1)
+                    Positioned(
+                      bottom: 24,
+                      left: 16,
+                      child: _buildFloatingTag(tagItems[1], theme),
+                    ),
+                  if (tagItems.length > 2)
+                    Positioned(
+                      bottom: 24,
+                      right: 16,
+                      child: _buildFloatingTag(tagItems[2], theme),
+                    ),
+                ],
               ),
-            ],
+            ),
           ),
         const SizedBox(height: 16),
+
+        // ── MAIN STRUCTURED RESULT CARD ────────────────────────────
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
+            color: theme.card,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.25),
-            ),
+            border: Border.all(color: theme.borderMid.withValues(alpha: 0.6)),
             boxShadow: [
               BoxShadow(
-                color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.06),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 20,
                 spreadRadius: 2,
               ),
@@ -1089,137 +1126,403 @@ class _ResultCardWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── 2. CATEGORY BADGE, MEAL NAME & SERVING STEPPER ──────
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Row(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.psychology_outlined,
-                        color: DashboardThemeColors.accentEmerald,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            analysis.detectedFood,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Category Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.primary.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            categoryText,
                             style: GoogleFonts.outfit(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: DashboardThemeColors.textPrimary,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Scan Analysis Result',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: DashboardThemeColors.textMuted,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                              color: theme.primary,
                             ),
                           ),
-                        ],
+                        ),
+
+                        // Quantity / Serving Stepper
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: theme.surfaceVariant.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: theme.borderMid),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InkWell(
+                                onTap: _servingMultiplier > 0.5
+                                    ? () => setState(() => _servingMultiplier -= 0.5)
+                                    : null,
+                                borderRadius: BorderRadius.circular(14),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(Icons.remove, size: 16, color: theme.textPrimary),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Text(
+                                  '${_servingMultiplier % 1 == 0 ? _servingMultiplier.toInt() : _servingMultiplier}x',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () => setState(() => _servingMultiplier += 0.5),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(Icons.add, size: 16, color: theme.textPrimary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      analysis.detectedFood,
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textPrimary,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              const Divider(color: DashboardThemeColors.trackBg, height: 1),
-              const SizedBox(height: 20),
+
+              const Divider(height: 1, color: AppColors.border),
+
+              // ── 3. 2x2 ICON + MACRO GRID ─────────────────────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     Row(
                       children: [
-                        Expanded(child: _buildMacroCell('🔥 Calories', '${analysis.calories}', 'kcal', DashboardThemeColors.accentLime)),
+                        Expanded(
+                          child: _buildMacroCard(
+                            title: 'Calories',
+                            value: '$scaledCalories kcal',
+                            icon: Icons.local_fire_department_rounded,
+                            iconColor: AppColors.success,
+                            theme: theme,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _buildMacroCell('💪 Protein', '${analysis.protein}', 'g', DashboardThemeColors.accentEmerald)),
+                        Expanded(
+                          child: _buildMacroCard(
+                            title: 'Carbs',
+                            value: '${scaledCarbs}g',
+                            icon: Icons.grain_rounded,
+                            iconColor: AppColors.carbs,
+                            theme: theme,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Expanded(child: _buildMacroCell('🌾 Carbs', '${analysis.carbs}', 'g', DashboardThemeColors.accentBlue)),
+                        Expanded(
+                          child: _buildMacroCard(
+                            title: 'Protein',
+                            value: '${scaledProtein}g',
+                            icon: Icons.fitness_center_rounded,
+                            iconColor: AppColors.protein,
+                            theme: theme,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _buildMacroCell('🫙 Fats', '${analysis.fats}', 'g', DashboardThemeColors.accentRed)),
+                        Expanded(
+                          child: _buildMacroCard(
+                            title: 'Fats',
+                            value: '${scaledFats}g',
+                            icon: Icons.opacity_rounded,
+                            iconColor: AppColors.fats,
+                            theme: theme,
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+
+              // ── 4. HEALTH SCORE ROW ─────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.surfaceVariant.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.borderMid.withValues(alpha: 0.6)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.favorite_rounded, size: 16, color: AppColors.success),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Health Score',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '$healthScore / 100',
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: healthScore >= 70
+                                  ? AppColors.success
+                                  : (healthScore >= 50 ? AppColors.warning : AppColors.error),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: (healthScore / 100).clamp(0.0, 1.0),
+                          minHeight: 6,
+                          backgroundColor: theme.borderMid.withValues(alpha: 0.4),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            healthScore >= 70
+                                ? AppColors.success
+                                : (healthScore >= 50 ? AppColors.warning : AppColors.error),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── AI COACH NOTE (Renamed from "Llama says") ────────────
               if (rec.message.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: rec.triggerWarning
-                          ? DashboardThemeColors.accentAmber.withValues(alpha: 0.08)
-                          : DashboardThemeColors.accentEmerald.withValues(alpha: 0.08),
+                          ? AppColors.warning.withValues(alpha: 0.08)
+                          : theme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: rec.triggerWarning
-                            ? DashboardThemeColors.accentAmber.withValues(alpha: 0.3)
-                            : DashboardThemeColors.accentEmerald.withValues(alpha: 0.3),
+                            ? AppColors.warning.withValues(alpha: 0.3)
+                            : theme.primary.withValues(alpha: 0.3),
                       ),
                     ),
-                    child: Row(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          rec.triggerWarning
-                              ? Icons.warning_amber_rounded
-                              : Icons.check_circle_outline_rounded,
-                          color: rec.triggerWarning
-                              ? DashboardThemeColors.accentAmber
-                              : DashboardThemeColors.accentEmerald,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            rec.message,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              height: 1.5,
-                              color: rec.triggerWarning
-                                  ? const Color(0xFFFCD34D)
-                                  : const Color(0xFF6EE7B7),
-                              fontWeight: FontWeight.w500,
+                        Row(
+                          children: [
+                            Icon(
+                              rec.triggerWarning
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.auto_awesome,
+                              color: rec.triggerWarning ? AppColors.warning : theme.primary,
+                              size: 16,
                             ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Your AI Coach',
+                              style: GoogleFonts.outfit(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: rec.triggerWarning ? AppColors.warning : theme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          rec.message,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: theme.textSecondary,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
+
               const SizedBox(height: 20),
+
+              // ── 5. TWO ACTION BUTTONS AT BOTTOM ─────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                 child: Row(
                   children: [
+                    // Fix Results (Outlined ghost button)
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: widget.onDiscard,
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: Text(
+                          'Fix results',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.primary,
+                          side: BorderSide(color: theme.primary, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Done (Solid fill primary button)
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: onLog,
-                        icon: const Icon(Icons.add_rounded, size: 18),
+                        onPressed: widget.onLog,
+                        icon: const Icon(Icons.check_circle_rounded, size: 16),
                         label: Text(
-                          'Log Meal',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                          'Done',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFloatingTag(String text, AuraThemeExtension theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: theme.card.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.primary.withValues(alpha: 0.6), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: theme.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMacroCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required AuraThemeExtension theme,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.surfaceVariant.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.borderMid.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: theme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+                       style: ElevatedButton.styleFrom(
                           backgroundColor: DashboardThemeColors.accentEmerald,
                           foregroundColor: Colors.black,
                           elevation: 0,
@@ -1483,12 +1786,6 @@ class _MacroRingsSection extends StatelessWidget {
     required this.onTap,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
   @override
   Widget build(BuildContext context) {
     final theme = context.auraTheme;
