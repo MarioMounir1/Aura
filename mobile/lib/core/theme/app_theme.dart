@@ -8,18 +8,18 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get lightTheme {
-    final base = ThemeData.light();
+  static ThemeData get darkTheme {
+    final base = ThemeData.dark();
     return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.light(
+      colorScheme: const ColorScheme.dark(
         surface: AppColors.card,
         primary: AppColors.primaryAccent,
         secondary: AppColors.cyan,
         error: AppColors.error,
       ),
       extensions: const [
-        AuraThemeExtension.light,
+        AuraThemeExtension.dark,
       ],
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
@@ -41,7 +41,8 @@ class AppTheme {
     );
   }
 
-  /// Default theme set to lightTheme as per design spec
-  static ThemeData get darkTheme => lightTheme;
+  /// Default theme set to darkTheme as per design spec
+  static ThemeData get lightTheme => darkTheme;
 }
+
 
