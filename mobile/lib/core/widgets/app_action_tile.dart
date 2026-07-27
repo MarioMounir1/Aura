@@ -10,6 +10,7 @@ class AppActionTile extends StatelessWidget {
   final String? subtitle;
   final IconData icon;
   final Color color;
+  final LinearGradient? gradient;
   final VoidCallback onTap;
   final bool isFilled;
   final double borderRadius;
@@ -20,7 +21,8 @@ class AppActionTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     required this.icon,
-    this.color = AppColors.cyan,
+    this.color = AppColors.primaryAccent,
+    this.gradient,
     required this.onTap,
     this.isFilled = true,
     this.borderRadius = 14.0,
@@ -29,10 +31,46 @@ class AppActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isFilled ? color : color.withValues(alpha: 0.12);
-    final foregroundColor = isFilled
-        ? (color.computeLuminance() > 0.5 ? Colors.black : Colors.white)
-        : color;
+    final theme = context.auraTheme;
+    final bool hasGradient = gradient != null;
+
+    BoxDecoration decoration;
+    Color iconAndTitleColor;
+    Color subtitleColor;
+
+    if (hasGradient) {
+      decoration = BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: gradient!.colors.first.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      );
+      iconAndTitleColor = Colors.white;
+      subtitleColor = Colors.white.withValues(alpha: 0.85);
+    } else if (isFilled) {
+      decoration = BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(borderRadius),
+      );
+      iconAndTitleColor = color.computeLuminance() > 0.5 ? theme.textPrimary : Colors.white;
+      subtitleColor = iconAndTitleColor.withValues(alpha: 0.8);
+    } else {
+      // Secondary / Flatter tile style for Light Theme (e.g., Search Food)
+      decoration = BoxDecoration(
+        color: theme.surfaceVariant.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: theme.borderMid, width: 1),
+      );
+      iconAndTitleColor = (color == AppColors.cyan || color == AppColors.primaryAccent)
+          ? theme.primary
+          : color;
+      subtitleColor = theme.textSecondary;
+    }
 
     return Material(
       color: Colors.transparent,
@@ -41,17 +79,11 @@ class AppActionTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         child: Container(
           padding: padding,
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(borderRadius),
-            border: isFilled
-                ? null
-                : Border.all(color: color.withValues(alpha: 0.3), width: 1),
-          ),
+          decoration: decoration,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: foregroundColor, size: 22),
+              Icon(icon, color: iconAndTitleColor, size: 22),
               const SizedBox(width: 12),
               Flexible(
                 child: Column(
@@ -63,7 +95,7 @@ class AppActionTile extends StatelessWidget {
                       style: GoogleFonts.outfit(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: foregroundColor,
+                        color: isFilled || hasGradient ? iconAndTitleColor : theme.textPrimary,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -72,9 +104,8 @@ class AppActionTile extends StatelessWidget {
                         subtitle!,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: isFilled
-                              ? foregroundColor.withValues(alpha: 0.8)
-                              : AppColors.textSecondary,
+                          color: subtitleColor,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
@@ -88,3 +119,4 @@ class AppActionTile extends StatelessWidget {
     );
   }
 }
+
