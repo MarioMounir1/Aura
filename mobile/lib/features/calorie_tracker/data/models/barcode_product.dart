@@ -27,6 +27,7 @@ class BarcodeProduct {
   final double proteinPer100g;
   final double carbsPer100g;
   final double fatsPer100g;
+  final String dataSource;
 
   const BarcodeProduct({
     required this.barcode,
@@ -35,6 +36,7 @@ class BarcodeProduct {
     required this.proteinPer100g,
     required this.carbsPer100g,
     required this.fatsPer100g,
+    this.dataSource = 'open_food_facts',
   });
 
   factory BarcodeProduct.fromJson(Map<String, dynamic> json) {
@@ -46,12 +48,14 @@ class BarcodeProduct {
       proteinPer100g: (per100g['protein'] as num?)?.toDouble() ?? 0.0,
       carbsPer100g: (per100g['carbs'] as num?)?.toDouble() ?? 0.0,
       fatsPer100g: (per100g['fats'] as num?)?.toDouble() ?? 0.0,
+      dataSource: (json['dataSource'] as String?) ?? 'open_food_facts',
     );
   }
 
   Map<String, dynamic> toJson() => {
         'barcode': barcode,
         'productName': productName,
+        'dataSource': dataSource,
         'per100g': {
           'calories': caloriesPer100g,
           'protein': proteinPer100g,
