@@ -27,28 +27,14 @@ import '../../profile/presentation/bloc/profile_state.dart';
 import '../data/models/workout_models.dart';
 import 'bloc/workout_bloc.dart';
 import 'bloc/workout_event.dart';
+import '../../../../core/theme/app_colors.dart';
 import 'bloc/workout_state.dart';
 import 'active_workout_view.dart';
 
 // ── State Machine ─────────────────────────────────────────────
 enum WorkoutHubState { unconfigured, loading, ready, activeWorkout }
 
-// ── Design Tokens ──────────────────────────────────────────────
-class _C {
-  _C._();
-  static const Color bg        = Color(0xFF090C15);
-  static const Color card      = Color(0xFF121824);
-  static const Color cardElev  = Color(0xFF1B2232);
-  static const Color border    = Color(0xFF222B3F);
-  static const Color borderMid = Color(0xFF374151);
-  static const Color cyan      = Color(0xFF00BCD4);
-  static const Color textPri   = Color(0xFFFFFFFF);
-  static const Color textSec   = Color(0xFF8E929C);
-  static const Color textMut   = Color(0xFF5D616B);
-  static const Color amber     = Color(0xFFFBBF24);
-  static const Color success   = Color(0xFF4CAF50);
-  static const Color error     = Color(0xFFF44336);
-}
+typedef _C = AppColors;
 
 // ═══════════════════════════════════════════════════════════════
 // WorkoutScreen
