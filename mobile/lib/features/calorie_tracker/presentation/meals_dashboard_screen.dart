@@ -756,35 +756,13 @@ class _DashboardHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: DashboardThemeColors.accentEmerald,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'LOCAL PROCESSING • ONLINE',
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.6,
-                      color: DashboardThemeColors.accentEmerald,
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 4),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
-                      userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
+                      'Meals Dashboard',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.outfit(
@@ -1967,24 +1945,29 @@ class _MacroRingsSection extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               // ── 3. VIEW PROGRESS BUTTON ────────
-              Material(
-                color: theme.surface,
-                borderRadius: BorderRadius.circular(16),
-                child: InkWell(
-                  onTap: () => Navigator.of(context).pushNamed('/nutrition/progress'),
+              Container(
+                decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.borderMid.withValues(alpha: 0.5)),
+                ),
+                child: Material(
+                  color: theme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).pushNamed('/nutrition/progress'),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.bar_chart_rounded, size: 16, color: Colors.white),
                           ),
-                          child: const Icon(Icons.bar_chart_rounded, size: 16, color: AppColors.primary),
-                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -2015,6 +1998,7 @@ class _MacroRingsSection extends StatelessWidget {
                   ),
                 ),
               ),
+              ),
             ],
           ),
         ),
@@ -2044,9 +2028,8 @@ class _MacroChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
