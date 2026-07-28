@@ -2027,7 +2027,7 @@ class _MacroChip extends StatelessWidget {
   }
 }
 
-// ── Cal AI Style Smart Scanner Section ──────────────────────
+// ── Senior Flutter: Cal AI Smart Scanner Hero ────────────────
 
 class _SmartScannerSection extends StatelessWidget {
   final AiUsageQuota? quota;
@@ -2050,7 +2050,7 @@ class _SmartScannerSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Header
+        // Section Title & Badge
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -2059,7 +2059,7 @@ class _SmartScannerSection extends StatelessWidget {
                 const Icon(Icons.auto_awesome, color: AppColors.cyan, size: 18),
                 const SizedBox(width: 6),
                 Text(
-                  'CAL AI SMART SCANNER',
+                  'SMART MEAL SCANNER',
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
@@ -2072,16 +2072,16 @@ class _SmartScannerSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: theme.surface,
+                color: AppColors.cyan.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.border),
+                border: Border.all(color: AppColors.cyan.withValues(alpha: 0.3)),
               ),
               child: Text(
-                'Offline AI',
+                'AI Vision',
                 style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.success,
+                  color: AppColors.cyan,
                 ),
               ),
             ),
@@ -2089,189 +2089,173 @@ class _SmartScannerSection extends StatelessWidget {
         ),
         const SizedBox(height: 14),
 
-        // Hero Cal AI Camera Scanner Preview Container
-        GestureDetector(
-          onTap: onCamera,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  theme.surface,
-                  theme.card,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.cyan.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Camera Viewfinder Box Simulation
-                Container(
-                  height: 130,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: AppColors.cyan.withValues(alpha: 0.3)),
-                  ),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      const Icon(
-                        Icons.crop_free_rounded,
-                        size: 90,
-                        color: AppColors.cyan,
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.cyan,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.cyan.withValues(alpha: 0.4),
-                                  blurRadius: 14,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt_rounded,
-                              color: AppColors.background,
-                              size: 26,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'TAP TO SNAP MEAL',
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Quick Action Buttons Row: Gallery Upload & Barcode Scan
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: onGallery,
-                        icon: const Icon(Icons.photo_library_outlined, size: 16),
-                        label: Text(
-                          'Upload Photo',
-                          style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.textPrimary,
-                          side: BorderSide(color: theme.border, width: 1),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: onBarcode,
-                        icon: const Icon(Icons.qr_code_scanner_rounded, size: 16),
-                        label: Text(
-                          'Scan Barcode',
-                          style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.warning,
-                          side: BorderSide(color: AppColors.warning.withValues(alpha: 0.5), width: 1),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
-                    ),
+        // Main Hero Snap Card
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onCamera,
+            borderRadius: BorderRadius.circular(24),
+            splashColor: AppColors.cyan.withValues(alpha: 0.15),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.card,
+                    theme.surface,
                   ],
                 ),
-              ],
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.cyan.withValues(alpha: 0.35), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.cyan.withValues(alpha: 0.08),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Glowing Shutter Camera Button Container
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.cyan,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.cyan.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: AppColors.background,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Snap & Analyze Meal',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Take a photo for instant calories, macros & ingredient breakdown.',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            height: 1.35,
+                            color: theme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 16,
+                    color: theme.textMuted,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
-        // 100% Privacy Trust Badge
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: theme.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.shield_outlined,
-                  color: AppColors.success,
-                  size: 16,
+        // Quick Tools Action Row
+        Row(
+          children: [
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onGallery,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: theme.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: theme.border),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.photo_library_outlined, size: 16, color: AppColors.cyan),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Upload Photo',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '100% Local • Zero Cloud',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: theme.textPrimary,
-                      ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onBarcode,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: theme.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: theme.border),
                     ),
-                    Text(
-                      'On-device AI engine parses ingredients directly without uploading your photos to third-party servers.',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: theme.textMuted,
-                        height: 1.3,
-                      ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.qr_code_scanner_rounded, size: 16, color: AppColors.warning),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Scan Barcode',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-// ── MyFitnessPal Style Daily Food Diary Section ──────────────
+// ── Senior Flutter: MyFitnessPal Categorized Food Diary ──────
 
 class _FeedSection extends StatelessWidget {
   final List<MealEntry> logs;
@@ -2366,19 +2350,85 @@ class _FeedSection extends StatelessWidget {
         ),
         const SizedBox(height: 14),
 
-        for (var cat in categories) ...[
-          _MealCategorySlotCard(
-            categoryTitle: cat,
-            categoryLogs: categorized[cat]!,
-            onSnap: onSnap,
-            onEdit: onEdit,
-            onDelete: (meal) {
-              final idx = logs.indexOf(meal);
-              if (idx >= 0) onDelete(meal, idx);
-            },
+        if (logs.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            decoration: BoxDecoration(
+              color: theme.card,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: theme.border),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.restaurant_rounded,
+                    color: theme.primary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No meals logged yet today',
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Snap a photo or search to log your breakfast, lunch, or dinner.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: theme.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: onSnap,
+                  icon: const Icon(Icons.camera_alt_rounded, size: 16),
+                  label: Text(
+                    'Snap First Meal',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primary,
+                    foregroundColor: AppColors.background,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Column(
+            children: [
+              for (var cat in categories)
+                if (categorized[cat]!.isNotEmpty) ...[
+                  _MealCategorySlotCard(
+                    categoryTitle: cat,
+                    categoryLogs: categorized[cat]!,
+                    onSnap: onSnap,
+                    onEdit: onEdit,
+                    onDelete: (meal) {
+                      final idx = logs.indexOf(meal);
+                      if (idx >= 0) onDelete(meal, idx);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                ],
+            ],
           ),
-          const SizedBox(height: 14),
-        ],
       ],
     );
   }
