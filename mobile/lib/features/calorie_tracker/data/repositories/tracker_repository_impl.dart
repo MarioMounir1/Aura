@@ -27,6 +27,16 @@ class TrackerRepositoryImpl implements TrackerRepository {
   // ── Food Log ──
 
   @override
+  Future<Either<Failure, Map<String, dynamic>>> getNutritionHistory({int days = 7}) async {
+    try {
+      final response = await apiClient.dio.get('/nutrition/history', queryParameters: {'days': days});
+      return Right(response.data as Map<String, dynamic>);
+    } catch (e) {
+      return Left(_handleError(e, 'Failed to fetch nutrition history'));
+    }
+  }
+
+  @override
   Future<Either<Failure, Map<String, dynamic>>> getTodayFoodSummary({String? date}) async {
     try {
       final queryParams = <String, dynamic>{};
