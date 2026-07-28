@@ -9,7 +9,7 @@ import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUs
 import { analyzeMealHandler, manualLogMealHandler, updateMealLog } from "../controllers/meal.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { scanBarcodeHandler, logBarcodeHandler, estimateBarcodeHandler } from "../controllers/barcode.controller";
-import { getMealHistory, deleteMealLog } from "../controllers/history.controller";
+import { getMealHistory, deleteMealLog, getNutritionHistory } from "../controllers/history.controller";
 import { getSuggestions } from "../controllers/suggestion.controller";
 import { updateProfile, getTdee } from "../controllers/profile.controller";
 import { searchFoods, getFoodById, getFoodCategories } from "../controllers/food.controller";
@@ -298,6 +298,14 @@ router.post("/meals/estimate-barcode", requireAuth, barcodeLimiter, estimateBarc
  * @body    { barcode, productName, calories, protein, carbs, fats, servingGrams }
  */
 router.post("/meals/log-barcode", requireAuth, barcodeLimiter, logBarcodeHandler);
+
+/**
+ * @route   GET /api/v1/nutrition/history
+ * @desc    Get daily nutrition history with aggregated stats
+ * @access  Private (JWT required)
+ * @query   days? (7–30, default 7)
+ */
+router.get("/nutrition/history", requireAuth, getNutritionHistory);
 
 /**
  * @route   GET /api/v1/meals/history
