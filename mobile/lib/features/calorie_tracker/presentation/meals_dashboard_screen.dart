@@ -761,15 +761,29 @@ class _DashboardHeader extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      'Meals Dashboard',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: DashboardThemeColors.textPrimary,
-                      ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.asset(
+                            'assets/images/aura_logo.png',
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 28),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Aura',
+                          style: GoogleFonts.outfit(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: DashboardThemeColors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   // Greeting Streak Badge (Warning-colored pill)
