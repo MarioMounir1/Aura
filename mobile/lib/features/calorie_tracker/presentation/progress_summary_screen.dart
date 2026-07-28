@@ -136,7 +136,7 @@ class _ProgressSummaryScreenState extends State<ProgressSummaryScreen> {
     );
   }
 
-  Widget _buildToggleButtons(AppTheme theme, int selectedDays) {
+  Widget _buildToggleButtons(AuraThemeExtension theme, int selectedDays) {
     return Container(
       decoration: BoxDecoration(
         color: theme.card,
@@ -192,7 +192,7 @@ class _ProgressSummaryScreenState extends State<ProgressSummaryScreen> {
     );
   }
 
-  Widget _buildChart(history, AppTheme theme) {
+  Widget _buildChart(history, AuraThemeExtension theme) {
     if (history.days.isEmpty) {
       return Center(
         child: Text('No data available.', style: TextStyle(color: theme.textSecondary)),
@@ -326,7 +326,7 @@ class _ProgressSummaryScreenState extends State<ProgressSummaryScreen> {
   }
 
   Widget _buildStatCard({
-    required AppTheme theme,
+    required AuraThemeExtension theme,
     required String title,
     required String value,
     required String unit,
