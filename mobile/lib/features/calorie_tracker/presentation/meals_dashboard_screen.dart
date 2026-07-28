@@ -764,24 +764,29 @@ class _DashboardHeader extends StatelessWidget {
                     child: Row(
                       children: [
                         Container(
-                          width: 38,
-                          height: 38,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: AppColors.primary,
+                              width: 1.5,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                spreadRadius: 2,
+                                color: AppColors.primary.withValues(alpha: 0.5),
+                                blurRadius: 10,
+                                spreadRadius: 1,
                               ),
                             ],
                           ),
-                          child: ClipOval(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10.5),
                             child: Image.asset(
                               'assets/images/aura_logo.png',
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 34),
+                                  const Icon(Icons.fitness_center_rounded, color: AppColors.primary, size: 36),
                             ),
                           ),
                         ),
