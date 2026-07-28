@@ -69,7 +69,7 @@ class AuraThemeExtension extends ThemeExtension<AuraThemeExtension> {
     carbs: Color(0xFF8B5CF6),
     fats: Color(0xFFF97316),
     snapMealGradient: LinearGradient(
-      colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+      colors: [Color(0xFF083344), Color(0xFF0E7490)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
