@@ -59,6 +59,8 @@ import 'features/calorie_tracker/presentation/bloc/food_search_event.dart';
 import 'features/calorie_tracker/presentation/bloc/water_event.dart';
 import 'features/calorie_tracker/presentation/bloc/weight_event.dart';
 import 'features/calorie_tracker/presentation/bloc/meal_plan_event.dart';
+import 'features/calorie_tracker/presentation/bloc/nutrition_progress_bloc.dart';
+import 'features/calorie_tracker/presentation/progress_summary_screen.dart';
 import 'features/premium/data/services/purchase_service.dart';
 
 // ── Language Cubit ────────────────────────────────────────────
@@ -204,6 +206,12 @@ class TeneenApp extends StatelessWidget {
               ctx.read<WorkoutRepository>(),
             ),
           ),
+          // Nutrition Progress
+          BlocProvider<NutritionProgressBloc>(
+            create: (ctx) => NutritionProgressBloc(
+              ctx.read<TrackerRepository>(),
+            ),
+          ),
         ],
         child: BlocBuilder<LanguageCubit, Locale>(
           builder: (context, locale) {
@@ -251,6 +259,7 @@ class TeneenApp extends StatelessWidget {
                 '/meals/analyze': (_) => const AnalyzeMealScreen(),
                 '/water/progress': (_) => const WaterTrackingScreen(),
                 '/meals/ai-suggestion': (_) => const AiSuggestionScreen(),
+                '/nutrition/progress': (_) => const ProgressSummaryScreen(),
               },
             );
           },
