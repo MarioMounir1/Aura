@@ -2050,44 +2050,7 @@ class _SmartScannerSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Title & Badge
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.auto_awesome, color: AppColors.cyan, size: 18),
-                const SizedBox(width: 6),
-                Text(
-                  'SMART MEAL SCANNER',
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.4,
-                    color: AppColors.cyan,
-                  ),
-                ),
-              ],
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppColors.cyan.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.cyan.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                'AI Vision',
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.cyan,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
+
 
         // Main Hero Snap Card
         Material(
@@ -2100,14 +2063,7 @@ class _SmartScannerSection extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.card,
-                    theme.surface,
-                  ],
-                ),
+                gradient: theme.snapMealGradient,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(color: AppColors.cyan.withValues(alpha: 0.35), width: 1.5),
                 boxShadow: [
@@ -2192,7 +2148,7 @@ class _SmartScannerSection extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: theme.card,
+                      gradient: theme.uploadScreenshotGradient,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: theme.border),
                     ),
@@ -2225,7 +2181,7 @@ class _SmartScannerSection extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                     decoration: BoxDecoration(
-                      color: theme.card,
+                      gradient: theme.scanBarcodeGradient,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: theme.border),
                     ),
