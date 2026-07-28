@@ -1860,6 +1860,18 @@ class _MacroRingsSection extends StatelessWidget {
                           color: AppColors.cyan,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Tooltip(
+                        message: 'Nutrition Progress',
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).pushNamed('/nutrition/progress'),
+                          child: const Icon(
+                            Icons.bar_chart_rounded,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   Container(
