@@ -712,6 +712,22 @@ class _MealsDashboardState extends State<MealsDashboard> {
     );
   }
 
+  int _calculateStreak(List<MealEntry> mealLogs) {
+    if (mealLogs.isEmpty) return 1;
+    final dates = mealLogs
+        .map((l) => DateTime(l.createdAt.year, l.createdAt.month, l.createdAt.day))
+        .toSet();
+    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    DateTime checkDate = dates.contains(today) ? today : (dates.contains(yesterday) ? yesterday : today);
+    int streak = 0;
+    while (dates.contains(checkDate)) {
+      streak++;
+      checkDate = checkDate.subtract(const Duration(days: 1));
+    }
+    return streak > 0 ? streak : 1;
+  }
 }
 // ↑ End of _MealsDashboardState
 
