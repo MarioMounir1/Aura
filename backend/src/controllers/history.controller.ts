@@ -180,3 +180,137 @@ export async function deleteMealLog(req: Request, res: Response): Promise<void> 
     });
   }
 }
+
+// ── Nutrition History ──────────────────────────────────────
+
+const NutritionHistoryQuerySchema = z.object({
+  days: z.coerce.number().int().min(7).max(30).default(7),
+});
+
+function calcNutrition(
+  food: { calories: number; protein: number; carbs: number; fats: number; fiber: number; servingSize: number },
+  servings: number,
+) {
+  return {
+    calories: Math.round(food.calories * servings * 10) / 10,
+    protein:  Math.round(food.protein  * servings * 10) / 10,
+    carbs:    Math.round(food.carbs    * servings * 10) / 10,
+    fats:     Math.round(food.fats     * servings * 10) / 10,
+  };
+}
+
+export async function getNutritionHistory(req: Request, res: Response): Promise<void> {
+  const userId = req.user!.id;
+  
+  const parsed = NutritionHistoryQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Invalid query parameters",
+      details: parsed.error.flatten().fieldErrors,
+    });
+    return;
+  }
+  
+  const { days } = parsed.data;
+  
+  const since = new Date();
+  since.setDate(since.getDate() - days + 1);
+  since.setUTCHours(0, 0, 0, 0);
+
+  try {
+    const [user, foodLogs, mealLogs] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { dailyCalorieGoal: true, proteinGoal: true, carbsGoal: true, fatsGoal: true }
+      }),
+      prisma.foodLog.findMany({
+        where: { userId, loggedAt: { gte: since } },
+        include: { foodItem: true },
+      }),
+      prisma.mealLog.findMany({
+        where: { userId, loggedAt: { gte: since } },
+        select: { calories: true, protein: true, carbs: true, fats: true, loggedAt: true },
+      }),
+    ]);
+    
+    const goalCalories = user?.dailyCalorieGoal ?? 2000;
+    const goalProtein = user?.proteinGoal ?? 150;
+    
+    const dailyTotals: Record<string, { calories: number; protein: number; carbs: number; fats: number; date: string }> = {};
+    
+    for (let i = 0; i < days; i++) {
+      const d = new Date(since);
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().split("T")[0];
+      dailyTotals[key] = { date: key, calories: 0, protein: 0, carbs: 0, fats: 0 };
+    }
+    
+    for (const log of foodLogs) {
+      const key = log.loggedAt.toISOString().split("T")[0];
+      if (dailyTotals[key]) {
+        const n = calcNutrition(log.foodItem, log.servings);
+        dailyTotals[key].calories += n.calories;
+        dailyTotals[key].protein += n.protein;
+        dailyTotals[key].carbs += n.carbs;
+        dailyTotals[key].fats += n.fats;
+      }
+    }
+    
+    for (const log of mealLogs) {
+      const key = log.loggedAt.toISOString().split("T")[0];
+      if (dailyTotals[key]) {
+        dailyTotals[key].calories += log.calories;
+        dailyTotals[key].protein += log.protein;
+        dailyTotals[key].carbs += log.carbs;
+        dailyTotals[key].fats += log.fats;
+      }
+    }
+    
+    const sortedDays = Object.values(dailyTotals).sort((a, b) => a.date.localeCompare(b.date));
+    
+    let sumCalories = 0;
+    let sumProtein = 0;
+    let daysGoalMet = 0;
+    
+    for (const day of sortedDays) {
+      sumCalories += day.calories;
+      sumProtein += day.protein;
+      if (day.calories > 0 && day.calories <= goalCalories) {
+        daysGoalMet++;
+      }
+    }
+    
+    const daysWithData = sortedDays.filter(d => d.calories > 0).length;
+    const divisor = daysWithData > 0 ? daysWithData : 1;
+    
+    res.json({
+      success: true,
+      data: {
+        days: sortedDays.map(d => ({
+          date: d.date,
+          calories: Math.round(d.calories),
+          protein: Math.round(d.protein),
+          carbs: Math.round(d.carbs),
+          fats: Math.round(d.fats),
+        })),
+        stats: {
+          averageCalories: Math.round(sumCalories / divisor),
+          averageProtein: Math.round(sumProtein / divisor),
+          daysGoalMet,
+        },
+        goals: {
+          calories: goalCalories,
+          protein: goalProtein,
+        }
+      }
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ [History] getNutritionHistory error:", msg);
+    res.status(500).json({
+      success: false,
+      error: "Failed to load nutrition history.",
+    });
+  }
+}
