@@ -1889,18 +1889,38 @@ class _MacroRingsSection extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // ── 1. DOMINANT PRIMARY CALORIE RING ──────────────────
+              // ── 1. DOMINANT PRIMARY CALORIE LINEAR BAR ──────────────────
+              Text(
+                '${caloriesConsumed.round()}',
+                style: GoogleFonts.outfit(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: theme.textPrimary,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                remainingText,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: theme.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0.0, end: calProgress),
                 duration: const Duration(milliseconds: 1400),
                 curve: Curves.easeOutCubic,
-                builder: (_, v, __) => AppMetricRing(
-                  value: '${caloriesConsumed.round()}',
-                  label: remainingText,
-                  progress: v,
-                  roleColor: AppColors.primaryAccent,
-                  size: 140.0,
-                  strokeWidth: 10.0,
+                builder: (_, v, __) => ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: v,
+                    minHeight: 10,
+                    backgroundColor: AppColors.primaryAccent.withValues(alpha: 0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryAccent),
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
