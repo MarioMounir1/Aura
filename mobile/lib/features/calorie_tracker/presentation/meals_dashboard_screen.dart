@@ -511,7 +511,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _DashboardHeader(),
+                _DashboardHeader(streakCount: _calculateStreak(logs)),
                 const SizedBox(height: 24),
 
                 // ── Daily Performance Rings ─────────────────
@@ -718,7 +718,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
 // ── Dashboard Header ──────────────────────────────────────────
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader();
+  final int streakCount;
+
+  const _DashboardHeader({required this.streakCount});
 
   @override
   Widget build(BuildContext context) {
@@ -761,15 +763,50 @@ class _DashboardHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: DashboardThemeColors.textPrimary,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      userName.isNotEmpty ? 'Hey $userName 👋' : 'Meals Dashboard',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: DashboardThemeColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  // Greeting Streak Badge (Warning-colored pill)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 15,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$streakCount day streak',
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 2),
               Text(
@@ -781,20 +818,6 @@ class _DashboardHeader extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: DashboardThemeColors.trackBg),
-          ),
-          child: const Icon(
-            Icons.shield_outlined,
-            color: DashboardThemeColors.accentEmerald,
-            size: 24,
           ),
         ),
       ],
@@ -849,115 +872,129 @@ class _ProcessingStateWidgetState extends State<_ProcessingStateWidget>
       children: [
         if (widget.selectedImage != null)
           ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.file(
-              widget.selectedImage!,
-              height: 140,
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              height: 220,
               width: double.infinity,
-              fit: BoxFit.cover,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: DashboardThemeColors.borderMid, width: 1),
+              ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.file(
+                      widget.selectedImage!,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withValues(alpha: 0.15),
+                            Colors.black.withValues(alpha: 0.55),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         const SizedBox(height: 16),
-        AnimatedBuilder(
-          animation: _shimmerController,
-          builder: (_, __) {
-            return Container(
-              width: double.infinity,
-              height: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.3),
-                ),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: ShaderMask(
-                  shaderCallback: (bounds) {
-                    return LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: const [
-                        Color(0xFF111827),
-                        Color(0xFF1F2937),
-                        Color(0xFF10B981),
-                        Color(0xFF1F2937),
-                        Color(0xFF111827),
-                      ],
-                      stops: [
-                        0.0,
-                        (_shimmerAnim.value + 1.5) / 3.0 - 0.3,
-                        (_shimmerAnim.value + 1.5) / 3.0,
-                        (_shimmerAnim.value + 1.5) / 3.0 + 0.3,
-                        1.0,
-                      ].map((s) => s.clamp(0.0, 1.0)).toList(),
-                    ).createShader(bounds);
-                  },
-                  blendMode: BlendMode.srcATop,
-                  child: Container(
-                    color: DashboardThemeColors.cardBackground,
-                    padding: const EdgeInsets.all(24),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: DashboardThemeColors.cardBackground,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _shimmerBox(40, 40),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _shimmerLine(width: 0.5, height: 12),
-                        const SizedBox(height: 12),
-                        _shimmerLine(width: 0.8, height: 20),
-                        const SizedBox(height: 10),
-                        _shimmerLine(width: 0.65, height: 14),
-                        const SizedBox(height: 20),
-                        Row(children: [
-                          _shimmerBox(60, 60),
-                          const SizedBox(width: 12),
-                          _shimmerBox(60, 60),
-                          const SizedBox(width: 12),
-                          _shimmerBox(60, 60),
-                          const SizedBox(width: 12),
-                          _shimmerBox(60, 60),
-                        ]),
+                        _shimmerLine(width: 0.6, height: 16),
+                        const SizedBox(height: 6),
+                        _shimmerLine(width: 0.35, height: 11),
                       ],
                     ),
                   ),
-                ),
+                ],
               ),
-            );
-          },
-        ),
-        const SizedBox(height: 20),
-        AnimatedBuilder(
-          animation: _pulseAnim,
-          builder: (_, __) => Opacity(
-            opacity: _pulseAnim.value,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _shimmerBox(double.infinity, 70)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _shimmerBox(double.infinity, 70)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: _shimmerBox(double.infinity, 70)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _shimmerBox(double.infinity, 70)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              AnimatedBuilder(
+                animation: _shimmerAnim,
+                builder: (_, __) => Container(
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: DashboardThemeColors.accentEmerald,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.6),
-                        blurRadius: 8,
-                        spreadRadius: 2,
+                    color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: DashboardThemeColors.accentEmerald,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.6),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Analyzing meal components locally...',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: DashboardThemeColors.accentEmerald,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  'Analyzing meal components locally...',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: DashboardThemeColors.accentEmerald,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
