@@ -2027,7 +2027,7 @@ class _MacroChip extends StatelessWidget {
   }
 }
 
-// ── Extracted: Smart Scanner Idle State ──────────────────────
+// ── Cal AI Style Smart Scanner Section ──────────────────────
 
 class _SmartScannerSection extends StatelessWidget {
   final AiUsageQuota? quota;
@@ -2045,119 +2045,197 @@ class _SmartScannerSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cameraUsage = quota?.cameraUsage ?? 0;
-    final cameraLimit = quota?.cameraLimit ?? 2;
-    final remainingCamera = quota?.remainingCamera ?? (cameraLimit - cameraUsage);
-    final isCameraExceeded = quota?.isCameraExceeded ?? (cameraUsage >= cameraLimit);
-    final cameraText = '$cameraUsage/$cameraLimit scans today';
-    final cameraUsageColor = isCameraExceeded
-        ? DashboardThemeColors.accentRed
-        : (remainingCamera == 1
-            ? DashboardThemeColors.accentAmber
-            : DashboardThemeColors.accentEmerald.withValues(alpha: 0.85));
-
-    final galleryUsage = quota?.galleryUsage ?? 0;
-    final galleryLimit = quota?.galleryLimit ?? 2;
-    final remainingGallery = quota?.remainingGallery ?? (galleryLimit - galleryUsage);
-    final isGalleryExceeded = quota?.isGalleryExceeded ?? (galleryUsage >= galleryLimit);
-    final galleryText = '$galleryUsage/$galleryLimit screenshots today';
-    final galleryUsageColor = isGalleryExceeded
-        ? DashboardThemeColors.accentRed
-        : (remainingGallery == 1
-            ? DashboardThemeColors.accentAmber
-            : DashboardThemeColors.accentBlue.withValues(alpha: 0.85));
+    final theme = context.auraTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Section Header
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Icon(Icons.bolt, color: DashboardThemeColors.accentLime, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              'SMART MEAL SCANNER',
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.4,
-                color: DashboardThemeColors.accentLime,
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: AppColors.cyan, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  'CAL AI SMART SCANNER',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.4,
+                    color: AppColors.cyan,
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: theme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.border),
+              ),
+              child: Text(
+                'Offline AI',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.success,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 14),
-        Text(
-          'Analyze your meal instantly using local offline models — 100% private, zero cloud.',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            height: 1.5,
-            color: DashboardThemeColors.textSecondary,
+
+        // Hero Cal AI Camera Scanner Preview Container
+        GestureDetector(
+          onTap: onCamera,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  theme.surface,
+                  theme.card,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.cyan.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // Camera Viewfinder Box Simulation
+                Container(
+                  height: 130,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.cyan.withValues(alpha: 0.3)),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(
+                        Icons.crop_free_rounded,
+                        size: 90,
+                        color: AppColors.cyan,
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.cyan,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.cyan.withValues(alpha: 0.4),
+                                  blurRadius: 14,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt_rounded,
+                              color: AppColors.background,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'TAP TO SNAP MEAL',
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Quick Action Buttons Row: Gallery Upload & Barcode Scan
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onGallery,
+                        icon: const Icon(Icons.photo_library_outlined, size: 16),
+                        label: Text(
+                          'Upload Photo',
+                          style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.textPrimary,
+                          side: BorderSide(color: theme.border, width: 1),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onBarcode,
+                        icon: const Icon(Icons.qr_code_scanner_rounded, size: 16),
+                        label: Text(
+                          'Scan Barcode',
+                          style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.warning,
+                          side: BorderSide(color: AppColors.warning.withValues(alpha: 0.5), width: 1),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: AppActionTile(
-                title: 'Snap Meal',
-                subtitle: 'Camera · $cameraText',
-                icon: Icons.camera_alt_outlined,
-                gradient: AppColors.snapMealGradient,
-                onTap: onCamera,
-                isFilled: true,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: AppActionTile(
-                title: 'Upload Screenshot',
-                subtitle: 'Gallery · $galleryText',
-                icon: Icons.image_outlined,
-                gradient: AppColors.uploadScreenshotGradient,
-                onTap: onGallery,
-                isFilled: true,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        AppActionTile(
-          title: 'Search Food',
-          subtitle: 'Global search across millions of products & foods · Global',
-          icon: Icons.search_rounded,
-          color: AppColors.primaryAccent,
-          onTap: () => Navigator.of(context).pushNamed('/foods/search'),
-          isFilled: false,
-        ),
-        const SizedBox(height: 12),
-        AppActionTile(
-          title: 'Scan Barcode',
-          subtitle: 'Instant nutrition from packaged foods · Unlimited',
-          icon: Icons.barcode_reader,
-          gradient: AppColors.scanBarcodeGradient,
-          onTap: onBarcode,
-          isFilled: true,
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
+
+        // 100% Privacy Trust Badge
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: DashboardThemeColors.cardBackground,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: DashboardThemeColors.trackBg),
+            color: theme.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.border),
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: DashboardThemeColors.accentEmerald.withValues(alpha: 0.1),
+                  color: AppColors.success.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.lock_outline_rounded,
-                  color: DashboardThemeColors.accentEmerald,
+                  Icons.shield_outlined,
+                  color: AppColors.success,
                   size: 16,
                 ),
               ),
@@ -2167,19 +2245,19 @@ class _SmartScannerSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '100% Local • No Cloud Required',
+                      '100% Local • Zero Cloud',
                       style: GoogleFonts.outfit(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: DashboardThemeColors.textPrimary,
+                        color: theme.textPrimary,
                       ),
                     ),
                     Text(
-                      'Powered by secure offline privacy engines — your data never leaves your device.',
+                      'On-device AI engine parses ingredients directly without uploading your photos to third-party servers.',
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: DashboardThemeColors.textMuted,
-                        height: 1.4,
+                        color: theme.textMuted,
+                        height: 1.3,
                       ),
                     ),
                   ],
@@ -2193,99 +2271,7 @@ class _SmartScannerSection extends StatelessWidget {
   }
 }
 
-class _ActionCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String subtitle;
-  final String usageText;
-  final Color usageColor;
-  final LinearGradient gradient;
-  final Color accentColor;
-  final VoidCallback onTap;
-
-  const _ActionCard({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.usageText,
-    required this.usageColor,
-    required this.gradient,
-    required this.accentColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 160,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: accentColor.withValues(alpha: 0.25)),
-          boxShadow: [
-            BoxShadow(
-              color: accentColor.withValues(alpha: 0.12),
-              blurRadius: 16,
-              spreadRadius: 1,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: accentColor, size: 24),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: DashboardThemeColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: accentColor.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    usageText,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: usageColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Extracted: Today's Feed Section ──────────────────────────
+// ── MyFitnessPal Style Daily Food Diary Section ──────────────
 
 class _FeedSection extends StatelessWidget {
   final List<MealEntry> logs;
@@ -2300,111 +2286,269 @@ class _FeedSection extends StatelessWidget {
     required this.onDelete,
   });
 
+  Map<String, List<MealEntry>> _categorizeLogs() {
+    final Map<String, List<MealEntry>> categorized = {
+      'Breakfast': [],
+      'Lunch': [],
+      'Dinner': [],
+      'Snacks': [],
+    };
+
+    for (var log in logs) {
+      final hour = log.createdAt.hour;
+      if (hour >= 5 && hour < 11) {
+        categorized['Breakfast']!.add(log);
+      } else if (hour >= 11 && hour < 16) {
+        categorized['Lunch']!.add(log);
+      } else if (hour >= 16 && hour < 22) {
+        categorized['Dinner']!.add(log);
+      } else {
+        categorized['Snacks']!.add(log);
+      }
+    }
+    return categorized;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = context.auraTheme;
+    final categorized = _categorizeLogs();
+    final categories = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(children: [
-              Text(
-                "Today's Feed",
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: DashboardThemeColors.textPrimary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: DashboardThemeColors.trackBg,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${logs.length}',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: DashboardThemeColors.textPrimary,
-                  ),
-                ),
-              ),
-            ]),
             Row(
               children: [
-                TextButton.icon(
-                  onPressed: () => Navigator.of(context).pushNamed('/foods/search'),
-                  icon: const Icon(Icons.search_rounded, size: 16, color: DashboardThemeColors.accentEmerald),
-                  label: Text(
-                    'Search',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: DashboardThemeColors.accentEmerald,
-                    ),
+                Text(
+                  "Daily Food Diary",
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textPrimary,
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: onSnap,
-                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 16, color: DashboardThemeColors.accentLime),
-                  label: Text(
-                    'Snap',
-                    style: GoogleFonts.outfit(
-                      fontSize: 13,
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: theme.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: theme.border),
+                  ),
+                  child: Text(
+                    '${logs.length} logged',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: DashboardThemeColors.accentLime,
+                      color: AppColors.cyan,
                     ),
                   ),
                 ),
               ],
+            ),
+            TextButton.icon(
+              onPressed: () => Navigator.of(context).pushNamed('/foods/search'),
+              icon: const Icon(Icons.search_rounded, size: 16, color: AppColors.cyan),
+              label: Text(
+                'Search',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.cyan,
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        if (logs.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            decoration: BoxDecoration(
-              color: DashboardThemeColors.cardBackground,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: DashboardThemeColors.trackBg),
-            ),
-            child: Column(
+        const SizedBox(height: 14),
+
+        for (var cat in categories) ...[
+          _MealCategorySlotCard(
+            categoryTitle: cat,
+            categoryLogs: categorized[cat]!,
+            onSnap: onSnap,
+            onEdit: onEdit,
+            onDelete: (meal) {
+              final idx = logs.indexOf(meal);
+              if (idx >= 0) onDelete(meal, idx);
+            },
+          ),
+          const SizedBox(height: 14),
+        ],
+      ],
+    );
+  }
+}
+
+class _MealCategorySlotCard extends StatelessWidget {
+  final String categoryTitle;
+  final List<MealEntry> categoryLogs;
+  final VoidCallback onSnap;
+  final void Function(MealEntry) onEdit;
+  final void Function(MealEntry) onDelete;
+
+  const _MealCategorySlotCard({
+    required this.categoryTitle,
+    required this.categoryLogs,
+    required this.onSnap,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  IconData _getCategoryIcon() {
+    switch (categoryTitle) {
+      case 'Breakfast':
+        return Icons.free_breakfast_outlined;
+      case 'Lunch':
+        return Icons.lunch_dining_outlined;
+      case 'Dinner':
+        return Icons.dinner_dining_outlined;
+      default:
+        return Icons.cookie_outlined;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.auraTheme;
+    final totalCalories = categoryLogs.fold<double>(0, (sum, item) => sum + item.calories).round();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Slot Header Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.restaurant_outlined,
-                    color: DashboardThemeColors.textMuted, size: 36),
-                const SizedBox(height: 10),
-                Text(
-                  'No meals logged yet today.',
-                  style: GoogleFonts.inter(color: DashboardThemeColors.textMuted, fontSize: 14),
+                Row(
+                  children: [
+                    Icon(_getCategoryIcon(), color: theme.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      categoryTitle,
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: theme.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
                 Text(
-                  'Snap a meal above to get started.',
-                  style: GoogleFonts.inter(color: DashboardThemeColors.textMuted, fontSize: 12),
+                  '$totalCalories kcal',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: totalCalories > 0 ? theme.primary : theme.textMuted,
+                  ),
                 ),
               ],
             ),
-          )
-        else
-          Column(
-            children: [
-              for (var i = 0; i < logs.length; i++)
-                _MealLogCard(
-                  key: ValueKey(logs[i].id),
-                  meal: logs[i],
-                  index: i,
-                  onEdit:   onEdit,
-                  onDelete: onDelete,
-                ),
-            ],
           ),
-      ],
+
+          const Divider(height: 1, color: AppColors.border),
+
+          // Logged Food Item Rows
+          if (categoryLogs.isNotEmpty) ...[
+            for (var meal in categoryLogs) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            meal.foodName,
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: theme.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                '${meal.calories.round()} kcal',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'P: ${meal.protein.round()}g · C: ${meal.carbs.round()}g · F: ${meal.fat.round()}g',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: theme.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 16),
+                      color: theme.textSecondary,
+                      onPressed: () => onEdit(meal),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 16),
+                      color: AppColors.danger,
+                      onPressed: () => onDelete(meal),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.border),
+            ],
+          ],
+
+          // Quick + Add Food Button
+          InkWell(
+            onTap: () => Navigator.of(context).pushNamed('/foods/search'),
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add_rounded, size: 16, color: AppColors.cyan),
+                  const SizedBox(width: 4),
+                  Text(
+                    'ADD FOOD',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                      color: AppColors.cyan,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
