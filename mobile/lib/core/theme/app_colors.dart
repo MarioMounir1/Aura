@@ -65,9 +65,9 @@ class AuraThemeExtension extends ThemeExtension<AuraThemeExtension> {
     success: Color(0xFF4CAF50),
     warning: Color(0xFFFFC107),
     error: Color(0xFFF44336),
-    protein: Color(0xFF4CAF50),
-    carbs: Color(0xFF00BCD4),
-    fats: Color(0xFFF44336),
+    protein: Color(0xFF10B981),
+    carbs: Color(0xFF8B5CF6),
+    fats: Color(0xFFF97316),
     snapMealGradient: LinearGradient(
       colors: [Color(0xFF064E3B), Color(0xFF065F46)],
       begin: Alignment.topLeft,
@@ -196,9 +196,9 @@ abstract class AppColors {
   static const Color danger        = Color(0xFFF44336);
 
   // ── Macro Nutrients ──────────────────────────────────────────
-  static const Color protein       = Color(0xFF4CAF50);
-  static const Color carbs         = Color(0xFF00BCD4);
-  static const Color fats          = Color(0xFFF44336);
+  static const Color protein       = Color(0xFF10B981);
+  static const Color carbs         = Color(0xFF8B5CF6);
+  static const Color fats          = Color(0xFFF97316);
 
   // ── Action Tile Gradients ────────────────────────────────────
   static const LinearGradient snapMealGradient = LinearGradient(
