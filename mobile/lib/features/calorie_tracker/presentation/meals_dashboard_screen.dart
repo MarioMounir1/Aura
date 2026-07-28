@@ -1860,18 +1860,6 @@ class _MacroRingsSection extends StatelessWidget {
                           color: AppColors.cyan,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Tooltip(
-                        message: 'Nutrition Progress',
-                        child: GestureDetector(
-                          onTap: () => Navigator.of(context).pushNamed('/nutrition/progress'),
-                          child: const Icon(
-                            Icons.bar_chart_rounded,
-                            size: 18,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   Container(
@@ -1976,6 +1964,56 @@ class _MacroRingsSection extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 20),
+              // ── 3. VIEW PROGRESS BUTTON ────────
+              Material(
+                color: theme.surface,
+                borderRadius: BorderRadius.circular(16),
+                child: InkWell(
+                  onTap: () => Navigator.of(context).pushNamed('/nutrition/progress'),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.bar_chart_rounded, size: 16, color: AppColors.primary),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'View progress',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '7-day trend, averages & goal history',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: theme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, size: 20, color: AppColors.textMuted),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
