@@ -11,6 +11,7 @@ class AppButton extends StatelessWidget {
   final AppButtonVariant variant;
   final IconData? icon;
   final Color? iconColor;
+  final bool isFullWidth;
 
   const AppButton({
     super.key,
@@ -19,6 +20,7 @@ class AppButton extends StatelessWidget {
     this.variant = AppButtonVariant.primary,
     this.icon,
     this.iconColor,
+    this.isFullWidth = true,
   });
 
   const AppButton.primary({
@@ -27,6 +29,7 @@ class AppButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.iconColor,
+    this.isFullWidth = true,
   }) : variant = AppButtonVariant.primary;
 
   const AppButton.secondary({
@@ -35,6 +38,7 @@ class AppButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.iconColor,
+    this.isFullWidth = true,
   }) : variant = AppButtonVariant.secondary;
 
   @override
@@ -75,7 +79,7 @@ class AppButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(24),
         child: Container(
-          width: double.infinity,
+          width: isFullWidth ? double.infinity : null,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           decoration: BoxDecoration(
             color: backgroundColor,

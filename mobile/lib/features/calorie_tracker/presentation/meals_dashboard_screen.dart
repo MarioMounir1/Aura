@@ -2468,19 +2468,11 @@ class _FeedSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
+                AppButton.primary(
                   onPressed: onSnap,
-                  icon: const Icon(Icons.camera_alt_rounded, size: 16),
-                  label: Text(
-                    'Snap First Meal',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primary,
-                    foregroundColor: AppColors.background,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
+                  icon: Icons.camera_alt_rounded,
+                  label: 'Snap First Meal',
+                  isFullWidth: false,
                 ),
               ],
             ),
