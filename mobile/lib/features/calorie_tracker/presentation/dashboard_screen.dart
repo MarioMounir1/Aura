@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../../core/widgets/app_metric_ring.dart';
+import '../../../core/widgets/app_action_tile.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
@@ -1055,15 +1058,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           Center(
             child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
+              child: AppButton.primary(
+                label: 'Awesome!',
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Awesome!', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               ),
             ),
           ),

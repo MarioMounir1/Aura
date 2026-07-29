@@ -30,6 +30,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../../core/widgets/app_metric_ring.dart';
 import '../../../../core/widgets/app_action_tile.dart';
+import '../../../../core/widgets/app_button.dart';
 import '../../../core/widgets/ad_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
@@ -1508,38 +1509,20 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                   children: [
                     // Fix Results (Outlined ghost button)
                     Expanded(
-                      child: OutlinedButton.icon(
+                      child: AppButton.secondary(
+                        label: 'Fix results',
+                        icon: Icons.edit_outlined,
+                        iconColor: AppColors.warning,
                         onPressed: widget.onDiscard,
-                        icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: Text(
-                          'Fix results',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.primary,
-                          side: BorderSide(color: theme.primary, width: 1.5),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     // Done (Solid fill primary button)
                     Expanded(
-                      child: ElevatedButton.icon(
+                      child: AppButton.primary(
+                        label: 'Done',
+                        icon: Icons.check_circle_rounded,
                         onPressed: widget.onLog,
-                        icon: const Icon(Icons.check_circle_rounded, size: 16),
-                        label: Text(
-                          'Done',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primary,
-                          foregroundColor: AppColors.background,
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
                       ),
                     ),
                   ],

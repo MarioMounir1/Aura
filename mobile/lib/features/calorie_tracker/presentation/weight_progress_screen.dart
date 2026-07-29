@@ -13,6 +13,7 @@ import 'bloc/dashboard_bloc.dart';
 import 'bloc/dashboard_event.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_event.dart';
+import '../../../core/widgets/app_button.dart';
 
 class WeightProgressScreen extends StatefulWidget {
   const WeightProgressScreen({super.key});
@@ -198,18 +199,10 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
           const SizedBox(height: 24),
 
           // ── Weight Logger Action Button ───────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showLogWeightDialog(context, l10n),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.weightLogToday),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
+          AppButton.primary(
+            label: l10n.weightLogToday,
+            icon: Icons.add_rounded,
+            onPressed: () => _showLogWeightDialog(context, l10n),
           ),
           const SizedBox(height: 24),
 

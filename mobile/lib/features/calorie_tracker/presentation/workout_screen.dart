@@ -19,6 +19,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/ad_banner.dart';
+import '../../../core/widgets/app_metric_ring.dart';
+import '../../../core/widgets/app_action_tile.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../premium/presentation/premium_upgrade_screen.dart';
 import '../../premium/data/services/purchase_service.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
@@ -1411,34 +1414,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       const SizedBox(height: 14),
 
                       // Start Workout CTA
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: isRestDay ? null : _startWorkout,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _C.cyan,
-                        disabledBackgroundColor: _C.cardElev,
-                        foregroundColor: Colors.black,
-                        disabledForegroundColor: _C.textMut,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded, size: 22),
-                          const SizedBox(width: 8),
-                          Text(
-                            isRestDay
+                      AppButton.primary(
+                        onPressed: isRestDay ? null : _startWorkout,
+                        icon: isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded,
+                        label: isRestDay
                                 ? (isArabic ? 'يوم راحة' : 'Rest Day')
                                 : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
-                            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800),
-                          ),
-                        ],
                       ),
-                    ),
-                  ),
                 ],
               ),
             ),
