@@ -587,6 +587,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
           onCamera:  () => _pickAndAnalyze(ImageSource.camera),
           onGallery: () => _pickAndAnalyze(ImageSource.gallery),
           onBarcode: _scanBarcode,
+          onSearch: () => Navigator.of(context).pushNamed('/foods/search'),
         );
     }
   }
@@ -2117,6 +2118,7 @@ class _SmartScannerSection extends StatelessWidget {
   final VoidCallback onCamera;
   final VoidCallback onGallery;
   final VoidCallback onBarcode;
+  final VoidCallback onSearch;
 
   const _SmartScannerSection({
     super.key,
@@ -2124,128 +2126,57 @@ class _SmartScannerSection extends StatelessWidget {
     required this.onCamera,
     required this.onGallery,
     required this.onBarcode,
+    required this.onSearch,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = context.auraTheme;
+    final int cameraUsage = quota?.cameraUsage ?? 0;
+    final int cameraLimit = quota?.cameraLimit ?? 2;
+    final int galleryUsage = quota?.galleryUsage ?? 0;
+    final int galleryLimit = quota?.galleryLimit ?? 2;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
-
-        // Main Hero Snap Card
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onCamera,
-            borderRadius: BorderRadius.circular(24),
-            splashColor: AppColors.cyan.withValues(alpha: 0.15),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: theme.snapMealGradient,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.cyan.withValues(alpha: 0.35), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.cyan.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Glowing Shutter Camera Button Container
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: AppColors.cyan,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.cyan.withValues(alpha: 0.4),
-                          blurRadius: 16,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt_rounded,
-                      color: AppColors.background,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Snap & Analyze Meal',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Take a photo for instant calories, macros & ingredient breakdown.',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            height: 1.35,
-                            color: theme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: theme.textMuted,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // Quick Tools Action Row
+        // 1. Two square/equal-sized gradient tiles side by side
         Row(
           children: [
+            // Snap Meal Tile
             Expanded(
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: onGallery,
-                  borderRadius: BorderRadius.circular(16),
+                  onTap: onCamera,
+                  borderRadius: BorderRadius.circular(14),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    height: 110,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: theme.uploadScreenshotGradient,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: theme.border),
+                      gradient: theme.snapMealGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.cyan.withValues(alpha: 0.15)),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.photo_library_outlined, size: 16, color: AppColors.cyan),
-                        const SizedBox(width: 6),
+                        const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
+                        const Spacer(),
                         Text(
-                          'Upload Photo',
+                          'Snap meal',
                           style: GoogleFonts.outfit(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: theme.textPrimary,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Camera · $cameraUsage/$cameraLimit today',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.75),
                           ),
                         ),
                       ],
@@ -2254,31 +2185,41 @@ class _SmartScannerSection extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
+            // Upload Screenshot Tile
             Expanded(
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: onBarcode,
-                  borderRadius: BorderRadius.circular(16),
+                  onTap: onGallery,
+                  borderRadius: BorderRadius.circular(14),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    height: 110,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: theme.scanBarcodeGradient,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: theme.border),
+                      gradient: theme.uploadScreenshotGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.qr_code_scanner_rounded, size: 16, color: AppColors.warning),
-                        const SizedBox(width: 6),
+                        const Icon(Icons.photo_library_outlined, color: Colors.white, size: 24),
+                        const Spacer(),
                         Text(
-                          'Scan Barcode',
+                          'Upload screenshot',
                           style: GoogleFonts.outfit(
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: theme.textPrimary,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Gallery · $galleryUsage/$galleryLimit today',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.75),
                           ),
                         ),
                       ],
@@ -2288,6 +2229,118 @@ class _SmartScannerSection extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+
+        // 2. Search Food Flat Row
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onSearch,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.surfaceVariant,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: theme.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.search_rounded, color: AppColors.success, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Search food',
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Global search across millions of foods',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: theme.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // 3. Scan Barcode Gradient Row
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onBarcode,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: theme.scanBarcodeGradient,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Scan barcode',
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Instant nutrition · Unlimited',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
