@@ -55,31 +55,13 @@ class _MealPlansScreenState extends State<MealPlansScreen> {
 
             if (state is MealPlanInitial && _lastLoadedState == null) {
               context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
-              return const Center(child: CircularProgressIndicator());
             }
 
-            if (state is MealPlanLoading && _lastLoadedState == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (_lastLoadedState != null) {
-              return Stack(
-                children: [
-                  _buildContent(context, _lastLoadedState!, l10n, isArabic),
-                  if (state is MealPlanLoading)
-                    const Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: LinearProgressIndicator(
-                        minHeight: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        backgroundColor: Colors.transparent,
-                      ),
-                    ),
-                ],
-              );
-            }
+            final displayState = _lastLoadedState ?? const MealPlanLoaded(
+              days: [],
+              hasPlan: false,
+              weekStart: '',
+            );
 
             if (state is MealPlanFailure) {
               return Center(
@@ -96,7 +78,17 @@ class _MealPlansScreenState extends State<MealPlansScreen> {
                 ),
               );
             }
-            return const SizedBox.shrink();
+
+            return Stack(
+              children: [
+                _buildContent(context, displayState, l10n, isArabic),
+                if (state is MealPlanLoading || _lastLoadedState == null)
+                  const Positioned(
+                    top: 0, left: 0, right: 0,
+                    child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
+                  ),
+              ],
+            );
           },
         ),
       ),

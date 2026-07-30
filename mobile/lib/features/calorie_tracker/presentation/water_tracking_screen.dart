@@ -60,31 +60,18 @@ class _WaterTrackingScreenState extends State<WaterTrackingScreen> {
 
             if (state is WaterInitial && _lastLoadedState == null) {
               context.read<WaterBloc>().add(const LoadWaterToday());
-              return const Center(child: CircularProgressIndicator());
             }
 
-            if (state is WaterLoading && _lastLoadedState == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (_lastLoadedState != null) {
-              return Stack(
-                children: [
-                  _buildContent(context, _lastLoadedState!, l10n),
-                  if (state is WaterLoading)
-                    const Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: LinearProgressIndicator(
-                        minHeight: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        backgroundColor: Colors.transparent,
-                      ),
-                    ),
-                ],
-              );
-            }
+            final displayState = _lastLoadedState ?? const WaterLoaded(
+              totalMl: 0,
+              goalMl: 2500,
+              remainingMl: 2500,
+              progressPct: 0,
+              logs: [],
+              hourlyBreakdown: {},
+              quickAddOptions: [250, 500, 750, 1000],
+              date: '',
+            );
 
             if (state is WaterFailure) {
               return Center(
@@ -101,7 +88,22 @@ class _WaterTrackingScreenState extends State<WaterTrackingScreen> {
                 ),
               );
             }
-            return const SizedBox.shrink();
+
+            return Stack(
+              children: [
+                _buildContent(context, displayState, l10n),
+                if (state is WaterLoading || _lastLoadedState == null)
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: LinearProgressIndicator(
+                      minHeight: 3,
+                      color: AppColors.primary,
+                    ),
+                  ),
+              ],
+            );
           },
         ),
       ),

@@ -50,7 +50,10 @@ class _ProgressSummaryScreenState extends State<ProgressSummaryScreen> {
       body: BlocBuilder<NutritionProgressBloc, NutritionProgressState>(
         builder: (context, state) {
           if (state is NutritionProgressLoading || state is NutritionProgressInitial) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const Align(
+              alignment: Alignment.topCenter,
+              child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
+            );
           } else if (state is NutritionProgressError) {
             return Center(child: Text(state.message, style: const TextStyle(color: Colors.red)));
           } else if (state is NutritionProgressLoaded) {

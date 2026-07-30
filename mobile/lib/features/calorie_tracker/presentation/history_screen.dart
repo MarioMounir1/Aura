@@ -46,10 +46,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
       body: BlocBuilder<CalorieTrackerBloc, CalorieTrackerState>(
         builder: (context, state) {
           if (state is CalorieTrackerHistoryLoading) {
-            return const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation(AppColors.primary),
-              ),
+            return Stack(
+              children: [
+                _buildEmptyState(),
+                const Positioned(
+                  top: 0, left: 0, right: 0,
+                  child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
+                ),
+              ],
             );
           }
 

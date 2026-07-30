@@ -65,31 +65,16 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
 
             if (state is WeightInitial && _lastLoadedState == null) {
               context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
-              return const Center(child: CircularProgressIndicator());
             }
 
-            if (state is WeightLoading && _lastLoadedState == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (_lastLoadedState != null) {
-              return Stack(
-                children: [
-                  _buildContent(context, _lastLoadedState!, l10n),
-                  if (state is WeightLoading)
-                    const Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: LinearProgressIndicator(
-                        minHeight: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        backgroundColor: Colors.transparent,
-                      ),
-                    ),
-                ],
-              );
-            }
+            final displayState = _lastLoadedState ?? const WeightLoaded(
+              logs: [],
+              currentWeight: 0.0,
+              goal: 'maintain',
+              stats: null,
+              coachNote: 'Loading...',
+              activeDaysFilter: 30,
+            );
 
             if (state is WeightFailure) {
               return Center(
@@ -106,7 +91,17 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
                 ),
               );
             }
-            return const SizedBox.shrink();
+
+            return Stack(
+              children: [
+                _buildContent(context, displayState, l10n),
+                if (state is WeightLoading || _lastLoadedState == null)
+                  const Positioned(
+                    top: 0, left: 0, right: 0,
+                    child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
+                  ),
+              ],
+            );
           },
         ),
       ),

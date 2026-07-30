@@ -145,13 +145,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, state) {
           if (state is ProfileInitial) {
             context.read<ProfileBloc>().add(LoadProfile());
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+            return const Align(
+              alignment: Alignment.topCenter,
+              child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
             );
           }
           if (state is ProfileLoading && !_isInitialized) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+            return const Align(
+              alignment: Alignment.topCenter,
+              child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
             );
           }
           if (state is ProfileLoaded) {
