@@ -2140,13 +2140,6 @@ class _SmartScannerSection extends StatelessWidget {
                       gradient: theme.snapMealGradient,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: AppColors.cyan.withValues(alpha: 0.15)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF065F46).withValues(alpha: 0.45),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2198,13 +2191,6 @@ class _SmartScannerSection extends StatelessWidget {
                       gradient: theme.uploadScreenshotGradient,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF1D4ED8).withValues(alpha: 0.45),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2321,13 +2307,6 @@ class _SmartScannerSection extends StatelessWidget {
                 gradient: theme.scanBarcodeGradient,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF92400E).withValues(alpha: 0.45),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
               ),
               child: Row(
                 children: [
