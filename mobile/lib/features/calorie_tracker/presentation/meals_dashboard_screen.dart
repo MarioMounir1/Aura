@@ -2132,25 +2132,40 @@ class _SmartScannerSection extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: onCamera,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(18),
                   child: Container(
                     height: 110,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: theme.snapMealGradient,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: AppColors.cyan.withValues(alpha: 0.15)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF065F46).withValues(alpha: 0.45),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 19),
+                        ),
                         const Spacer(),
                         Text(
                           'Snap meal',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
@@ -2175,25 +2190,40 @@ class _SmartScannerSection extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: onGallery,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(18),
                   child: Container(
                     height: 110,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: theme.uploadScreenshotGradient,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1D4ED8).withValues(alpha: 0.45),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.photo_library_outlined, color: Colors.white, size: 24),
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 19),
+                        ),
                         const Spacer(),
                         Text(
                           'Upload screenshot',
                           style: GoogleFonts.outfit(
                             fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
@@ -2220,25 +2250,32 @@ class _SmartScannerSection extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onSearch,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: theme.surfaceVariant,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: theme.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
                       color: AppColors.success.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.search_rounded, color: AppColors.success, size: 20),
+                    child: const Icon(Icons.search_rounded, color: AppColors.success, size: 17),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -2249,7 +2286,7 @@ class _SmartScannerSection extends StatelessWidget {
                           'Search food',
                           style: GoogleFonts.outfit(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             color: theme.textPrimary,
                           ),
                         ),
@@ -2276,25 +2313,32 @@ class _SmartScannerSection extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onBarcode,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: theme.scanBarcodeGradient,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF92400E).withValues(alpha: 0.45),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                    child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 19),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -2305,7 +2349,7 @@ class _SmartScannerSection extends StatelessWidget {
                           'Scan barcode',
                           style: GoogleFonts.outfit(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
