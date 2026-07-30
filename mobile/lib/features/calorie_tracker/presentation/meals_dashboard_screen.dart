@@ -2467,13 +2467,6 @@ class _FeedSection extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 16),
-                AppButton.primary(
-                  onPressed: onSnap,
-                  icon: Icons.camera_alt_rounded,
-                  label: 'Snap First Meal',
-                  isFullWidth: false,
-                ),
               ],
             ),
           )
