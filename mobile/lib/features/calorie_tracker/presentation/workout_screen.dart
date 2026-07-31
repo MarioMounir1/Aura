@@ -89,7 +89,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ── Load existing routine from backend ─────────────────────
   Future<void> _loadRoutine({bool silent = false}) async {
     if (!mounted) return;
-    if (!silent || _state != WorkoutHubState.ready) {
+    if (!silent && _activeRoutine == null && _state != WorkoutHubState.ready) {
       setState(() => _state = WorkoutHubState.loading);
     } else {
       setState(() => _isRefreshingInPlace = true);
@@ -465,10 +465,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ══════════════════════════════════════════════════════════════
 
   Widget _buildLoadingView(bool isArabic) {
-    return const Center(
-      child: CircularProgressIndicator(
+    return const Align(
+      alignment: Alignment.topCenter,
+      child: LinearProgressIndicator(
         valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
-        strokeWidth: 2.5,
+        minHeight: 3,
+        backgroundColor: Colors.transparent,
       ),
     );
   }
@@ -2241,29 +2243,25 @@ class _QuestionnaireSheetState extends State<_QuestionnaireSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            optName,
-                            style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: _C.textPri),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: _C.amber.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: _C.amber.withValues(alpha: 0.3)),
-                          ),
-                          child: Text(
-                            optReasonTag,
-                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _C.amber),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      optName,
+                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: _C.textPri),
                     ),
+                    if (optReasonTag.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _C.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: _C.amber.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          optReasonTag,
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _C.amber),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(optTagline, style: GoogleFonts.inter(fontSize: 12, color: _C.textSec)),
                     const SizedBox(height: 10),
