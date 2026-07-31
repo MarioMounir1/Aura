@@ -2408,73 +2408,66 @@ class _CoachChatCardState extends State<CoachChatCard> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _C.card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1.2),
+        color: _C.cardElev,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F00BCD4), // 0 4px 14px rgba(0,188,212,0.12)
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: _C.cyan.withValues(alpha: 0.15), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Icon Badge + "Your Coach" Label & Note ─────────────
           if (hasNote) ...[
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 38x38px, 12px radius, bg-accent, sparkle icon in text-accent, glow 0 0 10px rgba(0,188,212,0.3)
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
                     color: _C.cyan.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x4D00BCD4), // 0 0 10px rgba(0,188,212,0.3)
+                        blurRadius: 10,
+                      ),
+                    ],
                   ),
-                  child: const Icon(Icons.psychology_rounded, color: _C.cyan, size: 16),
+                  child: const Center(
+                    child: Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 18),
+                  ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            isArabic ? 'نصيحة مدرب الذكاء الاصطناعي' : 'AI COACH NOTE',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: _C.cyan,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _C.cyan.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 0.8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.bolt_rounded, color: _C.cyan, size: 10),
-                                const SizedBox(width: 2),
-                                Text(
-                                  'Ollama AI',
-                                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: _C.cyan),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Text(
+                        isArabic ? 'مدربك الشخصي' : 'Your Coach',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _C.cyan,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         coachNote,
                         style: GoogleFonts.inter(
-                          fontSize: 12.5,
+                          fontSize: 13,
                           color: _C.textPri,
-                          height: 1.35,
-                          fontWeight: FontWeight.w500,
+                          height: 1.55,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
@@ -2482,11 +2475,10 @@ class _CoachChatCardState extends State<CoachChatCard> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            const Divider(color: _C.border, height: 1, thickness: 0.8),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
           ],
 
+          // ── Chat Bubbles (if active conversation) ──────────────
           if (_messages.isNotEmpty) ...[
             Container(
               constraints: const BoxConstraints(maxHeight: 220),
@@ -2501,51 +2493,72 @@ class _CoachChatCardState extends State<CoachChatCard> {
                 },
               ),
             ),
-            const SizedBox(height: 10),
-            const Divider(color: _C.border, height: 1, thickness: 0.8),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
           ],
 
-          Row(
-            children: [
-              const Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  enabled: !_isInterpreting,
-                  style: GoogleFonts.inter(fontSize: 12, color: _C.textPri),
-                  decoration: InputDecoration(
-                    hintText: isArabic
-                        ? 'اسأل المدرب أو اكتب أمراً.. "غير اليوم لـ Legs"'
-                        : 'Ask coach or command.. e.g. "swap today for legs"',
-                    hintStyle: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 6),
+          // ── Pill-Shaped Input Bar ──────────────────────────────
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            decoration: BoxDecoration(
+              color: _C.card,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: _C.borderMid),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.chat_bubble_outline_rounded, color: _C.textMut, size: 16),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    enabled: !_isInterpreting,
+                    style: GoogleFonts.inter(fontSize: 13, color: _C.textPri),
+                    decoration: InputDecoration(
+                      hintText: isArabic
+                          ? 'اسأل مدربك أي شيء...'
+                          : 'Ask your coach anything',
+                      hintStyle: GoogleFonts.inter(fontSize: 13, color: _C.textMut),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    onSubmitted: (_) => _submit(),
                   ),
-                  onSubmitted: (_) => _submit(),
                 ),
-              ),
-              const SizedBox(width: 4),
-              InkWell(
-                onTap: _isInterpreting ? null : _submit,
-                borderRadius: BorderRadius.circular(10),
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: _isInterpreting
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
-                          ),
-                        )
-                      : const Icon(Icons.send_rounded, color: _C.cyan, size: 16),
+                const SizedBox(width: 6),
+                // 32x32px circular send button with fill-primary background & up-arrow icon
+                _AnimatedPressable(
+                  onTap: _isInterpreting ? null : _submit,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: _C.cyan,
+                      shape: BoxShape.circle,
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x6600BCD4), // 0 3px 10px rgba(0,188,212,0.4)
+                          blurRadius: 10,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: _isInterpreting
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                              ),
+                            )
+                          : const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 18),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
