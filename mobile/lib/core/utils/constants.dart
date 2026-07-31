@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
+
 // lib/core/utils/constants.dart
 // Calc-Calories — App-wide constants
 
@@ -5,11 +8,16 @@ class AppConstants {
   AppConstants._();
 
   // API
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://localhost:3000', // Uses adb reverse on physical Android devices
-  );
-  static const String apiV1 = '$baseUrl/api/v1';
+  static String get baseUrl {
+    const envUrl = String.fromEnvironment('API_BASE_URL');
+    if (envUrl.isNotEmpty) return envUrl;
+    if (!kIsWeb && Platform.isAndroid) {
+      return 'http://10.0.2.2:3000';
+    }
+    return 'http://127.0.0.1:3000';
+  }
+
+  static String get apiV1 => '$baseUrl/api/v1';
 
   // Hive box names
   static const String mealLogsBox = 'meal_logs';
