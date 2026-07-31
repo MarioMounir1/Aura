@@ -1309,9 +1309,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                     color: _C.cyan, letterSpacing: 0.8),
                               ),
                             ),
-                            InkWell(
+                            _AnimatedPressable(
                               onTap: () => _showSwapSessionSheet(isArabic),
-                              borderRadius: BorderRadius.circular(12),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
@@ -1416,12 +1415,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       const SizedBox(height: 14),
 
                       // Start Workout CTA
-                      AppButton.primary(
-                        onPressed: isRestDay ? null : _startWorkout,
-                        icon: isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded,
-                        label: isRestDay
-                                ? (isArabic ? 'يوم راحة' : 'Rest Day')
-                                : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
+                      _AnimatedPressable(
+                        onTap: isRestDay ? null : _startWorkout,
+                        child: AppButton.primary(
+                          onPressed: isRestDay ? null : _startWorkout,
+                          icon: isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded,
+                          label: isRestDay
+                                  ? (isArabic ? 'يوم راحة' : 'Rest Day')
+                                  : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
+                        ),
                       ),
                 ],
               ),
@@ -1515,32 +1517,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         final label = weekDayLabels[i];
 
         final isCompleted = detail?.isCompleted ?? (i < _completedDaysThisWeek.length ? _completedDaysThisWeek[i] : false);
-        final isSkipped   = detail?.isSkipped ?? false;
-        final isRest      = detail?.isRest ?? false;
-        final isMissed    = detail?.isMissed ?? false;
+        final isRest      = detail?.isRest ?? detail?.isSkipped ?? false;
         final isToday     = detail?.isToday ?? (i == todayIndex);
-
-        Color circleBg = _C.cardElev;
-        Color borderColor = _C.border;
-        Widget circleChild = const SizedBox.shrink();
-
-        if (isCompleted) {
-          circleBg = isToday ? _C.cyan.withValues(alpha: 0.25) : _C.cyan.withValues(alpha: 0.15);
-          borderColor = _C.cyan;
-          circleChild = const Icon(Icons.check_rounded, color: _C.cyan, size: 14);
-        } else if (isSkipped) {
-          circleBg = _C.amber.withValues(alpha: 0.12);
-          borderColor = _C.amber.withValues(alpha: 0.4);
-          circleChild = const Icon(Icons.block_rounded, color: _C.amber, size: 13);
-        } else if (isMissed) {
-          circleBg = Colors.redAccent.withValues(alpha: 0.1);
-          borderColor = Colors.redAccent.withValues(alpha: 0.4);
-          circleChild = const Icon(Icons.priority_high_rounded, color: Colors.redAccent, size: 13);
-        } else if (isRest) {
-          circleBg = Colors.transparent;
-          borderColor = _C.borderMid;
-          circleChild = const Icon(Icons.nightlight_round, color: _C.textMut, size: 11);
-        }
 
         return GestureDetector(
           onTap: () {
@@ -1557,21 +1535,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   color: isToday ? _C.cyan : _C.textMut,
                 )),
             const SizedBox(height: 6),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              width: 28, height: 28,
-              decoration: BoxDecoration(
-                color: circleBg,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isToday ? _C.cyan : borderColor,
-                  width: isToday ? 1.8 : 1.0,
-                ),
-                boxShadow: isToday
-                    ? [BoxShadow(color: _C.cyan.withValues(alpha: 0.3), blurRadius: 6)]
-                    : null,
-              ),
-              child: Center(child: circleChild),
+            _buildDayCircleWidget(
+              isCompleted: isCompleted,
+              isToday: isToday,
+              isRest: isRest,
             ),
           ]),
         );
@@ -2794,13 +2761,12 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GestureDetector(
+          _AnimatedPressable(
             onTap: () {
               setState(() {
                 _isExpanded = !_isExpanded;
               });
             },
-            behavior: HitTestBehavior.opaque,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -2897,24 +2863,24 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                         fontSize: 10, fontWeight: FontWeight.w600, color: _C.textMut),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
 
-                // Alternatives Swap Icon Button
-                InkWell(
+                // Alternatives Swap Icon Badge Button (36x36px, 11px corner radius, bg-accent background, text-accent icon)
+                _AnimatedPressable(
                   onTap: _toggleAlternatives,
-                  borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: _showAlternatives
-                          ? _C.cyan.withValues(alpha: 0.2)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
+                      color: _C.cyan.withValues(alpha: _showAlternatives ? 0.25 : 0.12),
+                      borderRadius: BorderRadius.circular(11),
                     ),
-                    child: const Icon(
-                      Icons.swap_horiz_rounded,
-                      color: _C.cyan,
-                      size: 18,
+                    child: const Center(
+                      child: Icon(
+                        Icons.swap_horiz_rounded,
+                        color: _C.cyan,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ),
@@ -3066,6 +3032,154 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
   }
 }
 
+// ── Reusable Press Motion Scale Feedback Widget ──────────────
+
+class _AnimatedPressable extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+
+  const _AnimatedPressable({
+    required this.child,
+    this.onTap,
+  });
+
+  @override
+  State<_AnimatedPressable> createState() => _AnimatedPressableState();
+}
+
+class _AnimatedPressableState extends State<_AnimatedPressable> {
+  bool _isPressed = false;
+
+  void _onTapDown(TapDownDetails details) {
+    if (widget.onTap != null) {
+      setState(() => _isPressed = true);
+    }
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+  }
+
+  void _onTapCancel() {
+    if (_isPressed) {
+      setState(() => _isPressed = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// ── Dashed Circle Painter for Rest Days ──────────────────────
+
+class _DashedCirclePainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  _DashedCirclePainter({required this.color, this.strokeWidth = 1.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - strokeWidth) / 2;
+
+    const dashCount = 12;
+    const dashArc = (2 * 3.141592653589793) / dashCount;
+    const drawArc = dashArc * 0.55;
+
+    for (int i = 0; i < dashCount; i++) {
+      final startAngle = i * dashArc;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        drawArc,
+        false,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
+// ── Weekly Calendar Day Circle Builder ────────────────────────
+
+Widget _buildDayCircleWidget({
+  required bool isCompleted,
+  required bool isToday,
+  required bool isRest,
+}) {
+  if (isCompleted) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: const BoxDecoration(
+        color: _C.success,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(color: Color(0x804CAF50), blurRadius: 10),
+        ],
+      ),
+      child: const Center(
+        child: Icon(Icons.check_rounded, color: Colors.white, size: 14),
+      ),
+    );
+  } else if (isToday) {
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: _C.cyan.withValues(alpha: 0.15),
+        shape: BoxShape.circle,
+        border: Border.all(color: _C.cyan, width: 2.5),
+        boxShadow: const [
+          BoxShadow(color: Color(0x8000BCD4), blurRadius: 12),
+        ],
+      ),
+    );
+  } else if (isRest) {
+    return CustomPaint(
+      size: const Size(30, 30),
+      painter: _DashedCirclePainter(color: _C.border, strokeWidth: 1.0),
+    );
+  } else {
+    // Future / upcoming training day
+    return Container(
+      width: 30,
+      height: 30,
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        shape: BoxShape.circle,
+        border: Border.all(color: _C.border, width: 1.0),
+      ),
+    );
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // EXTRACTED COMPONENT 3: WeeklyCalendarRow (Isolated status dots)
 // ══════════════════════════════════════════════════════════════
@@ -3096,32 +3210,8 @@ class WeeklyCalendarRow extends StatelessWidget {
         final label = weekDayLabels[i];
 
         final isCompleted = detail?.isCompleted ?? (i < completedDaysThisWeek.length ? completedDaysThisWeek[i] : false);
-        final isSkipped   = detail?.isSkipped ?? false;
-        final isRest      = detail?.isRest ?? false;
-        final isMissed    = detail?.isMissed ?? false;
+        final isRest      = detail?.isRest ?? detail?.isSkipped ?? false;
         final isToday     = detail?.isToday ?? (i == todayIndex);
-
-        Color circleBg = _C.cardElev;
-        Color borderColor = _C.border;
-        Widget circleChild = const SizedBox.shrink();
-
-        if (isCompleted) {
-          circleBg = isToday ? _C.cyan.withValues(alpha: 0.25) : _C.cyan.withValues(alpha: 0.15);
-          borderColor = _C.cyan;
-          circleChild = const Icon(Icons.check_rounded, color: _C.cyan, size: 14);
-        } else if (isSkipped) {
-          circleBg = _C.amber.withValues(alpha: 0.12);
-          borderColor = _C.amber.withValues(alpha: 0.4);
-          circleChild = const Icon(Icons.block_rounded, color: _C.amber, size: 13);
-        } else if (isMissed) {
-          circleBg = Colors.redAccent.withValues(alpha: 0.1);
-          borderColor = Colors.redAccent.withValues(alpha: 0.4);
-          circleChild = const Icon(Icons.priority_high_rounded, color: Colors.redAccent, size: 13);
-        } else if (isRest) {
-          circleBg = Colors.transparent;
-          borderColor = _C.borderMid;
-          circleChild = const Icon(Icons.nightlight_round, color: _C.textMut, size: 11);
-        }
 
         return GestureDetector(
           onTap: () {
@@ -3138,21 +3228,10 @@ class WeeklyCalendarRow extends StatelessWidget {
                   color: isToday ? _C.cyan : _C.textMut,
                 )),
             const SizedBox(height: 6),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              width: 28, height: 28,
-              decoration: BoxDecoration(
-                color: circleBg,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isToday ? _C.cyan : borderColor,
-                  width: isToday ? 1.8 : 1.0,
-                ),
-                boxShadow: isToday
-                    ? [BoxShadow(color: _C.cyan.withValues(alpha: 0.3), blurRadius: 6)]
-                    : null,
-              ),
-              child: Center(child: circleChild),
+            _buildDayCircleWidget(
+              isCompleted: isCompleted,
+              isToday: isToday,
+              isRest: isRest,
             ),
           ]),
         );
