@@ -2094,6 +2094,92 @@ class _MacroChip extends StatelessWidget {
   }
 }
 
+// ── Tap Motion Feedback Wrapper for Scanner Cards ────────────
+
+class _AnimatedScannerTile extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final Color? glowColor;
+
+  const _AnimatedScannerTile({
+    required this.child,
+    required this.onTap,
+    this.glowColor,
+  });
+
+  @override
+  State<_AnimatedScannerTile> createState() => _AnimatedScannerTileState();
+}
+
+class _AnimatedScannerTileState extends State<_AnimatedScannerTile> {
+  bool _isPressed = false;
+
+  void _onTapDown(TapDownDetails details) {
+    setState(() => _isPressed = true);
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    setState(() => _isPressed = false);
+  }
+
+  void _onTapCancel() {
+    setState(() => _isPressed = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final glowColor = widget.glowColor;
+    return GestureDetector(
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      onTap: widget.onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: glowColor != null && _isPressed
+                ? [
+                    BoxShadow(
+                      color: glowColor.withValues(alpha: 0.45),
+                      blurRadius: 18,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : const [],
+          ),
+          child: Stack(
+            children: [
+              widget.child,
+              if (glowColor != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      curve: Curves.easeOutCubic,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: _isPressed
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.transparent,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Senior Flutter: Cal AI Smart Scanner Hero ────────────────
 
 class _SmartScannerSection extends StatelessWidget {
@@ -2128,50 +2214,47 @@ class _SmartScannerSection extends StatelessWidget {
           children: [
             // Snap Meal Tile
             Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onCamera,
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    height: 110,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: theme.snapMealGradient,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppColors.cyan.withValues(alpha: 0.15)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 19),
+              child: _AnimatedScannerTile(
+                onTap: onCamera,
+                glowColor: theme.snapMealGradient.colors.last,
+                child: Container(
+                  height: 110,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: theme.snapMealGradient,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.cyan.withValues(alpha: 0.15)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const Spacer(),
-                        Text(
-                          'Snap meal',
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                        child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 19),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Snap meal',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Camera · $cameraUsage/$cameraLimit today',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.75),
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Camera · $cameraUsage/$cameraLimit today',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.75),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2179,50 +2262,47 @@ class _SmartScannerSection extends StatelessWidget {
             const SizedBox(width: 12),
             // Upload Screenshot Tile
             Expanded(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onGallery,
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    height: 110,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: theme.uploadScreenshotGradient,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 19),
+              child: _AnimatedScannerTile(
+                onTap: onGallery,
+                glowColor: theme.uploadScreenshotGradient.colors.last,
+                child: Container(
+                  height: 110,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: theme.uploadScreenshotGradient,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const Spacer(),
-                        Text(
-                          'Upload screenshot',
-                          style: GoogleFonts.outfit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                        child: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 19),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Upload screenshot',
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Gallery · $galleryUsage/$galleryLimit today',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            color: Colors.white.withValues(alpha: 0.75),
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Gallery · $galleryUsage/$galleryLimit today',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.75),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -2232,119 +2312,113 @@ class _SmartScannerSection extends StatelessWidget {
         const SizedBox(height: 12),
 
         // 2. Search Food Flat Row
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onSearch,
-            borderRadius: BorderRadius.circular(18),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.surfaceVariant,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: theme.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+        _AnimatedScannerTile(
+          onTap: onSearch,
+          glowColor: null,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.surfaceVariant,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: theme.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.search_rounded, color: AppColors.success, size: 17),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Search food',
-                          style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: theme.textPrimary,
-                          ),
+                  child: const Icon(Icons.search_rounded, color: AppColors.success, size: 17),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Search food',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: theme.textPrimary,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Global search across millions of foods',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: theme.textSecondary,
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Global search across millions of foods',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.textSecondary,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
         const SizedBox(height: 12),
 
         // 3. Scan Barcode Gradient Row
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onBarcode,
-            borderRadius: BorderRadius.circular(18),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: theme.scanBarcodeGradient,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 19),
+        _AnimatedScannerTile(
+          onTap: onBarcode,
+          glowColor: theme.scanBarcodeGradient.colors.last,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: theme.scanBarcodeGradient,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Scan barcode',
-                          style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                  child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 19),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Scan barcode',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Instant nutrition · Unlimited',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.75),
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Instant nutrition · Unlimited',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.white.withValues(alpha: 0.75),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
