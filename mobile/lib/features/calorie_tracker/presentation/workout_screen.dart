@@ -600,8 +600,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: _C.card,
-                      borderRadius: BorderRadius.circular(20),
+                      color: _C.cardElev,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000), // 0 4px 14px rgba(0,0,0,0.2)
+                          blurRadius: 14,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                       border: Border.all(color: _C.border, width: 1.2),
                     ),
                     padding: const EdgeInsets.all(16),
@@ -1283,8 +1290,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 else
                   Container(
                     decoration: BoxDecoration(
-                      color: _C.card,
-                      borderRadius: BorderRadius.circular(24),
+                      color: _C.cardElev,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000), // 0 4px 14px rgba(0,0,0,0.2)
+                          blurRadius: 14,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
                       border: Border.all(color: _C.border, width: 1.2),
                     ),
                     padding: const EdgeInsets.all(20),
@@ -2878,21 +2892,27 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                 ),
                 const SizedBox(width: 8),
 
-                // Alternatives Swap Icon Badge Button (36x36px, 11px corner radius, bg-accent background, text-accent icon)
+                // Alternatives Swap Icon Badge Button (34x34px, 10px corner radius, bg-accent background, text-accent icon, 0 0 8px accent glow)
                 _AnimatedPressable(
                   onTap: _toggleAlternatives,
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: _C.cyan.withValues(alpha: _showAlternatives ? 0.25 : 0.12),
-                      borderRadius: BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x4000BCD4), // 0 0 8px rgba(0,188,212,0.25)
+                          blurRadius: 8,
+                        ),
+                      ],
                     ),
                     child: const Center(
                       child: Icon(
                         Icons.swap_horiz_rounded,
                         color: _C.cyan,
-                        size: 18,
+                        size: 16,
                       ),
                     ),
                   ),
@@ -3148,42 +3168,42 @@ Widget _buildDayCircleWidget({
 }) {
   if (isCompleted) {
     return Container(
-      width: 30,
-      height: 30,
+      width: 28,
+      height: 28,
       decoration: const BoxDecoration(
         color: _C.success,
         shape: BoxShape.circle,
         boxShadow: [
-          BoxShadow(color: Color(0x804CAF50), blurRadius: 10),
+          BoxShadow(color: Color(0x804CAF50), blurRadius: 10), // 0 0 10px rgba(76,175,80,0.5)
         ],
       ),
       child: const Center(
-        child: Icon(Icons.check_rounded, color: Colors.white, size: 14),
+        child: Icon(Icons.check_rounded, color: Colors.white, size: 13),
       ),
     );
   } else if (isToday) {
     return Container(
-      width: 30,
-      height: 30,
+      width: 28,
+      height: 28,
       decoration: BoxDecoration(
         color: _C.cyan.withValues(alpha: 0.15),
         shape: BoxShape.circle,
         border: Border.all(color: _C.cyan, width: 2.5),
         boxShadow: const [
-          BoxShadow(color: Color(0x8000BCD4), blurRadius: 12),
+          BoxShadow(color: Color(0x8000BCD4), blurRadius: 12), // 0 0 12px rgba(0,188,212,0.5)
         ],
       ),
     );
   } else if (isRest) {
     return CustomPaint(
-      size: const Size(30, 30),
+      size: const Size(28, 28),
       painter: _DashedCirclePainter(color: _C.border, strokeWidth: 1.0),
     );
   } else {
     // Future / upcoming training day
     return Container(
-      width: 30,
-      height: 30,
+      width: 28,
+      height: 28,
       decoration: BoxDecoration(
         color: Colors.transparent,
         shape: BoxShape.circle,
