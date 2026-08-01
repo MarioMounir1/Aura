@@ -74,7 +74,7 @@ async function callOllamaChatDetailed(
 
   if (provider === "gemini" || provider === "google") {
     try {
-      const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+      const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
       const model = genAI.getGenerativeModel({ model: modelName });
       const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
       const result = await model.generateContent(prompt);
