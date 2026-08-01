@@ -730,10 +730,10 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
     const daysPerWeek = user.workoutDays;
     const meta = ROUTINE_CATALOGUE[splitType];
 
-    // Compute workout streak
+    // Compute workout streak ONLY from completed/finished sessions
     let streakDays = 0;
     const allSessions = await prisma.workoutSession.findMany({
-      where: { userId },
+      where: { userId, endedAt: { not: null } },
       select: { startedAt: true },
       orderBy: { startedAt: 'desc' },
     });
@@ -761,7 +761,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
 
     const currentSession = await buildCurrentSession(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt, streakDays);
 
-    // Compute real weekly completion from DB
+    // Compute real weekly completion from DB (ONLY completed sessions with endedAt != null)
     const now = new Date(targetDateStr + "T12:00:00Z");
     const startOfWeek = new Date(now);
     const dayOfWeek = (now.getDay() + 6) % 7; // Mon = 0, Sun = 6
@@ -778,6 +778,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       prisma.workoutSession.findMany({
         where: {
           userId,
+          endedAt: { not: null },
           startedAt: {
             gte: startOfWeek,
             lt: endOfWeek,
