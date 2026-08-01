@@ -480,8 +480,18 @@ export async function interpretSessionRequest(
   message: string,
   context: InterpretContext
 ): Promise<InterpretResult> {
-  const availableDaysStr = Array.from(new Set(context.availableDayTypes)).join(", ");
-  const currentExercisesStr = context.exercises.map((e) => e.name).join(", ");
+  const countReductionMatch = message.match(/(?:make|reduce|limit|set|cut|just|too much)\s*(?:it|today|session)?\s*(?:to|for|is)?\s*(\d+)\s*(?:ex|exs|exercise|exercises)/i)
+    || (message.toLowerCase().includes("too much") && message.match(/(\d+)\s*(?:ex|exs|exercise|exercises)/i));
+
+  if (countReductionMatch && !message.toLowerCase().includes("add") && !message.toLowerCase().includes("swap")) {
+    const targetNum = parseInt(countReductionMatch[1], 10);
+    if (targetNum > 0 && targetNum <= 15) {
+      return {
+        intent: "lighter_intensity",
+        reply: `Got it! Trimming today's session to your top ${targetNum} main exercises.`,
+      };
+    }
+  }
 
   const systemPrompt = `You are an expert AI fitness coach & workout session controller. Classify user message into 1 of 8 intents:
 1. "add_exercise": user wants to add a new exercise to today's workout (e.g., "add 3 sets of incline dumbbell curls"). Extract "exerciseName" and "targetSets" (default 3 if omitted).
@@ -517,7 +527,7 @@ Respond ONLY with JSON:
     systemPrompt,
     userPrompt,
     fallback,
-    { callerName: "interpretSessionRequest", timeoutMs: 8000, numPredict: 140 }
+    { callerName: "interpretSessionRequest", timeoutMs: 25000, numPredict: 140 }
   );
 
   if (detailedRes.source === "timeout" || detailedRes.source === "error") {
