@@ -611,3 +611,52 @@ Produce exactly 2 to 3 entries. No markdown, no extra keys.`;
     (a) => typeof a.name === "string" && a.name.trim().length > 0
   );
 }
+
+// ── 11. AI Session Exercise Recommendations Generator ────────
+
+export interface ExerciseRecommendation {
+  name: string;
+  reason: string;
+  muscleGroup: string;
+}
+
+export async function generateSessionRecommendations(input: {
+  splitName: string;
+  todayDayName: string;
+  exercises: string[];
+}): Promise<ExerciseRecommendation[]> {
+  const currentStr = input.exercises.join(", ");
+  const systemPrompt = `You are a world-class strength & conditioning coach. Analyze the user's workout session for today and suggest 3-4 complementary exercise additions that fill missing muscle groups or provide ideal accessory work.
+
+Respond ONLY with this exact JSON schema:
+{
+  "recommendations": [
+    { "name": "Exercise Name", "reason": "One concise sentence explaining why this is a great addition.", "muscleGroup": "Target Muscle Group" }
+  ]
+}
+Produce exactly 3 to 4 recommendations. No markdown formatting, no intro text.`;
+
+  const userPrompt = `Routine: ${input.splitName}. Day: ${input.todayDayName}. Current exercises in session: [${currentStr}]. Recommend 3-4 complementary exercise additions.`;
+
+  const fallback = {
+    recommendations: [
+      { name: "Face Pulls", reason: "Adds essential rear delt and upper back posture balance.", muscleGroup: "Rear Delts" },
+      { name: "Cable Flyes", reason: "Isolates chest with continuous cable tension.", muscleGroup: "Chest" },
+      { name: "Standing Calf Raises", reason: "Builds lower leg volume and ankle stability.", muscleGroup: "Calves" },
+      { name: "Hanging Leg Raises", reason: "Strengthens lower abs and core stability.", muscleGroup: "Core" },
+    ],
+  };
+
+  const result = await callOllamaJsonChat<{ recommendations: ExerciseRecommendation[] }>(
+    systemPrompt,
+    userPrompt,
+    fallback,
+    { callerName: "generateSessionRecommendations", timeoutMs: 10000 }
+  );
+
+  const list = result?.recommendations;
+  if (!Array.isArray(list) || list.length === 0) return fallback.recommendations;
+  return list.slice(0, 4).filter(
+    (r) => typeof r.name === "string" && r.name.trim().length > 0
+  );
+}
