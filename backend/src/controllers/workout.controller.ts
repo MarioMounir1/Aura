@@ -1670,7 +1670,54 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
         }
       }
     } else if (interpretation.intent === "lighter_intensity") {
-      actionExecuted = true;
+      const countMatch = message.match(/(\d+)\s*(?:ex|exs|exercise|exercises)/i);
+      const targetCount = countMatch ? parseInt(countMatch[1], 10) : null;
+
+      let activeSession = await prisma.workoutSession.findFirst({
+        where: { userId, endedAt: null },
+        include: { exercises: { include: { exercise: true } } },
+      });
+
+      if (!activeSession) {
+        activeSession = await prisma.workoutSession.create({
+          data: {
+            userId,
+            name: currentSession.todayDayName,
+            startedAt: new Date(),
+          },
+        });
+        for (let i = 0; i < currentSession.exercises.length; i++) {
+          const ex = currentSession.exercises[i];
+          if (ex.id) {
+            await prisma.workoutExercise.create({
+              data: {
+                sessionId: activeSession.id,
+                exerciseId: ex.id,
+                order: i + 1,
+              },
+            });
+          }
+        }
+        activeSession = await prisma.workoutSession.findFirst({
+          where: { id: activeSession.id },
+          include: { exercises: { include: { exercise: true } } },
+        });
+      }
+
+      if (activeSession && targetCount && targetCount > 0 && activeSession.exercises.length > targetCount) {
+        const toRemove = activeSession.exercises.slice(targetCount);
+        for (const r of toRemove) {
+          await prisma.exerciseSet.deleteMany({ where: { workoutExerciseId: r.id } });
+          await prisma.workoutExercise.delete({ where: { id: r.id } });
+        }
+        actionExecuted = true;
+        confirmationMessage = `Got it! Reduced today's workout to your top ${targetCount} main exercises.`;
+      } else {
+        actionExecuted = true;
+        if (!confirmationMessage || confirmationMessage.includes("wasn't sure")) {
+          confirmationMessage = `Lightened today's intensity. Focus on clean form and lower overall volume today!`;
+        }
+      }
     } else if (interpretation.intent === "change_plan") {
       const currentDays = user.workoutDays ?? 4;
       const resolved = resolveSplitForChangePlan(
