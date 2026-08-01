@@ -531,7 +531,7 @@ Respond ONLY with JSON:
   const res = detailedRes.value;
   console.log(`⏱️ [Ollama] interpretSessionRequest finished in ${detailedRes.elapsedMs}ms (${detailedRes.evalCount ?? 0} tokens generated, source: ${detailedRes.source}, intent: ${res.intent})`);
 
-  if (!res.intent || !["override_day", "swap_exercise", "lighter_intensity", "question", "change_plan", "unrecognized"].includes(res.intent)) {
+  if (!res.intent || !["add_exercise", "remove_exercise", "override_day", "swap_exercise", "lighter_intensity", "question", "change_plan", "unrecognized"].includes(res.intent)) {
     return fallback;
   }
 
