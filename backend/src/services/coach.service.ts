@@ -488,7 +488,7 @@ export async function interpretSessionRequest(
 2. "remove_exercise": user wants to remove an exercise from today's workout (e.g., "remove leg press", "delete cable flyes"). Extract "exerciseName".
 3. "swap_exercise": user wants to replace an exercise or body part today (e.g., "swap bench press for dumbbell press", "replace leg curl"). Extract "exerciseName" (the target exercise to replace) and "replacementExercise" (the specific replacement requested or recommended).
 4. "override_day": change/skip today's split day. "dayType" in [${availableDaysStr}] or "skip".
-5. "lighter_intensity": request easier/lighter session today.
+5. "lighter_intensity": request easier/lighter session, reduce volume, or limit exercise count (e.g., "too much for me", "make it 5 exercises", "reduce to 4 exercises", "make it lighter").
 6. "question": coaching/training question (exercise, form, recovery, general fitness).
 7. "change_plan": switch entire training split going forward (e.g. "switch to Upper/Lower", "Arnold split", "3 days a week"). Extract "proposedSplitName" if split name mentioned, and "proposedDays" (number) if days mentioned.
 8. "unrecognized": ambiguous, incoherent, or off-topic.
