@@ -930,8 +930,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
   }
 
-  }
-
   void _showSwapSessionSheet(bool isArabic) {
     final rawBreakdown = _activeRoutine?.breakdown ?? [];
     final uniqueTypes = <String>[];
