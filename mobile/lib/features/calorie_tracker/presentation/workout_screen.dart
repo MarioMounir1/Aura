@@ -930,108 +930,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
   }
 
-  void _showAddExerciseSheet(bool isArabic) {
-    final controller = TextEditingController();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: _C.bg,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      isArabic ? 'إضافة تمرين جديد' : 'Add Exercise to Today\'s Session',
-                      style: GoogleFonts.inter(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: _C.textPri,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: _C.textMut),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isArabic
-                      ? 'اكتب اسم التمرين لإضافته إلى تمرين اليوم'
-                      : 'Type an exercise name to append it to your session.',
-                  style: GoogleFonts.inter(fontSize: 12, color: _C.textMut),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  style: GoogleFonts.inter(fontSize: 14, color: _C.textPri),
-                  decoration: InputDecoration(
-                    hintText: isArabic ? 'مثال: Cable Lateral Raises' : 'e.g. Cable Lateral Raises',
-                    hintStyle: GoogleFonts.inter(fontSize: 13, color: _C.textMut),
-                    filled: true,
-                    fillColor: _C.cardElev,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: _C.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: _C.cyan, width: 1.5),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                AppButton.primary(
-                  onPressed: () async {
-                    final text = controller.text.trim();
-                    if (text.isEmpty) return;
-                    Navigator.pop(ctx);
-                    setState(() => _isRefreshingInPlace = true);
-                    try {
-                      final resp = await _dio.post('/workouts/session/interpret', data: {
-                        'message': 'Add 3 sets of $text',
-                      });
-                      if (resp.statusCode == 200 && resp.data['success'] == true) {
-                        final updatedData = resp.data['data']['currentSession'];
-                        if (updatedData != null) {
-                          final updatedSession = CurrentSession.fromJson(updatedData);
-                          setState(() {
-                            _currentSession = updatedSession;
-                            _showAllExercises = true;
-                          });
-                        } else {
-                          await _loadRoutine(silent: true);
-                        }
-                      }
-                    } catch (e) {
-                      // ignore
-                    } finally {
-                      if (mounted) setState(() => _isRefreshingInPlace = false);
-                    }
-                  },
-                  label: isArabic ? 'إضافة التمرين' : 'Add Exercise',
-                  icon: Icons.add_rounded,
-                ),
-                const SizedBox(height: 12),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   void _showSwapSessionSheet(bool isArabic) {
@@ -1526,30 +1424,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                               ),
                             ),
                           ],
-                          const SizedBox(height: 10),
-                          InkWell(
-                            onTap: () => _showAddExerciseSheet(isArabic),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                              decoration: BoxDecoration(
-                                color: _C.cyan.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.add_circle_outline_rounded, color: _C.cyan, size: 16),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    isArabic ? 'إضافة تمرين إلى الجلسة' : '+ Add Exercise to Today\'s Workout',
-                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: _C.cyan),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
                         ],
 
                       const SizedBox(height: 16),
