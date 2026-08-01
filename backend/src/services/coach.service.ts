@@ -1,9 +1,10 @@
-// ============================================================
-//  src/services/coach.service.ts
-//  Aura — Local Ollama AI Personal Coach Service
-// ============================================================
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { OLLAMA_CONFIG } from "../config";
 
-import { OLLAMA_CONFIG } from "../config";interface ExerciseInput {
+const apiKey = process.env.GEMINI_API_KEY || "";
+const genAI = new GoogleGenerativeAI(apiKey);
+
+interface ExerciseInput {
   name: string;
   targetSets: number;
   lastWeekWeight?: number | null;
@@ -65,11 +66,30 @@ async function callOllamaChatDetailed(
   fallback: string,
   options?: OllamaCallOptions
 ): Promise<OllamaResult<string>> {
-  const provider = process.env.AI_PROVIDER ?? "ollama";
+  const provider = process.env.AI_PROVIDER ?? "gemini";
   const callerName = options?.callerName ?? "callOllamaChat";
-  const timeoutMs = options?.timeoutMs ?? 3500;
+  const timeoutMs = options?.timeoutMs ?? 8000;
   const numPredict = options?.numPredict ?? 80;
   const startTime = Date.now();
+
+  if (provider === "gemini" || provider === "google") {
+    try {
+      const modelName = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
+      return {
+        value: cleaned || fallback,
+        source: "model",
+        elapsedMs: Date.now() - startTime,
+      };
+    } catch (err: any) {
+      console.warn(`⚠️ [Gemini Coach Error] '${callerName}' failed: ${err.message}`);
+      return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
+    }
+  }
 
   if (provider === "none" || isOllamaCurrentlyOffline()) {
     return { value: fallback, source: "error", elapsedMs: 0 };
