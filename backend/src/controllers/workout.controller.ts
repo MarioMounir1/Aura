@@ -498,54 +498,75 @@ async function fetchSessionData(
     };
   }
 
-  const baseExercises = DAY_EXERCISES[todayDayName] ?? [];
-
-  const dbExercises = await prisma.exercise.findMany({
-    where: {
-      OR: baseExercises.map(e => ({ name: { equals: e.name, mode: "insensitive" } }))
-    }
+  const activeSession = await prisma.workoutSession.findFirst({
+    where: { userId, endedAt: null },
+    include: {
+      exercises: {
+        include: { exercise: true },
+        orderBy: { order: "asc" },
+      },
+    },
   });
 
-  const exercises = await Promise.all(baseExercises.map(async (ex) => {
-    let dbEx = dbExercises.find(d => d.name.toLowerCase() === ex.name.toLowerCase());
+  let rawList: { name: string; targetSets: number; muscleGroup: string; dbId?: string }[] = [];
 
-    if (!dbEx) {
-      console.warn(`⚠️ [Workout] Exercise "${ex.name}" in DAY_EXERCISES ("${todayDayName}") has no matching DB Exercise record! Auto-creating DB record...`);
-      try {
-        dbEx = await prisma.exercise.create({
-          data: {
-            name: ex.name,
-            muscleGroup: ex.muscleGroup,
-            description: `Auto-seeded exercise record for ${ex.name}`,
-          },
-        });
-      } catch (e) {
-        // Fallback search if created in parallel
-        dbEx = await prisma.exercise.findFirst({ where: { name: { equals: ex.name, mode: "insensitive" } } }) ?? undefined;
+  if (activeSession && activeSession.exercises.length > 0) {
+    rawList = activeSession.exercises.map((we) => ({
+      name: we.exercise.name,
+      targetSets: 3,
+      muscleGroup: we.exercise.muscleGroup,
+      dbId: we.exercise.id,
+    }));
+  } else {
+    rawList = (DAY_EXERCISES[todayDayName] ?? []).map((e) => ({ ...e }));
+  }
+
+  const exercises = await Promise.all(
+    rawList.map(async (ex) => {
+      let dbEx = ex.dbId
+        ? await prisma.exercise.findUnique({ where: { id: ex.dbId } })
+        : await prisma.exercise.findFirst({ where: { name: { equals: ex.name, mode: "insensitive" } } });
+
+      if (!dbEx) {
+        console.warn(`⚠️ [Workout] Exercise "${ex.name}" has no matching DB Exercise record! Auto-creating DB record...`);
+        try {
+          dbEx = await prisma.exercise.create({
+            data: {
+              name: ex.name,
+              muscleGroup: ex.muscleGroup,
+              description: `Auto-seeded exercise record for ${ex.name}`,
+            },
+          });
+        } catch (e) {
+          dbEx = (await prisma.exercise.findFirst({ where: { name: { equals: ex.name, mode: "insensitive" } } })) ?? undefined;
+        }
       }
-    }
 
-    if (!dbEx) {
-      console.error(`❌ [Workout] CRITICAL: Failed to resolve or create DB Exercise for "${ex.name}"!`);
+      if (!dbEx) {
+        return {
+          name: ex.name,
+          targetSets: ex.targetSets,
+          muscleGroup: ex.muscleGroup,
+          id: undefined,
+          lastWeekWeight: undefined,
+          lastWeekReps: undefined,
+          isPlateaued: false,
+        };
+      }
+
+      const trend = await getRecentPerformanceTrend(userId, dbEx.id, 3);
+      const lastPerf = trend.history[0] ?? null;
       return {
-        ...ex,
-        id: undefined,
-        lastWeekWeight: undefined,
-        lastWeekReps: undefined,
-        isPlateaued: false,
+        name: ex.name,
+        targetSets: ex.targetSets,
+        muscleGroup: ex.muscleGroup,
+        id: dbEx.id,
+        lastWeekWeight: lastPerf ? lastPerf.weight : null,
+        lastWeekReps: lastPerf ? lastPerf.reps : null,
+        isPlateaued: trend.isPlateaued,
       };
-    }
-
-    const trend = await getRecentPerformanceTrend(userId, dbEx.id, 3);
-    const lastPerf = trend.history[0] ?? null;
-    return {
-      ...ex,
-      id: dbEx.id,
-      lastWeekWeight: lastPerf ? lastPerf.weight : null,
-      lastWeekReps: lastPerf ? lastPerf.reps : null,
-      isPlateaued: trend.isPlateaued,
-    };
-  }));
+    })
+  );
 
   const first = exercises[0];
   const topHistoricalSet = (first && first.lastWeekWeight && first.lastWeekReps)
