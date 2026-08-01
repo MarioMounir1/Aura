@@ -58,6 +58,14 @@ function isOllamaCurrentlyOffline(): boolean {
   return false;
 }
 
+function resolveGeminiModelName(): string {
+  const envModel = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+  if (envModel === "gemini-1.5-flash") {
+    return "gemini-flash-latest";
+  }
+  return envModel;
+}
+
 // ── Helper: Ollama Chat Call with Timeout, Logging & Source Metadata ──────
 
 async function callOllamaChatDetailed(
@@ -74,7 +82,7 @@ async function callOllamaChatDetailed(
 
   if (provider === "gemini" || provider === "google") {
     try {
-      const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+      const modelName = resolveGeminiModelName();
       const model = genAI.getGenerativeModel({ model: modelName });
       const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
       const result = await model.generateContent(prompt);
@@ -171,13 +179,33 @@ async function callOllamaJsonChatDetailed<T>(
   fallback: T,
   options?: OllamaCallOptions
 ): Promise<OllamaResult<T>> {
-  const provider = process.env.AI_PROVIDER ?? "ollama";
+  const provider = process.env.AI_PROVIDER ?? "gemini";
   const callerName = options?.callerName ?? "callOllamaJsonChat";
-  const timeoutMs = options?.timeoutMs ?? 4000;
+  const timeoutMs = options?.timeoutMs ?? 8000;
   const numPredict = options?.numPredict ?? 140;
   const startTime = Date.now();
 
-  if (provider === "none") {
+  if (provider === "gemini" || provider === "google") {
+    try {
+      const modelName = resolveGeminiModelName();
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const prompt = `${systemPrompt}\n\nUser Prompt:\n${userPrompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown codeblocks or extra text.`;
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").trim();
+      const parsed = JSON.parse(cleaned) as T;
+      return {
+        value: parsed || fallback,
+        source: "model",
+        elapsedMs: Date.now() - startTime,
+      };
+    } catch (err: any) {
+      console.warn(`⚠️ [Gemini Coach JSON Error] '${callerName}' failed: ${err.message}`);
+      return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
+    }
+  }
+
+  if (provider === "none" || isOllamaCurrentlyOffline()) {
     return { value: fallback, source: "error", elapsedMs: 0 };
   }
 
