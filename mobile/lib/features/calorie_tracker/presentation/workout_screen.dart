@@ -1426,24 +1426,26 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           ],
                         ],
 
-                      const SizedBox(height: 16),
-                      Divider(color: _C.border, height: 1),
-                      const SizedBox(height: 14),
+                        const SizedBox(height: 16),
+                        Divider(color: _C.border, height: 1),
+                        const SizedBox(height: 14),
 
-                      // Start Workout CTA
-                      _AnimatedPressable(
-                        onTap: isRestDay ? null : _startWorkout,
-                        child: AppButton.primary(
-                          onPressed: isRestDay ? null : _startWorkout,
-                          icon: isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded,
-                          label: isRestDay
-                                  ? (isArabic ? 'يوم راحة' : 'Rest Day')
-                                  : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
+                        // Start Workout CTA
+                        _AnimatedPressable(
+                          onTap: isRestDay ? null : _startWorkout,
+                          child: AppButton.primary(
+                            onPressed: isRestDay ? null : _startWorkout,
+                            icon: isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded,
+                            label: isRestDay
+                                    ? (isArabic ? 'يوم راحة' : 'Rest Day')
+                                    : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
+                          ),
                         ),
-                      ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
           ],
         ),
         if (_isRefreshingInPlace)
