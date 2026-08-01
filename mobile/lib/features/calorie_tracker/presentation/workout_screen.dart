@@ -1525,6 +1525,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                 ),
                               ),
                             ),
+                          ],
                           const SizedBox(height: 10),
                           InkWell(
                             onTap: () => _showAddExerciseSheet(isArabic),
