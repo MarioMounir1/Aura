@@ -1446,27 +1446,25 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ],
               ),
-          ],
-        ),
-        if (_isRefreshingInPlace)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: const LinearProgressIndicator(
-                minHeight: 2.5,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
-              ),
-            ),
+              if (_isRefreshingInPlace)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: const LinearProgressIndicator(
+                      minHeight: 2.5,
+                      backgroundColor: Colors.transparent,
+                      valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
+                    ),
+                  ),
+                ),
+            ],
           ),
-      ],
-    ),
-  ),
-);
-}
+        ),
+      );
+    }
 
   Widget _buildPerformanceBadge(bool isArabic) {
     // Contextually reads from the FIRST exercise in today's session
