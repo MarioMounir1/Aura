@@ -10,7 +10,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote, generateExerciseAlternatives } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote, generateExerciseAlternatives, generateSessionRecommendations } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -1130,6 +1130,38 @@ export async function swapSessionExercise(req: Request, res: Response): Promise<
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
     console.error("❌ [Workout] swapSessionExercise error:", err);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+// ── GET /api/v1/workouts/session/recommendations ──────────────────
+export async function getSessionRecommendations(req: Request, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.workoutSplitType) {
+      res.status(400).json({ success: false, error: "No active routine found" });
+      return;
+    }
+    const splitType = user.workoutSplitType;
+    const splitName = user.workoutSplitName ?? user.workoutSplitType;
+    const targetDateStr = new Date().toISOString().split("T")[0];
+
+    const currentSession = await fetchSessionData(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
+    const exerciseNames = currentSession.exercises.map((e) => e.name);
+
+    const recommendations = await generateSessionRecommendations({
+      splitName,
+      todayDayName: currentSession.todayDayName,
+      exercises: exerciseNames,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: recommendations,
+    });
+  } catch (err) {
+    console.error("❌ [Workout] getSessionRecommendations error:", err);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
