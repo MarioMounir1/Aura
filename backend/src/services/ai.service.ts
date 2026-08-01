@@ -177,7 +177,7 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
 // ── Google Gemini Implementation ───────────────────────────
 
 async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const modelName = process.env.GEMINI_MODEL ?? "gemini-1.5-pro";
+  const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
   console.log(`🔮 Calling Gemini API (${modelName}): ${input.type === "text" ? input.mealDescription : "Image buffer"}`);
 
   const model = genAI.getGenerativeModel({
@@ -191,7 +191,7 @@ async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResul
     temperature: 0.1,
     topP: 0.8,
     topK: 40,
-    maxOutputTokens: 4096,
+    maxOutputTokens: 1024,
   };
 
   let parts: Part[];
