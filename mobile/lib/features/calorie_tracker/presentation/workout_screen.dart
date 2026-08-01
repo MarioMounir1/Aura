@@ -928,6 +928,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         );
       }
     }
+  }
+
   void _showAddExerciseSheet(bool isArabic) {
     final controller = TextEditingController();
     showModalBottomSheet(
