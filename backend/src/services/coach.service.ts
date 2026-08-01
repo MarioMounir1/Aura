@@ -465,9 +465,11 @@ export interface InterpretContext {
 }
 
 export interface InterpretResult {
-  intent: "override_day" | "swap_exercise" | "lighter_intensity" | "question" | "change_plan" | "unrecognized";
+  intent: "override_day" | "swap_exercise" | "add_exercise" | "remove_exercise" | "lighter_intensity" | "question" | "change_plan" | "unrecognized";
   dayType?: string;
   exerciseName?: string;
+  replacementExercise?: string;
+  targetSets?: number;
   reason?: string;
   proposedDays?: number;       // for change_plan: day count extracted (null = keep current)
   proposedSplitName?: string; // for change_plan: split name mentioned (null = recommend by days)
@@ -481,30 +483,34 @@ export async function interpretSessionRequest(
   const availableDaysStr = Array.from(new Set(context.availableDayTypes)).join(", ");
   const currentExercisesStr = context.exercises.map((e) => e.name).join(", ");
 
-  const systemPrompt = `You are a fitness coach & session controller. Classify user message into 1 of 6 intents:
-1. "override_day": change/skip today's split day. "dayType" in [${availableDaysStr}] or "skip".
-2. "swap_exercise": replace exercise or target body part today. "exerciseName" is exercise/muscle group to replace.
-3. "lighter_intensity": request easier/lighter session today.
-4. "question": coaching/training question (exercise, form, recovery, general fitness).
-5. "change_plan": switch entire training split going forward (e.g. "switch to Upper/Lower", "Arnold split", "3 days a week"). Extract "proposedSplitName" if split name mentioned, and "proposedDays" (number) if days mentioned.
-6. "unrecognized": ambiguous, incoherent, or off-topic.
+  const systemPrompt = `You are an expert AI fitness coach & workout session controller. Classify user message into 1 of 8 intents:
+1. "add_exercise": user wants to add a new exercise to today's workout (e.g., "add 3 sets of incline dumbbell curls"). Extract "exerciseName" and "targetSets" (default 3 if omitted).
+2. "remove_exercise": user wants to remove an exercise from today's workout (e.g., "remove leg press", "delete cable flyes"). Extract "exerciseName".
+3. "swap_exercise": user wants to replace an exercise or body part today (e.g., "swap bench press for dumbbell press", "replace leg curl"). Extract "exerciseName" (the target exercise to replace) and "replacementExercise" (the specific replacement requested or recommended).
+4. "override_day": change/skip today's split day. "dayType" in [${availableDaysStr}] or "skip".
+5. "lighter_intensity": request easier/lighter session today.
+6. "question": coaching/training question (exercise, form, recovery, general fitness).
+7. "change_plan": switch entire training split going forward (e.g. "switch to Upper/Lower", "Arnold split", "3 days a week"). Extract "proposedSplitName" if split name mentioned, and "proposedDays" (number) if days mentioned.
+8. "unrecognized": ambiguous, incoherent, or off-topic.
 
 Respond ONLY with JSON:
 {
-  "intent": "override_day" | "swap_exercise" | "lighter_intensity" | "question" | "change_plan" | "unrecognized",
+  "intent": "add_exercise" | "remove_exercise" | "swap_exercise" | "override_day" | "lighter_intensity" | "question" | "change_plan" | "unrecognized",
   "dayType": string | null,
   "exerciseName": string | null,
+  "replacementExercise": string | null,
+  "targetSets": number | null,
   "proposedDays": number | null,
   "proposedSplitName": string | null,
   "reason": string | null,
-  "reply": "Short natural reply (1-2 sentences). For change_plan: confirmation line if split specified, or clarifying question if ambiguous."
+  "reply": "Short natural confirmation line or answer (1-2 sentences)."
 }`;
 
   const userPrompt = `Routine: ${context.splitName}. Today: ${context.todayDayName}. Exercises: ${currentExercisesStr}. Message: "${message}"`;
 
   const fallback: InterpretResult = {
     intent: "unrecognized",
-    reply: "I wasn't sure what you meant by that — try naming a specific day type or exercise to swap, or ask a coaching question.",
+    reply: "I wasn't sure what you meant by that — try asking to add, swap, or remove an exercise, or change your routine split.",
   };
 
   const detailedRes = await callOllamaJsonChatDetailed<InterpretResult>(
