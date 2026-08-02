@@ -39,6 +39,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _hasUnsavedChanges = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ProfileBloc>().add(LoadProfile());
+      }
+    });
+  }
+
+  @override
   void dispose() {
     if (_isInitialized) {
       _nameController.dispose();
@@ -58,15 +68,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _ageController = TextEditingController(text: (user['age'] ?? '').toString());
     _weightController = TextEditingController(text: (user['weightKg'] ?? '').toString());
     _heightController = TextEditingController(text: (user['heightCm'] ?? '').toString());
-    _calorieGoalController = TextEditingController(text: (user['dailyCalorieGoal'] ?? '').toString());
-    _waterGoalController = TextEditingController(text: (user['dailyWaterGoalMl'] ?? '').toString());
+
+    final initialCalories = user['dailyCalorieGoal'];
+    int calGoal = (initialCalories is int && initialCalories > 0)
+        ? initialCalories
+        : int.tryParse(user['dailyCalorieGoal']?.toString() ?? '') ?? 0;
+
+    if (calGoal <= 0) {
+      final w = double.tryParse((user['weightKg'] ?? '').toString()) ?? 70.0;
+      final h = double.tryParse((user['heightCm'] ?? '').toString()) ?? 170.0;
+      final a = int.tryParse((user['age'] ?? '').toString()) ?? 25;
+      final g = user['gender'] ?? 'male';
+      final act = user['activityLevel'] ?? 'moderate';
+      final goalType = user['goal'] ?? 'maintain';
+
+      final double bmr = (10 * w) + (6.25 * h) - (5 * a) + (g == 'male' ? 5 : -161);
+      final double mult = act == 'sedentary'
+          ? 1.2
+          : act == 'lightly_active'
+              ? 1.375
+              : act == 'very_active'
+                  ? 1.725
+                  : 1.55;
+      final double adj = goalType == 'lose'
+          ? -500
+          : goalType == 'gain'
+              ? 500
+              : 0;
+      calGoal = (bmr * mult + adj).round().clamp(1200, 5000);
+    }
+
+    _calorieGoalController = TextEditingController(text: calGoal.toString());
+    _waterGoalController = TextEditingController(text: (user['dailyWaterGoalMl'] ?? '2500').toString());
 
     _nameController.addListener(_onFieldChanged);
     _ageController.addListener(_onFieldChanged);
     _weightController.addListener(_onFieldChanged);
     _heightController.addListener(_onFieldChanged);
     _calorieGoalController.addListener(_onFieldChanged);
-    _waterGoalController.addListener(_onFieldChanged);
 
     _gender = user['gender'] ?? 'male';
     _activityLevel = user['activityLevel'] ?? 'moderate';
@@ -642,40 +681,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel(l10n.profileCalorieGoal),
-                    TextFormField(
-                      controller: _calorieGoalController,
-                      keyboardType: TextInputType.number,
-                      decoration: _buildInputDecoration(hint: 'kcal', icon: Icons.local_fire_department_rounded),
-                      style: GoogleFonts.inter(color: AppColors.textPrimary),
-                      validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel(l10n.profileWaterGoal),
-                    TextFormField(
-                      controller: _waterGoalController,
-                      keyboardType: TextInputType.number,
-                      decoration: _buildInputDecoration(hint: 'ml', icon: Icons.water_drop_rounded),
-                      style: GoogleFonts.inter(color: AppColors.textPrimary),
-                      validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          _buildFieldLabel(l10n.profileCalorieGoal),
+          TextFormField(
+            controller: _calorieGoalController,
+            keyboardType: TextInputType.number,
+            decoration: _buildInputDecoration(hint: 'kcal', icon: Icons.local_fire_department_rounded),
+            style: GoogleFonts.inter(color: AppColors.textPrimary),
+            validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
           ),
         ],
       ),
@@ -690,8 +702,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        children: [
+      child: Material(
+        color: Colors.transparent,
+        child: Column(
+          children: [
           // Language Switcher Tile
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -784,6 +798,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -795,9 +810,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
       ),
-      child: ListTile(
-        onTap: () => _showLogoutConfirmDialog(context, l10n),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          onTap: () => _showLogoutConfirmDialog(context, l10n),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -819,6 +836,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
         ),
         trailing: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.error, size: 14),
+      ),
       ),
     );
   }
