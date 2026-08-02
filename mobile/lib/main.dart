@@ -18,7 +18,6 @@ import 'core/utils/constants.dart';
 import 'features/calorie_tracker/data/models/meal_log_model.dart';
 import 'features/calorie_tracker/data/repositories/meal_repository_impl.dart';
 import 'features/calorie_tracker/domain/repositories/meal_repository.dart';
-import 'features/calorie_tracker/presentation/analyze_meal_screen.dart';
 import 'features/calorie_tracker/presentation/ai_suggestion_screen.dart';
 import 'features/calorie_tracker/presentation/bloc/calorie_tracker_bloc.dart';
 import 'features/calorie_tracker/presentation/history_screen.dart';
@@ -256,7 +255,6 @@ class TeneenApp extends StatelessWidget {
                 '/settings': (_) => const SettingsScreen(),
                 '/foods/search': (_) => const FoodSearchScreen(),
                 '/weight/progress': (_) => const WeightProgressScreen(),
-                '/meals/analyze': (_) => const AnalyzeMealScreen(),
                 '/water/progress': (_) => const WaterTrackingScreen(),
                 '/meals/ai-suggestion': (_) => const AiSuggestionScreen(),
                 '/nutrition/progress': (_) => const ProgressSummaryScreen(),
