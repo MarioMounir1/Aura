@@ -504,7 +504,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     }
 
     return Scaffold(
-      backgroundColor: DashboardThemeColors.background,
+      backgroundColor: context.auraTheme.background,
       body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -798,7 +798,7 @@ class _DashboardHeader extends StatelessWidget {
                           style: GoogleFonts.outfit(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: DashboardThemeColors.textPrimary,
+                            color: context.auraTheme.textPrimary,
                           ),
                         ),
                       ],
@@ -840,7 +840,7 @@ class _DashboardHeader extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: DashboardThemeColors.textSecondary,
+                  color: context.auraTheme.textSecondary,
                 ),
               ),
             ],
