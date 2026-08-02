@@ -706,35 +706,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         color: Colors.transparent,
         child: Column(
           children: [
-          // Language Switcher Tile
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.language_rounded, color: AppColors.primary, size: 20),
-            ),
-            title: Text(
-              'اللغة / Language',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildLangChip(context, 'العربية', 'ar', isArabic),
-                const SizedBox(width: 6),
-                _buildLangChip(context, 'English', 'en', !isArabic),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: AppColors.border),
           // Units Tile
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
