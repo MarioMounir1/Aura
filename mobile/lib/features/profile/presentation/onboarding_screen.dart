@@ -176,9 +176,9 @@ Map<String, int> _calcTdee({
   final bmr = (10 * weight + 6.25 * height - 5 * age + genderFactor);
   final tdee = (bmr * multiplier).round();
   final recommended = math.max(1200, tdee + calorieAdjust);
-  final protein = ((recommended * 0.30) / 4).round();
-  final carbs   = ((recommended * 0.40) / 4).round();
-  final fats    = ((recommended * 0.30) / 9).round();
+  final protein = math.min(145, ((recommended * 0.20) / 4).round());
+  final fats    = ((recommended * 0.25) / 9).round();
+  final carbs   = ((recommended - (protein * 4 + fats * 9)) / 4).round();
   return {
     'bmr': bmr.round(),
     'tdee': tdee,
