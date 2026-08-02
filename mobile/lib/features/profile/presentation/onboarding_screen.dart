@@ -519,7 +519,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           ),
           const SizedBox(height: 32),
           _ChoiceCard(
-            isSelected: currentLang == 'en',
+            isSelected: true,
             onTap: () => context.read<LanguageCubit>().setLanguage('en'),
             child: Row(
               children: [
@@ -530,32 +530,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('English', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: _T.textPri)),
-                      Text('US / UK', style: GoogleFonts.inter(fontSize: 13, color: _T.textSec)),
+                      Text('Default Language', style: GoogleFonts.inter(fontSize: 13, color: _T.textSec)),
                     ],
                   ),
                 ),
-                if (currentLang == 'en') const Icon(Icons.check_circle_rounded, color: _T.cyan),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          _ChoiceCard(
-            isSelected: currentLang == 'ar',
-            onTap: () => context.read<LanguageCubit>().setLanguage('ar'),
-            child: Row(
-              children: [
-                const Text('🇪🇬', style: TextStyle(fontSize: 28)),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('العربية', style: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w700, color: _T.textPri)),
-                      Text('Egyptian Arabic', style: GoogleFonts.inter(fontSize: 13, color: _T.textSec)),
-                    ],
-                  ),
-                ),
-                if (currentLang == 'ar') const Icon(Icons.check_circle_rounded, color: _T.cyan),
+                const Icon(Icons.check_circle_rounded, color: _T.cyan),
               ],
             ),
           ),
