@@ -271,23 +271,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Header Widget: Avatar + Name + Email ──────────────────────────
   Widget _buildUserAvatarHeader(String name, String email, bool isPremium) {
+    final theme = context.auraTheme;
     final String initials = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'A';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.card,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-        gradient: LinearGradient(
-          colors: [
-            AppColors.surfaceVariant.withOpacity(0.5),
-            AppColors.surface,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         children: [
@@ -302,11 +295,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   gradient: LinearGradient(
                     colors: isPremium
                         ? [const Color(0xFFFBBF24), const Color(0xFFF59E0B)]
-                        : [AppColors.primary, AppColors.primaryDark],
+                        : [theme.primary, theme.primary],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (isPremium ? const Color(0xFFFBBF24) : AppColors.primary).withOpacity(0.3),
+                      color: (isPremium ? const Color(0xFFFBBF24) : theme.primary).withOpacity(0.3),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -348,7 +341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color: theme.textPrimary,
             ),
           ),
           if (email.isNotEmpty) ...[
@@ -357,7 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               email,
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: AppColors.textSecondary,
+                color: theme.textSecondary,
               ),
             ),
           ],
@@ -388,23 +381,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildMetricTile(String label, String value, IconData icon) {
+    final theme = context.auraTheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         children: [
-          Icon(icon, color: AppColors.primary, size: 20),
+          Icon(icon, color: theme.primary, size: 20),
           const SizedBox(height: 6),
           Text(
             value,
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color: theme.textPrimary,
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -415,7 +409,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             label,
             style: GoogleFonts.inter(
               fontSize: 11,
-              color: AppColors.textSecondary,
+              color: theme.textSecondary,
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -463,7 +457,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 2),
                   Text(
                     isArabic ? 'أنت تستمتع بجميع الميزات المميزة.' : 'You are enjoying full unlimited premium access.',
-                    style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                    style: GoogleFonts.inter(fontSize: 12, color: context.auraTheme.textSecondary),
                   ),
                 ],
               ),
@@ -534,16 +528,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Section Title Helper ─────────────────────────────────────────
   Widget _buildSectionTitle(String title, IconData icon) {
+    final theme = context.auraTheme;
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.primary),
+        Icon(icon, size: 18, color: theme.primary),
         const SizedBox(width: 8),
         Text(
           title,
           style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
+            color: theme.textPrimary,
           ),
         ),
       ],
@@ -567,7 +562,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextFormField(
             controller: _nameController,
             decoration: _buildInputDecoration(hint: 'Full Name', icon: Icons.person_rounded),
-            style: GoogleFonts.inter(color: AppColors.textPrimary),
+            style: GoogleFonts.inter(color: theme.textPrimary),
             validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
           ),
           const SizedBox(height: 16),
@@ -582,7 +577,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       controller: _ageController,
                       keyboardType: TextInputType.number,
                       decoration: _buildInputDecoration(hint: 'Years', icon: Icons.cake_rounded),
-                      style: GoogleFonts.inter(color: AppColors.textPrimary),
+                      style: GoogleFonts.inter(color: theme.textPrimary),
                       validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
                     ),
                   ],
@@ -596,9 +591,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildFieldLabel(l10n.profileGender),
                     DropdownButtonFormField<String>(
                       value: _gender,
-                      dropdownColor: AppColors.surfaceVariant,
+                      dropdownColor: theme.card,
                       decoration: _buildInputDecoration(hint: '', icon: Icons.wc_rounded),
-                      style: GoogleFonts.inter(color: AppColors.textPrimary),
+                      style: GoogleFonts.inter(color: theme.textPrimary),
                       items: [
                         DropdownMenuItem(value: 'male', child: Text(l10n.profileGenderMale)),
                         DropdownMenuItem(value: 'female', child: Text(l10n.profileGenderFemale)),
@@ -625,7 +620,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       controller: _weightController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: _buildInputDecoration(hint: 'kg', icon: Icons.scale_rounded),
-                      style: GoogleFonts.inter(color: AppColors.textPrimary),
+                      style: GoogleFonts.inter(color: theme.textPrimary),
                       validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
                     ),
                   ],
@@ -641,7 +636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       controller: _heightController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: _buildInputDecoration(hint: 'cm', icon: Icons.height_rounded),
-                      style: GoogleFonts.inter(color: AppColors.textPrimary),
+                      style: GoogleFonts.inter(color: theme.textPrimary),
                       validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
                     ),
                   ],
@@ -653,9 +648,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildFieldLabel(l10n.profileGoal),
           DropdownButtonFormField<String>(
             value: _goal,
-            dropdownColor: AppColors.surfaceVariant,
+            dropdownColor: theme.card,
             decoration: _buildInputDecoration(hint: '', icon: Icons.track_changes_rounded),
-            style: GoogleFonts.inter(color: AppColors.textPrimary),
+            style: GoogleFonts.inter(color: theme.textPrimary),
             items: [
               DropdownMenuItem(value: 'lose', child: Text(l10n.onboardingGoalLose)),
               DropdownMenuItem(value: 'maintain', child: Text(l10n.onboardingGoalMaintain)),
@@ -670,9 +665,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildFieldLabel(l10n.profileActivity),
           DropdownButtonFormField<String>(
             value: _activityLevel,
-            dropdownColor: AppColors.surfaceVariant,
+            dropdownColor: theme.card,
             decoration: _buildInputDecoration(hint: '', icon: Icons.directions_run_rounded),
-            style: GoogleFonts.inter(color: AppColors.textPrimary, fontSize: 13),
+            style: GoogleFonts.inter(color: theme.textPrimary, fontSize: 13),
             items: [
               DropdownMenuItem(value: 'sedentary', child: Text(l10n.onboardingActivitySedentary)),
               DropdownMenuItem(value: 'lightly_active', child: Text(l10n.onboardingActivityLight)),
@@ -690,7 +685,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             controller: _calorieGoalController,
             keyboardType: TextInputType.number,
             decoration: _buildInputDecoration(hint: 'kcal', icon: Icons.local_fire_department_rounded),
-            style: GoogleFonts.inter(color: AppColors.textPrimary),
+            style: GoogleFonts.inter(color: theme.textPrimary),
             validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
           ),
         ],
