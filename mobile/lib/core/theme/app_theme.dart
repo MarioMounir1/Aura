@@ -41,8 +41,38 @@ class AppTheme {
     );
   }
 
-  /// Default theme set to darkTheme as per design spec
-  static ThemeData get lightTheme => darkTheme;
+  static ThemeData get lightTheme {
+    final base = ThemeData.light();
+    return base.copyWith(
+      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+      colorScheme: const ColorScheme.light(
+        surface: Color(0xFFFFFFFF),
+        primary: Color(0xFF00ACC1),
+        secondary: Color(0xFF00ACC1),
+        error: Color(0xFFEF4444),
+      ),
+      extensions: const [
+        AuraThemeExtension.light,
+      ],
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFFF8FAFC),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: IconThemeData(color: Color(0xFF0F172A)),
+        titleTextStyle: TextStyle(
+          color: Color(0xFF0F172A),
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textTheme: GoogleFonts.interTextTheme(
+        base.textTheme,
+      ).apply(
+        bodyColor: const Color(0xFF0F172A),
+        displayColor: const Color(0xFF0F172A),
+      ),
+    );
+  }
 }
 
 
