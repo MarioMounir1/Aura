@@ -15,6 +15,7 @@ import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'core/utils/constants.dart';
+import 'core/theme/theme_cubit.dart';
 import 'features/calorie_tracker/data/models/meal_log_model.dart';
 import 'features/calorie_tracker/data/repositories/meal_repository_impl.dart';
 import 'features/calorie_tracker/domain/repositories/meal_repository.dart';
@@ -83,7 +84,6 @@ class LanguageCubit extends Cubit<Locale> {
     return prefs.getString(_prefKey) ?? 'en';
   }
 }
-
 // ── Entry Point ───────────────────────────────────────────────
 
 Future<void> main() async {
@@ -111,20 +111,22 @@ Future<void> main() async {
   Hive.registerAdapter(MealLogModelAdapter());
   await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
 
-  // Load saved language preference
+  // Load saved preferences
   final savedLang = await LanguageCubit.getSavedLanguage();
+  final savedThemeMode = await ThemeCubit.getSavedThemeMode();
 
   // Initialize RevenueCat SDK
   await PurchaseService.instance.init();
 
-  runApp(TeneenApp(initialLang: savedLang));
+  runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
 }
 
 // ── Root App Widget ───────────────────────────────────────────
 
 class TeneenApp extends StatelessWidget {
   final String initialLang;
-  const TeneenApp({super.key, required this.initialLang});
+  final ThemeMode initialThemeMode;
+  const TeneenApp({super.key, required this.initialLang, required this.initialThemeMode});
 
   @override
   Widget build(BuildContext context) {
@@ -145,6 +147,10 @@ class TeneenApp extends StatelessWidget {
       ],
       child: MultiBlocProvider(
         providers: [
+          // Theme switching
+          BlocProvider<ThemeCubit>(
+            create: (_) => ThemeCubit(initialThemeMode),
+          ),
           // Language switching
           BlocProvider<LanguageCubit>(
             create: (_) => LanguageCubit(initialLang),
@@ -212,12 +218,14 @@ class TeneenApp extends StatelessWidget {
             ),
           ),
         ],
-        child: BlocBuilder<LanguageCubit, Locale>(
-          builder: (context, locale) {
+        child: BlocBuilder<ThemeCubit, ThemeMode>(
+          builder: (context, themeMode) {
             return MaterialApp(
               title:                   'The Teneen',
               debugShowCheckedModeBanner: false,
-              theme:                   AppTheme.darkTheme,
+              theme:                   AppTheme.lightTheme,
+              darkTheme:               AppTheme.darkTheme,
+              themeMode:               themeMode,
 
               // ── Localization ────────────────────────────
               locale:                  const Locale('en'),
