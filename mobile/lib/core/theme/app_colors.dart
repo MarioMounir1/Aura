@@ -69,23 +69,56 @@ class AuraThemeExtension extends ThemeExtension<AuraThemeExtension> {
     carbs: Color(0xFF8B5CF6),
     fats: Color(0xFFF97316),
     snapMealGradient: LinearGradient(
-      colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+      colors: [Color(0xFF059669), Color(0xFF10B981)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     uploadScreenshotGradient: LinearGradient(
-      colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
+      colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     scanBarcodeGradient: LinearGradient(
-      colors: [Color(0xFF451A03), Color(0xFF92400E)],
+      colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
   );
 
-  static const AuraThemeExtension light = dark;
+  static const AuraThemeExtension light = AuraThemeExtension(
+    background: Color(0xFFF8FAFC),
+    card: Color(0xFFFFFFFF),
+    surface: Color(0xFFF1F5F9),
+    surfaceVariant: Color(0xFFE2E8F0),
+    border: Color(0xFFE2E8F0),
+    borderMid: Color(0xFFCBD5E1),
+    textPrimary: Color(0xFF0F172A),
+    textSecondary: Color(0xFF475569),
+    textMuted: Color(0xFF94A3B8),
+    primary: Color(0xFF00ACC1),
+    accentCyan: Color(0xFF00ACC1),
+    success: Color(0xFF10B981),
+    warning: Color(0xFFF59E0B),
+    error: Color(0xFFEF4444),
+    protein: Color(0xFF059669),
+    carbs: Color(0xFF7C3AED),
+    fats: Color(0xFFEA580C),
+    snapMealGradient: LinearGradient(
+      colors: [Color(0xFF059669), Color(0xFF10B981)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    uploadScreenshotGradient: LinearGradient(
+      colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    scanBarcodeGradient: LinearGradient(
+      colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+  );
 
   @override
   AuraThemeExtension copyWith({
@@ -202,17 +235,17 @@ abstract class AppColors {
 
   // ── Action Tile Gradients ────────────────────────────────────
   static const LinearGradient snapMealGradient = LinearGradient(
-    colors: [Color(0xFF064E3B), Color(0xFF065F46)],
+    colors: [Color(0xFF059669), Color(0xFF10B981)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
   static const LinearGradient uploadScreenshotGradient = LinearGradient(
-    colors: [Color(0xFF1E3A5F), Color(0xFF1D4ED8)],
+    colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
   static const LinearGradient scanBarcodeGradient = LinearGradient(
-    colors: [Color(0xFF451A03), Color(0xFF92400E)],
+    colors: [Color(0xFFD97706), Color(0xFFF59E0B)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
