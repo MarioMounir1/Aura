@@ -281,6 +281,11 @@ class AuthWrapper extends StatelessWidget {
         if (authState is Authenticated) {
           context.read<ProfileBloc>().add(LoadProfile());
           context.read<DashboardBloc>().add(const LoadDashboard());
+          context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
+          context.read<WaterBloc>().add(const LoadWaterToday());
+          context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
+          context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
+          context.read<FoodSearchBloc>().add(LoadFoodCategories());
         } else if (authState is Unauthenticated) {
           context.read<ProfileBloc>().add(ResetProfileEvent());
           context.read<DashboardBloc>().add(const ResetDashboardEvent());
@@ -322,8 +327,7 @@ class AuthWrapper extends StatelessWidget {
                   }
                   if (profileState is ProfileLoaded) {
                     if (profileState.isOnboardingCompleted) {
-                      final userId = profileState.user['id'] as String? ?? 'user';
-                      return HomeShellScreen(key: ValueKey(userId));
+                      return const HomeShellScreen();
                     } else {
                       return const OnboardingScreen();
                     }
@@ -352,18 +356,10 @@ class AuthWrapper extends StatelessWidget {
               ),
             );
           }
-          if (authState is Unauthenticated || authState is AuthFailure) {
+          if (authState is Unauthenticated || authState is AuthFailure || authState is AuthInitial || authState is AuthLoading) {
             return const LoginScreen();
           }
-          // Splash / loading state
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-              ),
-            ),
-          );
+          return const LoginScreen();
         },
       ),
     );
