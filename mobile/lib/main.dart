@@ -214,19 +214,15 @@ class TeneenApp extends StatelessWidget {
         ],
         child: BlocBuilder<LanguageCubit, Locale>(
           builder: (context, locale) {
-            // RTL for Arabic, LTR for English
-            final isArabic = locale.languageCode == 'ar';
-
             return MaterialApp(
-              title:                   'The Teneen | التنين',
+              title:                   'The Teneen',
               debugShowCheckedModeBanner: false,
               theme:                   AppTheme.darkTheme,
 
               // ── Localization ────────────────────────────
-              locale:                  locale,
+              locale:                  const Locale('en'),
               supportedLocales: const [
                 Locale('en'),
-                Locale('ar'),
               ],
               localizationsDelegates: const [
                 AppLocalizations.delegate,
@@ -238,9 +234,7 @@ class TeneenApp extends StatelessWidget {
               // ── RTL / LTR ───────────────────────────────
               builder: (context, child) {
                 return Directionality(
-                  textDirection: isArabic
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
+                  textDirection: TextDirection.ltr,
                   child: child!,
                 );
               },
