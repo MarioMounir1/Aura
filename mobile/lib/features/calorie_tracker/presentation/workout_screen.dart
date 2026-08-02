@@ -2483,6 +2483,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.auraTheme;
     final coachNote = widget.coachNote;
     final hasNote = coachNote != null && coachNote.trim().isNotEmpty;
     final isArabic = widget.isArabic;
@@ -2491,16 +2492,16 @@ class _CoachChatCardState extends State<CoachChatCard> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _C.cardElev,
+        color: theme.card,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x1F00BCD4), // 0 4px 14px rgba(0,188,212,0.12)
+            color: theme.primary.withValues(alpha: 0.12),
             blurRadius: 14,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: _C.cyan.withValues(alpha: 0.15), width: 1),
+        border: Border.all(color: theme.border, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2515,17 +2516,17 @@ class _CoachChatCardState extends State<CoachChatCard> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: _C.cyan.withValues(alpha: 0.15),
+                    color: theme.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x4D00BCD4), // 0 0 10px rgba(0,188,212,0.3)
+                        color: theme.primary.withValues(alpha: 0.3),
                         blurRadius: 10,
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Icon(Icons.auto_awesome_rounded, color: _C.cyan, size: 18),
+                  child: Center(
+                    child: Icon(Icons.auto_awesome_rounded, color: theme.primary, size: 18),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -2538,7 +2539,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: _C.cyan,
+                          color: theme.primary,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -2546,7 +2547,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
                         coachNote,
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          color: _C.textPri,
+                          color: theme.textPrimary,
                           height: 1.55,
                           fontWeight: FontWeight.w400,
                         ),
@@ -2581,19 +2582,19 @@ class _CoachChatCardState extends State<CoachChatCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: _C.card,
+              color: theme.surfaceVariant,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: _C.borderMid),
+              border: Border.all(color: theme.border),
             ),
             child: Row(
               children: [
-                const Icon(Icons.chat_bubble_outline_rounded, color: _C.textMut, size: 16),
+                Icon(Icons.chat_bubble_outline_rounded, color: theme.textMuted, size: 16),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     enabled: !_isInterpreting,
-                    style: GoogleFonts.inter(fontSize: 13, color: _C.textPri),
+                    style: GoogleFonts.inter(fontSize: 13, color: theme.textPrimary),
                     decoration: InputDecoration(
                       hintText: isArabic
                           ? 'اسأل مدربك أي شيء...'
