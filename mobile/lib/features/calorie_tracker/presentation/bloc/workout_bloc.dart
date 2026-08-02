@@ -208,6 +208,28 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     emit(currentState.copyWith(isSubmitting: true));
 
     try {
+      for (final log in currentState.currentLogs) {
+        for (final s in log.sets) {
+          if (!s.isLogged) {
+            final w = s.loggedWeightKg ?? s.targetWeightKg;
+            final r = s.loggedReps ?? s.targetReps;
+            if (w != null && r != null) {
+              try {
+                await repository.logSet(
+                  s.id ?? log.exerciseName,
+                  s.setIndex,
+                  reps: r,
+                  weightKg: w,
+                );
+                s.isLogged = true;
+                s.loggedWeightKg = w;
+                s.loggedReps = r;
+              } catch (_) {}
+            }
+          }
+        }
+      }
+
       final res = await repository.finishSession(currentState.sessionId, notes: 'Great workout!');
       final summaryNote = res['summaryNote'] as String? ?? 'Workout successfully completed!';
       emit(WorkoutSessionFinished(summaryNote));
