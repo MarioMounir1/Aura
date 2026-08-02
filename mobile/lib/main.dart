@@ -223,7 +223,7 @@ class TeneenApp extends StatelessWidget {
             return MaterialApp(
               title:                   'The Teneen',
               debugShowCheckedModeBanner: false,
-              theme:                   AppTheme.darkTheme,
+              theme:                   AppTheme.lightTheme,
               darkTheme:               AppTheme.darkTheme,
               themeMode:               themeMode,
 
