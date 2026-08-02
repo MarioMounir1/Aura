@@ -161,6 +161,21 @@ export async function getTodayFoodLogs(req: Request, res: Response): Promise<voi
       }),
     ]);
 
+    if (user && user.proteinGoal > 160) {
+      const cal = user.dailyCalorieGoal || 2000;
+      const prot = Math.min(145, Math.round((cal * 0.20) / 4));
+      const fat = Math.round((cal * 0.25) / 9);
+      const carb = Math.round((cal - (prot * 4 + fat * 9)) / 4);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { proteinGoal: prot, carbsGoal: carb, fatsGoal: fat },
+      });
+      user.proteinGoal = prot;
+      user.carbsGoal = carb;
+      user.fatsGoal = fat;
+    }
+
     // Calculate totals from food logs
     const foodLogTotals = foodLogs.reduce(
       (acc, log) => {
