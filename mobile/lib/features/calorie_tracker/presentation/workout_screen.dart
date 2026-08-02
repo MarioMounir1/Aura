@@ -1367,15 +1367,25 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: _C.cyan.withValues(alpha: 0.12),
+                                color: (session?.isTodayCompleted == true && !hasActiveSession)
+                                    ? _C.success.withValues(alpha: 0.15)
+                                    : _C.cyan.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: _C.cyan.withValues(alpha: 0.3), width: 1),
+                                border: Border.all(
+                                  color: (session?.isTodayCompleted == true && !hasActiveSession)
+                                      ? _C.success.withValues(alpha: 0.4)
+                                      : _C.cyan.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
                               ),
                               child: Text(
-                                isArabic ? 'جلسة اليوم' : "TODAY'S SESSION",
+                                (session?.isTodayCompleted == true && !hasActiveSession)
+                                    ? (isArabic ? 'تمرين اليوم مكتمل 🎉' : 'TODAY COMPLETED 🎉')
+                                    : (isArabic ? 'جلسة اليوم' : "TODAY'S SESSION"),
                                 style: GoogleFonts.inter(
                                     fontSize: 10, fontWeight: FontWeight.w800,
-                                    color: _C.cyan, letterSpacing: 0.8),
+                                    color: (session?.isTodayCompleted == true && !hasActiveSession) ? _C.success : _C.cyan,
+                                    letterSpacing: 0.8),
                               ),
                             ),
                             _AnimatedPressable(
@@ -1406,7 +1416,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
                       // Routine name + today label
                       Text(
-                        '${routine.name} — $todayLabel',
+                        (session?.isTodayCompleted == true && !hasActiveSession)
+                            ? '${routine.name} — $todayLabel (${isArabic ? "التمرين القادم" : "Next Session"})'
+                            : '${routine.name} — $todayLabel',
                         style: GoogleFonts.inter(
                             fontSize: 18, fontWeight: FontWeight.w900,
                             color: _C.textPri, letterSpacing: -0.3),
@@ -3280,7 +3292,7 @@ class WeeklyCalendarRow extends StatelessWidget {
   final List<WeekDayDetail> weekScheduleDetails;
   final List<bool> completedDaysThisWeek;
   final bool isArabic;
-  final Function(WeekDayDetail detail) onDayTap;
+  final void Function(WeekDayDetail detail) onDayTap;
 
   const WeeklyCalendarRow({
     super.key,
