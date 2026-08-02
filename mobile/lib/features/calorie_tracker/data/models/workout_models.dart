@@ -418,20 +418,7 @@ class WorkoutLog {
       double? weight = ex.lastWeekWeight;
       int? reps = ex.lastWeekReps;
 
-      if (i == 0) {
-        label = 'Warm-up';
-        weight = (ex.lastWeekWeight != null) ? ex.lastWeekWeight! * 0.7 : null;
-        reps = (ex.lastWeekReps != null) ? (ex.lastWeekReps! + 2) : null;
-      } else if (i == totalSets - 1 && totalSets >= 4) {
-        label = 'Back-off Set';
-        weight = (ex.lastWeekWeight != null) ? ex.lastWeekWeight! * 0.88 : null;
-      } else if (i == totalSets - 2 && totalSets >= 4) {
-        label = 'Top Set';
-        weight = (ex.lastWeekWeight != null) ? ex.lastWeekWeight! + 2.5 : null;
-        reps = (ex.lastWeekReps != null) ? (ex.lastWeekReps! - 2).clamp(1, 20) : null;
-      } else {
-        label = 'Working Set';
-      }
+      label = i == totalSets - 1 ? 'Top Set' : 'Working Set';
 
       sets.add(ExerciseSet(
         setIndex:        setIndex,
