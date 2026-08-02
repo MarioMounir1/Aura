@@ -21,12 +21,14 @@ class ActiveWorkoutView extends StatefulWidget {
   final WorkoutSessionActive sessionState;
   final bool isArabic;
   final VoidCallback onFinish;
+  final VoidCallback onExit;
 
   const ActiveWorkoutView({
     super.key,
     required this.sessionState,
     required this.isArabic,
     required this.onFinish,
+    required this.onExit,
   });
 
   @override
@@ -222,8 +224,14 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
     final totalSets = logs.fold<int>(0, (sum, log) => sum + log.sets.length);
     final loggedSets = logs.fold<int>(0, (sum, log) => sum + log.loggedSetsCount);
 
-    return Stack(
-      children: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        widget.onExit();
+      },
+      child: Stack(
+        children: [
         Column(
           key: const ValueKey('activeWorkout'),
           children: [
@@ -237,7 +245,7 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: widget.onFinish,
+                    onTap: widget.onExit,
                     child: const Icon(Icons.close_rounded, color: _C.textPri, size: 22),
                   ),
                   const SizedBox(width: 14),
@@ -273,34 +281,84 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
                 itemCount: logs.length + 1,
                 itemBuilder: (context, index) {
                   if (index == logs.length) {
-                    // Add Exercise Button
+                    // Add Exercise & Finish Workout Buttons
                     return Padding(
                       padding: const EdgeInsets.only(top: 10, bottom: 40),
-                      child: ElevatedButton(
-                        onPressed: () => _showAddExerciseSheet(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _C.cardElev,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            side: const BorderSide(color: _C.border, width: 1.2),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.add_rounded, color: _C.cyan),
-                            const SizedBox(width: 8),
-                            Text(
-                              widget.isArabic ? 'إضافة تمرين' : 'Add Exercise',
-                              style: GoogleFonts.inter(
-                                color: _C.cyan,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                      child: Column(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => _showAddExerciseSheet(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _C.cardElev,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: const BorderSide(color: _C.border, width: 1.2),
                               ),
                             ),
-                          ],
-                        ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.add_rounded, color: _C.cyan),
+                                const SizedBox(width: 8),
+                                Text(
+                                  widget.isArabic ? 'إضافة تمرين' : 'Add Exercise',
+                                  style: GoogleFonts.inter(
+                                    color: _C.cyan,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            width: double.infinity,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [_C.cyan, Color(0xFF0097A7)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _C.cyan.withValues(alpha: 0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: widget.onFinish,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, color: Colors.black, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    widget.isArabic ? 'إنهاء التمرين' : 'Finish Workout',
+                                    style: GoogleFonts.inter(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -322,7 +380,8 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
             child: _buildTimerBanner(),
           ),
       ],
-    );
+    ),
+  );
   }
 }
 
@@ -374,12 +433,44 @@ class _ExerciseCardState extends State<_ExerciseCard> {
   }
 
   void _initControllers() {
-    _weightCtrl = widget.log.sets.map((s) => TextEditingController(
-      text: s.loggedWeightKg?.toStringAsFixed(0) ?? '',
-    )).toList();
-    _repsCtrl = widget.log.sets.map((s) => TextEditingController(
-      text: s.loggedReps?.toString() ?? '',
-    )).toList();
+    _weightCtrl = widget.log.sets.map((s) {
+      final val = s.loggedWeightKg ?? s.targetWeightKg;
+      String text = '';
+      if (val != null) {
+        text = val % 1 == 0 ? val.toInt().toString() : val.toStringAsFixed(1);
+      }
+      return TextEditingController(text: text);
+    }).toList();
+
+    _repsCtrl = widget.log.sets.map((s) {
+      final val = s.loggedReps ?? s.targetReps;
+      String text = '';
+      if (val != null) {
+        text = val.toString();
+      }
+      return TextEditingController(text: text);
+    }).toList();
+  }
+
+  void _stepWeight(int index, double delta) {
+    if (widget.log.sets[index].isLogged) return;
+    final currentText = _weightCtrl[index].text.trim();
+    double currentVal = double.tryParse(currentText) ?? widget.log.sets[index].targetWeightKg ?? 0.0;
+    double newVal = (currentVal + delta).clamp(0.0, 500.0);
+    newVal = double.parse(newVal.toStringAsFixed(1));
+    _weightCtrl[index].text = newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
+    HapticFeedback.selectionClick();
+    setState(() {});
+  }
+
+  void _stepReps(int index, int delta) {
+    if (widget.log.sets[index].isLogged) return;
+    final currentText = _repsCtrl[index].text.trim();
+    int currentVal = int.tryParse(currentText) ?? widget.log.sets[index].targetReps ?? 0;
+    int newVal = (currentVal + delta).clamp(0, 100);
+    _repsCtrl[index].text = newVal.toString();
+    HapticFeedback.selectionClick();
+    setState(() {});
   }
 
   void _disposeControllers() {
@@ -436,7 +527,6 @@ class _ExerciseCardState extends State<_ExerciseCard> {
       widget.onSetCompleted();
     }
     
-    // Optimistic UI handled by Bloc now, but we can do a local haptic
     HapticFeedback.lightImpact();
   }
 
@@ -537,21 +627,21 @@ class _ExerciseCardState extends State<_ExerciseCard> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(children: [
-              Expanded(flex: 4,
+              Expanded(flex: 3,
                   child: Text('SET',
                       style: GoogleFonts.inter(
                           fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-              Expanded(flex: 3,
+              Expanded(flex: 4,
                   child: Text('WEIGHT (kg)',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                           fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-              Expanded(flex: 3,
+              Expanded(flex: 4,
                   child: Text('REPS',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                           fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-              const SizedBox(width: 46),
+              const SizedBox(width: 40),
             ]),
           ),
           const SizedBox(height: 10),
@@ -570,18 +660,18 @@ class _ExerciseCardState extends State<_ExerciseCard> {
     final locked = s.isLogged;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: locked ? _C.cyan.withOpacity(0.07) : _C.card,
+        color: locked ? _C.cyan.withValues(alpha: 0.12) : _C.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: locked ? _C.cyan : _C.border,
-          width: locked ? 1.6 : 1.2,
+          color: locked ? _C.cyan : _C.borderMid.withValues(alpha: 0.7),
+          width: locked ? 1.6 : 1.0,
         ),
       ),
       child: Row(children: [
         // Set label column
-        Expanded(flex: 4, child: Column(
+        Expanded(flex: 3, child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
@@ -592,7 +682,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
               Text('Set ${s.setIndex}',
                   style: GoogleFonts.inter(
                       fontSize: 13, fontWeight: FontWeight.w700,
-                      color: s.label == 'Top Set' ? _C.amber : _C.textPri)),
+                      color: s.label == 'Top Set' ? _C.amber : (locked ? _C.textPri : _C.textSec))),
             ]),
             const SizedBox(height: 2),
             Text(s.targetDisplayLabel,
@@ -600,76 +690,36 @@ class _ExerciseCardState extends State<_ExerciseCard> {
           ],
         )),
 
-        // Weight input
-        Expanded(flex: 3, child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: SizedBox(height: 38, child: TextFormField(
+        // Weight input with +/- stepper buttons
+        Expanded(flex: 4, child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: _buildStepperField(
             controller: _weightCtrl[index],
-            enabled: !locked,
+            locked: locked,
+            hintText: s.targetWeightKg?.toStringAsFixed(0) ?? '—',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textAlign: TextAlign.center,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-            style: GoogleFonts.inter(
-                fontSize: 14, fontWeight: FontWeight.w700,
-                color: locked ? _C.textMut : _C.textPri),
-            decoration: InputDecoration(
-              hintText: s.targetWeightKg?.toStringAsFixed(0) ?? '—',
-              hintStyle: GoogleFonts.inter(color: _C.textMut.withOpacity(0.5), fontSize: 13),
-              contentPadding: EdgeInsets.zero,
-              filled: true,
-              fillColor: locked ? _C.cardElev.withOpacity(0.5) : _C.cardElev,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.cyan, width: 1.5)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.border)),
-            ),
-          )),
+            formatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            onMinus: () => _stepWeight(index, -2.5),
+            onPlus: () => _stepWeight(index, 2.5),
+          ),
         )),
 
-        // Reps input
-        Expanded(flex: 3, child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 5),
-          child: SizedBox(height: 38, child: TextFormField(
+        // Reps input with +/- stepper buttons
+        Expanded(flex: 4, child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: _buildStepperField(
             controller: _repsCtrl[index],
-            enabled: !locked,
+            locked: locked,
+            hintText: s.targetReps?.toString() ?? '—',
             keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: GoogleFonts.inter(
-                fontSize: 14, fontWeight: FontWeight.w700,
-                color: locked ? _C.textMut : _C.textPri),
-            decoration: InputDecoration(
-              hintText: s.targetReps?.toString() ?? '—',
-              hintStyle: GoogleFonts.inter(color: _C.textMut.withOpacity(0.5), fontSize: 13),
-              contentPadding: EdgeInsets.zero,
-              filled: true,
-              fillColor: locked ? _C.cardElev.withOpacity(0.5) : _C.cardElev,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.cyan, width: 1.5)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.borderMid)),
-              disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _C.border)),
-            ),
-          )),
+            formatters: [FilteringTextInputFormatter.digitsOnly],
+            onMinus: () => _stepReps(index, -1),
+            onPlus: () => _stepReps(index, 1),
+          ),
         )),
 
         // Checkmark lock button
-        SizedBox(width: 46, child: IconButton(
+        SizedBox(width: 40, child: IconButton(
           icon: Icon(
             locked ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
             color: locked ? _C.success : _C.textMut,
@@ -679,6 +729,81 @@ class _ExerciseCardState extends State<_ExerciseCard> {
           padding: EdgeInsets.zero,
         )),
       ]),
+    );
+  }
+
+  Widget _buildStepperField({
+    required TextEditingController controller,
+    required bool locked,
+    required String hintText,
+    required TextInputType keyboardType,
+    required List<TextInputFormatter> formatters,
+    required VoidCallback onMinus,
+    required VoidCallback onPlus,
+  }) {
+    return Container(
+      height: 38,
+      decoration: BoxDecoration(
+        color: locked ? _C.cardElev.withValues(alpha: 0.5) : _C.cardElev,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: locked ? _C.cyan.withValues(alpha: 0.4) : _C.borderMid,
+          width: locked ? 1.2 : 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          if (!locked)
+            GestureDetector(
+              onTap: onMinus,
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox(
+                width: 24,
+                height: 38,
+                child: Center(
+                  child: Icon(Icons.remove_rounded, size: 14, color: _C.cyan),
+                ),
+              ),
+            ),
+          Expanded(
+            child: TextFormField(
+              controller: controller,
+              enabled: !locked,
+              keyboardType: keyboardType,
+              textAlign: TextAlign.center,
+              inputFormatters: formatters,
+              onChanged: (_) => setState(() {}),
+              style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w700,
+                color: locked ? _C.textMut : _C.textPri,
+              ),
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: GoogleFonts.inter(color: _C.textMut.withValues(alpha: 0.5), fontSize: 12),
+                contentPadding: EdgeInsets.zero,
+                isDense: true,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+              ),
+            ),
+          ),
+          if (!locked)
+            GestureDetector(
+              onTap: onPlus,
+              behavior: HitTestBehavior.opaque,
+              child: const SizedBox(
+                width: 24,
+                height: 38,
+                child: Center(
+                  child: Icon(Icons.add_rounded, size: 14, color: _C.cyan),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
