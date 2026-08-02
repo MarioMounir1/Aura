@@ -68,6 +68,8 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
                     id: dbEx['id'] as String, // the workoutExerciseId
                     setIndex: sIdx + 1,
                     label: sIdx == exTemplate.targetSets - 1 ? 'Top Set' : 'Working Set',
+                    targetWeightKg: exTemplate.lastWeekWeight,
+                    targetReps: exTemplate.lastWeekReps,
                   )),
                 ),
              );
@@ -206,8 +208,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     emit(currentState.copyWith(isSubmitting: true));
 
     try {
-      await repository.finishSession(currentState.sessionId, notes: 'Great workout!');
-      emit(const WorkoutSessionFinished('Workout successfully completed!'));
+      final res = await repository.finishSession(currentState.sessionId, notes: 'Great workout!');
+      final summaryNote = res['summaryNote'] as String? ?? 'Workout successfully completed!';
+      emit(WorkoutSessionFinished(summaryNote));
     } catch (e) {
       emit(currentState.copyWith(
         isSubmitting: false,
