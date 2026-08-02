@@ -606,7 +606,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: _C.cardElev,
+                      color: context.auraTheme.card,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
                         BoxShadow(
@@ -615,7 +615,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           offset: Offset(0, 4),
                         ),
                       ],
-                      border: Border.all(color: _C.border, width: 1.2),
+                      border: Border.all(color: context.auraTheme.border, width: 1.2),
                     ),
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -630,7 +630,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
-                                color: _C.textPri,
+                                color: context.auraTheme.textPrimary,
                                 letterSpacing: 0.2,
                               ),
                             ),
@@ -638,7 +638,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                               children: [
                                 Text(
                                   isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/wk',
-                                  style: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
+                                  style: GoogleFonts.inter(fontSize: 11, color: context.auraTheme.textMuted),
                                 ),
                                 const SizedBox(width: 8),
                                 InkWell(
@@ -1532,6 +1532,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
 
   Widget _buildPerformanceBadge(bool isArabic) {
+    final theme = context.auraTheme;
     // Contextually reads from the FIRST exercise in today's session
     final top = _currentSession?.topHistoricalSet;
     final label = top?.displayLabel ?? '— No data yet';
@@ -1541,31 +1542,31 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: _C.card,
+        color: theme.surfaceVariant,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _C.border, width: 1),
+        border: Border.all(color: theme.border, width: 1),
       ),
       child: Row(
         children: [
           Container(
             width: 30, height: 30,
             decoration: BoxDecoration(
-              color: _C.cyan.withValues(alpha: 0.12),
+              color: theme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.bolt_rounded, color: _C.cyan, size: 16),
+            child: Icon(Icons.bolt_rounded, color: theme.primary, size: 16),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                 isArabic ? 'أفضل أداء الأسبوع الماضي' : 'Last week top performance',
-                style: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
+                style: GoogleFonts.inter(fontSize: 11, color: theme.textSecondary),
               ),
               const SizedBox(height: 2),
               Text(
                 label,
                 style: GoogleFonts.inter(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: _C.textPri),
+                    fontSize: 13, fontWeight: FontWeight.w700, color: theme.textPrimary),
               ),
             ]),
           ),
@@ -1588,6 +1589,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   Widget _buildWeeklyCalendar(bool isArabic) {
+    final theme = context.auraTheme;
     const weekDayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     final todayIndex = DateTime.now().weekday - 1;
 
@@ -1613,7 +1615,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 style: GoogleFonts.inter(
                   fontSize: 10.5,
                   fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-                  color: isToday ? _C.cyan : _C.textMut,
+                  color: isToday ? theme.primary : theme.textSecondary,
                 )),
             const SizedBox(height: 6),
             _buildDayCircleWidget(
