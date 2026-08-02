@@ -112,6 +112,7 @@ class CurrentSession {
   final List<SessionExercise> exercises;
   final bool isSkipped;
   final bool isOverridden;
+  final bool isTodayCompleted;
   final String? coachNote;
   final TopHistoricalSet? topHistoricalSet;
 
@@ -121,6 +122,7 @@ class CurrentSession {
     required this.exercises,
     this.isSkipped = false,
     this.isOverridden = false,
+    this.isTodayCompleted = false,
     this.coachNote,
     this.topHistoricalSet,
   });
@@ -128,13 +130,14 @@ class CurrentSession {
   bool get isRestDay => exercises.isEmpty && !isSkipped;
 
   factory CurrentSession.fromJson(Map<String, dynamic> j) => CurrentSession(
-        routineName:     j['routineName'] as String? ?? 'Workout',
-        todayDayName:    j['todayDayName'] as String? ?? 'Training Day',
-        exercises:       (j['exercises'] as List<dynamic>? ?? [])
+        routineName:      j['routineName'] as String? ?? 'Workout',
+        todayDayName:     j['todayDayName'] as String? ?? 'Training Day',
+        exercises:        (j['exercises'] as List<dynamic>? ?? [])
             .map((e) => SessionExercise.fromJson(e as Map<String, dynamic>))
             .toList(),
         isSkipped:        j['isSkipped'] as bool? ?? false,
         isOverridden:     j['isOverridden'] as bool? ?? false,
+        isTodayCompleted: j['isTodayCompleted'] as bool? ?? false,
         coachNote:        j['coachNote'] as String?,
         topHistoricalSet: j['topHistoricalSet'] != null
             ? TopHistoricalSet.fromJson(j['topHistoricalSet'] as Map<String, dynamic>)
