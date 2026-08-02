@@ -372,8 +372,15 @@ class _AuthWrapperState extends State<AuthWrapper> {
               ),
             );
           }
-          if (authState is Unauthenticated || authState is AuthFailure || authState is AuthInitial || authState is AuthLoading) {
-            return const LoginScreen();
+          if (authState is AuthInitial || authState is AuthLoading) {
+            return const Scaffold(
+              backgroundColor: AppColors.background,
+              body: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+            );
           }
           return const LoginScreen();
         },
