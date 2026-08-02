@@ -54,9 +54,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     with SingleTickerProviderStateMixin {
 
   // ── State ──────────────────────────────────────────────────
-  WorkoutHubState _state = WorkoutHubState.loading;
-  int _activeDays = 0;
-  RoutineSuggestion? _activeRoutine;
+  WorkoutHubState _state = WorkoutHubState.ready;
+  int _activeDays = 4;
+  RoutineSuggestion? _activeRoutine = RoutineCatalogue.forDays(4).first;
   CurrentSession? _currentSession;
   String? _errorMessage;
   String? _swapSuggestionNote;
@@ -78,7 +78,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   void initState() {
     super.initState();
     _dio = ApiClient().dio;
-    _loadRoutine();
+    _loadRoutine(silent: true);
   }
 
   @override
@@ -89,11 +89,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ── Load existing routine from backend ─────────────────────
   Future<void> _loadRoutine({bool silent = false}) async {
     if (!mounted) return;
-    if (!silent && _activeRoutine == null && _state != WorkoutHubState.ready) {
-      setState(() => _state = WorkoutHubState.loading);
-    } else {
-      setState(() => _isRefreshingInPlace = true);
-    }
+    setState(() => _isRefreshingInPlace = true);
     try {
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
       final resp = await _dio.get('/workouts/routine?date=$todayStr');
@@ -507,7 +503,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     isArabic ? 'مركز التمرين' : 'Workout Hub',
                     style: GoogleFonts.inter(
                       fontSize: 26, fontWeight: FontWeight.w900,
-                      color: _C.textPri, letterSpacing: -0.5,
+                      color: context.auraTheme.textPrimary, letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -515,7 +511,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     _state == WorkoutHubState.ready
                         ? (isArabic ? 'روتينك نشط' : 'Your routine is active')
                         : (isArabic ? 'لا يوجد روتين نشط' : 'No routine configured'),
-                    style: GoogleFonts.inter(fontSize: 12, color: _C.textMut),
+                    style: GoogleFonts.inter(fontSize: 12, color: context.auraTheme.textMuted),
                   ),
                 ],
               ),
@@ -1345,7 +1341,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 else
                   Container(
                     decoration: BoxDecoration(
-                      color: _C.cardElev,
+                      color: context.auraTheme.card,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
                         BoxShadow(
@@ -1354,7 +1350,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           offset: Offset(0, 4),
                         ),
                       ],
-                      border: Border.all(color: _C.border, width: 1.2),
+                      border: Border.all(color: context.auraTheme.border, width: 1.2),
                     ),
                     padding: const EdgeInsets.all(20),
                     child: Column(
