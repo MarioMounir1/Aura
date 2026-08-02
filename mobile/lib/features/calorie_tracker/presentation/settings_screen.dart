@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../main.dart';
+import '../../../core/theme/theme_cubit.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_event.dart';
@@ -151,12 +152,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
+    final theme = context.auraTheme;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.background,
       appBar: AppBar(
         title: Text(
           l10n.profileTitle,
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.textPrimary),
         ),
         centerTitle: false,
         elevation: 0,
@@ -549,12 +552,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Group 1: Fitness & Health Metrics ─────────────────────────────
   Widget _buildFitnessMetricsGroup(AppLocalizations l10n) {
+    final theme = context.auraTheme;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,11 +700,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Group 2: Preferences (Language, Units, Theme) ────────────────
   Widget _buildPreferencesGroup(BuildContext context, bool isArabic) {
+    final theme = context.auraTheme;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.border),
       ),
       child: Material(
         color: Colors.transparent,
@@ -742,30 +747,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
-          // Dark Theme Status Tile
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.dark_mode_rounded, color: AppColors.primary, size: 20),
-            ),
-            title: Text(
-              isArabic ? 'المظهر' : 'App Theme',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            subtitle: Text(
-              isArabic ? 'الوضع الداكن الفاخر' : 'Ultra Dark Mode (Default)',
-              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            trailing: const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
+          // App Theme Selector Tile
+          BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, currentMode) {
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    currentMode == ThemeMode.light
+                        ? Icons.light_mode_rounded
+                        : (currentMode == ThemeMode.system ? Icons.brightness_auto_rounded : Icons.dark_mode_rounded),
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                title: Text(
+                  'App Theme',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                subtitle: Text(
+                  currentMode == ThemeMode.light
+                      ? 'White Theme (Aura Touch)'
+                      : (currentMode == ThemeMode.system ? 'System Default' : 'Dark Mode (Default)'),
+                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildThemeChip(context, '🌙 Dark', ThemeMode.dark, currentMode == ThemeMode.dark),
+                    const SizedBox(width: 6),
+                    _buildThemeChip(context, '☀️ Light', ThemeMode.light, currentMode == ThemeMode.light),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -773,13 +797,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildThemeChip(BuildContext context, String label, ThemeMode mode, bool isActive) {
+    final theme = context.auraTheme;
+    return GestureDetector(
+      onTap: () => context.read<ThemeCubit>().setThemeMode(mode),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isActive ? theme.primary : theme.surfaceVariant,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isActive ? theme.primary : theme.border,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isActive ? Colors.white : theme.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Group 3: Account Actions (Logout) ────────────────────────────
   Widget _buildAccountActionsGroup(BuildContext context, AppLocalizations l10n) {
+    final theme = context.auraTheme;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.border),
       ),
       child: Material(
         color: Colors.transparent,
@@ -864,28 +916,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Input Styling Helpers ─────────────────────────────────────────
   InputDecoration _buildInputDecoration({required String hint, required IconData icon}) {
+    final theme = context.auraTheme;
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 18),
+      prefixIcon: Icon(icon, color: theme.textSecondary, size: 18),
       filled: true,
-      fillColor: AppColors.background,
+      fillColor: theme.surfaceVariant,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: theme.border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: BorderSide(color: theme.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        borderSide: BorderSide(color: theme.primary, width: 1.5),
       ),
     );
   }
 
   Widget _buildFieldLabel(String text) {
+    final theme = context.auraTheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, left: 2),
       child: Text(
@@ -893,7 +947,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         style: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: AppColors.textSecondary,
+          color: theme.textSecondary,
         ),
       ),
     );
