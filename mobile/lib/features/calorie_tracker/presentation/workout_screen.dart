@@ -436,6 +436,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
+  void _exitWorkoutWithoutFinishing() {
+    setState(() {
+      _state = WorkoutHubState.ready;
+    });
+  }
+
   Widget _buildCurrentView(bool isArabic) {
     switch (_state) {
       case WorkoutHubState.loading:
@@ -449,6 +455,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 sessionState: workoutState,
                 isArabic: isArabic,
                 onFinish: _finishWorkout,
+                onExit: _exitWorkoutWithoutFinishing,
               );
             }
             return _buildLoadingView(isArabic);
