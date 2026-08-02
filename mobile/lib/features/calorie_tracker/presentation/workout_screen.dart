@@ -517,8 +517,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               ),
               Row(
                 children: [
-                  _buildStreakBadge(),
-                  const SizedBox(width: 8),
                   InkWell(
                     onTap: _openSetupSheet,
                     borderRadius: BorderRadius.circular(12),
