@@ -259,10 +259,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       return;
     }
 
-    context.read<WorkoutBloc>().add(StartWorkoutSession(
-      _currentSession != null ? _currentSession!.routineName : 'Custom Session',
-      initialExercises: _currentSession?.exercises,
-    ));
+    final workoutState = context.read<WorkoutBloc>().state;
+    if (workoutState is! WorkoutSessionActive) {
+      context.read<WorkoutBloc>().add(StartWorkoutSession(
+        _currentSession != null ? _currentSession!.routineName : 'Custom Session',
+        initialExercises: _currentSession?.exercises,
+      ));
+    }
 
     setState(() {
       _state = WorkoutHubState.activeWorkout;
@@ -1216,6 +1219,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   Widget _buildTodayCard(bool isArabic) {
     final routine = _activeRoutine!;
     final session = _currentSession;
+    final workoutBlocState = context.watch<WorkoutBloc>().state;
+    final hasActiveSession = workoutBlocState is WorkoutSessionActive;
 
     final todayLabel = session?.todayDayName
         ?? (() {
@@ -1235,11 +1240,54 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       switchInCurve: Curves.easeIn,
       switchOutCurve: Curves.easeOut,
       child: KeyedSubtree(
-        key: ValueKey('${routine.splitType}_${todayLabel}_${exercises.length}_$isSkipped'),
+        key: ValueKey('${routine.splitType}_${todayLabel}_${exercises.length}_${isSkipped}_$hasActiveSession'),
         child: Stack(
           children: [
             Column(
               children: [
+                if (hasActiveSession)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _C.cyan.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: _C.cyan.withValues(alpha: 0.4), width: 1.2),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _C.cyan.withValues(alpha: 0.18),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.fitness_center_rounded, color: _C.cyan, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isArabic ? 'تمرين قيد التقدّم 🏋️‍♂️' : 'ACTIVE WORKOUT IN PROGRESS 🏋️‍♂️',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: _C.cyan, letterSpacing: 0.5),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isArabic
+                                      ? 'لديك تمرين نشط! اضغط على "إنهاء التمرين" لتسجيل نتائجك.'
+                                      : 'You have an active workout in progress! Please finish your workout to log your progress.',
+                                  style: GoogleFonts.inter(fontSize: 12, color: _C.textPri, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (isSkipped)
                   Container(
                     decoration: BoxDecoration(
@@ -1435,15 +1483,19 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                         Divider(color: _C.border, height: 1),
                         const SizedBox(height: 14),
 
-                        // Start Workout CTA
+                        // Start / Finish Workout CTA
                         _AnimatedPressable(
                           onTap: isRestDay ? null : _startWorkout,
                           child: AppButton.primary(
                             onPressed: isRestDay ? null : _startWorkout,
-                            icon: isRestDay ? Icons.hotel_rounded : Icons.play_arrow_rounded,
+                            icon: isRestDay
+                                ? Icons.hotel_rounded
+                                : (hasActiveSession ? Icons.check_circle_rounded : Icons.play_arrow_rounded),
                             label: isRestDay
-                                    ? (isArabic ? 'يوم راحة' : 'Rest Day')
-                                    : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout'),
+                                ? (isArabic ? 'يوم راحة' : 'Rest Day')
+                                : (hasActiveSession
+                                    ? (isArabic ? 'إنهاء / متابعة التمرين' : 'Finish Workout')
+                                    : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout')),
                           ),
                         ),
                       ],
