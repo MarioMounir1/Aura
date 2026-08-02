@@ -493,6 +493,16 @@ export async function interpretSessionRequest(
     }
   }
 
+  const setsReductionMatch = message.match(/(?:make|reduce|limit|set|cut|change|just)?\s*(?:it|today|session)?\s*(?:to|is|for)?\s*(\d+)\s*(?:set|sets)/i);
+  if (setsReductionMatch) {
+    const targetSetsNum = Math.min(5, Math.max(1, parseInt(setsReductionMatch[1], 10)));
+    return {
+      intent: "lighter_intensity",
+      targetSets: targetSetsNum,
+      reply: `Got it! Adjusted all exercises in today's workout to ${targetSetsNum} sets.`,
+    };
+  }
+
   const systemPrompt = `You are an expert AI fitness coach & workout session controller. Classify user message into 1 of 8 intents:
 1. "add_exercise": user wants to add a new exercise to today's workout (e.g., "add 3 sets of incline dumbbell curls"). Extract "exerciseName" and "targetSets" (default 3 if omitted).
 2. "remove_exercise": user wants to remove an exercise from today's workout (e.g., "remove leg press", "delete cable flyes"). Extract "exerciseName".
