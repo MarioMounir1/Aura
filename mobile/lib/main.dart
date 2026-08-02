@@ -269,8 +269,17 @@ class TeneenApp extends StatelessWidget {
 
 // ── Auth Wrapper ──────────────────────────────────────────────
 
-class AuthWrapper extends StatelessWidget {
+// ── Auth Wrapper ──────────────────────────────────────────────
+
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  ProfileLoaded? _lastProfileLoaded;
 
   @override
   Widget build(BuildContext context) {
@@ -285,6 +294,7 @@ class AuthWrapper extends StatelessWidget {
           context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
           context.read<FoodSearchBloc>().add(LoadFoodCategories());
         } else if (authState is Unauthenticated) {
+          _lastProfileLoaded = null;
           context.read<ProfileBloc>().add(ResetProfileEvent());
           context.read<DashboardBloc>().add(const ResetDashboardEvent());
           context.read<CalorieTrackerBloc>().add(const ResetCalorieTracker());
@@ -300,8 +310,11 @@ class AuthWrapper extends StatelessWidget {
           if (authState is Authenticated) {
             return BlocListener<ProfileBloc, ProfileState>(
               listener: (context, profileState) {
-                if (profileState is ProfileLoaded && profileState.isOnboardingCompleted) {
-                  context.read<DashboardBloc>().add(const LoadDashboard());
+                if (profileState is ProfileLoaded) {
+                  _lastProfileLoaded = profileState;
+                  if (profileState.isOnboardingCompleted) {
+                    context.read<DashboardBloc>().add(const LoadDashboard());
+                  }
                 }
                 if (profileState is ProfileFailure &&
                     (profileState.message.contains("Authentication required") ||
@@ -313,6 +326,18 @@ class AuthWrapper extends StatelessWidget {
               },
               child: BlocBuilder<ProfileBloc, ProfileState>(
                 builder: (context, profileState) {
+                  if (profileState is ProfileLoaded) {
+                    _lastProfileLoaded = profileState;
+                  }
+
+                  if (_lastProfileLoaded != null) {
+                    if (_lastProfileLoaded!.isOnboardingCompleted) {
+                      return const HomeShellScreen();
+                    } else {
+                      return const OnboardingScreen();
+                    }
+                  }
+
                   if (profileState is ProfileInitial || profileState is ProfileLoading) {
                     return const Scaffold(
                       backgroundColor: AppColors.background,
@@ -323,15 +348,8 @@ class AuthWrapper extends StatelessWidget {
                       ),
                     );
                   }
-                  if (profileState is ProfileLoaded) {
-                    if (profileState.isOnboardingCompleted) {
-                      return const HomeShellScreen();
-                    } else {
-                      return const OnboardingScreen();
-                    }
-                  }
+
                   if (profileState is ProfileFailure) {
-                    // If it fails, let them complete onboarding or try loading again
                     return Scaffold(
                       backgroundColor: AppColors.background,
                       body: Center(
