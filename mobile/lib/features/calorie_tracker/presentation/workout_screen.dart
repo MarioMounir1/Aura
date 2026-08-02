@@ -423,7 +423,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         ),
       ],
       child: Scaffold(
-        backgroundColor: _C.bg,
+        backgroundColor: context.auraTheme.background,
         body: SafeArea(
           bottom: false,
           child: AnimatedSwitcher(
@@ -525,9 +525,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _C.card,
+                        color: context.auraTheme.card,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: _C.borderMid, width: 1),
+                        border: Border.all(color: context.auraTheme.border, width: 1),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -536,7 +536,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           const SizedBox(width: 4),
                           Text(
                             isArabic ? 'البرنامج' : 'Plan',
-                            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: _C.textPri),
+                            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: context.auraTheme.textPrimary),
                           ),
                         ],
                       ),
@@ -2847,6 +2847,7 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.auraTheme;
     final ex = widget.exercise;
     final i = widget.index;
     final isFirst = widget.isFirst;
@@ -2870,11 +2871,11 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                   width: 26, height: 26,
                   decoration: BoxDecoration(
                     color: isFirst
-                        ? _C.cyan.withValues(alpha: 0.15)
-                        : _C.cardElev,
+                        ? theme.primary.withValues(alpha: 0.15)
+                        : theme.surfaceVariant,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isFirst ? _C.cyan : _C.borderMid,
+                      color: isFirst ? theme.primary : theme.border,
                       width: 1.2,
                     ),
                   ),
@@ -2883,7 +2884,7 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                       '${i + 1}',
                       style: GoogleFonts.inter(
                         fontSize: 11, fontWeight: FontWeight.w800,
-                        color: isFirst ? _C.cyan : _C.textMut,
+                        color: isFirst ? theme.primary : theme.textSecondary,
                       ),
                     ),
                   ),
@@ -2903,7 +2904,7 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: isFirst ? FontWeight.w700 : FontWeight.w600,
-                                color: isFirst ? _C.textPri : _C.textSec,
+                                color: theme.textPrimary,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -2938,7 +2939,7 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                       ),
                       Text(
                         ex.muscleGroup,
-                        style: GoogleFonts.inter(fontSize: 10, color: _C.textMut),
+                        style: GoogleFonts.inter(fontSize: 10, color: theme.textSecondary),
                       ),
                     ],
                   ),
@@ -2948,14 +2949,14 @@ class _WorkoutExerciseRowState extends State<WorkoutExerciseRow> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: _C.cardElev,
+                    color: theme.surfaceVariant,
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: _C.border),
+                    border: Border.all(color: theme.border),
                   ),
                   child: Text(
                     '${ex.targetSets} sets',
                     style: GoogleFonts.inter(
-                        fontSize: 10, fontWeight: FontWeight.w600, color: _C.textMut),
+                        fontSize: 10, fontWeight: FontWeight.w600, color: theme.textSecondary),
                   ),
                 ),
                 const SizedBox(width: 8),
