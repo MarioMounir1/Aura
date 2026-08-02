@@ -804,34 +804,6 @@ class _DashboardHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Greeting Streak Badge (Warning-colored pill)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.local_fire_department_rounded,
-                          size: 15,
-                          color: AppColors.warning,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$streakCount day streak',
-                          style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.warning,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 2),
