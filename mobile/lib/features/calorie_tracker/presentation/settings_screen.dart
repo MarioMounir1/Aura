@@ -771,8 +771,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 subtitle: Text(
                   currentMode == ThemeMode.light
-                      ? 'White Theme (Aura Touch)'
-                      : (currentMode == ThemeMode.system ? 'System Default' : 'Dark Mode (Default)'),
+                      ? 'Light Mode (Default)'
+                      : (currentMode == ThemeMode.system ? 'System Default' : 'Dark Mode'),
                   style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
                 ),
                 trailing: Row(
