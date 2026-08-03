@@ -462,6 +462,17 @@ async function fetchSessionData(
     },
   });
 
+  const todayStart = new Date(targetDateStr + "T00:00:00Z");
+  const todayEnd = new Date(targetDateStr + "T23:59:59Z");
+  const completedToday = await prisma.workoutSession.findFirst({
+    where: {
+      userId,
+      startedAt: { gte: todayStart, lte: todayEnd },
+      endedAt: { not: null },
+    },
+  });
+  const isTodayCompleted = !!completedToday;
+
   let todayDayName: string;
   let isOverridden = false;
   let isSkipped = false;
@@ -478,11 +489,17 @@ async function fetchSessionData(
     const targetDate = new Date(targetDateStr + "T00:00:00Z");
     const configDateStr = configuredAt.toISOString().split("T")[0];
     const configDate = new Date(configDateStr + "T00:00:00Z");
-    const diffDays = Math.max(0, Math.floor((targetDate.getTime() - configDate.getTime()) / 86400000));
+    let diffDays = Math.max(0, Math.floor((targetDate.getTime() - configDate.getTime()) / 86400000));
+    if (isTodayCompleted) {
+      diffDays += 1;
+    }
     todayDayName = days[diffDays % days.length] ?? "Rest";
   } else {
     const targetDate = new Date(targetDateStr + "T00:00:00Z");
-    const todayIndex = (targetDate.getDay() + 6) % 7;
+    let todayIndex = (targetDate.getDay() + 6) % 7;
+    if (isTodayCompleted) {
+      todayIndex += 1;
+    }
     todayDayName = days[todayIndex % days.length] ?? "Rest";
   }
 
@@ -493,6 +510,7 @@ async function fetchSessionData(
       exercises: [],
       isSkipped: true,
       isOverridden: true,
+      isTodayCompleted: false,
       coachNote: "Today is marked as skipped. Focus on rest and recovery.",
       topHistoricalSet: null,
     };
@@ -584,6 +602,7 @@ async function fetchSessionData(
     exercises,
     isSkipped: false,
     isOverridden,
+    isTodayCompleted,
     coachNote: undefined,
     topHistoricalSet,
   };
@@ -1454,14 +1473,81 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
 
     const userId = req.user!.id;
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.workoutSplitType) {
-      res.status(400).json({ success: false, error: "No active workout routine configuration found." });
+    if (!user) {
+      res.status(401).json({ success: false, error: "User not found." });
       return;
     }
 
-    const splitType = user.workoutSplitType;
-    const splitName = user.workoutSplitName ?? user.workoutSplitType;
     const targetDateStr = new Date().toISOString().split("T")[0];
+    const isFirstTimeUser = !user.workoutSplitType;
+
+    // ── First-time users: route to onboarding mode in interpretSessionRequest ──
+    if (isFirstTimeUser) {
+      const interpretation = await interpretSessionRequest(message.trim(), {
+        splitName: "",
+        availableDayTypes: [],
+        todayDayName: "",
+        exercises: [],
+      });
+
+      let actionExecuted = false;
+      let confirmationMessage = interpretation.reply;
+
+      if (interpretation.intent === "setup_routine") {
+        const resolved = resolveSplitForChangePlan(
+          interpretation.proposedSplitName ?? null,
+          typeof interpretation.proposedDays === "number" ? interpretation.proposedDays : null,
+          4 // default days when no current plan
+        );
+
+        if (resolved) {
+          const configuredAt = new Date();
+          await prisma.user.update({
+            where: { id: userId },
+            data: {
+              workoutDays: resolved.daysPerWeek,
+              workoutSplitType: resolved.splitType,
+              workoutSplitName: resolved.splitName,
+              workoutConfiguredAt: configuredAt,
+            },
+          });
+          actionExecuted = true;
+          confirmationMessage = interpretation.reply?.trim()
+            || `Your routine is set to ${resolved.splitName} (${resolved.daysPerWeek} days/week). Let's get started — today's session is ready!`;
+
+          const updatedSession = await fetchSessionData(userId, resolved.splitType, resolved.splitName, targetDateStr, configuredAt);
+          res.status(200).json({
+            success: true,
+            data: {
+              intent: "setup_routine",
+              actionExecuted: true,
+              confirmationMessage,
+              currentSession: updatedSession,
+            },
+          });
+          return;
+        } else {
+          // Couldn't resolve — ask for more info
+          confirmationMessage = "I'd love to help you set up! Which routine would you prefer (e.g. Push/Pull/Legs, Upper/Lower) and how many days per week do you want to train?";
+        }
+      }
+
+      // For question / unrecognized in first-time mode: return no session
+      res.status(200).json({
+        success: true,
+        data: {
+          intent: interpretation.intent,
+          actionExecuted,
+          confirmationMessage,
+          currentSession: null,
+        },
+      });
+      return;
+    }
+
+    // ── Existing-user path ───────────────────────────────────
+    const splitType = user.workoutSplitType!;
+    const splitName = user.workoutSplitName ?? user.workoutSplitType!;
 
     const currentSession = await fetchSessionData(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt);
     const meta = ROUTINE_CATALOGUE[splitType];
@@ -1750,7 +1836,7 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           confirmationMessage = `Lightened today's intensity. Focus on clean form and lower overall volume today!`;
         }
       }
-    } else if (interpretation.intent === "change_plan") {
+    } else if (interpretation.intent === "change_plan" || interpretation.intent === "setup_routine") {
       const currentDays = user.workoutDays ?? 4;
       const resolved = resolveSplitForChangePlan(
         interpretation.proposedSplitName,
