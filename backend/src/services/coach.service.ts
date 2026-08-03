@@ -476,10 +476,10 @@ export interface InterpretResult {
   reply: string;
 }
 
-export function extractPlanInfoFromMessage(msg: string): { proposedDays: number | null; proposedSplitName: string | null } {
+export function extractPlanInfoFromMessage(msg: string): { proposedDays: number | undefined; proposedSplitName: string | undefined } {
   const lower = msg.toLowerCase();
-  let proposedDays: number | null = null;
-  let proposedSplitName: string | null = null;
+  let proposedDays: number | undefined = undefined;
+  let proposedSplitName: string | undefined = undefined;
 
   const daysMatch = lower.match(/(\d+)\s*(?:days?|d|times?|x|\/wk|a week|per week|-day)/i);
   if (daysMatch) {
@@ -521,7 +521,7 @@ export async function interpretSessionRequest(
 
   // ── Fast-path plan change / setup shortcut ──────────────────
   const planInfo = extractPlanInfoFromMessage(message);
-  if (planInfo.proposedDays !== null || planInfo.proposedSplitName !== null) {
+  if (planInfo.proposedDays !== undefined || planInfo.proposedSplitName !== undefined) {
     const targetIntent = isFirstTimeSetup ? "setup_routine" : "change_plan";
     const desc = planInfo.proposedSplitName
       ? `${planInfo.proposedSplitName}${planInfo.proposedDays ? ` (${planInfo.proposedDays} days/week)` : ""}`
@@ -654,7 +654,7 @@ Respond ONLY with JSON:
     
     // Check if message had plan info as fallback
     const fallbackPlan = extractPlanInfoFromMessage(message);
-    if (fallbackPlan.proposedDays !== null || fallbackPlan.proposedSplitName !== null) {
+    if (fallbackPlan.proposedDays !== undefined || fallbackPlan.proposedSplitName !== undefined) {
       const targetIntent = isFirstTimeSetup ? "setup_routine" : "change_plan";
       return {
         intent: targetIntent,
