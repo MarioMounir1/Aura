@@ -2,7 +2,7 @@ name: calc_calories
 description: Calc-Calories — AI-powered calorie counter for Egyptian restaurants
 
 publish_to: "none"
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
