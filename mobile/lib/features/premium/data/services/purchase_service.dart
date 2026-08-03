@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../../../core/network/api_client.dart';
@@ -21,8 +22,8 @@ class PurchaseService {
   static const bool isTestMode = false; // Set to false to enforce real RevenueCat purchases and entitlement checks
 
   // Public API Keys for Mobile App SDK
-  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
-  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'test_WduHLUbxvLMORiUZWfuZsXzkcpV');
+  static const _googleApiKey = String.fromEnvironment('REVENUECAT_GOOGLE_KEY', defaultValue: 'goog_yltfLffqMriTAuxEGOoODmTexnN');
+  static const _appleApiKey  = String.fromEnvironment('REVENUECAT_APPLE_KEY', defaultValue: 'goog_yltfLffqMriTAuxEGOoODmTexnN');
 
   final _premiumStreamController = StreamController<bool>.broadcast();
   bool? _currentMockStatus;
@@ -39,10 +40,13 @@ class PurchaseService {
         return; // Platform not supported by RevenueCat
       }
 
-      final configuration = PurchasesConfiguration(
-        Platform.isAndroid ? _googleApiKey : _appleApiKey,
-      )..appUserID = appUserId;
+      final apiKey = Platform.isAndroid ? _googleApiKey : _appleApiKey;
+      if (apiKey.startsWith('test_') && kReleaseMode) {
+        print('⚠️ [RevenueCat] Test key detected in release mode. Skipping Purchases.configure to allow app testing.');
+        return;
+      }
 
+      final configuration = PurchasesConfiguration(apiKey)..appUserID = appUserId;
       await Purchases.configure(configuration);
 
 
@@ -50,12 +54,17 @@ class PurchaseService {
       // Listen for subscription updates in real-time
       Purchases.addCustomerInfoUpdateListener((customerInfo) {
         final isActive = customerInfo.entitlements.all['premium']?.isActive ?? false;
-        setMockPremiumStatus(isActive);
+        if (isActive) {
+          setMockPremiumStatus(true);
+        }
       });
 
-      // Emit initial entitlement state
+      // Emit initial entitlement state if active
       final currentInfo = await Purchases.getCustomerInfo();
-      setMockPremiumStatus(currentInfo.entitlements.all['premium']?.isActive ?? false);
+      final isInitActive = currentInfo.entitlements.all['premium']?.isActive ?? false;
+      if (isInitActive) {
+        setMockPremiumStatus(true);
+      }
     } catch (e) {
       print('❌ [RevenueCat] Initialization error: $e');
     }
