@@ -465,14 +465,14 @@ export interface InterpretContext {
 }
 
 export interface InterpretResult {
-  intent: "override_day" | "swap_exercise" | "add_exercise" | "remove_exercise" | "lighter_intensity" | "question" | "change_plan" | "unrecognized";
+  intent: "override_day" | "swap_exercise" | "add_exercise" | "remove_exercise" | "lighter_intensity" | "question" | "change_plan" | "setup_routine" | "unrecognized";
   dayType?: string;
   exerciseName?: string;
   replacementExercise?: string;
   targetSets?: number;
   reason?: string;
-  proposedDays?: number;       // for change_plan: day count extracted (null = keep current)
-  proposedSplitName?: string; // for change_plan: split name mentioned (null = recommend by days)
+  proposedDays?: number;       // for change_plan / setup_routine: day count extracted
+  proposedSplitName?: string; // for change_plan / setup_routine: split name mentioned
   reply: string;
 }
 
@@ -480,6 +480,58 @@ export async function interpretSessionRequest(
   message: string,
   context: InterpretContext
 ): Promise<InterpretResult> {
+  const isFirstTimeSetup = !context.splitName || context.availableDayTypes.length === 0;
+
+  // ── First-time onboarding path ─────────────────────────────
+  if (isFirstTimeSetup) {
+    const setupSystemPrompt = `You are a friendly AI fitness coach helping a brand-new user set up their first workout plan.
+Your job is to collect two pieces of information: (1) how many days per week they want to train (3–6), and (2) which training split they prefer.
+Available splits: Full Body Split (3d), Push/Pull/Legs (3d or 6d), Upper/Lower Split (4d), Bro Split 4-Day (4d), Hybrid PPL Split (5d), 5-Day Bodypart Split (5d), Arnold Split (6d).
+
+Classify the user message into one of:
+- "setup_routine": the user has provided enough info to configure a plan (days mentioned and/or split named). Extract "proposedDays" (integer 3–6) and "proposedSplitName" (closest matching split name, or null if not mentioned).
+- "question": they are asking a general fitness question unrelated to setup.
+- "unrecognized": greeting, vague, or totally off-topic — respond warmly and guide them to share their training frequency.
+
+Respond ONLY with valid JSON:
+{
+  "intent": "setup_routine" | "question" | "unrecognized",
+  "proposedDays": number | null,
+  "proposedSplitName": string | null,
+  "reply": "1–2 sentence friendly response."
+}`;
+
+    const setupUserPrompt = `New user message: "${message}"`;
+
+    const setupFallback: InterpretResult = {
+      intent: "unrecognized",
+      reply: "I'm here to help you set up your training plan! How many days a week are you looking to train — 3, 4, 5, or 6?",
+    };
+
+    const setupRes = await callOllamaJsonChatDetailed<InterpretResult>(
+      setupSystemPrompt,
+      setupUserPrompt,
+      setupFallback,
+      { callerName: "interpretSessionRequest:setup", timeoutMs: 25000, numPredict: 140 }
+    );
+
+    if (setupRes.source === "timeout" || setupRes.source === "error") {
+      return setupFallback;
+    }
+
+    const sr = setupRes.value;
+    console.log(`⏱️ [Coach] setup intent: ${sr.intent}, days: ${sr.proposedDays}, split: ${sr.proposedSplitName}`);
+
+    if (!sr.reply || typeof sr.reply !== "string" || !sr.reply.trim()) {
+      sr.reply = setupFallback.reply;
+    }
+    if (!sr.intent || !["setup_routine", "question", "unrecognized"].includes(sr.intent)) {
+      return setupFallback;
+    }
+    return sr;
+  }
+
+  // ── Existing-user fast-path regex shortcuts ────────────────
   const countReductionMatch = message.match(/(?:make|reduce|limit|set|cut|just|too much)\s*(?:it|today|session)?\s*(?:to|for|is)?\s*(\d+)\s*(?:ex|exs|exercise|exercises)/i)
     || (message.toLowerCase().includes("too much") && message.match(/(\d+)\s*(?:ex|exs|exercise|exercises)/i));
 
@@ -502,6 +554,10 @@ export async function interpretSessionRequest(
       reply: `Got it! Adjusted all exercises in today's workout to ${targetSetsNum} sets.`,
     };
   }
+
+  // ── Existing-user full AI classification ──────────────────
+  const availableDaysStr = context.availableDayTypes.join(", ") || "(none)";
+  const currentExercisesStr = context.exercises.map((e) => `${e.name} (${e.muscleGroup})`).join(", ") || "(none)";
 
   const systemPrompt = `You are an expert AI fitness coach & workout session controller. Classify user message into 1 of 8 intents:
 1. "add_exercise": user wants to add a new exercise to today's workout (e.g., "add 3 sets of incline dumbbell curls"). Extract "exerciseName" and "targetSets" (default 3 if omitted).
