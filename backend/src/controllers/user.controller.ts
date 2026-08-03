@@ -465,7 +465,7 @@ export async function updateGoals(req: Request, res: Response): Promise<void> {
 const GoogleLoginSchema = z.object({
   idToken: z.string().optional(),
   email: z.string().email("Invalid email address").toLowerCase(),
-  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  name: z.string().optional(),
   googleId: z.string().min(1, "Google ID is required"),
 });
 
@@ -543,9 +543,10 @@ export async function googleLogin(req: Request, res: Response): Promise<void> {
         });
         console.log(`🔗 [Auth] Linked Google account to existing user: ${verifiedEmail}`);
       } else {
+        const displayName = (name && name.trim().length > 0) ? name : verifiedEmail.split('@')[0];
         user = await prisma.user.create({
           data: {
-            name,
+            name: displayName,
             email: verifiedEmail,
             googleId: verifiedGoogleId,
             dailyCalorieGoal: 2000,
@@ -575,10 +576,10 @@ export async function googleLogin(req: Request, res: Response): Promise<void> {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    console.error("❌ [Auth] Google login error:", msg);
+    console.error("❌ [Auth] Google login error:", err);
     res.status(500).json({
       success: false,
-      error: "Google login service temporarily unavailable.",
+      error: `Google login failed: ${msg}`,
       code: "GOOGLE_LOGIN_ERROR",
     });
   }
