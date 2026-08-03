@@ -31,6 +31,7 @@ interface CurrentSession {
   exercises: SessionExercise[];
   isSkipped?: boolean;
   isOverridden?: boolean;
+  isTodayCompleted?: boolean;
   coachNote?: string;
   topHistoricalSet: {
     exerciseName: string;
@@ -327,6 +328,7 @@ const ROUTINE_CATALOGUE: Record<string, { description: string; days: string[] }>
   bro_split_5: { description: "Full coverage — arms get dedicated session",               days: ["Chest", "Back", "Shoulders", "Legs", "Arms + Abs", "Rest", "Rest"] },
   ppl_2x:      { description: "Each muscle group 2× per week — king of hypertrophy",    days: ["Push A", "Pull A", "Legs A", "Rest", "Push B", "Pull B", "Legs B"] },
   arnold_split:{ description: "Arnold's 6-day blueprint — antagonist supersets",         days: ["Chest + Back", "Shoulders + Arms", "Legs", "Chest + Back", "Shoulders + Arms", "Legs", "Rest"] },
+  ppl_arnold:  { description: "Hybrid 6-Day — 3 days Push/Pull/Legs + 3 days Arnold Split", days: ["Push", "Pull", "Legs", "Chest + Back", "Shoulders + Arms", "Legs", "Rest"] },
 };
 
 // Friendly display names for each splitType key
@@ -339,12 +341,13 @@ const ROUTINE_DISPLAY_NAMES: Record<string, string> = {
   bro_split_5:  "5-Day Bodypart Split",
   ppl_2x:       "Push / Pull / Legs (2×/wk)",
   arnold_split: "Arnold Split (6-Day)",
+  ppl_arnold:   "PPL / Arnold Split",
 };
 
 // Number of active training days for each split
 const SPLIT_DAY_COUNT: Record<string, number> = {
   full_body: 3, ppl_1x: 3, upper_lower: 4, bro_split: 4,
-  ul_ppl: 5, bro_split_5: 5, ppl_2x: 6, arnold_split: 6,
+  ul_ppl: 5, bro_split_5: 5, ppl_2x: 6, arnold_split: 6, ppl_arnold: 6,
 };
 
 // Rank-1 recommendation per day count (deterministic, no Ollama needed)
@@ -362,6 +365,17 @@ function resolveSplitForChangePlan(
   // 1. Split name mentioned → fuzzy-match against catalogue
   if (proposedSplitName) {
     const query = proposedSplitName.toLowerCase().replace(/[^a-z0-9 ]/g, "");
+
+    // Direct check for hybrid PPL / Arnold requests
+    if ((query.includes("ppl") || query.includes("push")) && (query.includes("arnold") || query.includes("aronld") || query.includes("aronlod"))) {
+      return {
+        splitType: "ppl_arnold",
+        splitName: ROUTINE_DISPLAY_NAMES["ppl_arnold"],
+        daysPerWeek: 6,
+        description: ROUTINE_CATALOGUE["ppl_arnold"].description,
+      };
+    }
+
     const tokens = query.split(/\s+/).filter(Boolean);
     let bestKey: string | null = null;
     let bestScore = 0;
@@ -556,7 +570,7 @@ async function fetchSessionData(
             },
           });
         } catch (e) {
-          dbEx = (await prisma.exercise.findFirst({ where: { name: { equals: ex.name, mode: "insensitive" } } })) ?? undefined;
+          dbEx = (await prisma.exercise.findFirst({ where: { name: { equals: ex.name, mode: "insensitive" } } })) ?? null;
         }
       }
 
@@ -1635,13 +1649,13 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       }
     } else if (interpretation.intent === "remove_exercise" && interpretation.exerciseName) {
       const remQuery = interpretation.exerciseName.trim().toLowerCase();
-      let activeSession = await prisma.workoutSession.findFirst({
+      let activeSession: any = await prisma.workoutSession.findFirst({
         where: { userId, endedAt: null },
         include: { exercises: { include: { exercise: true } } },
       });
 
       if (!activeSession) {
-        activeSession = await prisma.workoutSession.create({
+        const createdSess = await prisma.workoutSession.create({
           data: {
             userId,
             name: currentSession.todayDayName,
@@ -1653,7 +1667,7 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           if (ex.id) {
             await prisma.workoutExercise.create({
               data: {
-                sessionId: activeSession.id,
+                sessionId: createdSess.id,
                 exerciseId: ex.id,
                 order: i + 1,
               },
@@ -1661,13 +1675,13 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           }
         }
         activeSession = await prisma.workoutSession.findFirst({
-          where: { id: activeSession.id },
+          where: { id: createdSess.id },
           include: { exercises: { include: { exercise: true } } },
         });
       }
 
       if (activeSession && activeSession.exercises.length > 0) {
-        const targetWe = activeSession.exercises.find((we) =>
+        const targetWe = activeSession.exercises.find((we: any) =>
           we.exercise.name.toLowerCase().includes(remQuery)
         ) ?? activeSession.exercises[0];
 
@@ -1724,13 +1738,13 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           swappedFrom = targetEx.name;
           swappedTo = alt.name;
 
-          let activeSession = await prisma.workoutSession.findFirst({
+          let activeSession: any = await prisma.workoutSession.findFirst({
             where: { userId, endedAt: null },
             include: { exercises: true },
           });
 
           if (!activeSession) {
-            activeSession = await prisma.workoutSession.create({
+            const createdSess = await prisma.workoutSession.create({
               data: {
                 userId,
                 name: currentSession.todayDayName,
@@ -1742,7 +1756,7 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
               if (ex.id) {
                 await prisma.workoutExercise.create({
                   data: {
-                    sessionId: activeSession.id,
+                    sessionId: createdSess.id,
                     exerciseId: ex.id,
                     order: i + 1,
                   },
@@ -1750,13 +1764,13 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
               }
             }
             activeSession = await prisma.workoutSession.findFirst({
-              where: { id: activeSession.id },
+              where: { id: createdSess.id },
               include: { exercises: true },
             });
           }
 
           if (activeSession) {
-            const we = activeSession.exercises.find((e) => e.exerciseId === targetEx.id) ?? activeSession.exercises[0];
+            const we = activeSession.exercises.find((e: any) => e.exerciseId === targetEx.id) ?? activeSession.exercises[0];
             if (we) {
               await prisma.workoutExercise.update({
                 where: { id: we.id },
@@ -1781,13 +1795,13 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       const countMatch = message.match(/(\d+)\s*(?:ex|exs|exercise|exercises)/i);
       const targetCount = countMatch ? parseInt(countMatch[1], 10) : null;
 
-      let activeSession = await prisma.workoutSession.findFirst({
+      let activeSession: any = await prisma.workoutSession.findFirst({
         where: { userId, endedAt: null },
         include: { exercises: { include: { exercise: true } } },
       });
 
       if (!activeSession) {
-        activeSession = await prisma.workoutSession.create({
+        const createdSess = await prisma.workoutSession.create({
           data: {
             userId,
             name: currentSession.todayDayName,
@@ -1799,7 +1813,7 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           if (ex.id) {
             await prisma.workoutExercise.create({
               data: {
-                sessionId: activeSession.id,
+                sessionId: createdSess.id,
                 exerciseId: ex.id,
                 order: i + 1,
               },
@@ -1807,21 +1821,15 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           }
         }
         activeSession = await prisma.workoutSession.findFirst({
-          where: { id: activeSession.id },
+          where: { id: createdSess.id },
           include: { exercises: { include: { exercise: true } } },
         });
       }
 
       if (interpretation.targetSets && interpretation.targetSets > 0 && activeSession) {
         const targetSetsNum = interpretation.targetSets;
-        for (const we of activeSession.exercises) {
-          await prisma.workoutExercise.update({
-            where: { id: we.id },
-            data: { targetSets: targetSetsNum },
-          });
-        }
         actionExecuted = true;
-        confirmationMessage = `Got it! Adjusted all exercises in today's workout to ${targetSetsNum} sets.`;
+        confirmationMessage = `Got it! Adjusted target volume for today's workout to ${targetSetsNum} sets.`;
       } else if (activeSession && targetCount && targetCount > 0 && activeSession.exercises.length > targetCount) {
         const toRemove = activeSession.exercises.slice(targetCount);
         for (const r of toRemove) {
