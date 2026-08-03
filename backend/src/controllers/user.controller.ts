@@ -112,7 +112,7 @@ const RegisterSchema = z.object({
   email: z.string().email("Invalid email address").toLowerCase(),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
+    .min(6, "Password must be at least 6 characters")
     .max(128),
   dailyCalorieGoal: z.number().int().min(500).max(10000).optional(),
 });
@@ -234,10 +234,10 @@ export async function register(req: Request, res: Response): Promise<void> {
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
-    console.error("❌ [Auth] Register error:", msg);
+    console.error("❌ [Auth] Register error:", err);
     res.status(500).json({
       success: false,
-      error: "Failed to create account. Please try again.",
+      error: `Failed to create account: ${msg}`,
       code: "REGISTER_ERROR",
     });
   }
