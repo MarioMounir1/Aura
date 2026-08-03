@@ -421,26 +421,61 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isArabic ? 'مركز التمرين' : 'Workout Hub',
-                    style: GoogleFonts.inter(
-                      fontSize: 26, fontWeight: FontWeight.w900,
-                      color: context.auraTheme.textPrimary, letterSpacing: -0.5,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isArabic ? 'مركز التمرين' : 'Workout Hub',
+                      style: GoogleFonts.inter(
+                        fontSize: 26, fontWeight: FontWeight.w900,
+                        color: context.auraTheme.textPrimary, letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _state == WorkoutHubState.ready
-                        ? (isArabic ? 'روتينك نشط' : 'Your routine is active')
-                        : (isArabic ? 'لا يوجد روتين نشط' : 'No routine configured'),
-                    style: GoogleFonts.inter(fontSize: 12, color: context.auraTheme.textMuted),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      _state == WorkoutHubState.ready && _activeRoutine != null
+                          ? '${_activeRoutine!.name} • $_activeDays ${isArabic ? 'أيام/أسبوع' : 'Days/wk'}'
+                          : (isArabic ? 'لا يوجد روتين نشط' : 'No routine configured'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _state == WorkoutHubState.ready
+                            ? context.auraTheme.primary
+                            : context.auraTheme.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              if (_state == WorkoutHubState.ready && _activeRoutine != null) ...[
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: context.auraTheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: context.auraTheme.primary.withValues(alpha: 0.3), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.fitness_center_rounded, color: context.auraTheme.primary, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        _activeRoutine!.name,
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: context.auraTheme.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
