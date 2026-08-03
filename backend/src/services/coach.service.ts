@@ -476,11 +476,63 @@ export interface InterpretResult {
   reply: string;
 }
 
+export function extractPlanInfoFromMessage(msg: string): { proposedDays: number | null; proposedSplitName: string | null } {
+  const lower = msg.toLowerCase();
+  let proposedDays: number | null = null;
+  let proposedSplitName: string | null = null;
+
+  const daysMatch = lower.match(/(\d+)\s*(?:days?|d|times?|x|\/wk|a week|per week|-day)/i);
+  if (daysMatch) {
+    const parsed = parseInt(daysMatch[1], 10);
+    if (parsed >= 3 && parsed <= 6) {
+      proposedDays = parsed;
+    }
+  }
+
+  const isPpl = lower.includes("ppl") || lower.includes("push pull") || lower.includes("push/pull") || lower.includes("push leg");
+  const isArnold = lower.includes("arnold") || lower.includes("aronld") || lower.includes("aronlod") || lower.includes("arnolod");
+
+  if (isPpl && isArnold) {
+    proposedSplitName = "PPL / Arnold Split";
+    if (!proposedDays) proposedDays = 6;
+  } else if (isArnold) {
+    proposedSplitName = "Arnold Split";
+    if (!proposedDays) proposedDays = 6;
+  } else if (isPpl) {
+    proposedSplitName = "Push / Pull / Legs";
+  } else if (lower.includes("upper lower") || lower.includes("upper/lower") || lower.includes("upper & lower")) {
+    proposedSplitName = "Upper / Lower Split";
+    if (!proposedDays) proposedDays = 4;
+  } else if (lower.includes("bro split") || lower.includes("bodypart")) {
+    proposedSplitName = "Bro Split";
+  } else if (lower.includes("full body") || lower.includes("fullbody")) {
+    proposedSplitName = "Full Body Split";
+    if (!proposedDays) proposedDays = 3;
+  }
+
+  return { proposedDays, proposedSplitName };
+}
+
 export async function interpretSessionRequest(
   message: string,
   context: InterpretContext
 ): Promise<InterpretResult> {
   const isFirstTimeSetup = !context.splitName || context.availableDayTypes.length === 0;
+
+  // ── Fast-path plan change / setup shortcut ──────────────────
+  const planInfo = extractPlanInfoFromMessage(message);
+  if (planInfo.proposedDays !== null || planInfo.proposedSplitName !== null) {
+    const targetIntent = isFirstTimeSetup ? "setup_routine" : "change_plan";
+    const desc = planInfo.proposedSplitName
+      ? `${planInfo.proposedSplitName}${planInfo.proposedDays ? ` (${planInfo.proposedDays} days/week)` : ""}`
+      : `${planInfo.proposedDays} days per week`;
+    return {
+      intent: targetIntent,
+      proposedDays: planInfo.proposedDays,
+      proposedSplitName: planInfo.proposedSplitName,
+      reply: `Got it! Setting your workout routine to ${desc}...`,
+    };
+  }
 
   // ── First-time onboarding path ─────────────────────────────
   if (isFirstTimeSetup) {
@@ -532,15 +584,16 @@ Respond ONLY with valid JSON:
   }
 
   // ── Existing-user fast-path regex shortcuts ────────────────
-  const countReductionMatch = message.match(/(?:make|reduce|limit|set|cut|just|too much)\s*(?:it|today|session)?\s*(?:to|for|is)?\s*(\d+)\s*(?:ex|exs|exercise|exercises)/i)
-    || (message.toLowerCase().includes("too much") && message.match(/(\d+)\s*(?:ex|exs|exercise|exercises)/i));
+  const countReductionMatch = message.match(/(?:make|reduce|limit|set|cut|just|too much|change|only|want)\s*(?:it|today|session)?\s*(?:to|for|is)?\s*(\d+)\s*(?:ex|exc|exs|exercise|exercises|per day|each day|a day)/i)
+    || message.match(/(\d+)\s*(?:ex|exc|exs|exercise|exercises)/i)
+    || message.match(/(\d+)\s*(?:exc|exs|exercises)\s*(?:only|per day|a day)/i);
 
   if (countReductionMatch && !message.toLowerCase().includes("add") && !message.toLowerCase().includes("swap")) {
     const targetNum = parseInt(countReductionMatch[1], 10);
     if (targetNum > 0 && targetNum <= 15) {
       return {
         intent: "lighter_intensity",
-        reply: `Got it! Trimming today's session to your top ${targetNum} main exercises.`,
+        reply: `Got it! Adjusting today's workout to your top ${targetNum} main exercises.`,
       };
     }
   }
@@ -598,6 +651,19 @@ Respond ONLY with JSON:
 
   if (detailedRes.source === "timeout" || detailedRes.source === "error") {
     console.warn(`⏱️ [Ollama] interpretSessionRequest failed/timed out after ${detailedRes.elapsedMs}ms (${detailedRes.evalCount ?? 0} tokens, source: ${detailedRes.source})`);
+    
+    // Check if message had plan info as fallback
+    const fallbackPlan = extractPlanInfoFromMessage(message);
+    if (fallbackPlan.proposedDays !== null || fallbackPlan.proposedSplitName !== null) {
+      const targetIntent = isFirstTimeSetup ? "setup_routine" : "change_plan";
+      return {
+        intent: targetIntent,
+        proposedDays: fallbackPlan.proposedDays,
+        proposedSplitName: fallbackPlan.proposedSplitName,
+        reply: `Got it! Updating your workout plan...`,
+      };
+    }
+
     return {
       intent: "unrecognized",
       reply: "Still thinking that one over — mind trying again in a second?",
