@@ -6,26 +6,22 @@
 //
 // Flow:
 //   1. onInit: GET /workouts/routine → unconfigured | ready
-//   2. Setup tapped → questionnaire sheet (step 1: frequency, step 2: split dialog)
-//   3. Confirm → POST /workouts/setup → state = ready
+//   2. unconfigured → CoachChatCard with greeting (AI-chat-only setup)
+//   3. User types → POST /workouts/session/interpret → setup_routine → state = ready
 //   4. Start Workout → state = activeWorkout (inline tracker)
 //   5. Finish → state = ready, sets cleared
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/ad_banner.dart';
-import '../../../core/widgets/app_metric_ring.dart';
-import '../../../core/widgets/app_action_tile.dart';
 import '../../../core/widgets/app_button.dart';
-import '../../premium/presentation/premium_upgrade_screen.dart';
 import '../../premium/data/services/purchase_service.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
-import '../../profile/presentation/bloc/profile_event.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
 import '../data/models/workout_models.dart';
 import 'bloc/workout_bloc.dart';
@@ -173,77 +169,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
   }
 
-  // ── POST setup to backend ──────────────────────────────────
-  Future<void> _submitRoutine(int days, RoutineSuggestion split) async {
-    if (!mounted) return;
-    setState(() => _state = WorkoutHubState.loading);
-    try {
-      final resp = await _dio.post('/workouts/setup', data: {
-        'daysPerWeek': days,
-        'splitType':   split.splitType,
-        'splitName':   split.name,
-      });
-      if (!mounted) return;
-      final sessionData = resp.data['data']?['currentSession'];
-      setState(() {
-        _activeDays    = days;
-        _activeRoutine = split;
-        _currentSession = sessionData != null
-            ? CurrentSession.fromJson(sessionData as Map<String, dynamic>)
-            : null;
-        _state         = WorkoutHubState.ready;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${split.name} configured successfully!',
-              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: _C.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    } on DioException catch (e) {
-      if (!mounted) return;
-      final msg = (e.response?.data is Map
-              ? e.response?.data['error']
-              : null) as String? ??
-          'Failed to save routine. Please try again.';
-      setState(() => _state = WorkoutHubState.unconfigured);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg,
-                style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-            backgroundColor: _C.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _state = WorkoutHubState.unconfigured);
-    }
-  }
 
-  // ── Launch Setup Sheet ─────────────────────────────────────
-  void _openSetupSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _QuestionnaireSheet(
-        onComplete: (int days, RoutineSuggestion split) {
-          Navigator.pop(context);
-          _submitRoutine(days, split);
-        },
-      ),
-    );
-  }
 
   // ── Launch Active Workout ──────────────────────────────────
   void _startWorkout() {
@@ -515,33 +441,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ],
               ),
-              Row(
-                children: [
-                  InkWell(
-                    onTap: _openSetupSheet,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: context.auraTheme.card,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: context.auraTheme.border, width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.tune_rounded, color: _C.cyan, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            isArabic ? 'البرنامج' : 'Plan',
-                            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: context.auraTheme.textPrimary),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -568,9 +467,23 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ),
 
-              // ── UNCONFIGURED: empty state ─────────────────
+              // ── UNCONFIGURED: AI-chat onboarding ──────────
               if (_state == WorkoutHubState.unconfigured)
-                _buildEmptyState(isArabic),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: CoachChatCard(
+                    coachNote: null,
+                    isArabic: isArabic,
+                    dio: _dio,
+                    isFirstTime: true,
+                    onSessionUpdated: (updatedSession) {
+                      setState(() {
+                        _currentSession = updatedSession;
+                      });
+                    },
+                    onRoutineUpdated: () => _loadRoutine(silent: false),
+                  ),
+                ),
 
               // ── READY: full hub content ───────────────────
               if (_state == WorkoutHubState.ready) ...[
@@ -787,91 +700,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  Widget _buildSetupButton(bool isArabic) {
-    return GestureDetector(
-      onTap: _openSetupSheet,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_C.cyan.withOpacity(0.14), _C.cyan.withOpacity(0.05)],
-          ),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _C.cyan.withOpacity(0.35), width: 1.4),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        child: Row(
-          children: [
-            Container(
-              width: 38, height: 38,
-              decoration: BoxDecoration(
-                color: _C.cyan.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.tune_rounded, color: _C.cyan, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _state == WorkoutHubState.ready
-                        ? (isArabic ? 'تعديل خطة التدريب' : 'Reconfigure Routine Plan')
-                        : (isArabic ? 'إعداد خطة التدريب' : 'Setup Your Routine Plan'),
-                    style: GoogleFonts.inter(
-                        fontSize: 14, fontWeight: FontWeight.w700, color: _C.textPri),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isArabic
-                        ? 'اختر تكرارك وخطة التقسيم'
-                        : 'Choose your frequency and training split',
-                    style: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: _C.cyan, size: 14),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildEmptyState(bool isArabic) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
-      child: Column(
-        children: [
-          Container(
-            width: 72, height: 72,
-            decoration: BoxDecoration(
-              color: _C.card,
-              shape: BoxShape.circle,
-              border: Border.all(color: _C.border, width: 1.2),
-            ),
-            child: const Icon(Icons.fitness_center_rounded, color: _C.textMut, size: 32),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            isArabic ? 'لا يوجد روتين نشط' : 'No Active Routine',
-            style: GoogleFonts.inter(
-                fontSize: 18, fontWeight: FontWeight.w800, color: _C.textPri),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isArabic
-                ? 'اضغط على الإعداد أعلاه لتهيئة برنامج التدريب الخاص بك.'
-                : 'No active routine. Tap Setup above to initialize your training split.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 13, color: _C.textSec, height: 1.5),
-          ),
-        ],
-      ),
-    );
-  }
 
 
 
@@ -1801,566 +1630,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ACTIVE WORKOUT VIEW
   // ══════════════════════════════════════════════════════════════
 }
-
-// ═══════════════════════════════════════════════════════════════
-// Questionnaire Sheet (bottom sheet)
-// ═══════════════════════════════════════════════════════════════
-
-class _QuestionnaireSheet extends StatefulWidget {
-  final void Function(int days, RoutineSuggestion split) onComplete;
-  const _QuestionnaireSheet({required this.onComplete});
-
-  @override
-  State<_QuestionnaireSheet> createState() => _QuestionnaireSheetState();
-}
-
-class _QuestionnaireSheetState extends State<_QuestionnaireSheet> {
-  int _step = 0;
-  int? _selectedFreq;
-  String _selectedExp = 'new'; // 'new' | 'consistent' | 'experienced'
-
-  bool _loadingRecommend = false;
-  Map<String, dynamic>? _recommendedData;
-
-  @override
-  void initState() {
-    super.initState();
-    final profileState = context.read<ProfileBloc>().state;
-    if (profileState is ProfileLoaded) {
-      final exp = profileState.user['trainingExperience'] as String?;
-      if (exp != null && exp.isNotEmpty) {
-        _selectedExp = exp;
-      }
-    }
-  }
-
-  Future<void> _fetchRecommendation() async {
-    if (_selectedFreq == null) return;
-    setState(() {
-      _step = 1;
-      _loadingRecommend = true;
-    });
-
-    // Save trainingExperience to profile
-    context.read<ProfileBloc>().add(UpdateProfileEvent(trainingExperience: _selectedExp));
-
-    try {
-      final dio = ApiClient().dio;
-      final resp = await dio.get('/workouts/recommend', queryParameters: {'days': _selectedFreq});
-      if (mounted) {
-        setState(() {
-          _recommendedData = resp.data['data'] as Map<String, dynamic>?;
-          _loadingRecommend = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _loadingRecommend = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.88,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (_, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: _C.card,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: Column(
-          children: [
-            // Handle
-            const SizedBox(height: 12),
-            Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: _C.borderMid, borderRadius: BorderRadius.circular(2)),
-            ),
-            const SizedBox(height: 20),
-
-            // Step indicator
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: _buildStepIndicator(),
-            ),
-            const SizedBox(height: 20),
-
-            // Page content
-            Expanded(
-              child: SingleChildScrollView(
-                controller: scrollCtrl,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _step == 0 ? _buildStep1() : _buildStep2(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStepIndicator() {
-    return Row(
-      children: [
-        _stepDot(active: true),
-        Expanded(
-          child: Container(
-            height: 2,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: _step >= 1 ? _C.cyan : _C.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
-        _stepDot(active: _step >= 1),
-      ],
-    );
-  }
-
-  Widget _stepDot({required bool active}) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      width: 26, height: 26,
-      decoration: BoxDecoration(
-        color: active ? _C.cyan : Colors.transparent,
-        shape: BoxShape.circle,
-        border: Border.all(color: active ? _C.cyan : _C.borderMid, width: 1.5),
-      ),
-      child: active
-          ? const Icon(Icons.check_rounded, size: 13, color: Colors.black)
-          : null,
-    );
-  }
-
-  // ── Step 1: Frequency & Training Experience ────────────────
-  Widget _buildStep1() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Smart Routine Planner',
-            style: GoogleFonts.inter(
-                fontSize: 22, fontWeight: FontWeight.w900,
-                color: _C.textPri, letterSpacing: -0.4)),
-        const SizedBox(height: 4),
-        Text('Step 1 of 2 · Training Background',
-            style: GoogleFonts.inter(fontSize: 12, color: _C.textMut)),
-        const SizedBox(height: 20),
-
-        // Section A: Days/Week
-        Text('How many days per week do you train?',
-            style: GoogleFonts.inter(
-                fontSize: 16, fontWeight: FontWeight.w700, color: _C.textPri)),
-        const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 2.3,
-          children: [3, 4, 5, 6].map((days) {
-            final sel = _selectedFreq == days;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedFreq = days),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: sel ? _C.cyan.withValues(alpha: 0.15) : _C.cardElev,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: sel ? _C.cyan : _C.borderMid, width: sel ? 2 : 1.2),
-                ),
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('$days Days',
-                      style: GoogleFonts.inter(
-                          fontSize: 16, fontWeight: FontWeight.w800,
-                          color: sel ? _C.cyan : _C.textPri)),
-                  Text('per week',
-                      style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: sel ? _C.cyan.withValues(alpha: 0.8) : _C.textMut)),
-                ]),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 24),
-
-        // Section B: Training Experience
-        Text('How long have you been lifting?',
-            style: GoogleFonts.inter(
-                fontSize: 16, fontWeight: FontWeight.w700, color: _C.textPri)),
-        const SizedBox(height: 12),
-
-        ...[
-          {'val': 'new', 'title': 'New to lifting', 'desc': 'Under 6 months of consistent training'},
-          {'val': 'consistent', 'title': 'Consistent lifter', 'desc': '6 months to 2 years of lifting history'},
-          {'val': 'experienced', 'title': 'Experienced lifter', 'desc': '2+ years of structured strength training'},
-        ].map((item) {
-          final val = item['val']!;
-          final sel = _selectedExp == val;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: InkWell(
-              onTap: () => setState(() => _selectedExp = val),
-              borderRadius: BorderRadius.circular(14),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: sel ? _C.cyan.withValues(alpha: 0.12) : _C.cardElev,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: sel ? _C.cyan : _C.borderMid,
-                    width: sel ? 1.8 : 1.0,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      sel ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
-                      color: sel ? _C.cyan : _C.textMut,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item['title']!,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
-                              color: sel ? _C.cyan : _C.textPri,
-                            ),
-                          ),
-                          Text(
-                            item['desc']!,
-                            style: GoogleFonts.inter(fontSize: 11, color: _C.textMut),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-
-        const SizedBox(height: 28),
-
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: _selectedFreq != null ? _fetchRecommendation : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _C.cyan,
-              disabledBackgroundColor: _C.border,
-              foregroundColor: Colors.black,
-              disabledForegroundColor: _C.textMut,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text('Get Personalized Split',
-                  style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800)),
-              const SizedBox(width: 6),
-              const Icon(Icons.arrow_forward_rounded, size: 18),
-            ]),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
-  // ── Step 2: Intelligent Recommendation ─────────────────────
-  Widget _buildStep2() {
-    if (_loadingRecommend) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          children: [
-            const CircularProgressIndicator(color: _C.cyan),
-            const SizedBox(height: 20),
-            Text(
-              'Analyzing your profile & generating AI coach recommendation...',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 13, color: _C.textSec),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final data = _recommendedData;
-    final recommended = data?['recommended'] as Map<String, dynamic>?;
-    final otherOptions = (data?['otherOptions'] as List<dynamic>?) ?? [];
-
-    if (recommended == null) {
-      return Column(
-        children: [
-          Text('Failed to load recommendation', style: GoogleFonts.inter(color: Colors.red)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => setState(() => _step = 0),
-            child: const Text('Back'),
-          ),
-        ],
-      );
-    }
-
-    final recName = recommended['name'] as String? ?? 'Recommended Split';
-    final recTagline = recommended['tagline'] as String? ?? '';
-    final recBreakdown = (recommended['breakdown'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-    final recReasonNote = recommended['reasonNote'] as String? ?? '';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(children: [
-          GestureDetector(
-            onTap: () => setState(() => _step = 0),
-            child: const Icon(Icons.arrow_back_ios_rounded, color: _C.textPri, size: 18),
-          ),
-          const SizedBox(width: 10),
-          Text('Smart Routine Planner',
-              style: GoogleFonts.inter(
-                  fontSize: 18, fontWeight: FontWeight.w900, color: _C.textPri)),
-        ]),
-        const SizedBox(height: 4),
-        Text('Step 2 of 2 · AI Coach Recommendation',
-            style: GoogleFonts.inter(fontSize: 12, color: _C.textMut)),
-        const SizedBox(height: 20),
-
-        // ── TOP RECOMMENDED CARD ────────────────────────────
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: _C.cyan.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _C.cyan, width: 2),
-            boxShadow: [BoxShadow(color: _C.cyan.withValues(alpha: 0.2), blurRadius: 16)],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _C.cyan,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'BEST FIT FOR YOU',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.black,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      const Icon(Icons.memory_rounded, color: _C.cyan, size: 12),
-                      const SizedBox(width: 4),
-                      Text('AI Coach', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _C.cyan)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                recName,
-                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: _C.textPri),
-              ),
-              const SizedBox(height: 4),
-              Text(recTagline, style: GoogleFonts.inter(fontSize: 12, color: _C.textSec)),
-              const SizedBox(height: 14),
-
-              // Reasoning Box
-              if (recReasonNote.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _C.card,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _C.cyan.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.psychology_rounded, color: _C.cyan, size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          recReasonNote,
-                          style: GoogleFonts.inter(fontSize: 12, color: _C.textPri, height: 1.4, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 14),
-
-              // Breakdown Pills
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: recBreakdown.map((d) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _C.cyan.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: _C.cyan.withValues(alpha: 0.4)),
-                  ),
-                  child: Text(
-                    d,
-                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _C.cyan),
-                  ),
-                )).toList(),
-              ),
-              const SizedBox(height: 16),
-
-              // Configure Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    final split = RoutineSuggestion(
-                      name: recName,
-                      splitType: recommended['splitType'] as String,
-                      tagline: recTagline,
-                      breakdown: recBreakdown,
-                    );
-                    widget.onComplete(_selectedFreq!, split);
-                  },
-                  icon: const Icon(Icons.check_circle_rounded, size: 18),
-                  label: Text('Configure This Plan', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.cyan,
-                    foregroundColor: Colors.black,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 24),
-
-        // ── OTHER OPTIONS ──────────────────────────────────
-        if (otherOptions.isNotEmpty) ...[
-          Text('Other Options for $_selectedFreq Days',
-              style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w800, color: _C.textPri)),
-          const SizedBox(height: 12),
-
-          ...otherOptions.map((opt) {
-            final optMap = opt as Map<String, dynamic>;
-            final optName = optMap['name'] as String? ?? 'Split';
-            final optTagline = optMap['tagline'] as String? ?? '';
-            final optBreakdown = (optMap['breakdown'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
-            final optReasonTag = optMap['reasonTag'] as String? ?? 'Alternative option';
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _C.cardElev,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _C.border, width: 1.2),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      optName,
-                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: _C.textPri),
-                    ),
-                    if (optReasonTag.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: _C.amber.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: _C.amber.withValues(alpha: 0.3)),
-                        ),
-                        child: Text(
-                          optReasonTag,
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _C.amber),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 4),
-                    Text(optTagline, style: GoogleFonts.inter(fontSize: 12, color: _C.textSec)),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: optBreakdown.map((d) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _C.card,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: _C.border),
-                        ),
-                        child: Text(d, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: _C.textSec)),
-                      )).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 40,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          final split = RoutineSuggestion(
-                            name: optName,
-                            splitType: optMap['splitType'] as String,
-                            tagline: optTagline,
-                            breakdown: optBreakdown,
-                          );
-                          widget.onComplete(_selectedFreq!, split);
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: _C.textPri,
-                          side: const BorderSide(color: _C.borderMid),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: Text('Select This Plan', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
-
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-}
-
 // ══════════════════════════════════════════════════════════════
 // EXTRACTED COMPONENT 1: CoachInputCard (Isolated text field state)
 // ══════════════════════════════════════════════════════════════
@@ -2385,8 +1654,9 @@ class CoachChatCard extends StatefulWidget {
   final String? coachNote;
   final bool isArabic;
   final Dio dio;
+  final bool isFirstTime;
   final ValueChanged<CurrentSession> onSessionUpdated;
-  final VoidCallback onRoutineUpdated; // called after a change_plan is confirmed
+  final VoidCallback onRoutineUpdated; // called after a change_plan or setup_routine is confirmed
 
   const CoachChatCard({
     super.key,
@@ -2395,6 +1665,7 @@ class CoachChatCard extends StatefulWidget {
     required this.dio,
     required this.onSessionUpdated,
     required this.onRoutineUpdated,
+    this.isFirstTime = false,
   });
 
   @override
@@ -2406,6 +1677,27 @@ class _CoachChatCardState extends State<CoachChatCard> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isInterpreting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isFirstTime) {
+      // Pre-seed the coach greeting for brand-new users
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _messages.add(CoachChatMessage(
+              text: widget.isArabic
+                  ? 'مرحباً! أنا مدربك الشخصي. لنبدأ بإعداد خطة تدريبية مخصصة لك. كم يوماً في الأسبوع تريد التدريب؟'
+                  : "Hi! I'm your AI Coach 💪 Let's set up your personalized workout plan. How many days a week do you want to train — 3, 4, 5, or 6?",
+              isUser: false,
+            ));
+          });
+          _scrollToBottom();
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -2452,7 +1744,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
         widget.onSessionUpdated(session);
       }
 
-      if (intent == 'change_plan' && actionExecuted) {
+      if ((intent == 'change_plan' || intent == 'setup_routine') && actionExecuted) {
         widget.onRoutineUpdated();
       }
 
