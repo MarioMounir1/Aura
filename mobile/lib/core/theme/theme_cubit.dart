@@ -18,15 +18,15 @@ class ThemeCubit extends Cubit<ThemeMode> {
 
   static Future<ThemeMode> getSavedThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getString(_prefKey) ?? 'dark';
+    final saved = prefs.getString(_prefKey) ?? 'light';
     switch (saved) {
-      case 'light':
-        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
       case 'system':
         return ThemeMode.system;
-      case 'dark':
+      case 'light':
       default:
-        return ThemeMode.dark;
+        return ThemeMode.light;
     }
   }
 }
