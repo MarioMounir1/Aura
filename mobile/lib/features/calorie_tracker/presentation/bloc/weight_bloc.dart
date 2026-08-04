@@ -20,7 +20,9 @@ class WeightBloc extends Bloc<WeightEvent, WeightState> {
     LoadWeightHistory event,
     Emitter<WeightState> emit,
   ) async {
-    emit(WeightLoading());
+    if (state is! WeightLoaded) {
+      emit(WeightLoading());
+    }
     final result = await repository.getWeightHistory(days: event.days);
 
     result.fold(
@@ -43,7 +45,9 @@ class WeightBloc extends Bloc<WeightEvent, WeightState> {
     Emitter<WeightState> emit,
   ) async {
     final currentState = state;
-    emit(WeightLoading());
+    if (currentState is! WeightLoaded) {
+      emit(WeightLoading());
+    }
 
     final result = await repository.logWeight(weightKg: event.weightKg);
 

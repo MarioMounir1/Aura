@@ -214,7 +214,7 @@ Customizations to calculate: ${JSON.stringify(addOns)}`;
         temperature: GEMINI_CONFIG.temperature,
         topP: GEMINI_CONFIG.topP,
         topK: GEMINI_CONFIG.topK,
-        maxOutputTokens: 8192,
+        maxOutputTokens: 1024,
       },
     });
 

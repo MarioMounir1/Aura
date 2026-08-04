@@ -71,10 +71,10 @@ function calculateTDEE(
   const adjustment = GOAL_ADJUSTMENTS[goal] ?? 0;
   const recommendedCalories = Math.max(1200, tdee + adjustment);
 
-  // Macro split: Protein 30% | Carbs 40% | Fat 30%
-  const recommendedProtein = Math.round((recommendedCalories * 0.30) / 4);
-  const recommendedCarbs   = Math.round((recommendedCalories * 0.40) / 4);
-  const recommendedFats    = Math.round((recommendedCalories * 0.30) / 9);
+  // Realistic macro split for general fitness: Protein 20% (~1.6g/kg) | Carbs 55% | Fat 25%
+  const recommendedProtein = Math.min(145, Math.round((recommendedCalories * 0.20) / 4));
+  const recommendedFats    = Math.round((recommendedCalories * 0.25) / 9);
+  const recommendedCarbs   = Math.round((recommendedCalories - (recommendedProtein * 4 + recommendedFats * 9)) / 4);
 
   return {
     bmr,

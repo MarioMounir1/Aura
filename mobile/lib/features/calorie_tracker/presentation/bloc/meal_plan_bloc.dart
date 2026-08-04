@@ -20,7 +20,9 @@ class MealPlanBloc extends Bloc<MealPlanEvent, MealPlanState> {
     LoadWeeklyMealPlan event,
     Emitter<MealPlanState> emit,
   ) async {
-    emit(MealPlanLoading());
+    if (state is! MealPlanLoaded) {
+      emit(MealPlanLoading());
+    }
     final result = await repository.getWeekMealPlan();
 
     result.fold(
@@ -39,7 +41,9 @@ class MealPlanBloc extends Bloc<MealPlanEvent, MealPlanState> {
     GenerateWeeklyPlanEvent event,
     Emitter<MealPlanState> emit,
   ) async {
-    emit(MealPlanLoading());
+    if (state is! MealPlanLoaded) {
+      emit(MealPlanLoading());
+    }
     final result = await repository.generateWeeklyMealPlan();
 
     await result.fold(

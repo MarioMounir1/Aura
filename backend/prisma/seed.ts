@@ -193,7 +193,11 @@ const gymExercises = [
   { name: "Standing Calf Raises", muscleGroup: "Calves", mechanic: "Isolation" },
   { name: "Seated Calf Raises", muscleGroup: "Calves", mechanic: "Isolation" },
   { name: "Cable Crunch", muscleGroup: "Core", mechanic: "Isolation" },
+  { name: "Smith Squats", muscleGroup: "Quads", mechanic: "Compound" },
+  { name: "Stiff-Leg Deadlift", muscleGroup: "Hamstrings", mechanic: "Compound" },
+  { name: "Dumbbell Shoulder Press", muscleGroup: "Shoulders", mechanic: "Compound" },
 ];
+
 
 async function main() {
   console.log("🌱  Seeding The Teneen database...\n");

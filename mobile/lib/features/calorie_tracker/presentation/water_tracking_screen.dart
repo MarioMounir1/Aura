@@ -286,7 +286,9 @@ class _WaterTrackingScreenState extends State<WaterTrackingScreen> {
               border: Border.all(color: AppColors.border),
               color: AppColors.surface,
             ),
-            child: ListTile(
+            child: Material(
+              color: Colors.transparent,
+              child: ListTile(
               leading: const Icon(Icons.water_drop_rounded, color: AppColors.protein),
               title: Text('$amount ${l10n.unitMl}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               subtitle: Text(time, style: const TextStyle(color: AppColors.textSecondary)),
@@ -300,6 +302,7 @@ class _WaterTrackingScreenState extends State<WaterTrackingScreen> {
                   }
                 },
               ),
+            ),
             ),
           ),
         );

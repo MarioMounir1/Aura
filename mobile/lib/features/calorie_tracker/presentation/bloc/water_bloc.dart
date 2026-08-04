@@ -20,7 +20,9 @@ class WaterBloc extends Bloc<WaterEvent, WaterState> {
     LoadWaterToday event,
     Emitter<WaterState> emit,
   ) async {
-    emit(WaterLoading());
+    if (state is! WaterLoaded) {
+      emit(WaterLoading());
+    }
     final dateStr = event.date ?? DateTime.now().toIso8601String().split('T')[0];
     final result = await repository.getTodayWater(date: dateStr);
 
@@ -46,7 +48,9 @@ class WaterBloc extends Bloc<WaterEvent, WaterState> {
     Emitter<WaterState> emit,
   ) async {
     final currentState = state;
-    emit(WaterLoading());
+    if (currentState is! WaterLoaded) {
+      emit(WaterLoading());
+    }
 
     final result = await repository.logWater(amountMl: event.amountMl);
 

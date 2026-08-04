@@ -121,6 +121,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
   Widget build(BuildContext context) {
     final package = _offerings?.current?.monthly;
     final mediaQuery = MediaQuery.of(context);
+    final displayPrice = package?.storeProduct.priceString ?? '\$1.00';
 
     return Container(
       constraints: BoxConstraints(
@@ -309,7 +310,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '\$1.00',
+                                displayPrice,
                                 style: GoogleFonts.inter(
                                   color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w800,
@@ -362,7 +363,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                                       ),
                                     )
                                   : Text(
-                                      'Join Premium — \$1.00/mo',
+                                      'Join Premium — $displayPrice/mo',
                                       style: GoogleFonts.inter(
                                         fontSize: 17,
                                         fontWeight: FontWeight.bold,

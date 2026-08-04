@@ -36,7 +36,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       print('⚠️ WARNING [ProfileBloc]: LoadProfile dispatched while another LoadProfile is already in flight! Cancelling previous request via restartable().');
     }
     _isProfileInFlight = true;
-    emit(ProfileLoading());
+    if (state is! ProfileLoaded) {
+      emit(ProfileLoading());
+    }
     try {
       final results = await Future.wait([
         repository.fetchUserProfile(),
@@ -171,6 +173,10 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   ) {
     final currentState = state;
     if (currentState is ProfileLoaded) {
+      // If the backend already considers this user premium, do not let RevenueCat sandbox override with false
+      if (currentState.user['isPremium'] == true && !event.isPremium) {
+        return;
+      }
       if (currentState.user['isPremium'] == event.isPremium) return;
       final updatedUser = Map<String, dynamic>.from(currentState.user);
       updatedUser['isPremium'] = event.isPremium;

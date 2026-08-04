@@ -92,6 +92,49 @@ class BarcodeService {
     return BarcodeProduct.fromJson(dataJson);
   }
 
+  // ── AI Estimation ──────────────────────────────────────────
+
+  /// Estimate nutrition for a missing barcode product using text AI,
+  /// and save the barcode mapping to the database.
+  ///
+  /// Throws [BarcodeNetworkException] on connectivity / server errors.
+  Future<BarcodeProduct> estimateBarcode({
+    required String barcode,
+    required String productName,
+  }) async {
+    late final Response<dynamic> response;
+    try {
+      response = await _dio.post<dynamic>(
+        '/meals/estimate-barcode',
+        data: {
+          'barcode': barcode,
+          'productName': productName,
+        },
+      );
+    } on DioException catch (e) {
+      throw _mapDioError(e);
+    } catch (e) {
+      throw BarcodeNetworkException('Unexpected error: $e');
+    }
+
+    final body = response.data;
+    if (body == null || body is! Map<String, dynamic>) {
+      throw const BarcodeNetworkException('Server returned an invalid response.');
+    }
+
+    if (body['success'] != true) {
+      final msg = body['error'] as String? ?? 'Estimation failed';
+      throw BarcodeNetworkException(msg);
+    }
+
+    final dataJson = body['data'];
+    if (dataJson == null || dataJson is! Map<String, dynamic>) {
+      throw const BarcodeNetworkException('Server returned malformed data.');
+    }
+
+    return BarcodeProduct.fromJson(dataJson);
+  }
+
   // ── Log ────────────────────────────────────────────────────
 
   /// Persist a confirmed barcode meal to the backend MealLog.

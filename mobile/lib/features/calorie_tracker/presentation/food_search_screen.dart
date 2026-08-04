@@ -189,7 +189,9 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                                         border: Border.all(color: AppColors.border),
                                         color: AppColors.surface,
                                       ),
-                                      child: ListTile(
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: ListTile(
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                         title: Text(
                                           name.isNotEmpty ? name : 'Unknown Item',
@@ -228,6 +230,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                                           ],
                                         ),
                                         onTap: () => _showLogDialog(context, item, name, l10n),
+                                      ),
                                       ),
                                     );
                                   },

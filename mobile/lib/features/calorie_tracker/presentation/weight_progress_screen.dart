@@ -398,19 +398,22 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
               border: Border.all(color: AppColors.border),
               color: AppColors.surface,
             ),
-            child: ListTile(
-              leading: const Icon(Icons.scale_rounded, color: AppColors.accent),
-              title: Text(l10n.weightKg(weight), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              subtitle: Text(date, style: const TextStyle(color: AppColors.textSecondary)),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted),
-                onPressed: () async {
-                  final bloc = context.read<WeightBloc>();
-                  final confirm = await _confirmDeleteDialog(context, l10n);
-                  if (confirm == true) {
-                    bloc.add(DeleteWeightLogEvent(id));
-                  }
-                },
+            child: Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: const Icon(Icons.scale_rounded, color: AppColors.accent),
+                title: Text(l10n.weightKg(weight), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                subtitle: Text(date, style: const TextStyle(color: AppColors.textSecondary)),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted),
+                  onPressed: () async {
+                    final bloc = context.read<WeightBloc>();
+                    final confirm = await _confirmDeleteDialog(context, l10n);
+                    if (confirm == true) {
+                      bloc.add(DeleteWeightLogEvent(id));
+                    }
+                  },
+                ),
               ),
             ),
           ),

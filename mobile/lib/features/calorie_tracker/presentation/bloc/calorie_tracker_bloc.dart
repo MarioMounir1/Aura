@@ -78,7 +78,9 @@ class CalorieTrackerBloc
     FetchMealHistory event,
     Emitter<CalorieTrackerState> emit,
   ) async {
-    emit(const CalorieTrackerHistoryLoading());
+    if (state is! CalorieTrackerHistoryLoaded) {
+      emit(const CalorieTrackerHistoryLoading());
+    }
 
     final result = await _repository.getMealHistory(
       page: event.page,

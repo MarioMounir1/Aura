@@ -21,6 +21,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/constants.dart';
 import 'home_shell_screen.dart';
 import '../../auth/presentation/login_screen.dart';
+import '../../../main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -91,40 +92,23 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _startSequence() async {
-    // Step 1 — logo enters
-    await Future.delayed(const Duration(milliseconds: 200));
-    if (!mounted) return;
-    _logoCtrl.forward();
+    if (mounted) _logoCtrl.forward();
+    if (mounted) _textCtrl.forward();
+    if (mounted) _loadingCtrl.forward();
 
-    // Step 2 — app name fades in
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    _textCtrl.forward();
-
-    // Step 3 — loading hint fades in
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    _loadingCtrl.forward();
-
-    // Step 4 — auth check (runs in parallel with animations)
-    await Future.delayed(const Duration(milliseconds: 1500));
+    // Check auth and navigate immediately without artificial delays
+    await Future.delayed(const Duration(milliseconds: 50));
     if (!mounted) return;
     await _checkAuthAndNavigate();
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    const storage = FlutterSecureStorage();
-    final token = await storage.read(key: AppConstants.tokenKey);
-
     if (!mounted) return;
-
-    final bool hasValidToken = token != null && token.isNotEmpty;
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 600),
-        pageBuilder: (_, __, ___) =>
-            hasValidToken ? const HomeShellScreen() : const LoginScreen(),
+        pageBuilder: (_, __, ___) => const AuthWrapper(),
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(
             opacity: CurvedAnimation(

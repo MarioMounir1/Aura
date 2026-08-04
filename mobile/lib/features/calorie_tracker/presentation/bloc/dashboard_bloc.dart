@@ -34,7 +34,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       print('⚠️ WARNING [DashboardBloc]: LoadDashboard dispatched while another LoadDashboard is already in flight! Cancelling previous request via restartable().');
     }
     _isFetchInFlight = true;
-    emit(DashboardLoading());
+    
+    // Only emit Loading if we don't already have data to prevent UI wiping
+    if (state is! DashboardLoaded) {
+      emit(DashboardLoading());
+    }
+    
     try {
       await _fetchData(event.date, emit);
     } finally {

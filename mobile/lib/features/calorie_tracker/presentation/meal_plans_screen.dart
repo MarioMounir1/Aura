@@ -263,34 +263,37 @@ class _MealPlansScreenState extends State<MealPlansScreen> {
                         border: Border.all(color: AppColors.border),
                         color: AppColors.surface,
                       ),
-                      child: ListTile(
-                        leading: Checkbox(
-                          value: isEaten,
-                          activeColor: AppColors.primary,
-                          onChanged: (val) {
-                            context.read<MealPlanBloc>().add(
-                                  ToggleMealEatenEvent(
-                                    planEntryId: id,
-                                    isEaten: val ?? false,
-                                  ),
-                                );
-                          },
-                        ),
-                        title: Text(
-                          name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                            decoration: isEaten ? TextDecoration.lineThrough : null,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          leading: Checkbox(
+                            value: isEaten,
+                            activeColor: AppColors.primary,
+                            onChanged: (val) {
+                              context.read<MealPlanBloc>().add(
+                                    ToggleMealEatenEvent(
+                                      planEntryId: id,
+                                      isEaten: val ?? false,
+                                    ),
+                                  );
+                            },
                           ),
-                        ),
-                        subtitle: Text(
-                          '$typeLabel · ${servings.toStringAsFixed(1)} servings',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                        ),
-                        trailing: Text(
-                          l10n.foodCaloriesPer(calories),
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          title: Text(
+                            name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                              decoration: isEaten ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '$typeLabel · ${servings.toStringAsFixed(1)} servings',
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                          trailing: Text(
+                            l10n.foodCaloriesPer(calories),
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
                         ),
                       ),
                     );
