@@ -23,20 +23,20 @@ import '../../../main.dart';
 // ── Design Tokens ─────────────────────────────────────────────
 class _T {
   _T._();
-  static const Color bg       = Color(0xFF090C15);
-  static const Color card     = Color(0xFF121824);
-  static const Color cardElev = Color(0xFF1B2232);
-  static const Color border   = Color(0xFF222B3F);
-  static const Color cyan     = Color(0xFF00BCD4);
-  static const Color cyanDark = Color(0xFF0097A7);
-  static const Color green    = Color(0xFF4CAF50);
-  static const Color amber    = Color(0xFFFFC107);
-  static const Color red      = Color(0xFFEF5350);
-  static const Color blue     = Color(0xFF2196F3);
-  static const Color purple   = Color(0xFF7C4DFF);
-  static const Color textPri  = Color(0xFFFFFFFF);
-  static const Color textSec  = Color(0xFF8E929C);
-  static const Color textMut  = Color(0xFF5D616B);
+  static const Color bg       = Color(0xFFF8FAFC);
+  static const Color card     = Color(0xFFFFFFFF);
+  static const Color cardElev = Color(0xFFF1F5F9);
+  static const Color border   = Color(0xFFE2E8F0);
+  static const Color cyan     = Color(0xFF00ACC1);
+  static const Color cyanDark = Color(0xFF008BA3);
+  static const Color green    = Color(0xFF10B981);
+  static const Color amber    = Color(0xFFF59E0B);
+  static const Color red      = Color(0xFFEF4444);
+  static const Color blue     = Color(0xFF2563EB);
+  static const Color purple   = Color(0xFF7C3AED);
+  static const Color textPri  = Color(0xFF0F172A);
+  static const Color textSec  = Color(0xFF475569);
+  static const Color textMut  = Color(0xFF94A3B8);
 }
 
 // ── Goal Model ────────────────────────────────────────────────
@@ -340,38 +340,42 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ── Build ─────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _T.bg,
-      body: BlocListener<ProfileBloc, ProfileState>(
-        listener: (ctx, state) {
-          if (state is ProfileFailure) {
-            setState(() => _isSubmitting = false);
-            _showError(state.message);
-          }
-        },
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    onPageChanged: (p) => setState(() => _currentStep = p),
-                    children: [
-                      _buildStep0_Language(),
-                      _buildStep1_Goal(),
-                      _buildStep2_BasicInfo(),
-                      _buildStep3_BodyStats(),
-                      _buildStep4_Activity(),
-                      _buildStep5_PlanPreview(),
-                    ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: _T.bg,
+        body: BlocListener<ProfileBloc, ProfileState>(
+          listener: (ctx, state) {
+            if (state is ProfileFailure) {
+              setState(() => _isSubmitting = false);
+              _showError(state.message);
+            }
+          },
+          child: SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  Expanded(
+                    child: PageView(
+                      controller: _pageController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      onPageChanged: (p) => setState(() => _currentStep = p),
+                      children: [
+                        _buildStep0_Language(),
+                        _buildStep1_Goal(),
+                        _buildStep2_BasicInfo(),
+                        _buildStep3_BodyStats(),
+                        _buildStep4_Activity(),
+                        _buildStep5_PlanPreview(),
+                      ],
+                    ),
                   ),
-                ),
-                _buildBottomBar(),
-              ],
+                  _buildBottomBar(),
+                ],
+              ),
             ),
           ),
         ),
