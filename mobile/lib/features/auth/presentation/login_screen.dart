@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/login_screen.dart
-// Calc-Calories — Login Screen (Performance-Optimised & AURA Branded)
+// Calc-Calories — Login Screen (Dynamic Theme & Keyboard Dismissal Enabled)
 
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
@@ -11,71 +11,6 @@ import 'bloc/auth_bloc.dart';
 import 'bloc/auth_event.dart';
 import 'bloc/auth_state.dart';
 import 'register_screen.dart';
-
-// ── Pre-cached text styles (created once, not on every build) ─────────────
-class _Styles {
-  _Styles._();
-
-  static final TextStyle brandTitle = GoogleFonts.inter(
-    fontSize: 32,
-    fontWeight: FontWeight.w900,
-    color: AppColors.textPrimary,
-    letterSpacing: -0.8,
-  );
-
-  static final TextStyle brandSub = GoogleFonts.inter(
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
-    color: AppColors.textSecondary,
-  );
-
-  static final TextStyle label = GoogleFonts.inter(
-    fontSize: 13,
-    fontWeight: FontWeight.w700,
-    color: AppColors.textSecondary,
-  );
-
-  static final TextStyle input = GoogleFonts.inter(
-    color: AppColors.textPrimary,
-    fontWeight: FontWeight.w600,
-  );
-
-  static final TextStyle hint = GoogleFonts.inter(color: AppColors.textMuted);
-
-  static final TextStyle buttonText = GoogleFonts.inter(
-    fontSize: 16,
-    fontWeight: FontWeight.w800,
-    letterSpacing: -0.2,
-  );
-
-  static final TextStyle orLabel = GoogleFonts.inter(
-    color: AppColors.textMuted,
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-  );
-
-  static final TextStyle googleBtnLabel = GoogleFonts.inter(
-    fontSize: 15,
-    fontWeight: FontWeight.w600,
-  );
-
-  static final TextStyle footerMuted = GoogleFonts.inter(
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    color: AppColors.textSecondary,
-  );
-
-  static final TextStyle footerLink = GoogleFonts.inter(
-    fontSize: 14,
-    fontWeight: FontWeight.w800,
-    color: AppColors.primary,
-  );
-
-  static final TextStyle snackText = GoogleFonts.inter(
-    color: Colors.white,
-    fontWeight: FontWeight.w600,
-  );
-}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -125,318 +60,452 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: BlocConsumer<AuthBloc, AuthState>(
-        listenWhen: (_, cur) => cur is AuthFailure,
-        listener: (context, state) {
-          if (state is AuthFailure) {
-            ScaffoldMessenger.of(context)
-              ..clearSnackBars()
-              ..showSnackBar(
-                SnackBar(
-                  content: Text(state.message, style: _Styles.snackText),
-                  backgroundColor: AppColors.error,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              );
-          }
-        },
-        buildWhen: (prev, cur) => (prev is AuthLoading) != (cur is AuthLoading),
-        builder: (context, state) {
-          final isLoading = state is AuthLoading;
+    final auraTheme = context.auraTheme;
 
-          isLoading ? _btnAnim.forward() : _btnAnim.reverse();
-
-          return SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // ── Brand Logo & Header ───────────────────────────
-                      Center(
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 88,
-                              height: 88,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.surface,
-                                border: Border.all(
-                                  color: AppColors.primary.withOpacity(0.5),
-                                  width: 1.6,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withOpacity(0.25),
-                                    blurRadius: 20,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: const Center(
-                                child: CustomPaint(
-                                  size: Size(44, 44),
-                                  painter: _AuraLogoPainter(
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Text('AURA', style: _Styles.brandTitle),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Track Your Progress',
-                              style: _Styles.brandSub,
-                            ),
-                          ],
-                        ),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: auraTheme.background,
+        body: BlocConsumer<AuthBloc, AuthState>(
+          listenWhen: (_, cur) => cur is AuthFailure,
+          listener: (context, state) {
+            if (state is AuthFailure) {
+              ScaffoldMessenger.of(context)
+                ..clearSnackBars()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      state.message,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 48),
+                    ),
+                    backgroundColor: auraTheme.error,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+            }
+          },
+          buildWhen: (prev, cur) => (prev is AuthLoading) != (cur is AuthLoading),
+          builder: (context, state) {
+            final isLoading = state is AuthLoading;
+            isLoading ? _btnAnim.forward() : _btnAnim.reverse();
 
-                      // ── Card container for inputs ─────────────────────
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: AppColors.border,
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // ── Email ─────────────────────────────────
-                            Text('Email Address', style: _Styles.label),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              textInputAction: TextInputAction.next,
-                              style: _Styles.input,
-                              decoration: InputDecoration(
-                                hintText: 'e.g. ahmed@gmail.com',
-                                hintStyle: _Styles.hint,
-                                prefixIcon: const Icon(
-                                  Icons.email_outlined,
-                                  color: AppColors.textMuted,
-                                  size: 20,
-                                ),
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) return 'Email is required';
-                                if (!v.contains('@')) return 'Please enter a valid email';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            // ── Password ──────────────────────────────
-                            Text('Password', style: _Styles.label),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _submit(),
-                              style: _Styles.input,
-                              decoration: InputDecoration(
-                                hintText: '••••••••',
-                                hintStyle: _Styles.hint,
-                                prefixIcon: const Icon(
-                                  Icons.lock_outline_rounded,
-                                  color: AppColors.textMuted,
-                                  size: 20,
-                                ),
-                                suffixIcon: IconButton(
-                                  splashRadius: 20,
-                                  onPressed: _toggleObscure,
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: AppColors.textMuted,
-                                    size: 20,
+            return SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // ── Brand Logo & Header ───────────────────────────
+                        Center(
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: auraTheme.card,
+                                  border: Border.all(
+                                    color: auraTheme.primary.withOpacity(0.4),
+                                    width: 1.5,
                                   ),
-                                ),
-                              ),
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) return 'Password is required';
-                                if (v.trim().length < 8) return 'Password must be at least 8 characters';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 28),
-
-                            // ── Submit Button (animated) ───────────────
-                            SizedBox(
-                              width: double.infinity,
-                              height: 52,
-                              child: ElevatedButton(
-                                onPressed: isLoading ? null : _submit,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.black,
-                                  disabledBackgroundColor: AppColors.primary.withOpacity(0.7),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: isLoading
-                                      ? const SizedBox(
-                                          key: ValueKey('loading'),
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            valueColor: AlwaysStoppedAnimation(Colors.black),
-                                          ),
-                                        )
-                                      : Text(
-                                          'Login',
-                                          key: const ValueKey('label'),
-                                          style: _Styles.buttonText,
-                                        ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // ── OR divider ────────────────────────────
-                            Row(
-                              children: [
-                                const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text('OR', style: _Styles.orLabel),
-                                ),
-                                const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-
-                            // ── Google Sign-In ────────────────────────
-                            SizedBox(
-                              width: double.infinity,
-                              height: 52,
-                              child: OutlinedButton.icon(
-                                onPressed: isLoading
-                                    ? null
-                                    : () => context.read<AuthBloc>().add(GoogleSignInSubmitted()),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.border, width: 1.2),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  foregroundColor: Colors.white,
-                                ),
-                                icon: Image.asset(
-                                  'assets/icons/google.png',
-                                  height: 20,
-                                  width: 20,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.g_mobiledata_rounded,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                label: Text(
-                                  'Continue with Google',
-                                  style: _Styles.googleBtnLabel,
-                                ),
-                              ),
-                            ),
-
-                            // ── Apple Sign-In (iOS only) ───────────────
-                            if (Platform.isIOS) ...[
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 52,
-                                child: ElevatedButton.icon(
-                                  onPressed: isLoading
-                                      ? null
-                                      : () => context.read<AuthBloc>().add(AppleSignInSubmitted()),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: auraTheme.primary.withOpacity(0.15),
+                                      blurRadius: 16,
+                                      spreadRadius: 2,
                                     ),
-                                    elevation: 0,
+                                  ],
+                                ),
+                                child: Center(
+                                  child: CustomPaint(
+                                    size: const Size(36, 36),
+                                    painter: _AuraLogoPainter(
+                                      color: auraTheme.primary,
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.apple_rounded, color: Colors.black, size: 22),
-                                  label: Text(
-                                    'Continue with Apple',
-                                    style: _Styles.googleBtnLabel,
-                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                'AURA',
+                                style: GoogleFonts.inter(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w900,
+                                  color: auraTheme.textPrimary,
+                                  letterSpacing: -0.6,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Track Your Nutrition & Workouts',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: auraTheme.textSecondary,
                                 ),
                               ),
                             ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // ── Switch to Register ────────────────────────────
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Don't have an account? ",
-                            style: _Styles.footerMuted,
                           ),
-                          InkWell(
-                            onTap: isLoading
-                                ? null
-                                : () => Navigator.push(
-                                      context,
-                                      PageRouteBuilder(
-                                        pageBuilder: (_, anim, __) => const RegisterScreen(),
-                                        transitionsBuilder: (_, anim, __, child) => FadeTransition(
-                                          opacity: anim,
-                                          child: SlideTransition(
-                                            position: Tween<Offset>(
-                                              begin: const Offset(0.05, 0),
-                                              end: Offset.zero,
-                                            ).animate(CurvedAnimation(
-                                              parent: anim,
-                                              curve: Curves.easeOut,
-                                            )),
-                                            child: child,
+                        ),
+                        const SizedBox(height: 28),
+
+                        // ── Card container for inputs ─────────────────────
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: auraTheme.card,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: auraTheme.border,
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ── Email ─────────────────────────────────
+                              Text(
+                                'Email Address',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: auraTheme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                style: GoogleFonts.inter(
+                                  color: auraTheme.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  hintText: 'e.g. ahmed@gmail.com',
+                                  hintStyle: GoogleFonts.inter(
+                                    color: auraTheme.textMuted,
+                                    fontSize: 14,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.email_outlined,
+                                    color: auraTheme.textMuted,
+                                    size: 18,
+                                  ),
+                                  filled: true,
+                                  fillColor: auraTheme.surface,
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.border),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.primary, width: 1.5),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.error),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.error, width: 1.5),
+                                  ),
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Email is required';
+                                  if (!v.contains('@')) return 'Please enter a valid email';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+
+                              // ── Password ──────────────────────────────
+                              Text(
+                                'Password',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: auraTheme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => _submit(),
+                                style: GoogleFonts.inter(
+                                  color: auraTheme.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  hintText: '••••••••',
+                                  hintStyle: GoogleFonts.inter(
+                                    color: auraTheme.textMuted,
+                                    fontSize: 14,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline_rounded,
+                                    color: auraTheme.textMuted,
+                                    size: 18,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    splashRadius: 18,
+                                    onPressed: _toggleObscure,
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: auraTheme.textMuted,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: auraTheme.surface,
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.border),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.primary, width: 1.5),
+                                  ),
+                                  errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.error),
+                                  ),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: auraTheme.error, width: 1.5),
+                                  ),
+                                ),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Password is required';
+                                  if (v.trim().length < 8) return 'Password must be at least 8 characters';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 22),
+
+                              // ── Submit Button (animated) ───────────────
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: ElevatedButton(
+                                  onPressed: isLoading ? null : _submit,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: auraTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    disabledBackgroundColor: auraTheme.primary.withOpacity(0.6),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 200),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            key: ValueKey('loading'),
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.2,
+                                              valueColor: AlwaysStoppedAnimation(Colors.white),
+                                            ),
+                                          )
+                                        : Text(
+                                            'Sign In',
+                                            key: const ValueKey('label'),
+                                            style: GoogleFonts.inter(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                              letterSpacing: -0.2,
+                                            ),
                                           ),
-                                        ),
-                                        transitionDuration: const Duration(milliseconds: 280),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // ── OR divider ────────────────────────────
+                              Row(
+                                children: [
+                                  Expanded(child: Divider(color: auraTheme.border, thickness: 1)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Text(
+                                      'OR',
+                                      style: GoogleFonts.inter(
+                                        color: auraTheme.textMuted,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                            borderRadius: BorderRadius.circular(4),
-                            child: Text('Register', style: _Styles.footerLink),
+                                  ),
+                                  Expanded(child: Divider(color: auraTheme.border, thickness: 1)),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+                              // ── Google Sign-In ────────────────────────
+                              SizedBox(
+                                width: double.infinity,
+                                height: 48,
+                                child: OutlinedButton.icon(
+                                  onPressed: isLoading
+                                      ? null
+                                      : () => context.read<AuthBloc>().add(GoogleSignInSubmitted()),
+                                  style: OutlinedButton.styleFrom(
+                                    side: BorderSide(color: auraTheme.border, width: 1),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    foregroundColor: auraTheme.textPrimary,
+                                    backgroundColor: auraTheme.surface,
+                                  ),
+                                  icon: Image.asset(
+                                    'assets/icons/google.png',
+                                    height: 18,
+                                    width: 18,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      Icons.g_mobiledata_rounded,
+                                      color: auraTheme.textPrimary,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  label: Text(
+                                    'Continue with Google',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: auraTheme.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              // ── Apple Sign-In (iOS only) ───────────────
+                              if (Platform.isIOS) ...[
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 48,
+                                  child: ElevatedButton.icon(
+                                    onPressed: isLoading
+                                        ? null
+                                        : () => context.read<AuthBloc>().add(AppleSignInSubmitted()),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: auraTheme.textPrimary,
+                                      foregroundColor: auraTheme.background,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    icon: Icon(
+                                      Icons.apple_rounded,
+                                      color: auraTheme.background,
+                                      size: 20,
+                                    ),
+                                    label: Text(
+                                      'Continue with Apple',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: auraTheme.background,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // ── Switch to Register ────────────────────────────
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account? ",
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: auraTheme.textSecondary,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: isLoading
+                                  ? null
+                                  : () => Navigator.push(
+                                        context,
+                                        PageRouteBuilder(
+                                          pageBuilder: (_, anim, __) => const RegisterScreen(),
+                                          transitionsBuilder: (_, anim, __, child) => FadeTransition(
+                                            opacity: anim,
+                                            child: SlideTransition(
+                                              position: Tween<Offset>(
+                                                begin: const Offset(0.05, 0),
+                                                end: Offset.zero,
+                                              ).animate(CurvedAnimation(
+                                                parent: anim,
+                                                curve: Curves.easeOut,
+                                              )),
+                                              child: child,
+                                            ),
+                                          ),
+                                          transitionDuration: const Duration(milliseconds: 240),
+                                        ),
+                                      ),
+                              borderRadius: BorderRadius.circular(4),
+                              child: Text(
+                                'Register',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: auraTheme.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -452,28 +521,23 @@ class _AuraLogoPainter extends CustomPainter {
     final double w = size.width;
     final double h = size.height;
 
-    // Anchor points for the stylized A to match the AURA brand logo
     final apex = Offset(w * 0.50, h * 0.10);
     final bottomLeft = Offset(w * 0.12, h * 0.88);
     final bottomRight = Offset(w * 0.88, h * 0.88);
-    
-    // Dynamic sharp crossbar extending to the right
     final crossLeft = Offset(w * 0.28, h * 0.58);
     final crossRight = Offset(w * 0.95, h * 0.42);
 
-    // Glow paint
     final glowPaint = Paint()
-      ..color = color.withOpacity(0.35)
+      ..color = color.withOpacity(0.30)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6
+      ..strokeWidth = 5
       ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
-    // Main sharp line paint
     final linePaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.2
+      ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
