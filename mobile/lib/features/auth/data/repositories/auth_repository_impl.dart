@@ -141,8 +141,10 @@ class AuthRepositoryImpl implements AuthRepository {
   Failure _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
     final responseData = e.response?.data;
-    final serverMessage =
-        responseData is Map ? responseData['error'] as String? : null;
+    String? serverMessage;
+    if (responseData is Map) {
+      serverMessage = (responseData['error'] ?? responseData['message']) as String?;
+    }
 
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout) {
@@ -150,7 +152,7 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     if (statusCode == 409) {
-      return ValidationFailure(message: serverMessage ?? 'Email already registered.');
+      return ValidationFailure(message: serverMessage ?? 'An account with this email already exists.');
     }
 
     if (statusCode == 401) {
@@ -158,7 +160,7 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     return ServerFailure(
-      message: serverMessage ?? 'An authentication error occurred.',
+      message: serverMessage ?? 'Authentication error occurred.',
       code: statusCode?.toString(),
     );
   }
