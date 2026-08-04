@@ -12,6 +12,7 @@ import cors from "cors";
 import v1Router from './routes/v1.routes';
 import { errorHandler } from "./middleware/validation";
 import prisma from "./services/prisma.service";
+import { execSync } from "child_process";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -66,8 +67,16 @@ app.use((_req: Request, res: Response) => {
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== "test") {
-  app.listen(PORT, () => {
-    console.log(`🚀  Calc-Calories API running on http://localhost:${PORT}`);
+  try {
+    console.log("🔄 Synchronizing Prisma database tables...");
+    execSync("npx prisma db push --accept-data-loss", { stdio: "inherit" });
+    console.log("✅ Database tables synchronized successfully!");
+  } catch (dbErr) {
+    console.error("⚠️ Prisma db push warning:", dbErr);
+  }
+
+  app.listen(Number(PORT), "0.0.0.0", () => {
+    console.log(`🚀  Calc-Calories API running on http://0.0.0.0:${PORT}`);
     console.log(`📱  Mobile API (v1):`);
     console.log(`   Auth:     POST /api/v1/auth/register`);
     console.log(`   Auth:     POST /api/v1/auth/login`);
