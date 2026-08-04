@@ -4,8 +4,8 @@
   "description": "Calc-Calories — AI-powered calorie counter for Egyptian restaurants. Production API.",
   "main": "dist/app.js",
   "scripts": {
-    "build": "npx prisma generate && tsc",
-    "start": "node dist/app.js",
+    "build": "npx prisma generate && npx prisma db push --accept-data-loss && tsc",
+    "start": "npx prisma db push --accept-data-loss && node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "test": "jest --runInBand --forceExit",
     "test:coverage": "jest --coverage --runInBand --forceExit",
