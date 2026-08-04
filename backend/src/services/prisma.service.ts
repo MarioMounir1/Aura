@@ -10,7 +10,15 @@ import { PrismaClient } from "@prisma/client";
 
 const connectionString = process.env.DATABASE_URL;
 
-const pool = new Pool({ connectionString });
+const isProduction =
+  process.env.NODE_ENV === "production" ||
+  connectionString?.includes("sslmode=") ||
+  connectionString?.includes("render.com");
+
+const pool = new Pool({
+  connectionString,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
+});
 const adapter = new PrismaPg(pool);
 
 declare global {
