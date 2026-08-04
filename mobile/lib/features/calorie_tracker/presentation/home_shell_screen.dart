@@ -12,29 +12,38 @@ import 'meals_dashboard_screen.dart';
 import 'workout_screen.dart';
 import 'settings_screen.dart';
 
-class DashboardTabWrapper extends StatelessWidget {
+class DashboardTabWrapper extends StatefulWidget {
   const DashboardTabWrapper({super.key});
+
+  @override
+  State<DashboardTabWrapper> createState() => _DashboardTabWrapperState();
+}
+
+class _DashboardTabWrapperState extends State<DashboardTabWrapper> {
+  DashboardLoaded? _lastLoaded;
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
-        if (state is DashboardInitial || state is DashboardLoading) {
-          return const Scaffold(
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-              ),
-            ),
-          );
-        }
         if (state is DashboardLoaded) {
+          _lastLoaded = state;
+        }
+
+        if (_lastLoaded != null) {
           return MealsDashboard(
-            foodSummary: state.foodSummary,
-            mealLogs: state.todayMealLogs,
+            foodSummary: _lastLoaded!.foodSummary,
+            mealLogs: _lastLoaded!.todayMealLogs,
           );
         }
+
+        if (state is DashboardInitial || state is DashboardLoading) {
+          return const MealsDashboard(
+            foodSummary: null,
+            mealLogs: [],
+          );
+        }
+
         if (state is DashboardFailure) {
           return Scaffold(
             backgroundColor: AppColors.background,
@@ -53,13 +62,10 @@ class DashboardTabWrapper extends StatelessWidget {
             ),
           );
         }
-        return const Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-            ),
-          ),
+
+        return const MealsDashboard(
+          foodSummary: null,
+          mealLogs: [],
         );
       },
     );
@@ -75,35 +81,35 @@ class HomeShellScreen extends StatefulWidget {
 
 class _HomeShellScreenState extends State<HomeShellScreen> {
   int _currentIndex = 0;
-  final Set<int> _visitedTabs = {0};
 
-  final List<Widget> _screens = [
-    const DashboardTabWrapper(),
-    const WorkoutScreen(),
-    const SettingsScreen(),
+  final List<Widget> _screens = const [
+    DashboardTabWrapper(),
+    WorkoutScreen(),
+    SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     final theme = context.auraTheme;
-    return Scaffold(
-      backgroundColor: theme.background,
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: _currentIndex,
-            children: List.generate(
-              _screens.length,
-              (i) => _visitedTabs.contains(i) ? _screens[i] : const SizedBox.shrink(),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: theme.background,
+        body: Stack(
+          children: [
+            IndexedStack(
+              index: _currentIndex,
+              children: _screens,
             ),
-          ),
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: _buildCustomNavBar(context),
-          ),
-        ],
+            Positioned(
+              bottom: 20,
+              left: 20,
+              right: 20,
+              child: _buildCustomNavBar(context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -145,7 +151,6 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
       onTap: () {
         setState(() {
           _currentIndex = index;
-          _visitedTabs.add(index);
         });
       },
       behavior: HitTestBehavior.opaque,
