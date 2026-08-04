@@ -11,6 +11,9 @@ class AppConstants {
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_BASE_URL');
     if (envUrl.isNotEmpty) return envUrl;
+    if (kReleaseMode) {
+      return 'https://aura-backend-rn4jk.onrender.com';
+    }
     if (!kIsWeb && Platform.isAndroid) {
       return 'http://10.0.2.2:3000';
     }
