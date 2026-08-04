@@ -1,10 +1,17 @@
 // ============================================================
 //  src/services/prisma.service.ts
-//  Singleton Prisma client — safe for dev hot-reload and prod
+//  Singleton Prisma client with pg.Pool adapter (Prisma 7 compatible)
 // ============================================================
 
 import "dotenv/config";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+
+const connectionString = process.env.DATABASE_URL;
+
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 
 declare global {
   var __prisma: PrismaClient | undefined;
@@ -13,6 +20,7 @@ declare global {
 const prisma: PrismaClient =
   global.__prisma ??
   new PrismaClient({
+    adapter,
     log:
       process.env.NODE_ENV === "development"
         ? ["query", "warn", "error"]
