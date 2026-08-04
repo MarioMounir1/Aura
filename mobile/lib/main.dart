@@ -111,14 +111,20 @@ Future<void> main() async {
   Hive.registerAdapter(MealLogModelAdapter());
   await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
 
-  // Load saved preferences
-  final savedLang = await LanguageCubit.getSavedLanguage();
-  final savedThemeMode = await ThemeCubit.getSavedThemeMode();
-
-  // Initialize RevenueCat SDK
-  await PurchaseService.instance.init();
+  // Load saved preferences concurrently
+  final results = await Future.wait([
+    LanguageCubit.getSavedLanguage(),
+    ThemeCubit.getSavedThemeMode(),
+  ]);
+  final savedLang = results[0] as String;
+  final savedThemeMode = results[1] as ThemeMode;
 
   runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
+
+  // Non-blocking initialization of RevenueCat SDK in background
+  PurchaseService.instance.init().catchError((e) {
+    debugPrint('PurchaseService background init error: $e');
+  });
 }
 
 // ── Root App Widget ───────────────────────────────────────────
