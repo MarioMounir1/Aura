@@ -16,6 +16,7 @@ import { Request, Response } from "express";
 import { processUpload } from "../middleware/upload.middleware";
 import { OLLAMA_CONFIG, getAiScanLimit } from "../config";
 import prisma from "../services/prisma.service";
+import { analyzeMeal } from "../services/ai.service";
 
 // ── Response Shape (matches Flutter LlamaMealResponse model) ─
 
@@ -219,65 +220,33 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
     // Best-effort: allow if check fails to avoid blocking legitimate users due to DB errors
   }
 
-  // ── Step 3: Convert image to base64 ──────────────────────
-  const base64Image = file.buffer.toString("base64");
-  const mimeType    = file.mimetype; // e.g. "image/jpeg"
-
-  // ── Step 3: Call local Ollama vision model (llava) ────────
-  const visionModel = process.env.OLLAMA_VISION_MODEL ?? "llava";
-  console.log(`🦙 [LocalLlama] Analyzing image with model: ${visionModel} (${(file.size / 1024).toFixed(1)} KB)`);
-
-  let rawContent: string;
-  try {
-    const ollamaRes = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: visionModel,
-        prompt: VISION_SYSTEM_PROMPT,
-        images: [base64Image],
-        stream: false,
-        options: { temperature: 0.1, num_predict: 200 },
-      }),
-      signal: AbortSignal.timeout(120_000), // 2-minute timeout for local inference
-    });
-
-    if (!ollamaRes.ok) {
-      const errText = await ollamaRes.text().catch(() => "");
-      throw new Error(`Ollama responded with ${ollamaRes.status}: ${errText.slice(0, 300)}`);
-    }
-
-    const ollamaData = (await ollamaRes.json()) as any;
-    rawContent = ollamaData.response ?? ollamaData.message?.content ?? "";
-
-    if (!rawContent) throw new Error("Ollama returned an empty response body.");
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Ollama inference failed";
-    console.error("❌ [LocalLlama] Ollama error:", msg);
-    const isTimeout = msg.toLowerCase().includes("timeout") || msg.toLowerCase().includes("abort");
-    res.status(isTimeout ? 504 : 502).json({
-      success: false,
-      source: "local_llama_inference",
-      error: isTimeout
-        ? "Local Llama model timed out. Ensure Ollama is running and llava is loaded."
-        : `Local Llama inference failed: ${msg}`,
-      code: isTimeout ? "LLAMA_TIMEOUT" : "LLAMA_ERROR",
-    });
-    return;
-  }
-
-  // ── Step 4: Parse structured macro data ─────────────────
+  // ── Step 3: Analyze Image using AI Engine (Gemini / Ollama) ──────
   let mealAnalysis: LlamaMealAnalysis;
+  const mimeType = file.mimetype; // e.g. "image/jpeg"
+
   try {
-    mealAnalysis = parseOllamaResponse(rawContent);
+    console.log(`🔮 [ImageScan] Analyzing meal image (${(file.size / 1024).toFixed(1)} KB)...`);
+    const aiResult = await analyzeMeal({
+      type: "image",
+      imageBuffer: file.buffer,
+      mimeType: (file.mimetype as any) || "image/jpeg",
+    });
+
+    mealAnalysis = {
+      detectedFood: aiResult.mealName,
+      calories: aiResult.calories,
+      protein: aiResult.protein,
+      carbs: aiResult.carbs,
+      fats: aiResult.fats,
+    };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Parse error";
-    console.error("❌ [LocalLlama] Parse error:", msg);
-    res.status(422).json({
+    const msg = err instanceof Error ? err.message : "Image scan failed";
+    console.error("❌ [ImageScan] AI analysis error:", msg);
+    res.status(500).json({
       success: false,
       source: "local_llama_inference",
-      error: `Could not extract macros from model output: ${msg}`,
-      code: "PARSE_ERROR",
+      error: `Meal image scan failed: ${msg}`,
+      code: "SCAN_ERROR",
     });
     return;
   }
