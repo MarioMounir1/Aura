@@ -7,6 +7,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import path from 'path';
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import v1Router from './routes/v1.routes';
@@ -69,10 +70,11 @@ app.use(errorHandler);
 if (process.env.NODE_ENV !== "test") {
   try {
     console.log("🔄 Synchronizing Prisma database tables...");
-    execSync("npx prisma db push --accept-data-loss", { stdio: "inherit" });
+    const prismaPath = path.join(__dirname, "..", "node_modules", ".bin", "prisma");
+    execSync(`${prismaPath} db push --accept-data-loss`, { stdio: "inherit" });
     console.log("✅ Database tables synchronized successfully!");
-  } catch (dbErr) {
-    console.error("⚠️ Prisma db push warning:", dbErr);
+  } catch (dbErr: any) {
+    console.error("⚠️ Prisma db push failed:", dbErr?.message || dbErr);
   }
 
   app.listen(Number(PORT), "0.0.0.0", () => {
