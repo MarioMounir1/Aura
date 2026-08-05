@@ -92,12 +92,6 @@ Strict Rule: If you cannot identify the food, return the JSON with 0 for all mac
 // ── Core AI Analysis Function ──────────────────────────────
 
 export async function analyzeMeal(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const provider = process.env.AI_PROVIDER ?? "google";
-
-  if (provider === "ollama") {
-    return analyzeWithOllama(input);
-  }
-
   return analyzeWithGemini(input);
 }
 
