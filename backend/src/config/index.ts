@@ -49,8 +49,18 @@ export function getAiScanLimit(isPremium: boolean): number {
 }
 
 
+export function resolveGeminiModelName(modelSetting?: string): string {
+  const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash").trim();
+  if (!raw || raw.includes("1.5") || raw.includes("2.5") || raw.startsWith("models/")) {
+    return "gemini-2.0-flash";
+  }
+  return raw;
+}
+
 export const GEMINI_CONFIG = {
-  model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+  get model(): string {
+    return resolveGeminiModelName(process.env.GEMINI_MODEL);
+  },
   temperature: 0.1,
   topP: 0.95,
   topK: 40,

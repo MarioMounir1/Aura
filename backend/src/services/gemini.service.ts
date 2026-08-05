@@ -5,7 +5,7 @@
  */
 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
-import { GEMINI_CONFIG } from "../config";
+import { GEMINI_CONFIG, resolveGeminiModelName } from "../config";
 import { AddOnData, BaseMacroRange, ReverseEngineerResponse } from "./ollama.service";
 
 const apiKey = process.env.GEMINI_API_KEY || "";
@@ -196,8 +196,9 @@ Calculate the nutritional MIN and MAX ranges for each customization/add-on liste
 
 You MUST return a clean, strictly validated JSON response matching the provided schema. Do not include any markdown, explanations, or text outside the JSON object.`;
 
+    const modelName = resolveGeminiModelName(GEMINI_CONFIG.model);
     const model = genAI.getGenerativeModel({
-      model: GEMINI_CONFIG.model,
+      model: modelName,
       systemInstruction: systemInstruction,
     });
 
@@ -206,19 +207,45 @@ Item: ${itemName}
 Description/Context: ${options?.itemDescription || "No description provided"}
 Customizations to calculate: ${JSON.stringify(addOns)}`;
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: responseSchema as any,
-        temperature: GEMINI_CONFIG.temperature,
-        topP: GEMINI_CONFIG.topP,
-        topK: GEMINI_CONFIG.topK,
-        maxOutputTokens: 1024,
-      },
-    });
+    const genConfig = {
+      responseMimeType: "application/json",
+      responseSchema: responseSchema as any,
+      temperature: GEMINI_CONFIG.temperature,
+      topP: GEMINI_CONFIG.topP,
+      topK: GEMINI_CONFIG.topK,
+      maxOutputTokens: 1024,
+    };
 
-    const responseText = result.response.text();
+    let responseText: string;
+    try {
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        generationConfig: genConfig,
+      });
+      responseText = result.response.text();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`⚠️ Gemini API call with ${modelName} in gemini.service failed (${msg}). Retrying with gemini-2.0-flash...`);
+      if (modelName !== "gemini-2.0-flash") {
+        try {
+          const fallbackModel = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash",
+            systemInstruction: systemInstruction,
+          });
+          const fallbackResult = await fallbackModel.generateContent({
+            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+            generationConfig: genConfig,
+          });
+          responseText = fallbackResult.response.text();
+        } catch (fallbackErr: unknown) {
+          const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+          throw new Error(`Gemini API call failed: ${fallbackMsg}`);
+        }
+      } else {
+        throw new Error(`Gemini API call failed: ${msg}`);
+      }
+    }
+
     if (!responseText) {
       throw new Error("Empty response from Gemini API");
     }
