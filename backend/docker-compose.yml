@@ -62,7 +62,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-calcuser}:${POSTGRES_PASSWORD:-calcpassword}@postgres:5432/${POSTGRES_DB:-calc_calories}?schema=public
       REDIS_URL: redis://redis:6379
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-pro}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       UPLOAD_MAX_SIZE_MB: ${UPLOAD_MAX_SIZE_MB:-10}
