@@ -153,11 +153,11 @@ export async function analyzeMealHandler(
     const msg = err instanceof Error ? err.message : "AI analysis failed";
     console.error("❌ [Meal] Gemini error:", msg);
 
-    const isQuota = msg.includes("429") || msg.toLowerCase().includes("quota");
+    const isQuota = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("exceeded");
     res.status(isQuota ? 429 : 502).json({
       success: false,
       error: isQuota
-        ? "AI quota exceeded. Please try again later."
+        ? "Google Gemini API rate limit or quota exceeded. Please wait a minute and try again."
         : `AI analysis failed: ${msg}`,
       code: isQuota ? "QUOTA_EXCEEDED" : "AI_ERROR",
     });
