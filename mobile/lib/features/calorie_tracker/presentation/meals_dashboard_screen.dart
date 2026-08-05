@@ -230,44 +230,32 @@ class _MealsDashboardState extends State<MealsDashboard> {
   }
 
   // ── Image Pick & Upload ───────────────────────────────────
+  bool _isPickingImage = false;
 
   Future<void> _pickAndAnalyze(ImageSource source) async {
-    final scanType = source == ImageSource.camera ? 'camera' : 'gallery';
+    if (_isPickingImage) return;
+    _isPickingImage = true;
 
-    // ── Check Quota Limits First ──
     try {
-      final quota = await _llamaService.fetchAiUsage();
-      if (mounted) {
-        setState(() {
-          _quota = quota;
-        });
-      }
-      final isExceeded = scanType == 'camera' ? quota.isCameraExceeded : quota.isGalleryExceeded;
-      
-      if (isExceeded) {
-        if (!mounted) return;
-        _showUpgradeDialog(scanType, quota);
+      final picked = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1280,
+      );
+      if (picked == null) {
+        _isPickingImage = false;
         return;
       }
-    } catch (e) {
-      debugPrint('Quota check failed, proceeding anyway: $e');
-    }
 
-    final picked = await _imagePicker.pickImage(
-      source: source,
-      imageQuality: 85,
-      maxWidth: 1280,
-    );
-    if (picked == null) return;
+      final scanType = source == ImageSource.camera ? 'camera' : 'gallery';
 
-    setState(() {
-      _selectedImage = File(picked.path);
-      _layoutState   = LayoutState.processing;
-      _llamaResult   = null;
-      _errorMessage  = null;
-    });
+      setState(() {
+        _selectedImage = File(picked.path);
+        _layoutState   = LayoutState.processing;
+        _llamaResult   = null;
+        _errorMessage  = null;
+      });
 
-    try {
       final result = await _llamaService.scanMealImage(_selectedImage!, scanType);
 
       if (!mounted) return;
@@ -296,7 +284,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
         _errorMessage = e.toString();
         _layoutState  = LayoutState.idle;
       });
-      _showErrorSnackbar('Unexpected error: $e');
+      _showErrorSnackbar('Scan failed: $e');
+    } finally {
+      _isPickingImage = false;
     }
   }
 
