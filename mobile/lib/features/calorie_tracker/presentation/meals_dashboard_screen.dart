@@ -1,4 +1,4 @@
-﻿// lib/features/calorie_tracker/presentation/meals_dashboard_screen.dart
+// lib/features/calorie_tracker/presentation/meals_dashboard_screen.dart
 // Calc-Calories â€” Meals Dashboard (Smart Scanner Rebuild)
 //
 // Architecture: StatefulWidget with 3 LayoutStates
@@ -18,6 +18,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
 import '../data/models/ai_usage_quota.dart';
@@ -1599,6 +1600,19 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> {
   bool _detected = false;
 
   @override
+  void initState() {
+    super.initState();
+    _requestCameraPermission();
+  }
+
+  Future<void> _requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    if (status.isGranted && mounted) {
+      _controller.start();
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -1674,6 +1688,44 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> {
                   children: [
                     MobileScanner(
                       controller: _controller,
+                      errorBuilder: (context, error, child) {
+                        return Container(
+                          color: DashboardThemeColors.surface,
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.camera_alt_outlined, color: DashboardThemeColors.accentAmber, size: 48),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    'Camera Access Needed',
+                                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Please grant camera permission to scan product barcodes.',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(fontSize: 12, color: DashboardThemeColors.textSecondary),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () => _requestCameraPermission(),
+                                    icon: const Icon(Icons.security, size: 18),
+                                    label: const Text('Grant Camera Permission'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: DashboardThemeColors.accentAmber,
+                                      foregroundColor: Colors.black,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                       onDetect: (capture) {
                         if (_detected) return;
                         final barcode = capture.barcodes.firstOrNull;

@@ -169,11 +169,11 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
 }
 
 function resolveGeminiModelName(modelSetting?: string): string {
-  const name = modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
-  if (name === "gemini-1.5-flash" || name === "models/gemini-1.5-flash") {
+  const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash").trim();
+  if (!raw || raw.includes("1.5") || raw.includes("1.5-flash") || raw.startsWith("models/")) {
     return "gemini-2.0-flash";
   }
-  return name;
+  return raw;
 }
 
 // ── Google Gemini Implementation ───────────────────────────
@@ -231,7 +231,25 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
     responseText = result.response.text();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Gemini API call failed: ${msg}`);
+    console.warn(`⚠️ Gemini API call with ${modelName} failed (${msg}). Retrying with gemini-2.0-flash...`);
+    if (modelName !== "gemini-2.0-flash") {
+      try {
+        const fallbackModel = genAI.getGenerativeModel({
+          model: "gemini-2.0-flash",
+          systemInstruction: SYSTEM_INSTRUCTION,
+        });
+        const fallbackResult = await fallbackModel.generateContent({
+          contents: [{ role: "user", parts }],
+          generationConfig,
+        });
+        responseText = fallbackResult.response.text();
+      } catch (fallbackErr: unknown) {
+        const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+        throw new Error(`Gemini API call failed: ${fallbackMsg}`);
+      }
+    } else {
+      throw new Error(`Gemini API call failed: ${msg}`);
+    }
   }
 
   if (!responseText || responseText.trim() === "") {
