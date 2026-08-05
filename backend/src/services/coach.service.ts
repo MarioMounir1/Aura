@@ -59,9 +59,9 @@ function isOllamaCurrentlyOffline(): boolean {
 }
 
 function resolveGeminiModelName(): string {
-  const envModel = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-  if (envModel === "gemini-1.5-flash") {
-    return "gemini-flash-latest";
+  const envModel = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  if (envModel === "gemini-1.5-flash" || envModel === "models/gemini-1.5-flash") {
+    return "gemini-2.0-flash";
   }
   return envModel;
 }

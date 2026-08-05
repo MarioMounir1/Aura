@@ -175,15 +175,17 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
 }
 
 function resolveGeminiModelName(modelSetting?: string): string {
-  const name = modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-flash-latest";
-  if (name === "gemini-1.5-flash") return "gemini-flash-latest";
+  const name = modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+  if (name === "gemini-1.5-flash" || name === "models/gemini-1.5-flash") {
+    return "gemini-2.0-flash";
+  }
   return name;
 }
 
 // ── Google Gemini Implementation ───────────────────────────
 
 async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const rawModel = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+  const rawModel = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
   const modelName = resolveGeminiModelName(rawModel);
   console.log(`🔮 Calling Gemini API (${modelName}): ${input.type === "text" ? input.mealDescription : "Image buffer"}`);
 
