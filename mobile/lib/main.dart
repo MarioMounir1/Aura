@@ -296,11 +296,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (authState is Authenticated) {
           context.read<ProfileBloc>().add(LoadProfile());
           context.read<DashboardBloc>().add(const LoadDashboard());
-          context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
-          context.read<WaterBloc>().add(const LoadWaterToday());
-          context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
-          context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
-          context.read<FoodSearchBloc>().add(LoadFoodCategories());
+          
+          // Defer non-critical background data fetches until after initial frame
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
+            context.read<WaterBloc>().add(const LoadWaterToday());
+            context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
+            context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
+            context.read<FoodSearchBloc>().add(LoadFoodCategories());
+          });
         } else if (authState is Unauthenticated) {
           _lastProfileLoaded = null;
           context.read<ProfileBloc>().add(ResetProfileEvent());
