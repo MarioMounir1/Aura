@@ -61,7 +61,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   int? _expandedExerciseIndex;
   List<WeekDayDetail> _weekScheduleDetails = [];
 
-  bool _showAllExercises = true;
+  bool _showAllExercises = false;
 
   // ── Streak & Real-Time Weekly Completion ──────────────────────
   int _streakDays = 0;
