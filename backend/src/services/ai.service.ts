@@ -10,7 +10,7 @@ import {
   Part,
   InlineDataPart,
 } from "@google/generative-ai";
-import { OLLAMA_CONFIG } from "../config";
+import { OLLAMA_CONFIG, resolveGeminiModelName } from "../config";
 
 const apiKey = process.env.GEMINI_API_KEY ?? "";
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -168,13 +168,6 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
   return parseAndValidateResponse(parsed);
 }
 
-function resolveGeminiModelName(modelSetting?: string): string {
-  const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash").trim();
-  if (!raw || raw.includes("1.5") || raw.includes("1.5-flash") || raw.startsWith("models/")) {
-    return "gemini-2.0-flash";
-  }
-  return raw;
-}
 
 // ── Google Gemini Implementation ───────────────────────────
 
