@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { OLLAMA_CONFIG } from "../config";
+import { OLLAMA_CONFIG, resolveGeminiModelName } from "../config";
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -58,13 +58,6 @@ function isOllamaCurrentlyOffline(): boolean {
   return false;
 }
 
-function resolveGeminiModelName(): string {
-  const envModel = (process.env.GEMINI_MODEL || "gemini-2.0-flash").trim();
-  if (!envModel || envModel.includes("1.5") || envModel.includes("1.5-flash") || envModel.startsWith("models/")) {
-    return "gemini-2.0-flash";
-  }
-  return envModel;
-}
 
 // ── Helper: Ollama Chat Call with Timeout, Logging & Source Metadata ──────
 
