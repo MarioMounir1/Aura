@@ -51,7 +51,7 @@ export function getAiScanLimit(isPremium: boolean): number {
 
 export function resolveGeminiModelName(modelSetting?: string): string {
   const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.0-flash").trim();
-  if (!raw || raw.includes("1.5") || raw.includes("2.5") || raw.startsWith("models/")) {
+  if (!raw || raw.includes("1.5") || raw.startsWith("models/")) {
     return "gemini-2.0-flash";
   }
   return raw;
