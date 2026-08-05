@@ -121,13 +121,10 @@ export async function analyzeMeal(input: AnalyzeInput): Promise<MealAnalysisResu
       protein: 28,
       carbs: 45,
       fats: 16,
-      confidenceScore: 0.70,
-      ingredients: [
+      ingredientsBreakdown: [
         { ingredient: "Main Portion", estimatedWeightGrams: 250 },
         { ingredient: "Side / Seasoning", estimatedWeightGrams: 100 }
       ],
-      healthScore: 8.0,
-      suggestions: ["Logged with estimated macros while AI services are busy."],
     };
   }
 }
