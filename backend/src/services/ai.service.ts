@@ -224,11 +224,11 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
     responseText = result.response.text();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`⚠️ Gemini API call with ${modelName} failed (${msg}). Retrying with gemini-2.0-flash...`);
-    if (modelName !== "gemini-2.0-flash") {
+    console.warn(`⚠️ Gemini API call with ${modelName} failed (${msg}). Retrying with gemini-2.0-flash-lite...`);
+    if (modelName !== "gemini-2.0-flash-lite") {
       try {
         const fallbackModel = genAI.getGenerativeModel({
-          model: "gemini-2.0-flash",
+          model: "gemini-2.0-flash-lite",
           systemInstruction: SYSTEM_INSTRUCTION,
         });
         const fallbackResult = await fallbackModel.generateContent({
