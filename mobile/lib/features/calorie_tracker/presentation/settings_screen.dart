@@ -38,6 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _goal = 'maintain';
   bool _isInitialized = false;
   bool _hasUnsavedChanges = false;
+  bool _isPersonalInfoExpanded = false;
 
   @override
   void initState() {
@@ -238,31 +239,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // ── 1. Top User Header with Avatar & Metrics Summary ──────────
             _buildUserAvatarHeader(name, email, isPremium),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildKeyMetricsSummaryRow(l10n),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // ── 2. Membership Banner ──────────────────────────────────────
             _buildMembershipBanner(context, isPremium, isArabic),
-            const SizedBox(height: 28),
+            const SizedBox(height: 16),
 
-            // ── 3. Group 1: Fitness & Personal Metrics ────────────────────
-            _buildSectionTitle(l10n.profilePersonalInfo, Icons.fitness_center_rounded),
-            const SizedBox(height: 12),
-            _buildFitnessMetricsGroup(l10n),
-            const SizedBox(height: 28),
+            // ── 3. Group 1: Fitness & Personal Metrics (collapsible) ──────
+            _buildCollapsiblePersonalInfo(l10n),
+            const SizedBox(height: 16),
 
             // ── 4. Group 2: Preferences ──────────────────────────────────
             _buildSectionTitle(l10n.profileLanguage, Icons.tune_rounded),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildPreferencesGroup(context, isArabic),
-            const SizedBox(height: 28),
+            const SizedBox(height: 16),
 
             // ── 5. Group 3: Account Actions ──────────────────────────────
             _buildSectionTitle(isArabic ? 'الحساب' : 'Account Actions', Icons.shield_rounded),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildAccountActionsGroup(context, l10n),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -276,7 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: theme.card,
         borderRadius: BorderRadius.circular(24),
@@ -288,8 +287,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             alignment: Alignment.center,
             children: [
               Container(
-                width: 86,
-                height: 86,
+                width: 68,
+                height: 68,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -300,8 +299,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   boxShadow: [
                     BoxShadow(
                       color: (isPremium ? const Color(0xFFFBBF24) : theme.primary).withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 2,
+                      blurRadius: 14,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
@@ -309,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Text(
                     initials,
                     style: GoogleFonts.inter(
-                      fontSize: 36,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: isPremium ? Colors.black : Colors.white,
                     ),
@@ -335,11 +334,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           Text(
             name,
             style: GoogleFonts.inter(
-              fontSize: 22,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
               color: theme.textPrimary,
             ),
@@ -545,19 +544,116 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Group 1: Fitness & Health Metrics ─────────────────────────────
-  Widget _buildFitnessMetricsGroup(AppLocalizations l10n) {
+  // ── Collapsible Personal Info Section ───────────────────────────
+  Widget _buildCollapsiblePersonalInfo(AppLocalizations l10n) {
     final theme = context.auraTheme;
+
+    // Build a compact summary line for the collapsed header
+    final name = _nameController.text.trim();
+    final age = _ageController.text.trim();
+    final weight = _weightController.text.trim();
+    final height = _heightController.text.trim();
+    final goalStr = _goal == 'lose' ? l10n.onboardingGoalLose : _goal == 'gain' ? l10n.onboardingGoalGain : l10n.onboardingGoalMaintain;
+    final summaryParts = [
+      if (name.isNotEmpty) name,
+      if (age.isNotEmpty) '${age}y',
+      if (weight.isNotEmpty) '${weight}kg',
+      if (height.isNotEmpty) '${height}cm',
+      goalStr,
+    ];
+    final summary = summaryParts.join(' · ');
+
     return Container(
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: theme.card,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: theme.border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header row (always visible)
+          InkWell(
+            onTap: () => setState(() => _isPersonalInfoExpanded = !_isPersonalInfoExpanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: theme.primary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.fitness_center_rounded, color: theme.primary, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.profilePersonalInfo,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textPrimary,
+                          ),
+                        ),
+                        if (!_isPersonalInfoExpanded && summary.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            summary,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: theme.textSecondary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _isPersonalInfoExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.expand_more_rounded, color: theme.textSecondary, size: 22),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Expandable fields
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity, height: 0),
+            secondChild: Column(
+              children: [
+                Divider(height: 1, color: theme.border),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildFitnessMetricsGroup(l10n),
+                ),
+              ],
+            ),
+            crossFadeState: _isPersonalInfoExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+            sizeCurve: Curves.easeOutCubic,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Group 1: Fitness & Health Metrics ─────────────────────────────
+  Widget _buildFitnessMetricsGroup(AppLocalizations l10n) {
+    final theme = context.auraTheme;
+    // ignore: unused_local_variable  (theme used below in field decorations)
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           _buildFieldLabel(l10n.profileName),
           TextFormField(
             controller: _nameController,
@@ -689,7 +785,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
           ),
         ],
-      ),
     );
   }
 

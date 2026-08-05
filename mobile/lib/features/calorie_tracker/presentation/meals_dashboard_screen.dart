@@ -1,10 +1,10 @@
-// lib/features/calorie_tracker/presentation/meals_dashboard_screen.dart
-// Calc-Calories — Meals Dashboard (Smart Scanner Rebuild)
+﻿// lib/features/calorie_tracker/presentation/meals_dashboard_screen.dart
+// Calc-Calories â€” Meals Dashboard (Smart Scanner Rebuild)
 //
 // Architecture: StatefulWidget with 3 LayoutStates
-//   - LayoutState.idle       → Clean slate with Snap/Upload action cards
-//   - LayoutState.processing → Shimmer + pulsing analysis text
-//   - LayoutState.resultLoaded → Analysis Result Card + contextual banner
+//   - LayoutState.idle       â†’ Clean slate with Snap/Upload action cards
+//   - LayoutState.processing â†’ Shimmer + pulsing analysis text
+//   - LayoutState.resultLoaded â†’ Analysis Result Card + contextual banner
 //
 // Networking: LocalLlamaService (Dio multipart/form-data)
 // Data Model: LlamaMealResponse (fully typed)
@@ -36,15 +36,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
 
-// ── Layout State Enum ─────────────────────────────────────────
+// â”€â”€ Layout State Enum â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 enum LayoutState { idle, processing, resultLoaded }
 
-// ── Theme Constants (Delegated to AppColors) ─────────────────
+// â”€â”€ Theme Constants (Delegated to AppColors) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 typedef DashboardThemeColors = AppColors;
 
-// ── Existing MealWarning / MealEntry models (preserved) ───────
+// â”€â”€ Existing MealWarning / MealEntry models (preserved) â”€â”€â”€â”€â”€â”€â”€
 
 class MealWarning {
   final String warningText;
@@ -115,7 +115,7 @@ class MealEntry {
   }
 }
 
-// ── Main Dashboard Widget ─────────────────────────────────────
+// â”€â”€ Main Dashboard Widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class MealsDashboard extends StatefulWidget {
   final Map<String, dynamic>? foodSummary;
@@ -128,7 +128,7 @@ class MealsDashboard extends StatefulWidget {
 }
 
 class _MealsDashboardState extends State<MealsDashboard> {
-  // ── Macro totals ─────────────────────────────────────────
+  // â”€â”€ Macro totals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   late double caloriesConsumed;
   late double caloriesTarget;
   late double proteinConsumed;
@@ -138,10 +138,10 @@ class _MealsDashboardState extends State<MealsDashboard> {
   late double fatsConsumed;
   late double fatsTarget;
 
-  // ── Feed ─────────────────────────────────────────────────
+  // â”€â”€ Feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   late List<MealEntry> logs;
 
-  // ── Scanner State machine ─────────────────────────────────
+  // â”€â”€ Scanner State machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   LayoutState _layoutState = LayoutState.idle;
   LlamaMealResponse? _llamaResult;
   // ignore: unused_field
@@ -149,7 +149,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
   File? _selectedImage;
   AiUsageQuota? _quota;
 
-  // ── Services ─────────────────────────────────────────────
+  // â”€â”€ Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   final _llamaService   = LocalLlamaService();
   final _imagePicker    = ImagePicker();
   final _manualService  = ManualMealService();
@@ -183,7 +183,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     }
   }
 
-  // ── Data initialization (preserved from original) ─────────
+  // â”€â”€ Data initialization (preserved from original) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void _initData() {
     if (widget.mealLogs != null && widget.mealLogs!.isNotEmpty) {
@@ -229,7 +229,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     fatsConsumed     = logs.fold(0.0, (s, m) => s + m.fat);
   }
 
-  // ── Image Pick & Upload ───────────────────────────────────
+  // â”€â”€ Image Pick & Upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   bool _isPickingImage = false;
 
   Future<void> _pickAndAnalyze(ImageSource source) async {
@@ -352,7 +352,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     });
   }
 
-  // ── Manual Macro Log Bottom Sheet ────────────────────────
+  // â”€â”€ Manual Macro Log Bottom Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   void _showManualLogSheet() {
     showModalBottomSheet(
@@ -483,7 +483,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     );
   }
 
-  // ── BUILD ─────────────────────────────────────────────────
+  // â”€â”€ BUILD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @override
   Widget build(BuildContext context) {
@@ -498,14 +498,14 @@ class _MealsDashboardState extends State<MealsDashboard> {
       body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _DashboardHeader(streakCount: _calculateStreak(logs)),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-                // ── Daily Performance Rings ─────────────────
+                // â”€â”€ Daily Performance Rings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 _MacroRingsSection(
                   caloriesConsumed: caloriesConsumed,
                   caloriesTarget:   caloriesTarget,
@@ -517,9 +517,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   fatsTarget:       fatsTarget,
                   onTap:            _showManualLogSheet,
                 ),
-                const SizedBox(height: 28),
-
-                // ── AI Canvas area (state-driven) ──────────
+                const SizedBox(height: 20),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 450),
                   switchInCurve: Curves.easeOutCubic,
@@ -527,9 +525,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   child: _buildAiCanvas(),
                 ),
 
-                const SizedBox(height: 28),
-
-                // ── Today's Feed ──────────────────────────
+                const SizedBox(height: 20),
                 _FeedSection(
                   logs:      logs,
                   onSnap:    () => _pickAndAnalyze(ImageSource.gallery),
@@ -538,7 +534,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                 ),
                 const SizedBox(height: 32),
 
-                // ── Ads Banner for Free Users ──────────────
+                // â”€â”€ Ads Banner for Free Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 if (!isPremium) ...[
                   const AdBanner(),
                   const SizedBox(height: 32),
@@ -554,7 +550,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   // (macro rings extracted to _MacroRingsSection below)
 
-  // ── AI CANVAS (STATE SWITCH) ───────────────────────────────
+  // â”€â”€ AI CANVAS (STATE SWITCH) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Widget _buildAiCanvas() {
     switch (_layoutState) {
@@ -583,7 +579,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     }
   }
 
-  // ── Barcode Scanner Flow ──────────────────────────────────
+  // â”€â”€ Barcode Scanner Flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> _scanBarcode() async {
     // Step 1: Open camera-based barcode scanner overlay
@@ -636,7 +632,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     } on BarcodeNotFoundException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      // ── NOT FOUND → prompt user for product name & AI estimate ──
+      // â”€â”€ NOT FOUND â†’ prompt user for product name & AI estimate â”€â”€
       product = await _promptForBarcodeEstimation(context, detectedBarcode!);
       if (product == null || !mounted) return;
     } on BarcodeNetworkException catch (e) {
@@ -721,9 +717,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
     return streak > 0 ? streak : 1;
   }
 }
-// ↑ End of _MealsDashboardState
+// â†‘ End of _MealsDashboardState
 
-// ── Dashboard Header ──────────────────────────────────────────
+// â”€â”€ Dashboard Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _DashboardHeader extends StatelessWidget {
   final int streakCount;
@@ -813,7 +809,7 @@ class _DashboardHeader extends StatelessWidget {
   }
 }
 
-// ── Processing State Widget (Isolated Ticker) ─────────────────
+// â”€â”€ Processing State Widget (Isolated Ticker) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ProcessingStateWidget extends StatefulWidget {
   final File? selectedImage;
@@ -1014,7 +1010,7 @@ class _ProcessingStateWidgetState extends State<_ProcessingStateWidget>
   }
 }
 
-// ── Result Card Widget (Redesigned per aura_design_spec.md Section 2) ──
+// â”€â”€ Result Card Widget (Redesigned per aura_design_spec.md Section 2) â”€â”€
 
 class _ResultCardWidget extends StatefulWidget {
   final LlamaMealResponse llamaResult;
@@ -1086,8 +1082,8 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
     if (tagItems.isEmpty) {
       tagItems.addAll([
         analysis.detectedFood.split(' ').take(2).join(' '),
-        'Protein · ${scaledProtein}g',
-        'Carbs · ${scaledCarbs}g',
+        'Protein Â· ${scaledProtein}g',
+        'Carbs Â· ${scaledCarbs}g',
       ]);
     }
 
@@ -1095,7 +1091,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
       key: const ValueKey('result'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── 1. PHOTO HEADER WITH FLOATING ANNOTATION TAGS ──────────
+        // â”€â”€ 1. PHOTO HEADER WITH FLOATING ANNOTATION TAGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (widget.selectedImage != null)
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
@@ -1181,7 +1177,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
           ),
         const SizedBox(height: 16),
 
-        // ── MAIN STRUCTURED RESULT CARD ────────────────────────────
+        // â”€â”€ MAIN STRUCTURED RESULT CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -1199,7 +1195,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── 2. CATEGORY BADGE, MEAL NAME & SERVING STEPPER ──────
+              // â”€â”€ 2. CATEGORY BADGE, MEAL NAME & SERVING STEPPER â”€â”€â”€â”€â”€â”€
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -1289,7 +1285,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
 
               const Divider(height: 1, color: AppColors.border),
 
-              // ── 3. 2x2 ICON + MACRO GRID ─────────────────────────────
+              // â”€â”€ 3. 2x2 ICON + MACRO GRID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1345,7 +1341,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                 ),
               ),
 
-              // ── 4. HEALTH SCORE ROW ─────────────────────────────────
+              // â”€â”€ 4. HEALTH SCORE ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
@@ -1408,7 +1404,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
 
               const SizedBox(height: 16),
 
-              // ── AI COACH NOTE (Renamed from "Llama says") ────────────
+              // â”€â”€ AI COACH NOTE (Renamed from "Llama says") â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               if (rec.message.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1464,7 +1460,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
 
               const SizedBox(height: 20),
 
-              // ── 5. TWO ACTION BUTTONS AT BOTTOM ─────────────────────
+              // â”€â”€ 5. TWO ACTION BUTTONS AT BOTTOM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                 child: Row(
@@ -1578,7 +1574,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
   }
 }
 
-// ── Barcode Scanner Overlay (½-screen modal) ─────────────────
+// â”€â”€ Barcode Scanner Overlay (Â½-screen modal) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Full-screen-ish camera overlay that reads barcodes via mobile_scanner.
 /// Pops immediately on first detection, returning the scanned barcode string.
@@ -1736,7 +1732,7 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> {
   }
 }
 
-// ── Extracted: Daily Performance Rings ───────────────────────
+// â”€â”€ Extracted: Daily Performance Rings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MacroRingsSection extends StatelessWidget {
   final double caloriesConsumed;
@@ -1776,7 +1772,7 @@ class _MacroRingsSection extends StatelessWidget {
         splashColor: theme.primary.withValues(alpha: 0.06),
         highlightColor: theme.primary.withValues(alpha: 0.03),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.card,
             borderRadius: BorderRadius.circular(24),
@@ -1843,11 +1839,11 @@ class _MacroRingsSection extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // ── 1. DOMINANT PRIMARY CALORIE LINEAR BAR ──────────────────
+              // â”€â”€ 1. DOMINANT PRIMARY CALORIE LINEAR BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               Text(
                 '${caloriesConsumed.round()}',
                 style: GoogleFonts.outfit(
-                  fontSize: 48,
+                  fontSize: 40,
                   fontWeight: FontWeight.bold,
                   color: theme.textPrimary,
                   height: 1.1,
@@ -1886,9 +1882,7 @@ class _MacroRingsSection extends StatelessWidget {
                   color: theme.textSecondary,
                 ),
               ),
-              const SizedBox(height: 20),
-
-              // ── 2. SECONDARY MACRO ELEMENTS (COMPACT CHIPS) ────────
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -1919,8 +1913,7 @@ class _MacroRingsSection extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              // ── 3. VIEW PROGRESS BUTTON ────────
+              const SizedBox(height: 14),
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
@@ -2056,7 +2049,7 @@ class _MacroChip extends StatelessWidget {
   }
 }
 
-// ── Senior Flutter: Cal AI Smart Scanner Hero ────────────────
+// â”€â”€ Senior Flutter: Cal AI Smart Scanner Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _SmartScannerSection extends StatelessWidget {
   final AiUsageQuota? quota;
@@ -2096,7 +2089,7 @@ class _SmartScannerSection extends StatelessWidget {
                   onTap: onCamera,
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    height: 110,
+                    height: 96,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: theme.snapMealGradient,
@@ -2126,7 +2119,7 @@ class _SmartScannerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Camera · $cameraUsage/$cameraLimit today',
+                          'Camera Â· $cameraUsage/$cameraLimit today',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -2147,7 +2140,7 @@ class _SmartScannerSection extends StatelessWidget {
                   onTap: onGallery,
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    height: 110,
+                    height: 96,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       gradient: theme.uploadScreenshotGradient,
@@ -2177,7 +2170,7 @@ class _SmartScannerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Gallery · $galleryUsage/$galleryLimit today',
+                          'Gallery Â· $galleryUsage/$galleryLimit today',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -2191,7 +2184,7 @@ class _SmartScannerSection extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         // 2. Search Food Flat Row
         Material(
@@ -2201,7 +2194,7 @@ class _SmartScannerSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: theme.surfaceVariant,
                 borderRadius: BorderRadius.circular(18),
@@ -2254,7 +2247,7 @@ class _SmartScannerSection extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         // 3. Scan Barcode Gradient Row
         Material(
@@ -2264,7 +2257,7 @@ class _SmartScannerSection extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 gradient: theme.scanBarcodeGradient,
                 borderRadius: BorderRadius.circular(18),
@@ -2296,7 +2289,7 @@ class _SmartScannerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Instant nutrition · Unlimited',
+                          'Instant nutrition Â· Unlimited',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -2315,7 +2308,7 @@ class _SmartScannerSection extends StatelessWidget {
   }
 }
 
-// ── Senior Flutter: MyFitnessPal Categorized Food Diary ──────
+// â”€â”€ Senior Flutter: MyFitnessPal Categorized Food Diary â”€â”€â”€â”€â”€â”€
 
 class _FeedSection extends StatelessWidget {
   final List<MealEntry> logs;
@@ -2592,7 +2585,7 @@ class _MealCategorySlotCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                'P: ${meal.protein.round()}g · C: ${meal.carbs.round()}g · F: ${meal.fat.round()}g',
+                                'P: ${meal.protein.round()}g Â· C: ${meal.carbs.round()}g Â· F: ${meal.fat.round()}g',
                                 style: GoogleFonts.inter(
                                   fontSize: 10,
                                   color: theme.textMuted,
@@ -2653,7 +2646,7 @@ class _MealCategorySlotCard extends StatelessWidget {
   }
 }
 
-// ── Extracted: Single Meal Log Card ──────────────────────────
+// â”€â”€ Extracted: Single Meal Log Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MealLogCard extends StatelessWidget {
   final MealEntry meal;
@@ -2810,7 +2803,7 @@ class _MealLogCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                '🌿 NUTRITIOUS',
+                                'ðŸŒ¿ NUTRITIOUS',
                                 style: GoogleFonts.inter(
                                   fontSize: 8,
                                   fontWeight: FontWeight.bold,
@@ -2936,7 +2929,7 @@ class _MealLogCard extends StatelessWidget {
   }
 }
 
-// ── Manual Meal Service (Dio POST/PUT/DELETE to /meals & /food-logs) ──────────
+// â”€â”€ Manual Meal Service (Dio POST/PUT/DELETE to /meals & /food-logs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class ManualMealService {
   static const Duration _timeout = Duration(seconds: 20);
@@ -2952,7 +2945,7 @@ class ManualMealService {
         headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
       ),
     );
-    // Inject JWT on every request — same pattern as LocalLlamaService
+    // Inject JWT on every request â€” same pattern as LocalLlamaService
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -2966,7 +2959,7 @@ class ManualMealService {
     );
   }
 
-  // ── Create ─────────────────────────────────────────────────
+  // â”€â”€ Create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> postManualLog({
     required String mealName,
@@ -2988,7 +2981,7 @@ class ManualMealService {
     );
   }
 
-  // ── Update MealLog (manual / ai scan) ─────────────────────
+  // â”€â”€ Update MealLog (manual / ai scan) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> updateMealLog(
     String id, {
@@ -3010,13 +3003,13 @@ class ManualMealService {
     );
   }
 
-  // ── Update FoodLog (db-search entries — servings only) ────
+  // â”€â”€ Update FoodLog (db-search entries â€” servings only) â”€â”€â”€â”€
 
   Future<void> updateFoodLog(String id, {required double servings}) async {
     await _dio.put<dynamic>('/food-logs/$id', data: {'servings': servings});
   }
 
-  // ── Delete ─────────────────────────────────────────────────
+  // â”€â”€ Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   Future<void> deleteMealLog(String id) async {
     await _dio.delete<dynamic>('/meals/$id');
@@ -3028,13 +3021,13 @@ class ManualMealService {
 }
 
 
-// ── Manual Log Bottom Sheet Widget ───────────────────────────
+// â”€â”€ Manual Log Bottom Sheet Widget â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _ManualLogSheet extends StatefulWidget {
   final void Function(MealEntry entry) onSaved;
   final ManualMealService service;
   final void Function(String) onError;
-  final MealEntry? initialEntry; // non-null → edit mode
+  final MealEntry? initialEntry; // non-null â†’ edit mode
 
   const _ManualLogSheet({
     required this.onSaved,
@@ -3180,7 +3173,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Sheet handle ─────────────────────────────
+            // â”€â”€ Sheet handle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Center(
               child: Container(
                 width: 40,
@@ -3193,7 +3186,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
               ),
             ),
 
-            // ── Title ────────────────────────────────────
+            // â”€â”€ Title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(
               children: [
                 Container(
@@ -3241,7 +3234,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 
             const SizedBox(height: 24),
 
-            // ── Meal name ─────────────────────────────────
+            // â”€â”€ Meal name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             _MacroField(
               controller: _mealNameCtrl,
               label: 'Meal Name',
@@ -3254,7 +3247,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 
             const SizedBox(height: 12),
 
-            // ── Macro fields in 2×2 grid ─────────────────
+            // â”€â”€ Macro fields in 2Ã—2 grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Row(
               children: [
                 Expanded(
@@ -3315,7 +3308,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 
             const SizedBox(height: 24),
 
-            // ── Save button ──────────────────────────────
+            // â”€â”€ Save button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -3362,12 +3355,12 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
     if (value == null || value.trim().isEmpty) return 'Required';
     final n = double.tryParse(value.trim());
     if (n == null) return 'Enter a number';
-    if (n < 0) return 'Must be ≥ 0';
+    if (n < 0) return 'Must be â‰¥ 0';
     return null;
   }
 }
 
-// ── Reusable Macro Input Field ────────────────────────────────
+// â”€â”€ Reusable Macro Input Field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 class _MacroField extends StatelessWidget {
@@ -3465,7 +3458,7 @@ class _MacroField extends StatelessWidget {
   }
 }
 
-// ── Custom Circular Progress Painter (preserved) ──────────────
+// â”€â”€ Custom Circular Progress Painter (preserved) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class CustomCircularProgressPainter extends CustomPainter {
   final double progress;
