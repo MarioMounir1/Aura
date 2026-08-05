@@ -36,60 +36,65 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       print('⚠️ WARNING [ProfileBloc]: LoadProfile dispatched while another LoadProfile is already in flight! Cancelling previous request via restartable().');
     }
     _isProfileInFlight = true;
-    if (state is! ProfileLoaded) {
-      emit(ProfileLoading());
-    }
+
     try {
-      final results = await Future.wait([
-        repository.fetchUserProfile(),
-        repository.isOnboardingCompleted(),
-      ]);
+      // 1. Instantly check local cache first for 0ms startup
+      final cachedUser = await repository.getCachedUserProfile();
+      final localOnboarding = await repository.isOnboardingCompleted();
 
-    final profileResult = results[0] as dynamic;
-    final isOnboardingCompleted = results[1] as bool;
-
-    profileResult.fold(
-      (failure) {
-        print("DEBUG [ProfileBloc]: Fetch user profile failed: ${failure.message}");
-        emit(ProfileFailure(failure.message));
-      },
-      (user) {
-        final ageVal = user['age'];
-        final weightVal = user['weightKg'];
-        final heightVal = user['heightCm'];
-        final userId = user['id'] as String? ?? '';
-        
-        // Sync isPremium status from backend DB to memory and local storage
-        final bool isDbPremium = user['isPremium'] == true;
-        ApiClient().saveIsPremium(isDbPremium);
-        PurchaseService.instance.setMockPremiumStatus(isDbPremium);
-
-        // Log into RevenueCat with the user's ID & sync entitlement status
-        if (userId.isNotEmpty) {
-          PurchaseService.instance.logIn(userId);
-        } else {
-          PurchaseService.instance.syncCustomerInfoOnLaunch();
-        }
-
-        print("DEBUG [ProfileBloc]: fetched user Map: $user");
-        print("DEBUG [ProfileBloc]: isOnboardingCompleted (local): $isOnboardingCompleted");
-        print("DEBUG [ProfileBloc]: ageVal: $ageVal, weightVal: $weightVal, heightVal: $heightVal");
-
-        // Onboarding is completed ONLY IF the user's DB profile has physical body stats set
-        final bool actuallyCompleted =
-            (ageVal != null && weightVal != null && heightVal != null);
-
-        print("DEBUG [ProfileBloc]: actuallyCompleted resolved to: $actuallyCompleted");
-
-        // Sync local prefs
-        repository.setOnboardingCompleted(actuallyCompleted);
+      if (cachedUser != null) {
+        final ageVal = cachedUser['age'];
+        final weightVal = cachedUser['weightKg'];
+        final heightVal = cachedUser['heightCm'];
+        final bool isCompleted = localOnboarding || (ageVal != null && weightVal != null && heightVal != null);
 
         emit(ProfileLoaded(
-          user: user,
-          isOnboardingCompleted: actuallyCompleted,
+          user: cachedUser,
+          isOnboardingCompleted: isCompleted,
         ));
-      },
-    );
+      } else {
+        if (state is! ProfileLoaded) {
+          emit(ProfileLoading());
+        }
+      }
+
+      // 2. Fetch fresh user profile from backend asynchronously
+      final profileResult = await repository.fetchUserProfile();
+
+      profileResult.fold(
+        (failure) {
+          print("DEBUG [ProfileBloc]: Fetch user profile network call failed: ${failure.message}");
+          if (state is! ProfileLoaded) {
+            emit(ProfileFailure(failure.message));
+          }
+        },
+        (user) {
+          final ageVal = user['age'];
+          final weightVal = user['weightKg'];
+          final heightVal = user['heightCm'];
+          final userId = user['id'] as String? ?? '';
+          
+          final bool isDbPremium = user['isPremium'] == true;
+          ApiClient().saveIsPremium(isDbPremium);
+          PurchaseService.instance.setMockPremiumStatus(isDbPremium);
+
+          if (userId.isNotEmpty) {
+            PurchaseService.instance.logIn(userId);
+          } else {
+            PurchaseService.instance.syncCustomerInfoOnLaunch();
+          }
+
+          final bool actuallyCompleted =
+              (ageVal != null && weightVal != null && heightVal != null);
+
+          repository.setOnboardingCompleted(actuallyCompleted);
+
+          emit(ProfileLoaded(
+            user: user,
+            isOnboardingCompleted: actuallyCompleted,
+          ));
+        },
+      );
     } finally {
       _isProfileInFlight = false;
     }

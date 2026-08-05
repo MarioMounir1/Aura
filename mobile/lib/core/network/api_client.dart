@@ -82,9 +82,10 @@ class ApiClient {
     await _secureStorage.delete(key: AppConstants.userIdKey);
     await _secureStorage.delete(key: 'is_premium');
     
-    // Clear onboarding flag from shared preferences as well
+    // Clear onboarding flag and cached user profile from shared preferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('onboarding_completed');
+    await prefs.remove('cached_user_profile');
   }
 
   /// Check if user is authenticated

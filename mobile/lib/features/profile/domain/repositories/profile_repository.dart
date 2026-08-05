@@ -32,4 +32,10 @@ abstract class ProfileRepository {
 
   /// Set onboarding completed locally
   Future<void> setOnboardingCompleted(bool completed);
+
+  /// Get cached user profile locally if available
+  Future<Map<String, dynamic>?> getCachedUserProfile();
+
+  /// Save user profile locally to disk
+  Future<void> cacheUserProfile(Map<String, dynamic> user);
 }

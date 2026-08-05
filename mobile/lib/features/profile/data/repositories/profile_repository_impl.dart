@@ -1,6 +1,4 @@
-// lib/features/profile/data/repositories/profile_repository_impl.dart
-// The Teneen — Profile Repository Implementation
-
+import 'dart:convert';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,6 +9,7 @@ import '../../domain/repositories/profile_repository.dart';
 class ProfileRepositoryImpl implements ProfileRepository {
   final ApiClient apiClient;
   static const _onboardingKey = 'onboarding_completed';
+  static const _profileCacheKey = 'cached_user_profile';
 
   ProfileRepositoryImpl(this.apiClient);
 
@@ -47,6 +46,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
       final response = await apiClient.dio.put('/users/profile', data: data);
       if (response.statusCode == 200) {
         final body = response.data as Map<String, dynamic>;
+        await cacheUserProfile(body);
         return Right(body);
       }
       return const Left(ServerFailure(message: 'Failed to update profile'));
@@ -68,7 +68,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       if (response.statusCode == 200) {
         final body = response.data as Map<String, dynamic>;
         if (body['success'] == true && body['data'] != null) {
-          return Right(body['data']['user'] as Map<String, dynamic>);
+          final userMap = body['data']['user'] as Map<String, dynamic>;
+          await cacheUserProfile(userMap);
+          return Right(userMap);
         }
       }
       return const Left(ServerFailure(message: 'Failed to fetch user profile'));
@@ -116,5 +118,33 @@ class ProfileRepositoryImpl implements ProfileRepository {
     final userId = await apiClient.getUserId();
     final key = userId != null && userId.isNotEmpty ? '${_onboardingKey}_$userId' : _onboardingKey;
     await prefs.setBool(key, completed);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> getCachedUserProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = await apiClient.getUserId();
+      final key = userId != null && userId.isNotEmpty ? '${_profileCacheKey}_$userId' : _profileCacheKey;
+      final rawJson = prefs.getString(key);
+      if (rawJson != null && rawJson.isNotEmpty) {
+        return jsonDecode(rawJson) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      print('Failed to read cached user profile: $e');
+    }
+    return null;
+  }
+
+  @override
+  Future<void> cacheUserProfile(Map<String, dynamic> user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = user['id'] as String? ?? await apiClient.getUserId();
+      final key = userId != null && userId.isNotEmpty ? '${_profileCacheKey}_$userId' : _profileCacheKey;
+      await prefs.setString(key, jsonEncode(user));
+    } catch (e) {
+      print('Failed to cache user profile: $e');
+    }
   }
 }

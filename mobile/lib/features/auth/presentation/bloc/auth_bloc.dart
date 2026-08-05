@@ -26,9 +26,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AppStarted event,
     Emitter<AuthState> emit,
   ) async {
-    final isAuthenticated = await _authRepository.checkAuthStatus();
+    final results = await Future.wait<bool>([
+      _authRepository.checkAuthStatus(),
+      _authRepository.isUserPremium(),
+    ]);
+    final isAuthenticated = results[0];
+    final isPremium = results[1];
+
     if (isAuthenticated) {
-      final isPremium = await _authRepository.isUserPremium();
       emit(Authenticated(token: '', isPremium: isPremium));
     } else {
       emit(Unauthenticated());
