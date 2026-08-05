@@ -227,7 +227,7 @@ class TeneenApp extends StatelessWidget {
         child: BlocBuilder<ThemeCubit, ThemeMode>(
           builder: (context, themeMode) {
             return MaterialApp(
-              title:                   'The Teneen',
+              title:                   'Aura',
               debugShowCheckedModeBanner: false,
               theme:                   AppTheme.lightTheme,
               darkTheme:               AppTheme.darkTheme,
