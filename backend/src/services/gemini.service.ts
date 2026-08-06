@@ -225,11 +225,11 @@ Customizations to calculate: ${JSON.stringify(addOns)}`;
       responseText = result.response.text();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`⚠️ Gemini API call with ${modelName} in gemini.service failed (${msg}). Retrying with gemini-2.0-flash-lite...`);
-      if (modelName !== "gemini-2.0-flash-lite") {
+      console.warn(`⚠️ Gemini API call with ${modelName} in gemini.service failed (${msg}). Retrying with gemini-2.5-flash-lite...`);
+      if (modelName !== "gemini-2.5-flash-lite") {
         try {
           const fallbackModel = genAI.getGenerativeModel({
-            model: "gemini-2.0-flash-lite",
+            model: "gemini-2.5-flash-lite",
             systemInstruction: systemInstruction,
           });
           const fallbackResult = await fallbackModel.generateContent({
