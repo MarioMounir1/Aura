@@ -1,6 +1,5 @@
-// lib/features/auth/presentation/bloc/auth_bloc.dart
-// Calc-Calories — Auth BLoC
-
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -95,10 +94,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       final googleSignIn = GoogleSignIn(
-        clientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
+        clientId: kIsWeb || Platform.isIOS
+            ? '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com'
+            : null,
         serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
         scopes: ['email', 'profile'],
       );
+
+      // Disconnect/signOut previous session to allow fresh account selection
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
+
       final account = await googleSignIn.signIn();
       if (account == null) {
         emit(const AuthFailure('Google sign in was cancelled.'));
@@ -123,6 +130,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         },
       );
     } catch (e) {
+      debugPrint('❌ Google sign-in exception: $e');
       emit(AuthFailure('Google sign in error: ${e.toString()}'));
     }
   }
