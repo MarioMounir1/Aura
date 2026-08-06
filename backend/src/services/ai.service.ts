@@ -202,7 +202,7 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
 // ── Google Gemini Implementation ───────────────────────────
 
 async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const rawModel = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+  const rawModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
   const modelName = resolveGeminiModelName(rawModel);
   console.log(`🔮 Calling Gemini API (${modelName}): ${input.type === "text" ? input.mealDescription : "Image buffer"}`);
 
@@ -254,11 +254,11 @@ Analyze the nutritional content of this specific meal from this Egyptian restaur
     responseText = result.response.text();
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`⚠️ Gemini API call with ${modelName} failed (${msg}). Retrying with gemini-2.0-flash-lite...`);
-    if (modelName !== "gemini-2.0-flash-lite") {
+    console.warn(`⚠️ Gemini API call with ${modelName} failed (${msg}). Retrying with gemini-2.5-flash-lite...`);
+    if (modelName !== "gemini-2.5-flash-lite") {
       try {
         const fallbackModel = genAI.getGenerativeModel({
-          model: "gemini-2.0-flash-lite",
+          model: "gemini-2.5-flash-lite",
           systemInstruction: SYSTEM_INSTRUCTION,
         });
         const fallbackResult = await fallbackModel.generateContent({
