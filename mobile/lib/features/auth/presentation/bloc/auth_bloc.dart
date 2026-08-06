@@ -93,27 +93,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final googleSignIn = GoogleSignIn(
-        clientId: kIsWeb || Platform.isIOS
-            ? '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com'
-            : null,
-        serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
+      GoogleSignIn googleSignIn = GoogleSignIn(
         scopes: ['email', 'profile'],
       );
 
-      // Disconnect/signOut previous session to allow fresh account selection
       try {
         await googleSignIn.signOut();
       } catch (_) {}
 
-      final account = await googleSignIn.signIn();
+      GoogleSignInAccount? account;
+      try {
+        account = await googleSignIn.signIn();
+      } catch (e) {
+        debugPrint('⚠️ Native Google Sign-In failed, attempting fallback: $e');
+      }
+
+      // If null, retry with serverClientId if configured
       if (account == null) {
-        emit(const AuthFailure('Google sign in was cancelled.'));
+        googleSignIn = GoogleSignIn(
+          serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
+          scopes: ['email', 'profile'],
+        );
+        account = await googleSignIn.signIn();
+      }
+
+      if (account == null) {
+        emit(const AuthFailure('Google sign in was cancelled or unavailable.'));
         return;
       }
 
-      final authentication = await account.authentication;
-      final idToken = authentication.idToken;
+      GoogleSignInAuthentication? authentication;
+      try {
+        authentication = await account.authentication;
+      } catch (e) {
+        debugPrint('⚠️ Could not get Google authentication tokens: $e');
+      }
+
+      final idToken = authentication?.idToken;
 
       final result = await _authRepository.loginWithGoogle(
         googleId: account.id,
