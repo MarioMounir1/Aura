@@ -1881,6 +1881,7 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
                           ),
                         ],
                       ),
+              ),
             ),
           ),
         ],
