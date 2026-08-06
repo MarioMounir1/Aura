@@ -73,10 +73,10 @@ const RESPONSE_SCHEMA = {
 
 // ── System Instruction ─────────────────────────────────────
 
-const SYSTEM_INSTRUCTION = `You are a world-class, highly accurate nutritional analysis AI specializing in visual portion estimation and scientific macronutrient calculation.
+const SYSTEM_INSTRUCTION = `You are a world-class, highly accurate nutritional analysis AI specializing in visual portion estimation and scientific macronutrient calculation for ALL global cuisines — including fast food, homemade meals, restaurant dishes, packaged foods, snacks, and beverages from any country worldwide.
 
 Your task:
-1. FIRST check if the image contains edible food or beverage.
+1. FIRST check if the image or description contains edible food or beverage.
    - If the image contains non-food objects (e.g. laptop, computer, keyboard, screen, phone, electronics, furniture, clothing, animal, person, room, table without food, random items), you MUST set:
      "is_food": false,
      "dish_name": "Not Food",
@@ -87,7 +87,7 @@ Your task:
      "confidence_score": 0.0
 2. If the image DOES contain edible food or drink:
    - Carefully count individual whole items (e.g., number of eggs, slices of toast, pieces of meat/chicken).
-   - Use standard verified nutritional references (USDA):
+   - Use standard verified nutritional references (USDA, global databases) for any cuisine:
      * 1 whole large egg: ~72-75 kcal (6.3g protein, 5g fat, 0.4g carbs). 5 whole eggs = ~360-375 kcal (31.5g protein, 25g fat, 2g carbs).
      * 100g cooked chicken breast: ~165 kcal (31g protein, 3.6g fat, 0g carbs).
      * 100g cooked white rice: ~130 kcal (2.7g protein, 0.3g fat, 28g carbs).
@@ -140,7 +140,7 @@ async function analyzeWithOllama(input: AnalyzeInput): Promise<MealAnalysisResul
     userPrompt = `Restaurant: ${input.restaurantName}
 Meal Description: ${input.mealDescription}
 
-Analyze the nutritional content of this specific meal from this Egyptian restaurant and return the macros.`;
+Analyze the nutritional content of this meal and return accurate macros. Use global food databases (USDA and equivalent) for reference.`;
   } else {
     const base64Image = input.imageBuffer.toString("base64");
     imagesArray.push(base64Image);
@@ -223,10 +223,10 @@ async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResul
   let parts: Part[];
 
   if (input.type === "text") {
-    const prompt = `Restaurant: ${input.restaurantName}
+    const prompt = `Restaurant: ${input.restaurantName || "Unknown"}
 Meal Description: ${input.mealDescription}
 
-Analyze the nutritional content of this specific meal from this Egyptian restaurant and return the macros.`;
+Analyze the nutritional content of this meal. It may be from any restaurant, cuisine, or homemade. Use global nutritional databases (USDA and equivalent) to return accurate macros.`;
 
     parts = [{ text: prompt }];
   } else {
