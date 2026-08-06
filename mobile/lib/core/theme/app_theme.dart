@@ -11,6 +11,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     final base = ThemeData.dark();
     return base.copyWith(
+      visualDensity: const VisualDensity(horizontal: -0.5, vertical: -0.5),
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: const ColorScheme.dark(
         surface: AppColors.card,
@@ -28,7 +29,7 @@ class AppTheme {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         titleTextStyle: TextStyle(
           color: AppColors.textPrimary,
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -44,6 +45,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     final base = ThemeData.light();
     return base.copyWith(
+      visualDensity: const VisualDensity(horizontal: -0.5, vertical: -0.5),
       scaffoldBackgroundColor: const Color(0xFFF8FAFC),
       colorScheme: const ColorScheme.light(
         surface: Color(0xFFFFFFFF),
@@ -61,7 +63,7 @@ class AppTheme {
         iconTheme: IconThemeData(color: Color(0xFF0F172A)),
         titleTextStyle: TextStyle(
           color: Color(0xFF0F172A),
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.w600,
         ),
       ),
