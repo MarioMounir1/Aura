@@ -103,9 +103,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
               children: _screens,
             ),
             Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
+              bottom: 16,
+              left: 24,
+              right: 24,
               child: _buildCustomNavBar(context),
             ),
           ],
@@ -117,15 +117,15 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   Widget _buildCustomNavBar(BuildContext context) {
     final theme = context.auraTheme;
     return Container(
-      height: 64,
+      height: 56,
       decoration: BoxDecoration(
         color: theme.card,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(color: theme.border, width: 1.0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 16,
+            blurRadius: 14,
             spreadRadius: 1,
             offset: const Offset(0, 4),
           ),
@@ -155,8 +155,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
-        height: 64,
+        width: 54,
+        height: 56,
         child: Center(
           child: Container(
             decoration: isSelected && hasHalo
@@ -165,13 +165,13 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                     boxShadow: [
                       BoxShadow(
                         color: theme.primary.withValues(alpha: 0.3),
-                        blurRadius: 15,
+                        blurRadius: 12,
                         spreadRadius: 2,
                       ),
                     ],
                   )
                 : null,
-            child: Icon(icon, color: color, size: 28),
+            child: Icon(icon, color: color, size: 23),
           ),
         ),
       ),
