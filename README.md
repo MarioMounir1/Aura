@@ -61,9 +61,9 @@
 ### 📱 Mobile App
 - 🔐 **Multi-method Auth** — Email/password + **Sign in with Google** (Android & iOS) + **Sign in with Apple** (iOS only)
 - 🧭 **Onboarding & Profile Setup** — Height, weight, age, gender, activity level, and fitness goal. Auto-calculates TDEE and macro targets
-- 📊 **Dashboard** — Live macro rings, calorie progress, today's food log summary vs daily goals
-- 🥗 **AI Meal Analysis** — Analyze meals by text description, restaurant name, or photo (uses Google Gemini)
-- 📷 **Barcode Scanning** — Live camera barcode scanner powered by `mobile_scanner`. Fetches product information via Open Food Facts with live serving size calculator, manual override, and offline AI fallback. Barcode logging is free & unlimited
+- 📊 **High-Density Dashboard** — Sleek compact dark-mode UI with live macro rings, calorie progress, and floating pill navigation bar
+- 🥗 **AI Meal Analysis (Gemini 2.0 Flash)** — Instant photo & text meal analysis with strict non-food detection, Egyptian restaurant dish knowledge, and itemized macro breakdowns
+- 📷 **Smart Barcode Scanner** — Real-time camera scanner with Flashlight (Torch) support, camera flip, smart permission recovery, and Open Food Facts lookup with offline AI fallback
 - 🦙 **Offline Local AI Scan** — Snap or upload a plate photo — inference runs entirely on-device via Ollama (`llava` / `llama3.2-vision`). Free tier includes 2 free scans daily; unlimited for Premium
 - 💳 **RevenueCat In-App Subscriptions** — Seamless native in-app purchases via RevenueCat SDK (`purchases_flutter`). Displays custom dark glassmorphic paywall sheet (`CustomPaywallSheet`), strictly verifying active entitlements before upgrading
 - 🔍 **Egyptian Food Database Search** — Bilingual (AR/EN) searchable database with categories, serving sizes, and full macro details
@@ -78,11 +78,12 @@
 ### 🛠️ Backend API
 - ✅ **Full JWT Authentication** with bcrypt password hashing
 - 🔑 **Social OAuth** — Google Sign-In token verification + Apple identity token decoding with account linking
+- ⚡ **Gemini 2.0 Flash Integration** — Centralized AI service with itemized ingredient decomposition, strict `is_food` validation (HTTP 422 for non-food images), and zero hallucination fallbacks
 - 💳 **Subscription Verification & Quota API** — Server-side subscription sync (`/users/subscribe`, `/users/unsubscribe`) and RevenueCat webhook integration (`/revenuecat/webhook`); enforces 2 daily free AI scan limits
 - 📦 **Barcode Engine** — Open Food Facts API product search with 6-hour caching (`/meals/scan-barcode`) and unlimited barcode logging (`/meals/log-barcode`)
 - 📦 **Food Database** — Search by name (AR/EN), filter by category, paginated results
 - 📋 **Food Logs** — Log items from the database; combined daily summary with totals vs goals
-- 🤖 **Dual AI Engine** — Gemini for cloud meal analysis; Ollama for private offline vision inference
+- 🤖 **Dual AI Engine** — Cloud Gemini 2.0 Flash for ultra-fast analysis; Ollama for private offline vision inference
 - 📅 **Meal Plan Engine** — Generate and manage weekly meal plans from the food database
 - 🏋️ **Workout Routine & NLP API** — Save training split config, serve sessions, swap exercises, process NLP session commands, override daily session types, and generate weekly recap AI summaries
 - 📈 **Weight & Water History** — Full log history with statistics
@@ -237,9 +238,17 @@ flutter pub get
 flutter run
 ```
 
+### 5. Build Android Release Bundle (`.aab` for Google Play)
+
+```bash
+cd mobile
+flutter build appbundle --release
+# Output: mobile/build/app/outputs/bundle/release/app-release.aab
+```
+
 ---
 
-### 5. iOS Setup (Google & Apple Sign-In)
+### 6. iOS Setup (Google & Apple Sign-In)
 
 > **Requires a Mac with Xcode to build.**
 
