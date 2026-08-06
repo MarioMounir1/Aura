@@ -1593,88 +1593,42 @@ class _BarcodeScannerOverlay extends StatefulWidget {
 }
 
 class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with WidgetsBindingObserver {
-  final MobileScannerController _controller = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
-    facing: CameraFacing.back,
-  );
+  late final MobileScannerController _controller;
   bool _detected = false;
   bool _permissionDenied = false;
-  bool _permanentlyDenied = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkAndRequestCameraPermission();
+    _controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      returnImage: false,
+    );
+    _checkInitialPermission();
+  }
+
+  Future<void> _checkInitialPermission() async {
+    final status = await Permission.camera.status;
+    if (status.isPermanentlyDenied) {
+      if (mounted) {
+        setState(() => _permissionDenied = true);
+      }
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _checkPermissionStatusOnly();
-    }
-  }
-
-  Future<void> _checkPermissionStatusOnly() async {
-    final status = await Permission.camera.status;
-    if (status.isGranted) {
-      if (mounted) {
-        setState(() {
-          _permissionDenied = false;
-          _permanentlyDenied = false;
-        });
-        _controller.start();
-      }
-    }
-  }
-
-  Future<void> _checkAndRequestCameraPermission() async {
-    final currentStatus = await Permission.camera.status;
-    if (currentStatus.isGranted) {
-      if (mounted) {
-        setState(() {
-          _permissionDenied = false;
-          _permanentlyDenied = false;
-        });
-        _controller.start();
-      }
-      return;
-    }
-
-    if (currentStatus.isPermanentlyDenied) {
-      if (mounted) {
-        setState(() {
-          _permissionDenied = true;
-          _permanentlyDenied = true;
-        });
-      }
-      return;
-    }
-
-    final requestStatus = await Permission.camera.request();
-    if (requestStatus.isGranted) {
-      if (mounted) {
-        setState(() {
-          _permissionDenied = false;
-          _permanentlyDenied = false;
-        });
-        _controller.start();
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _permissionDenied = true;
-          _permanentlyDenied = requestStatus.isPermanentlyDenied;
-        });
-      }
-    }
-  }
-
-  Future<void> _handlePermissionAction() async {
-    if (_permanentlyDenied) {
-      await openAppSettings();
-    } else {
-      await _checkAndRequestCameraPermission();
+      Permission.camera.status.then((status) {
+        if (status.isGranted && mounted) {
+          setState(() => _permissionDenied = false);
+          _controller.start();
+        }
+      });
+    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
+      _controller.stop();
     }
   }
 
@@ -1704,10 +1658,10 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Container(
@@ -1726,15 +1680,25 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
                     children: [
                       Text('Scan Barcode',
                           style: GoogleFonts.outfit(
-                            fontSize: 17, fontWeight: FontWeight.bold,
+                            fontSize: 16, fontWeight: FontWeight.bold,
                             color: DashboardThemeColors.textPrimary,
                           )),
-                      Text('Point camera at a product barcode',
+                      Text('Point camera at product barcode',
                           style: GoogleFonts.inter(
-                            fontSize: 12, color: DashboardThemeColors.textSecondary,
+                            fontSize: 11.5, color: DashboardThemeColors.textSecondary,
                           )),
                     ],
                   ),
+                ),
+                IconButton(
+                  tooltip: 'Flashlight',
+                  icon: const Icon(Icons.flash_on_rounded, color: DashboardThemeColors.accentAmber, size: 20),
+                  onPressed: () => _controller.toggleTorch(),
+                ),
+                IconButton(
+                  tooltip: 'Switch Camera',
+                  icon: const Icon(Icons.cameraswitch_outlined, color: DashboardThemeColors.textSecondary, size: 20),
+                  onPressed: () => _controller.switchCamera(),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close_rounded,
@@ -1744,7 +1708,7 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           // Camera view
           Expanded(
             child: Padding(
@@ -1768,17 +1732,15 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  _permanentlyDenied
-                                      ? 'Camera permission is blocked. Please enable camera access in app settings to scan barcodes.'
-                                      : 'Please grant camera permission to scan product barcodes.',
+                                  'Please enable camera permission in app settings to scan barcodes.',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.inter(fontSize: 12, color: DashboardThemeColors.textSecondary),
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
-                                  onPressed: _handlePermissionAction,
-                                  icon: Icon(_permanentlyDenied ? Icons.settings : Icons.security, size: 18),
-                                  label: Text(_permanentlyDenied ? 'Open App Settings' : 'Grant Camera Permission'),
+                                  onPressed: openAppSettings,
+                                  icon: const Icon(Icons.settings, size: 18),
+                                  label: const Text('Open App Settings'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: DashboardThemeColors.accentAmber,
                                     foregroundColor: Colors.black,
@@ -1795,6 +1757,7 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
                           MobileScanner(
                             controller: _controller,
                             errorBuilder: (context, error, child) {
+                              final isPerm = error.errorCode == MobileScannerErrorCode.permissionDenied;
                               return Container(
                                 color: DashboardThemeColors.surface,
                                 child: Center(
@@ -1803,23 +1766,35 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const Icon(Icons.camera_alt_outlined, color: DashboardThemeColors.accentAmber, size: 48),
+                                        Icon(
+                                          isPerm ? Icons.camera_alt_outlined : Icons.videocam_outlined,
+                                          color: DashboardThemeColors.accentAmber,
+                                          size: 48,
+                                        ),
                                         const SizedBox(height: 14),
                                         Text(
-                                          'Camera Access Needed',
+                                          isPerm ? 'Camera Access Needed' : 'Camera Ready',
                                           style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary),
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
-                                          'Please grant camera permission in settings to scan barcodes.',
+                                          isPerm
+                                              ? 'Please enable camera permission in settings to scan barcodes.'
+                                              : 'Tap restart to initialize the camera preview.',
                                           textAlign: TextAlign.center,
                                           style: GoogleFonts.inter(fontSize: 12, color: DashboardThemeColors.textSecondary),
                                         ),
                                         const SizedBox(height: 16),
                                         ElevatedButton.icon(
-                                          onPressed: openAppSettings,
-                                          icon: const Icon(Icons.settings, size: 18),
-                                          label: const Text('Open App Settings'),
+                                          onPressed: () async {
+                                            if (isPerm) {
+                                              await openAppSettings();
+                                            } else {
+                                              await _controller.start();
+                                            }
+                                          },
+                                          icon: Icon(isPerm ? Icons.settings : Icons.refresh_rounded, size: 18),
+                                          label: Text(isPerm ? 'Open App Settings' : 'Restart Camera'),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: DashboardThemeColors.accentAmber,
                                             foregroundColor: Colors.black,
@@ -1834,11 +1809,13 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
                             },
                             onDetect: (capture) {
                               if (_detected) return;
-                              final barcode = capture.barcodes.firstOrNull;
-                              final rawValue = barcode?.rawValue;
-                              if (rawValue != null && rawValue.isNotEmpty) {
-                                _detected = true;
-                                widget.onDetected(rawValue);
+                              for (final barcode in capture.barcodes) {
+                                final rawValue = barcode.rawValue ?? barcode.displayValue;
+                                if (rawValue != null && rawValue.trim().isNotEmpty) {
+                                  _detected = true;
+                                  widget.onDetected(rawValue.trim());
+                                  break;
+                                }
                               }
                             },
                           ),
