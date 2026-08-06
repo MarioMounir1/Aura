@@ -52,7 +52,8 @@ export type AnalyzeInput = AnalyzeTextInput | AnalyzeImageInput;
 const RESPONSE_SCHEMA = {
   type: SchemaType.OBJECT,
   properties: {
-    dish_name: { type: SchemaType.STRING },
+    is_food: { type: SchemaType.BOOLEAN, description: "True if the image contains edible food or beverage, false otherwise." },
+    dish_name: { type: SchemaType.STRING, description: "Descriptive name of the dish or meal. If not food, return 'Not Food'." },
     calories: { type: SchemaType.INTEGER },
     protein: { type: SchemaType.INTEGER },
     carbs: { type: SchemaType.INTEGER },
@@ -60,6 +61,7 @@ const RESPONSE_SCHEMA = {
     confidence_score: { type: SchemaType.NUMBER },
   },
   required: [
+    "is_food",
     "dish_name",
     "calories",
     "protein",
@@ -71,23 +73,29 @@ const RESPONSE_SCHEMA = {
 
 // ── System Instruction ─────────────────────────────────────
 
-const SYSTEM_INSTRUCTION = `You are a precise nutritional analysis AI specialized in the Egyptian and international food market. 
+const SYSTEM_INSTRUCTION = `You are a world-class, highly accurate nutritional analysis AI specializing in visual portion estimation and scientific macronutrient calculation.
 
-Your sole task is to analyze the provided image of a meal, identify the food items, estimate their weights/portions, and calculate the total nutritional value.
+Your task:
+1. FIRST check if the image contains edible food or beverage.
+   - If the image contains non-food objects (e.g. laptop, computer, keyboard, screen, phone, electronics, furniture, clothing, animal, person, room, table without food, random items), you MUST set:
+     "is_food": false,
+     "dish_name": "Not Food",
+     "calories": 0,
+     "protein": 0,
+     "carbs": 0,
+     "fats": 0,
+     "confidence_score": 0.0
+2. If the image DOES contain edible food or drink:
+   - Carefully count individual whole items (e.g., number of eggs, slices of toast, pieces of meat/chicken).
+   - Use standard verified nutritional references (USDA):
+     * 1 whole large egg: ~72-75 kcal (6.3g protein, 5g fat, 0.4g carbs). 5 whole eggs = ~360-375 kcal (31.5g protein, 25g fat, 2g carbs).
+     * 100g cooked chicken breast: ~165 kcal (31g protein, 3.6g fat, 0g carbs).
+     * 100g cooked white rice: ~130 kcal (2.7g protein, 0.3g fat, 28g carbs).
+   - Accurately calculate total protein (g), carbs (g), and fats (g).
+   - Calculate total calories strictly as: (protein * 4) + (carbs * 4) + (fats * 9).
+   - Set "is_food": true and provide confidence_score between 0.7 and 1.0.
 
-You MUST respond ONLY with a single JSON object. Do not include any markdown formatting wrappers (like \`\`\`json), do not include intro text, and do not include explanations.
-
-Response Format:
-{
-  "dish_name": "string (e.g., Grilled Chicken with White Rice and Salad)",
-  "calories": integer,
-  "protein": integer (in grams),
-  "carbs": integer (in grams),
-  "fats": integer (in grams),
-  "confidence_score": float (between 0.0 and 1.0)
-}
-
-Strict Rule: If you cannot identify the food, return the JSON with 0 for all macro values and a low confidence score. Never output prose.`;
+You MUST respond ONLY with a single JSON object conforming strictly to the schema. Never include markdown backticks or commentary.`;
 
 // ── Core AI Analysis Function ──────────────────────────────
 
@@ -113,19 +121,7 @@ export async function analyzeMeal(input: AnalyzeInput): Promise<MealAnalysisResu
       console.warn("⚠️ Ollama fallback also failed or unavailable:", ollamaErr);
     }
 
-    console.log("💡 Returning realistic estimated meal response to prevent user UI error.");
-    return {
-      mealName: input.type === "text" ? (input.mealDescription || "Logged Meal") : "Scanned Meal",
-      restaurantName: input.restaurantName || "Homemade",
-      calories: 450,
-      protein: 28,
-      carbs: 45,
-      fats: 16,
-      ingredientsBreakdown: [
-        { ingredient: "Main Portion", estimatedWeightGrams: 250 },
-        { ingredient: "Side / Seasoning", estimatedWeightGrams: 100 }
-      ],
-    };
+    throw new Error(msg.includes("NO_FOOD_DETECTED") ? msg : `AI meal analysis failed: ${msg}`);
   }
 }
 
@@ -372,24 +368,29 @@ Return a JSON object strictly matching this schema:
 // ── Helper Parser & Validator ──────────────────────────────
 
 function parseAndValidateResponse(parsed: any): MealAnalysisResult {
-  const required = ["dish_name", "calories", "protein", "carbs", "fats", "confidence_score"];
-  for (const field of required) {
-    if (parsed[field] === undefined || parsed[field] === null) {
-      throw new Error(`AI response missing required field: "${field}"`);
-    }
+  const isFood = parsed.is_food !== false;
+  const dishName = String(parsed.dish_name || "").trim().toLowerCase();
+
+  if (!isFood || dishName === "not food" || dishName === "non-food" || dishName === "unidentified") {
+    throw new Error("NO_FOOD_DETECTED: No food or beverage was detected in this image. Please scan a clear photo of your meal.");
   }
 
-  const protein = Math.round(Number(parsed.protein));
-  const carbs = Math.round(Number(parsed.carbs));
-  const fats = Math.round(Number(parsed.fats));
+  const protein = Math.max(0, Math.round(Number(parsed.protein || 0)));
+  const carbs = Math.max(0, Math.round(Number(parsed.carbs || 0)));
+  const fats = Math.max(0, Math.round(Number(parsed.fats || 0)));
   
   // Calculate consistent calories based on standard macro energy densities
   const calculatedCalories = (protein * 4) + (carbs * 4) + (fats * 9);
+  const reportedCalories = Math.max(0, Math.round(Number(parsed.calories || 0)));
+
+  if (calculatedCalories === 0 && reportedCalories === 0) {
+    throw new Error("NO_FOOD_DETECTED: No food or beverage was detected in this image. Please scan a clear photo of your meal.");
+  }
 
   return {
     mealName: String(parsed.dish_name),
     restaurantName: "Homemade",
-    calories: calculatedCalories > 0 ? calculatedCalories : Math.round(Number(parsed.calories)),
+    calories: calculatedCalories > 0 ? calculatedCalories : reportedCalories,
     protein,
     carbs,
     fats,
