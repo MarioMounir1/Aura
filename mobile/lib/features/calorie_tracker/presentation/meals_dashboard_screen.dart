@@ -1592,28 +1592,95 @@ class _BarcodeScannerOverlay extends StatefulWidget {
   State<_BarcodeScannerOverlay> createState() => _BarcodeScannerOverlayState();
 }
 
-class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> {
+class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with WidgetsBindingObserver {
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
     facing: CameraFacing.back,
   );
   bool _detected = false;
+  bool _permissionDenied = false;
+  bool _permanentlyDenied = false;
 
   @override
   void initState() {
     super.initState();
-    _requestCameraPermission();
+    WidgetsBinding.instance.addObserver(this);
+    _checkAndRequestCameraPermission();
   }
 
-  Future<void> _requestCameraPermission() async {
-    final status = await Permission.camera.request();
-    if (status.isGranted && mounted) {
-      _controller.start();
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissionStatusOnly();
+    }
+  }
+
+  Future<void> _checkPermissionStatusOnly() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) {
+      if (mounted) {
+        setState(() {
+          _permissionDenied = false;
+          _permanentlyDenied = false;
+        });
+        _controller.start();
+      }
+    }
+  }
+
+  Future<void> _checkAndRequestCameraPermission() async {
+    final currentStatus = await Permission.camera.status;
+    if (currentStatus.isGranted) {
+      if (mounted) {
+        setState(() {
+          _permissionDenied = false;
+          _permanentlyDenied = false;
+        });
+        _controller.start();
+      }
+      return;
+    }
+
+    if (currentStatus.isPermanentlyDenied) {
+      if (mounted) {
+        setState(() {
+          _permissionDenied = true;
+          _permanentlyDenied = true;
+        });
+      }
+      return;
+    }
+
+    final requestStatus = await Permission.camera.request();
+    if (requestStatus.isGranted) {
+      if (mounted) {
+        setState(() {
+          _permissionDenied = false;
+          _permanentlyDenied = false;
+        });
+        _controller.start();
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _permissionDenied = true;
+          _permanentlyDenied = requestStatus.isPermanentlyDenied;
+        });
+      }
+    }
+  }
+
+  Future<void> _handlePermissionAction() async {
+    if (_permanentlyDenied) {
+      await openAppSettings();
+    } else {
+      await _checkAndRequestCameraPermission();
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
@@ -1684,98 +1751,135 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Stack(
-                  children: [
-                    MobileScanner(
-                      controller: _controller,
-                      errorBuilder: (context, error, child) {
-                        return Container(
-                          color: DashboardThemeColors.surface,
-                          child: Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.camera_alt_outlined, color: DashboardThemeColors.accentAmber, size: 48),
-                                  const SizedBox(height: 14),
-                                  Text(
-                                    'Camera Access Needed',
-                                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary),
+                child: _permissionDenied
+                    ? Container(
+                        color: DashboardThemeColors.surface,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.camera_alt_outlined, color: DashboardThemeColors.accentAmber, size: 48),
+                                const SizedBox(height: 14),
+                                Text(
+                                  'Camera Access Needed',
+                                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _permanentlyDenied
+                                      ? 'Camera permission is blocked. Please enable camera access in app settings to scan barcodes.'
+                                      : 'Please grant camera permission to scan product barcodes.',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(fontSize: 12, color: DashboardThemeColors.textSecondary),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: _handlePermissionAction,
+                                  icon: Icon(_permanentlyDenied ? Icons.settings : Icons.security, size: 18),
+                                  label: Text(_permanentlyDenied ? 'Open App Settings' : 'Grant Camera Permission'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: DashboardThemeColors.accentAmber,
+                                    foregroundColor: Colors.black,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Please grant camera permission to scan product barcodes.',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(fontSize: 12, color: DashboardThemeColors.textSecondary),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton.icon(
-                                    onPressed: () => _requestCameraPermission(),
-                                    icon: const Icon(Icons.security, size: 18),
-                                    label: const Text('Grant Camera Permission'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: DashboardThemeColors.accentAmber,
-                                      foregroundColor: Colors.black,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : Stack(
+                        children: [
+                          MobileScanner(
+                            controller: _controller,
+                            errorBuilder: (context, error, child) {
+                              return Container(
+                                color: DashboardThemeColors.surface,
+                                child: Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(24),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.camera_alt_outlined, color: DashboardThemeColors.accentAmber, size: 48),
+                                        const SizedBox(height: 14),
+                                        Text(
+                                          'Camera Access Needed',
+                                          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: DashboardThemeColors.textPrimary),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Please grant camera permission in settings to scan barcodes.',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.inter(fontSize: 12, color: DashboardThemeColors.textSecondary),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        ElevatedButton.icon(
+                                          onPressed: openAppSettings,
+                                          icon: const Icon(Icons.settings, size: 18),
+                                          label: const Text('Open App Settings'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: DashboardThemeColors.accentAmber,
+                                            foregroundColor: Colors.black,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
+                                ),
+                              );
+                            },
+                            onDetect: (capture) {
+                              if (_detected) return;
+                              final barcode = capture.barcodes.firstOrNull;
+                              final rawValue = barcode?.rawValue;
+                              if (rawValue != null && rawValue.isNotEmpty) {
+                                _detected = true;
+                                widget.onDetected(rawValue);
+                              }
+                            },
+                          ),
+                          // Aiming reticle overlay
+                          Center(
+                            child: Container(
+                              width: 240,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: DashboardThemeColors.accentAmber,
+                                  width: 2,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
-                        );
-                      },
-                      onDetect: (capture) {
-                        if (_detected) return;
-                        final barcode = capture.barcodes.firstOrNull;
-                        final rawValue = barcode?.rawValue;
-                        if (rawValue != null && rawValue.isNotEmpty) {
-                          _detected = true;
-                          widget.onDetected(rawValue);
-                        }
-                      },
-                    ),
-                    // Aiming reticle overlay
-                    Center(
-                      child: Container(
-                        width: 240,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: DashboardThemeColors.accentAmber,
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    // Bottom hint
-                    Positioned(
-                      bottom: 20,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.65),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'Align barcode inside the frame',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: DashboardThemeColors.accentAmber,
-                              fontWeight: FontWeight.w600,
+                          // Bottom hint
+                          Positioned(
+                            bottom: 20,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Align barcode inside the frame',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: DashboardThemeColors.accentAmber,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                        ],
             ),
           ),
         ],
