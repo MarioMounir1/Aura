@@ -153,6 +153,15 @@ export async function analyzeMealHandler(
     const msg = err instanceof Error ? err.message : "AI analysis failed";
     console.error("❌ [Meal] Gemini error:", msg);
 
+    if (msg.includes("NO_FOOD_DETECTED")) {
+      res.status(422).json({
+        success: false,
+        error: "No food or beverage was detected in the image. Please take a clear photo of your meal.",
+        code: "NO_FOOD_DETECTED",
+      });
+      return;
+    }
+
     const isQuota = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("exceeded");
     res.status(isQuota ? 429 : 502).json({
       success: false,
