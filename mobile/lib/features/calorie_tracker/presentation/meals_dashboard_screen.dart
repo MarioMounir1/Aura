@@ -484,7 +484,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     );
   }
 
-  // â”€â”€ BUILD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— BUILD —————————————————————————————————————————————————————
 
   @override
   Widget build(BuildContext context) {
@@ -499,14 +499,14 @@ class _MealsDashboardState extends State<MealsDashboard> {
       body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _DashboardHeader(streakCount: _calculateStreak(logs)),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // â”€â”€ Daily Performance Rings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // ——— Daily Performance Rings ——————————————————
                 _MacroRingsSection(
                   caloriesConsumed: caloriesConsumed,
                   caloriesTarget:   caloriesTarget,
@@ -518,7 +518,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   fatsTarget:       fatsTarget,
                   onTap:            _showManualLogSheet,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 450),
                   switchInCurve: Curves.easeOutCubic,
@@ -526,16 +526,16 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   child: _buildAiCanvas(),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
                 _FeedSection(
                   logs:      logs,
                   onSnap:    () => _pickAndAnalyze(ImageSource.gallery),
                   onEdit:    _showEditSheet,
                   onDelete:  _handleDeleteEntry,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-                // â”€â”€ Ads Banner for Free Users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                // ——— Ads Banner for Free Users —————————————————
                 if (!isPremium) ...[
                   const AdBanner(),
                   const SizedBox(height: 32),
@@ -551,7 +551,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   // (macro rings extracted to _MacroRingsSection below)
 
-  // â”€â”€ AI CANVAS (STATE SWITCH) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— AI CANVAS (STATE SWITCH) ——————————————————————————————————
 
   Widget _buildAiCanvas() {
     switch (_layoutState) {
@@ -580,7 +580,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     }
   }
 
-  // â”€â”€ Barcode Scanner Flow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ——— Barcode Scanner Flow ——————————————————————————————————————
 
   Future<void> _scanBarcode() async {
     // Step 1: Open camera-based barcode scanner overlay
@@ -633,7 +633,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     } on BarcodeNotFoundException {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      // â”€â”€ NOT FOUND â†’ prompt user for product name & AI estimate â”€â”€
+      // ——— NOT FOUND —→ prompt user for product name & AI estimate ———
       product = await _promptForBarcodeEstimation(context, detectedBarcode!);
       if (product == null || !mounted) return;
     } on BarcodeNetworkException catch (e) {
@@ -718,9 +718,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
     return streak > 0 ? streak : 1;
   }
 }
-// â†‘ End of _MealsDashboardState
+// ↑ End of _MealsDashboardState
 
-// â”€â”€ Dashboard Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— Dashboard Header ——————————————————————————————————————————
 
 class _DashboardHeader extends StatelessWidget {
   final int streakCount;
@@ -810,7 +810,7 @@ class _DashboardHeader extends StatelessWidget {
   }
 }
 
-// â”€â”€ Processing State Widget (Isolated Ticker) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— Processing State Widget (Isolated Ticker) —————————————————
 
 class _ProcessingStateWidget extends StatefulWidget {
   final File? selectedImage;
@@ -1011,7 +1011,7 @@ class _ProcessingStateWidgetState extends State<_ProcessingStateWidget>
   }
 }
 
-// â”€â”€ Result Card Widget (Redesigned per aura_design_spec.md Section 2) â”€â”€
+// ——— Result Card Widget (Redesigned per aura_design_spec.md Section 2) ———
 
 class _ResultCardWidget extends StatefulWidget {
   final LlamaMealResponse llamaResult;
@@ -1083,8 +1083,8 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
     if (tagItems.isEmpty) {
       tagItems.addAll([
         analysis.detectedFood.split(' ').take(2).join(' '),
-        'Protein Â· ${scaledProtein}g',
-        'Carbs Â· ${scaledCarbs}g',
+        'Protein · ${scaledProtein}g',
+        'Carbs · ${scaledCarbs}g',
       ]);
     }
 
@@ -1092,7 +1092,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
       key: const ValueKey('result'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // â”€â”€ 1. PHOTO HEADER WITH FLOATING ANNOTATION TAGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ——— 1. PHOTO HEADER WITH FLOATING ANNOTATION TAGS ———————————————————
         if (widget.selectedImage != null)
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
@@ -1178,7 +1178,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
           ),
         const SizedBox(height: 16),
 
-        // â”€â”€ MAIN STRUCTURED RESULT CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ——— MAIN STRUCTURED RESULT CARD —————————————————————————————————————
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -1196,7 +1196,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // â”€â”€ 2. CATEGORY BADGE, MEAL NAME & SERVING STEPPER â”€â”€â”€â”€â”€â”€
+              // ——— 2. CATEGORY BADGE, MEAL NAME & SERVING STEPPER —————————————————
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -1286,7 +1286,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
 
               const Divider(height: 1, color: AppColors.border),
 
-              // â”€â”€ 3. 2x2 ICON + MACRO GRID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ——— 3. 2x2 ICON + MACRO GRID ————————————————————————————————————————
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1342,7 +1342,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                 ),
               ),
 
-              // â”€â”€ 4. HEALTH SCORE ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ——— 4. HEALTH SCORE ROW —————————————————————————————————————————————
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
@@ -1405,7 +1405,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
 
               const SizedBox(height: 16),
 
-              // â”€â”€ AI COACH NOTE (Renamed from "Llama says") â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ——— AI COACH NOTE (Renamed from "Llama says") ——————————————————————
               if (rec.message.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1461,7 +1461,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
 
               const SizedBox(height: 20),
 
-              // â”€â”€ 5. TWO ACTION BUTTONS AT BOTTOM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              // ——— 5. TWO ACTION BUTTONS AT BOTTOM ————————————————————————————————
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
                 child: Row(
@@ -1575,7 +1575,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
   }
 }
 
-// â”€â”€ Barcode Scanner Overlay (Â½-screen modal) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— Barcode Scanner Overlay (½-screen modal) ———————————————————
 
 /// Full-screen-ish camera overlay that reads barcodes via mobile_scanner.
 /// Pops immediately on first detection, returning the scanned barcode string.
@@ -1880,6 +1880,7 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
                             ),
                           ),
                         ],
+                      ),
             ),
           ),
         ],
@@ -1888,7 +1889,7 @@ class _BarcodeScannerOverlayState extends State<_BarcodeScannerOverlay> with Wid
   }
 }
 
-// â”€â”€ Extracted: Daily Performance Rings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——— Extracted: Daily Performance Rings —————————————————————————
 
 class _MacroRingsSection extends StatelessWidget {
   final double caloriesConsumed;
@@ -1924,20 +1925,20 @@ class _MacroRingsSection extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         splashColor: theme.primary.withValues(alpha: 0.06),
         highlightColor: theme.primary.withValues(alpha: 0.03),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: theme.card,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: theme.borderMid.withValues(alpha: 0.6)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 20,
-                spreadRadius: 2,
+                blurRadius: 16,
+                spreadRadius: 1,
               ),
             ],
           ),
@@ -1952,7 +1953,7 @@ class _MacroRingsSection extends StatelessWidget {
                       Text(
                         'Daily Performance',
                         style: GoogleFonts.outfit(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: theme.textPrimary,
                         ),
@@ -1962,17 +1963,17 @@ class _MacroRingsSection extends StatelessWidget {
                         message: 'Tap to log manually',
                         child: Icon(
                           Icons.edit_note_rounded,
-                          size: 18,
+                          size: 17,
                           color: AppColors.cyan,
                         ),
                       ),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppColors.cyan.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.cyan.withValues(alpha: 0.4)),
                     ),
                     child: Row(
@@ -2243,41 +2244,41 @@ class _SmartScannerSection extends StatelessWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: onCamera,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    height: 96,
-                    padding: const EdgeInsets.all(16),
+                    height: 86,
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: theme.snapMealGradient,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.cyan.withValues(alpha: 0.15)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 38,
-                          height: 38,
+                          width: 34,
+                          height: 34,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 19),
+                          child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 18),
                         ),
                         const Spacer(),
                         Text(
                           'Snap meal',
                           style: GoogleFonts.outfit(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Camera Â· $cameraUsage/$cameraLimit today',
+                          'Camera · $cameraUsage/$cameraLimit today',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             color: Colors.white.withValues(alpha: 0.75),
                           ),
                         ),
@@ -2287,48 +2288,48 @@ class _SmartScannerSection extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             // Upload Screenshot Tile
             Expanded(
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: onGallery,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    height: 96,
-                    padding: const EdgeInsets.all(16),
+                    height: 86,
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: theme.uploadScreenshotGradient,
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 38,
-                          height: 38,
+                          width: 34,
+                          height: 34,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 19),
+                          child: const Icon(Icons.photo_library_outlined, color: Colors.white, size: 18),
                         ),
                         const Spacer(),
                         Text(
                           'Upload screenshot',
                           style: GoogleFonts.outfit(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Gallery Â· $galleryUsage/$galleryLimit today',
+                          'Gallery · $galleryUsage/$galleryLimit today',
                           style: GoogleFonts.inter(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             color: Colors.white.withValues(alpha: 0.75),
                           ),
                         ),
