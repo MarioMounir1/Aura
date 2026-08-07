@@ -2558,28 +2558,27 @@ Widget _buildDayCircleWidget({
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: _C.cyan.withValues(alpha: 0.15),
+        color: const Color(0xFFDCEEE3),
         shape: BoxShape.circle,
-        border: Border.all(color: _C.cyan, width: 2.5),
+        border: Border.all(color: const Color(0xFF235A42), width: 2.5),
         boxShadow: const [
-          BoxShadow(color: Color(0x8000BCD4), blurRadius: 12), // 0 0 12px rgba(0,188,212,0.5)
+          BoxShadow(color: Color(0x20235A42), blurRadius: 10),
         ],
       ),
     );
   } else if (isRest) {
     return CustomPaint(
       size: const Size(28, 28),
-      painter: _DashedCirclePainter(color: _C.border, strokeWidth: 1.0),
+      painter: _DashedCirclePainter(color: const Color(0xFFD3E4D7), strokeWidth: 1.0),
     );
   } else {
-    // Future / upcoming training day
     return Container(
       width: 28,
       height: 28,
       decoration: BoxDecoration(
         color: Colors.transparent,
         shape: BoxShape.circle,
-        border: Border.all(color: _C.border, width: 1.0),
+        border: Border.all(color: const Color(0xFFD3E4D7), width: 1.0),
       ),
     );
   }
@@ -2630,7 +2629,7 @@ class WeeklyCalendarRow extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 10.5,
                   fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-                  color: isToday ? _C.cyan : _C.textMut,
+                  color: isToday ? const Color(0xFF235A42) : const Color(0xFF7A8B7B),
                 )),
             const SizedBox(height: 6),
             _buildDayCircleWidget(
