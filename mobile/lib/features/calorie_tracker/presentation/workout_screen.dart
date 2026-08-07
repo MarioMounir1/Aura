@@ -2812,27 +2812,9 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   }
 }
 
-String _getRealExercisePhotoUrl(String title) {
-  final lower = title.toLowerCase();
-
-  if (lower.contains('incline')) {
-    return 'https://images.pexels.com/photos/3838936/pexels-photo-3838936.jpeg?auto=compress&cs=tinysrgb&w=300';
-  } else if (lower.contains('bench press') || lower.contains('barbell bench')) {
-    return 'https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=300';
-  } else if (lower.contains('fly') || lower.contains('crossover')) {
-    return 'https://images.pexels.com/photos/3838274/pexels-photo-3838274.jpeg?auto=compress&cs=tinysrgb&w=300';
-  } else if (lower.contains('overhead') || lower.contains('military press')) {
-    return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=300';
-  } else if (lower.contains('lateral') || lower.contains('delt') || lower.contains('raise')) {
-    return 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=300';
-  } else if (lower.contains('deadlift') || lower.contains('rdl')) {
-    return 'https://images.pexels.com/photos/841130/pexels-photo-841130.jpeg?auto=compress&cs=tinysrgb&w=300';
-  } else if (lower.contains('squat') || lower.contains('leg press')) {
-    return 'https://images.pexels.com/photos/1552249/pexels-photo-1552249.jpeg?auto=compress&cs=tinysrgb&w=300';
-  } else if (lower.contains('warmup') || lower.contains('stretch')) {
-    return 'https://images.pexels.com/photos/3076509/pexels-photo-3076509.jpeg?auto=compress&cs=tinysrgb&w=300';
-  }
-  return 'https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=300';
+String _getAIExercisePhotoUrl(String title) {
+  final cleanTitle = Uri.encodeComponent('$title exercise fitness gym demonstration 3d professional');
+  return 'https://image.pollinations.ai/prompt/$cleanTitle?width=300&height=300&nologo=true&seed=42';
 }
 
 class _ExerciseTimelineTile extends StatelessWidget {
@@ -2858,7 +2840,7 @@ class _ExerciseTimelineTile extends StatelessWidget {
   });
 
   Widget _buildExerciseThumbnail(String title) {
-    final photoUrl = _getRealExercisePhotoUrl(title);
+    final photoUrl = _getAIExercisePhotoUrl(title);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -2872,9 +2854,6 @@ class _ExerciseTimelineTile extends StatelessWidget {
             Image.network(
               photoUrl,
               fit: BoxFit.cover,
-              headers: const {
-                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-              },
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
                 return Container(
@@ -2904,7 +2883,7 @@ class _ExerciseTimelineTile extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.2),
+                    Colors.black.withOpacity(0.25),
                     Colors.transparent,
                   ],
                   begin: Alignment.bottomCenter,
