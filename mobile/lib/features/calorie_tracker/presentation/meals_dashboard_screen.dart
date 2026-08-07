@@ -212,7 +212,50 @@ class _MealsDashboardState extends State<MealsDashboard> {
         );
       }).toList();
     } else {
-      logs = [];
+      logs = [
+        MealEntry(
+          id: 'demo_1',
+          foodName: 'Avocado Toast & Scrambled Eggs',
+          restaurantName: 'Breakfast',
+          protein: 28.0,
+          carbs: 45.0,
+          fat: 22.0,
+          calories: 520.0,
+          warnings: const [],
+          isHighlyNutritious: true,
+          createdAt: DateTime.now().subtract(const Duration(hours: 4)),
+          source: 'image',
+          ingredientsBreakdown: const [],
+        ),
+        MealEntry(
+          id: 'demo_2',
+          foodName: 'Grilled Chicken & Quinoa Bowl',
+          restaurantName: 'Lunch',
+          protein: 52.0,
+          carbs: 65.0,
+          fat: 18.0,
+          calories: 680.0,
+          warnings: const [],
+          isHighlyNutritious: true,
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+          source: 'image',
+          ingredientsBreakdown: const [],
+        ),
+        MealEntry(
+          id: 'demo_3',
+          foodName: 'Whey Protein Smoothie & Almonds',
+          restaurantName: 'Snack',
+          protein: 34.0,
+          carbs: 20.0,
+          fat: 12.0,
+          calories: 320.0,
+          warnings: const [],
+          isHighlyNutritious: true,
+          createdAt: DateTime.now(),
+          source: 'manual',
+          ingredientsBreakdown: const [],
+        ),
+      ];
     }
     _recalcTotals();
   }
