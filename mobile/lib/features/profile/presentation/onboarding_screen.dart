@@ -23,20 +23,20 @@ import '../../../main.dart';
 // ── Design Tokens ─────────────────────────────────────────────
 class _T {
   _T._();
-  static const Color bg       = Color(0xFFF8FAFC);
+  static const Color bg       = Color(0xFFF6F8F5);
   static const Color card     = Color(0xFFFFFFFF);
-  static const Color cardElev = Color(0xFFF1F5F9);
-  static const Color border   = Color(0xFFE2E8F0);
-  static const Color cyan     = Color(0xFF00ACC1);
-  static const Color cyanDark = Color(0xFF008BA3);
-  static const Color green    = Color(0xFF10B981);
+  static const Color cardElev = Color(0xFFEAF5EE);
+  static const Color border   = Color(0xFFE2EBE4);
+  static const Color cyan     = Color(0xFF235A42);
+  static const Color cyanDark = Color(0xFF1E3A2B);
+  static const Color green    = Color(0xFF235A42);
   static const Color amber    = Color(0xFFF59E0B);
   static const Color red      = Color(0xFFEF4444);
-  static const Color blue     = Color(0xFF2563EB);
+  static const Color blue     = Color(0xFF235A42);
   static const Color purple   = Color(0xFF7C3AED);
-  static const Color textPri  = Color(0xFF0F172A);
-  static const Color textSec  = Color(0xFF475569);
-  static const Color textMut  = Color(0xFF94A3B8);
+  static const Color textPri  = Color(0xFF1C2B1E);
+  static const Color textSec  = Color(0xFF5A6E5D);
+  static const Color textMut  = Color(0xFF7A8B7B);
 }
 
 // ── Goal Model ────────────────────────────────────────────────
@@ -657,7 +657,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           _StepTitle(
             emoji: '📏',
             title: 'Your body stats',
-            subtitle: 'Used to calculate your exact calorie needs using the Mifflin-St Jeor formula.',
+            subtitle: 'Used to calculate your personalized daily calorie target.',
           ),
           const SizedBox(height: 32),
 
@@ -792,7 +792,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           _StepTitle(
             emoji: '✨',
             title: 'Your Personal Plan',
-            subtitle: 'Built with the scientific Mifflin-St Jeor formula',
+            subtitle: 'Tailored for your fitness goals & metabolic profile',
           ),
           const SizedBox(height: 20),
 
