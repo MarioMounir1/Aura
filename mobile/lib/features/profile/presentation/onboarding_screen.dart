@@ -792,7 +792,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           _StepTitle(
             emoji: '✨',
             title: 'Your Personal Plan',
-            subtitle: 'Built with Mifflin-St Jeor formula · Same as MyFitnessPal',
+            subtitle: 'Built with the scientific Mifflin-St Jeor formula',
           ),
           const SizedBox(height: 20),
 
