@@ -1,9 +1,10 @@
 // lib/features/calorie_tracker/presentation/settings_screen.dart
-// Modernized Profile & Settings Screen for Aura
+// Modernized Profile & Settings Screen for Aura (Mint & Forest Green UI Redesign)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../main.dart';
 import '../../../core/theme/theme_cubit.dart';
@@ -153,69 +154,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
 
-    final theme = context.auraTheme;
-
     return Scaffold(
-      backgroundColor: theme.background,
-      appBar: AppBar(
-        title: Text(
-          l10n.profileTitle,
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: theme.textPrimary),
+      backgroundColor: const Color(0xFFF6F8F5),
+      body: SafeArea(
+        child: BlocConsumer<ProfileBloc, ProfileState>(
+          listener: (context, state) {
+            if (state is ProfileUpdateSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.profileSaved),
+                  backgroundColor: const Color(0xFF235A42),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            } else if (state is ProfileFailure) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          },
+          builder: (context, state) {
+            if (state is ProfileInitial) {
+              context.read<ProfileBloc>().add(LoadProfile());
+              return const Align(
+                alignment: Alignment.topCenter,
+                child: LinearProgressIndicator(minHeight: 3, color: Color(0xFF235A42)),
+              );
+            }
+            if (state is ProfileLoading && !_isInitialized) {
+              return const Align(
+                alignment: Alignment.topCenter,
+                child: LinearProgressIndicator(minHeight: 3, color: Color(0xFF235A42)),
+              );
+            }
+            if (state is ProfileLoaded) {
+              _initializeValues(state.user);
+              return Stack(
+                children: [
+                  _buildForm(context, state.user, l10n, isArabic),
+                  if (_hasUnsavedChanges)
+                    Positioned(
+                      left: 20,
+                      right: 20,
+                      bottom: 20,
+                      child: _buildFloatingSaveBar(context, l10n),
+                    ),
+                ],
+              );
+            }
+            return const SizedBox.shrink();
+          },
         ),
-        centerTitle: false,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-      ),
-      body: BlocConsumer<ProfileBloc, ProfileState>(
-        listener: (context, state) {
-          if (state is ProfileUpdateSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.profileSaved),
-                backgroundColor: AppColors.primary,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          } else if (state is ProfileFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: AppColors.error,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is ProfileInitial) {
-            context.read<ProfileBloc>().add(LoadProfile());
-            return const Align(
-              alignment: Alignment.topCenter,
-              child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
-            );
-          }
-          if (state is ProfileLoading && !_isInitialized) {
-            return const Align(
-              alignment: Alignment.topCenter,
-              child: LinearProgressIndicator(minHeight: 3, color: AppColors.primary),
-            );
-          }
-          if (state is ProfileLoaded) {
-            _initializeValues(state.user);
-            return Stack(
-              children: [
-                _buildForm(context, state.user, l10n, isArabic),
-                if (_hasUnsavedChanges)
-                  Positioned(
-                    left: 20,
-                    right: 20,
-                    bottom: 20,
-                    child: _buildFloatingSaveBar(context, l10n),
-                  ),
-              ],
-            );
-          }
-          return const SizedBox.shrink();
-        },
       ),
     );
   }
@@ -233,53 +225,123 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── 1. Top User Header with Avatar & Metrics Summary ──────────
+            // ── 1. Top Header (Date + Title + Action Avatar) ─────────────
+            _buildProfileHeader(context),
+            const SizedBox(height: 16),
+
+            // ── 2. User Profile Card ──────────────────────────────────────
             _buildUserAvatarHeader(name, email, isPremium),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+
+            // ── 3. Metrics Quick Summary Grid ──────────────────────────────
             _buildKeyMetricsSummaryRow(l10n),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-            // ── 2. Membership Banner ──────────────────────────────────────
+            // ── 4. Membership Banner ──────────────────────────────────────
             _buildMembershipBanner(context, isPremium, isArabic),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
 
-            // ── 3. Group 1: Fitness & Personal Metrics (collapsible) ──────
+            // ── 5. Personal Info (Collapsible) ────────────────────────────
             _buildCollapsiblePersonalInfo(l10n),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
 
-            // ── 4. Group 2: Preferences ──────────────────────────────────
-            _buildSectionTitle(l10n.profileLanguage, Icons.tune_rounded),
+            // ── 6. Preferences Section ────────────────────────────────────
+            _buildSectionTitle(l10n.profileLanguage),
             const SizedBox(height: 10),
             _buildPreferencesGroup(context, isArabic),
-            const SizedBox(height: 16),
+            const SizedBox(height: 22),
 
-            // ── 5. Group 3: Account Actions ──────────────────────────────
-            _buildSectionTitle(isArabic ? 'الحساب' : 'Account Actions', Icons.shield_rounded),
+            // ── 7. Account Actions Section ────────────────────────────────
+            _buildSectionTitle(isArabic ? 'الحساب' : 'ACCOUNT ACTIONS'),
             const SizedBox(height: 10),
             _buildAccountActionsGroup(context, l10n),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  // ── Header Widget: Avatar + Name + Email ──────────────────────────
+  // ── Top App Bar / Header ───────────────────────────────────────────
+  Widget _buildProfileHeader(BuildContext context) {
+    final dateStr = DateFormat('EEEE, d MMM').format(DateTime.now()).toUpperCase();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              dateStr,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF7A8B7B),
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Profile',
+              style: GoogleFonts.outfit(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1C2B1E),
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        Container(
+          width: 44,
+          height: 44,
+          decoration: const BoxDecoration(
+            color: Color(0xFF235A42),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x20235A42),
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.settings_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── User Avatar Card ──────────────────────────────────────────────
   Widget _buildUserAvatarHeader(String name, String email, bool isPremium) {
-    final theme = context.auraTheme;
     final String initials = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'A';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
       decoration: BoxDecoration(
-        color: theme.card,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
       child: Column(
         children: [
@@ -287,30 +349,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             alignment: Alignment.center,
             children: [
               Container(
-                width: 68,
-                height: 68,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: isPremium
-                        ? [const Color(0xFFFBBF24), const Color(0xFFF59E0B)]
-                        : [theme.primary, theme.primary],
-                  ),
+                  color: const Color(0xFF235A42),
                   boxShadow: [
                     BoxShadow(
-                      color: (isPremium ? const Color(0xFFFBBF24) : theme.primary).withOpacity(0.3),
-                      blurRadius: 14,
-                      spreadRadius: 1,
+                      color: const Color(0xFF235A42).withOpacity(0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Center(
                   child: Text(
                     initials,
-                    style: GoogleFonts.inter(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: isPremium ? Colors.black : Colors.white,
+                    style: GoogleFonts.outfit(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -320,36 +378,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   bottom: 0,
                   right: 0,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(5),
                     decoration: const BoxDecoration(
-                      color: Color(0xFF0F172A),
+                      color: Color(0xFF1C2B1E),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.stars_rounded,
                       color: Color(0xFFFBBF24),
-                      size: 22,
+                      size: 20,
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             name,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: theme.textPrimary,
+            style: GoogleFonts.outfit(
+              fontSize: 19,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1C2B1E),
             ),
           ),
           if (email.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               email,
               style: GoogleFonts.inter(
                 fontSize: 13,
-                color: theme.textSecondary,
+                color: const Color(0xFF7A8B7B),
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -380,24 +439,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildMetricTile(String label, String value, IconData icon) {
-    final theme = context.auraTheme;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: theme.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
       child: Column(
         children: [
-          Icon(icon, color: theme.primary, size: 20),
-          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF5EE),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: const Color(0xFF235A42), size: 18),
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: theme.textPrimary,
+            style: GoogleFonts.outfit(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1C2B1E),
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -408,7 +480,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             label,
             style: GoogleFonts.inter(
               fontSize: 11,
-              color: theme.textSecondary,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF7A8B7B),
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -424,21 +497,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (isPremium) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFBBF24).withOpacity(0.08),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFFBBF24).withOpacity(0.35), width: 1.5),
+          color: const Color(0xFFDCEEE3),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFB5DBC3), width: 1.2),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFBBF24).withOpacity(0.15),
+              decoration: const BoxDecoration(
+                color: Color(0xFF235A42),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFFFBBF24), size: 24),
+              child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -447,16 +520,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     isArabic ? 'عضو مميز في أورا' : 'Aura Premium Member',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.outfit(
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFFFBBF24),
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1C2B1E),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     isArabic ? 'أنت تستمتع بجميع الميزات المميزة.' : 'You are enjoying full unlimited premium access.',
-                    style: GoogleFonts.inter(fontSize: 12, color: context.auraTheme.textSecondary),
+                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D)),
                   ),
                 ],
               ),
@@ -467,22 +540,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else {
       return InkWell(
         onTap: () => PurchaseService.instance.presentPaywall(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [AppColors.primary, Color(0xFF0097A7)],
+              colors: [Color(0xFF235A42), Color(0xFF1E3A2B)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
+                color: Color(0x20235A42),
+                blurRadius: 12,
+                offset: Offset(0, 4),
               ),
             ],
           ),
@@ -491,10 +564,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.white.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.stars_rounded, color: Colors.white, size: 24),
+                child: const Icon(Icons.stars_rounded, color: Color(0xFFFBBF24), size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -503,9 +576,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       isArabic ? 'ترقية إلى المميز' : 'Upgrade to Premium',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.outfit(
                         fontSize: 17,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
@@ -526,29 +599,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Section Title Helper ─────────────────────────────────────────
-  Widget _buildSectionTitle(String title, IconData icon) {
-    final theme = context.auraTheme;
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: theme.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: theme.textPrimary,
-          ),
-        ),
-      ],
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title.toUpperCase(),
+      style: GoogleFonts.inter(
+        fontSize: 11,
+        fontWeight: FontWeight.w800,
+        color: const Color(0xFF5A6E5D),
+        letterSpacing: 0.8,
+      ),
     );
   }
 
   // ── Collapsible Personal Info Section ───────────────────────────
   Widget _buildCollapsiblePersonalInfo(AppLocalizations l10n) {
-    final theme = context.auraTheme;
-
-    // Build a compact summary line for the collapsed header
     final name = _nameController.text.trim();
     final age = _ageController.text.trim();
     final weight = _weightController.text.trim();
@@ -565,9 +629,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.card,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -581,11 +652,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: theme.primary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEAF5EE),
+                      shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.fitness_center_rounded, color: theme.primary, size: 18),
+                    child: const Icon(Icons.person_rounded, color: Color(0xFF235A42), size: 18),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -594,10 +665,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           l10n.profilePersonalInfo,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: theme.textPrimary,
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1C2B1E),
                           ),
                         ),
                         if (!_isPersonalInfoExpanded && summary.isNotEmpty) ...[
@@ -605,8 +676,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Text(
                             summary,
                             style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: theme.textSecondary,
+                              fontSize: 11.5,
+                              color: const Color(0xFF7A8B7B),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -618,7 +689,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   AnimatedRotation(
                     turns: _isPersonalInfoExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.expand_more_rounded, color: theme.textSecondary, size: 22),
+                    child: const Icon(Icons.expand_more_rounded, color: Color(0xFF7A8B7B), size: 22),
                   ),
                 ],
               ),
@@ -629,7 +700,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             firstChild: const SizedBox(width: double.infinity, height: 0),
             secondChild: Column(
               children: [
-                Divider(height: 1, color: theme.border),
+                const Divider(height: 1, color: Color(0xFFE2EBE4)),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: _buildFitnessMetricsGroup(l10n),
@@ -649,226 +720,226 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Group 1: Fitness & Health Metrics ─────────────────────────────
   Widget _buildFitnessMetricsGroup(AppLocalizations l10n) {
-    final theme = context.auraTheme;
-    // ignore: unused_local_variable  (theme used below in field decorations)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-          _buildFieldLabel(l10n.profileName),
-          TextFormField(
-            controller: _nameController,
-            decoration: _buildInputDecoration(hint: 'Full Name', icon: Icons.person_rounded),
-            style: GoogleFonts.inter(color: theme.textPrimary),
-            validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel(l10n.profileAge),
-                    TextFormField(
-                      controller: _ageController,
-                      keyboardType: TextInputType.number,
-                      decoration: _buildInputDecoration(hint: 'Years', icon: Icons.cake_rounded),
-                      style: GoogleFonts.inter(color: theme.textPrimary),
-                      validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
-                    ),
-                  ],
-                ),
+        _buildFieldLabel(l10n.profileName),
+        TextFormField(
+          controller: _nameController,
+          decoration: _buildInputDecoration(hint: 'Full Name', icon: Icons.person_rounded),
+          style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
+          validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabel(l10n.profileAge),
+                  TextFormField(
+                    controller: _ageController,
+                    keyboardType: TextInputType.number,
+                    decoration: _buildInputDecoration(hint: 'Years', icon: Icons.cake_rounded),
+                    style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
+                    validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel(l10n.profileGender),
-                    DropdownButtonFormField<String>(
-                      value: _gender,
-                      dropdownColor: theme.card,
-                      decoration: _buildInputDecoration(hint: '', icon: Icons.wc_rounded),
-                      style: GoogleFonts.inter(color: theme.textPrimary),
-                      items: [
-                        DropdownMenuItem(value: 'male', child: Text(l10n.profileGenderMale)),
-                        DropdownMenuItem(value: 'female', child: Text(l10n.profileGenderFemale)),
-                      ],
-                      onChanged: (val) {
-                        setState(() => _gender = val ?? 'male');
-                        _onFieldChanged();
-                      },
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabel(l10n.profileGender),
+                  DropdownButtonFormField<String>(
+                    value: _gender,
+                    dropdownColor: Colors.white,
+                    decoration: _buildInputDecoration(hint: '', icon: Icons.wc_rounded),
+                    style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
+                    items: [
+                      DropdownMenuItem(value: 'male', child: Text(l10n.profileGenderMale)),
+                      DropdownMenuItem(value: 'female', child: Text(l10n.profileGenderFemale)),
+                    ],
+                    onChanged: (val) {
+                      setState(() => _gender = val ?? 'male');
+                      _onFieldChanged();
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel(l10n.profileWeight),
-                    TextFormField(
-                      controller: _weightController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: _buildInputDecoration(hint: 'kg', icon: Icons.scale_rounded),
-                      style: GoogleFonts.inter(color: theme.textPrimary),
-                      validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
-                    ),
-                  ],
-                ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabel(l10n.profileWeight),
+                  TextFormField(
+                    controller: _weightController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: _buildInputDecoration(hint: 'kg', icon: Icons.scale_rounded),
+                    style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
+                    validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
+                  ),
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFieldLabel(l10n.profileHeight),
-                    TextFormField(
-                      controller: _heightController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: _buildInputDecoration(hint: 'cm', icon: Icons.height_rounded),
-                      style: GoogleFonts.inter(color: theme.textPrimary),
-                      validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
-                    ),
-                  ],
-                ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildFieldLabel(l10n.profileHeight),
+                  TextFormField(
+                    controller: _heightController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: _buildInputDecoration(hint: 'cm', icon: Icons.height_rounded),
+                    style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
+                    validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
+                  ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildFieldLabel(l10n.profileGoal),
-          DropdownButtonFormField<String>(
-            value: _goal,
-            dropdownColor: theme.card,
-            decoration: _buildInputDecoration(hint: '', icon: Icons.track_changes_rounded),
-            style: GoogleFonts.inter(color: theme.textPrimary),
-            items: [
-              DropdownMenuItem(value: 'lose', child: Text(l10n.onboardingGoalLose)),
-              DropdownMenuItem(value: 'maintain', child: Text(l10n.onboardingGoalMaintain)),
-              DropdownMenuItem(value: 'gain', child: Text(l10n.onboardingGoalGain)),
-            ],
-            onChanged: (val) {
-              setState(() => _goal = val ?? 'maintain');
-              _onFieldChanged();
-            },
-          ),
-          const SizedBox(height: 16),
-          _buildFieldLabel(l10n.profileActivity),
-          DropdownButtonFormField<String>(
-            value: _activityLevel,
-            dropdownColor: theme.card,
-            decoration: _buildInputDecoration(hint: '', icon: Icons.directions_run_rounded),
-            style: GoogleFonts.inter(color: theme.textPrimary, fontSize: 13),
-            items: [
-              DropdownMenuItem(value: 'sedentary', child: Text(l10n.onboardingActivitySedentary)),
-              DropdownMenuItem(value: 'lightly_active', child: Text(l10n.onboardingActivityLight)),
-              DropdownMenuItem(value: 'moderate', child: Text(l10n.onboardingActivityModerate)),
-              DropdownMenuItem(value: 'very_active', child: Text(l10n.onboardingActivityVeryActive)),
-            ],
-            onChanged: (val) {
-              setState(() => _activityLevel = val ?? 'moderate');
-              _onFieldChanged();
-            },
-          ),
-          const SizedBox(height: 16),
-          _buildFieldLabel(l10n.profileCalorieGoal),
-          TextFormField(
-            controller: _calorieGoalController,
-            keyboardType: TextInputType.number,
-            decoration: _buildInputDecoration(hint: 'kcal', icon: Icons.local_fire_department_rounded),
-            style: GoogleFonts.inter(color: theme.textPrimary),
-            validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
-          ),
-        ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _buildFieldLabel(l10n.profileGoal),
+        DropdownButtonFormField<String>(
+          value: _goal,
+          dropdownColor: Colors.white,
+          decoration: _buildInputDecoration(hint: '', icon: Icons.track_changes_rounded),
+          style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
+          items: [
+            DropdownMenuItem(value: 'lose', child: Text(l10n.onboardingGoalLose)),
+            DropdownMenuItem(value: 'maintain', child: Text(l10n.onboardingGoalMaintain)),
+            DropdownMenuItem(value: 'gain', child: Text(l10n.onboardingGoalGain)),
+          ],
+          onChanged: (val) {
+            setState(() => _goal = val ?? 'maintain');
+            _onFieldChanged();
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildFieldLabel(l10n.profileActivity),
+        DropdownButtonFormField<String>(
+          value: _activityLevel,
+          dropdownColor: Colors.white,
+          decoration: _buildInputDecoration(hint: '', icon: Icons.directions_run_rounded),
+          style: GoogleFonts.inter(color: const Color(0xFF1C2B1E), fontSize: 13),
+          items: [
+            DropdownMenuItem(value: 'sedentary', child: Text(l10n.onboardingActivitySedentary)),
+            DropdownMenuItem(value: 'lightly_active', child: Text(l10n.onboardingActivityLight)),
+            DropdownMenuItem(value: 'moderate', child: Text(l10n.onboardingActivityModerate)),
+            DropdownMenuItem(value: 'very_active', child: Text(l10n.onboardingActivityVeryActive)),
+          ],
+          onChanged: (val) {
+            setState(() => _activityLevel = val ?? 'moderate');
+            _onFieldChanged();
+          },
+        ),
+        const SizedBox(height: 16),
+        _buildFieldLabel(l10n.profileCalorieGoal),
+        TextFormField(
+          controller: _calorieGoalController,
+          keyboardType: TextInputType.number,
+          decoration: _buildInputDecoration(hint: 'kcal', icon: Icons.local_fire_department_rounded),
+          style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
+          validator: (val) => val == null || val.trim().isEmpty ? l10n.errorGeneric : null,
+        ),
+      ],
     );
   }
 
-  // ── Group 2: Preferences (Language, Units, Theme) ────────────────
+  // ── Group 2: Preferences (Units & Theme) ─────────────────────────
   Widget _buildPreferencesGroup(BuildContext context, bool isArabic) {
-    final theme = context.auraTheme;
     return Container(
       decoration: BoxDecoration(
-        color: theme.card,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: Column(
-          children: [
-          // Units Tile
+      child: Column(
+        children: [
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             leading: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+              decoration: const BoxDecoration(
+                color: Color(0xFFEAF5EE),
+                shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.straighten_rounded, color: AppColors.primary, size: 20),
+              child: const Icon(Icons.straighten_rounded, color: Color(0xFF235A42), size: 18),
             ),
             title: Text(
               isArabic ? 'وحدات القياس' : 'Measurement Units',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+              style: GoogleFonts.outfit(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF1C2B1E),
               ),
             ),
             subtitle: Text(
               isArabic ? 'المتري (كجم / سم)' : 'Metric (kg / cm)',
-              style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
             ),
             trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFF1C2B1E),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 'Metric',
-                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary),
+                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white),
               ),
             ),
           ),
-          const Divider(height: 1, color: AppColors.border),
-          // App Theme Selector Tile
+          const Divider(height: 1, color: Color(0xFFE2EBE4)),
           BlocBuilder<ThemeCubit, ThemeMode>(
             builder: (context, currentMode) {
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEAF5EE),
+                    shape: BoxShape.circle,
                   ),
                   child: Icon(
                     currentMode == ThemeMode.light
                         ? Icons.light_mode_rounded
                         : (currentMode == ThemeMode.system ? Icons.brightness_auto_rounded : Icons.dark_mode_rounded),
-                    color: AppColors.primary,
-                    size: 20,
+                    color: const Color(0xFF235A42),
+                    size: 18,
                   ),
                 ),
                 title: Text(
                   'App Theme',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1C2B1E),
                   ),
                 ),
                 subtitle: Text(
                   currentMode == ThemeMode.light
                       ? 'Light Mode (Default)'
                       : (currentMode == ThemeMode.system ? 'System Default' : 'Dark Mode'),
-                  style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
+                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -883,22 +954,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-      ),
     );
   }
 
   Widget _buildThemeChip(BuildContext context, String label, ThemeMode mode, bool isActive) {
-    final theme = context.auraTheme;
     return GestureDetector(
       onTap: () => context.read<ThemeCubit>().setThemeMode(mode),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: isActive ? theme.primary : theme.surfaceVariant,
+          color: isActive ? const Color(0xFF235A42) : const Color(0xFFF1F6F2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive ? theme.primary : theme.border,
+            color: isActive ? const Color(0xFF235A42) : const Color(0xFFD3E4D7),
             width: 1,
           ),
         ),
@@ -907,7 +976,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.bold,
-            color: isActive ? Colors.white : theme.textSecondary,
+            color: isActive ? Colors.white : const Color(0xFF5A6E5D),
           ),
         ),
       ),
@@ -916,40 +985,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Group 3: Account Actions (Logout) ────────────────────────────
   Widget _buildAccountActionsGroup(BuildContext context, AppLocalizations l10n) {
-    final theme = context.auraTheme;
     return Container(
       decoration: BoxDecoration(
-        color: theme.card,
+        color: const Color(0xFFFFF5F5),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.border),
+        border: Border.all(color: const Color(0xFFFFE0E0), width: 1.2),
       ),
       child: Material(
         color: Colors.transparent,
         child: ListTile(
           onTap: () => _showLogoutConfirmDialog(context, l10n),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.error.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFDE8E8),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.logout_rounded, color: Color(0xFFE53935), size: 18),
           ),
-          child: const Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
-        ),
-        title: Text(
-          l10n.profileLogout,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.error,
+          title: Text(
+            l10n.profileLogout,
+            style: GoogleFonts.outfit(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFE53935),
+            ),
           ),
+          subtitle: Text(
+            l10n.profileLogoutConfirm,
+            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9E9E9E)),
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFE53935), size: 14),
         ),
-        subtitle: Text(
-          l10n.profileLogoutConfirm,
-          style: GoogleFonts.inter(fontSize: 12, color: AppColors.textSecondary),
-        ),
-        trailing: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.error, size: 14),
-      ),
       ),
     );
   }
@@ -959,37 +1027,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: const Color(0xFF235A42),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(0.5)),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Color(0x30000000),
             blurRadius: 16,
-            offset: const Offset(0, 6),
+            offset: Offset(0, 6),
           ),
         ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 24),
-          const SizedBox(width: 12),
+          const Icon(Icons.edit_note_rounded, color: Colors.white, size: 22),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               'You have unsaved changes',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: Colors.white,
               ),
             ),
           ),
           ElevatedButton(
             onPressed: () => _saveProfile(context, l10n),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
+              backgroundColor: const Color(0xFFDCEEE3),
+              foregroundColor: const Color(0xFF1E3A2B),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1006,30 +1074,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Input Styling Helpers ─────────────────────────────────────────
   InputDecoration _buildInputDecoration({required String hint, required IconData icon}) {
-    final theme = context.auraTheme;
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: theme.textSecondary, size: 18),
+      prefixIcon: Icon(icon, color: const Color(0xFF7A8B7B), size: 18),
       filled: true,
-      fillColor: theme.surfaceVariant,
+      fillColor: const Color(0xFFF1F6F2),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: theme.border),
+        borderSide: const BorderSide(color: Color(0xFFD3E4D7)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: theme.border),
+        borderSide: const BorderSide(color: Color(0xFFD3E4D7)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: theme.primary, width: 1.5),
+        borderSide: const BorderSide(color: Color(0xFF235A42), width: 1.5),
       ),
     );
   }
 
   Widget _buildFieldLabel(String text) {
-    final theme = context.auraTheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, left: 2),
       child: Text(
@@ -1037,28 +1103,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         style: GoogleFonts.inter(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: theme.textSecondary,
+          color: const Color(0xFF5A6E5D),
         ),
-      ),
-    );
-  }
-
-  Widget _buildLangChip(BuildContext context, String label, String langCode, bool isActive) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: isActive,
-      onSelected: (val) {
-        if (val) {
-          context.read<LanguageCubit>().setLanguage(langCode);
-        }
-      },
-      selectedColor: AppColors.primary.withOpacity(0.2),
-      checkmarkColor: AppColors.primary,
-      backgroundColor: AppColors.background,
-      labelStyle: GoogleFonts.inter(
-        fontSize: 12,
-        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-        color: isActive ? AppColors.primary : AppColors.textSecondary,
       ),
     );
   }
@@ -1068,20 +1114,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: AppColors.surface,
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             l10n.profileLogout,
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
           ),
           content: Text(
             l10n.profileLogoutConfirm,
-            style: GoogleFonts.inter(color: AppColors.textSecondary),
+            style: GoogleFonts.inter(color: const Color(0xFF5A6E5D)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.cancelButton, style: GoogleFonts.inter(color: AppColors.textSecondary)),
+              child: Text(l10n.cancelButton, style: GoogleFonts.inter(color: const Color(0xFF7A8B7B))),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1090,7 +1136,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
+                backgroundColor: const Color(0xFFE53935),
+                elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
