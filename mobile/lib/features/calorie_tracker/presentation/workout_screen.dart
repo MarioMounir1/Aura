@@ -2812,6 +2812,29 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   }
 }
 
+String _get3DExerciseImageUrl(String title) {
+  final lower = title.toLowerCase();
+
+  if (lower.contains('incline')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg';
+  } else if (lower.contains('bench press') || lower.contains('barbell bench')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg';
+  } else if (lower.contains('fly') || lower.contains('crossover')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Cable_Chest_Fly/0.jpg';
+  } else if (lower.contains('overhead') || lower.contains('military')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Overhead_Press/0.jpg';
+  } else if (lower.contains('lateral') || lower.contains('delt') || lower.contains('raise')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Cable_Lateral_Raise/0.jpg';
+  } else if (lower.contains('deadlift') || lower.contains('rdl')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Deadlift/0.jpg';
+  } else if (lower.contains('split squat') || lower.contains('lunge')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Dumbbell_Lunge/0.jpg';
+  } else if (lower.contains('leg press') || lower.contains('squat')) {
+    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Full_Squat/0.jpg';
+  }
+  return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg';
+}
+
 class _ExerciseTimelineTile extends StatelessWidget {
   final int index;
   final String title;
@@ -2835,43 +2858,49 @@ class _ExerciseTimelineTile extends StatelessWidget {
   });
 
   Widget _buildExerciseThumbnail(String title) {
-    final lower = title.toLowerCase();
-    IconData icon = Icons.fitness_center_rounded;
-
-    if (lower.contains('bench') || lower.contains('chest') || lower.contains('fly')) {
-      icon = Icons.fitness_center_rounded;
-    } else if (lower.contains('press') || lower.contains('shoulder') || lower.contains('delt') || lower.contains('raise')) {
-      icon = Icons.accessibility_new_rounded;
-    } else if (lower.contains('squat') || lower.contains('leg') || lower.contains('lunge')) {
-      icon = Icons.directions_walk_rounded;
-    } else if (lower.contains('deadlift') || lower.contains('rdl') || lower.contains('hamstring')) {
-      icon = Icons.sports_gymnastics_rounded;
-    } else if (lower.contains('pull') || lower.contains('row') || lower.contains('back') || lower.contains('lat')) {
-      icon = Icons.format_list_bulleted_rounded;
-    } else if (lower.contains('warm') || lower.contains('stretch') || lower.contains('yoga')) {
-      icon = Icons.self_improvement_rounded;
-    }
+    final imageUrl = _get3DExerciseImageUrl(title);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: Container(
         width: 60,
         height: 60,
-        decoration: const BoxDecoration(
-          color: Color(0xFFEAF5EE),
-        ),
-        child: Center(
-          child: Container(
-            width: 42,
-            height: 42,
-            decoration: const BoxDecoration(
-              color: Color(0xFF235A42),
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Icon(icon, color: Colors.white, size: 22),
-            ),
-          ),
+        color: const Color(0xFFFFFFFF),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.contain,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: const Color(0xFFF1F6F2),
+              child: const Center(
+                child: SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+                  ),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: const Color(0xFFEAF5EE),
+              child: Center(
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF235A42),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
