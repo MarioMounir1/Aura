@@ -499,12 +499,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
       body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _DashboardHeader(streakCount: _calculateStreak(logs)),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 // ——— Daily Performance Rings ——————————————————
                 _MacroRingsSection(
@@ -518,7 +518,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   fatsTarget:       fatsTarget,
                   onTap:            _showManualLogSheet,
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 450),
                   switchInCurve: Curves.easeOutCubic,
@@ -533,7 +533,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   onEdit:    _showEditSheet,
                   onDelete:  _handleDeleteEntry,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 // ——— Ads Banner for Free Users —————————————————
                 if (!isPremium) ...[
@@ -2224,7 +2224,7 @@ class _SmartScannerSection extends StatelessWidget {
                   onTap: onCamera,
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    height: 86,
+                    height: 96,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: theme.snapMealGradient,
@@ -2275,7 +2275,7 @@ class _SmartScannerSection extends StatelessWidget {
                   onTap: onGallery,
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    height: 86,
+                    height: 96,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       gradient: theme.uploadScreenshotGradient,
