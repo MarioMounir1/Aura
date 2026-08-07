@@ -1803,7 +1803,6 @@ class _CoachChatCardState extends State<CoachChatCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.auraTheme;
     final coachNote = widget.coachNote;
     final hasNote = coachNote != null && coachNote.trim().isNotEmpty;
     final isArabic = widget.isArabic;
@@ -1812,16 +1811,16 @@ class _CoachChatCardState extends State<CoachChatCard> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.card,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
           BoxShadow(
-            color: theme.primary.withValues(alpha: 0.12),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
-        border: Border.all(color: theme.border, width: 1),
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1831,22 +1830,15 @@ class _CoachChatCardState extends State<CoachChatCard> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 38x38px, 12px radius, bg-accent, sparkle icon in text-accent, glow 0 0 10px rgba(0,188,212,0.3)
                 Container(
                   width: 38,
                   height: 38,
-                  decoration: BoxDecoration(
-                    color: theme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: theme.primary.withValues(alpha: 0.3),
-                        blurRadius: 10,
-                      ),
-                    ],
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFDCEEE3),
+                    shape: BoxShape.circle,
                   ),
-                  child: Center(
-                    child: Icon(Icons.auto_awesome_rounded, color: theme.primary, size: 18),
+                  child: const Center(
+                    child: Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 18),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1856,19 +1848,19 @@ class _CoachChatCardState extends State<CoachChatCard> {
                     children: [
                       Text(
                         isArabic ? 'مدربك الشخصي' : 'Your Coach',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: theme.primary,
+                        style: GoogleFonts.outfit(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF235A42),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         coachNote,
                         style: GoogleFonts.inter(
                           fontSize: 13,
-                          color: theme.textPrimary,
-                          height: 1.55,
+                          color: const Color(0xFF1C2B1E),
+                          height: 1.45,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -1891,7 +1883,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final message = _messages[index];
-                  return _buildBubble(message, isArabic, theme);
+                  return _buildBubble(message, isArabic);
                 },
               ),
             ),
@@ -1902,24 +1894,24 @@ class _CoachChatCardState extends State<CoachChatCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: theme.surfaceVariant,
+              color: const Color(0xFFF1F6F2),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: theme.border),
+              border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
             ),
             child: Row(
               children: [
-                Icon(Icons.chat_bubble_outline_rounded, color: theme.textMuted, size: 16),
+                const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF6B7C6E), size: 16),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     enabled: !_isInterpreting,
-                    style: GoogleFonts.inter(fontSize: 13, color: theme.textPrimary),
+                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1C2B1E)),
                     decoration: InputDecoration(
                       hintText: isArabic
                           ? 'اسأل مدربك أي شيء...'
                           : 'Ask your coach anything',
-                      hintStyle: GoogleFonts.inter(fontSize: 13, color: theme.textMuted),
+                      hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6B7C6E)),
                       border: InputBorder.none,
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -1928,22 +1920,14 @@ class _CoachChatCardState extends State<CoachChatCard> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                // 32x32px circular send button with fill-primary background & up-arrow icon
                 _AnimatedPressable(
                   onTap: _isInterpreting ? null : _submit,
                   child: Container(
                     width: 32,
                     height: 32,
-                    decoration: BoxDecoration(
-                      color: theme.primary,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF235A42),
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.primary.withValues(alpha: 0.4), // 0 3px 10px glow
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
                     ),
                     child: Center(
                       child: _isInterpreting
@@ -1952,10 +1936,10 @@ class _CoachChatCardState extends State<CoachChatCard> {
                               height: 14,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                          : const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 18),
+                          : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 18),
                     ),
                   ),
                 ),
@@ -1967,26 +1951,25 @@ class _CoachChatCardState extends State<CoachChatCard> {
     );
   }
 
-  Widget _buildBubble(CoachChatMessage message, bool isArabic, AuraThemeExtension theme) {
+  Widget _buildBubble(CoachChatMessage message, bool isArabic) {
     if (message.isUser) {
       return Align(
         alignment: Alignment.centerRight,
         child: Container(
           margin: const EdgeInsets.only(bottom: 8, left: 32),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
-            color: theme.primary.withValues(alpha: 0.18),
+            color: const Color(0xFF235A42),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(14),
               topRight: Radius.circular(14),
               bottomLeft: Radius.circular(14),
               bottomRight: Radius.circular(2),
             ),
-            border: Border.all(color: theme.primary.withValues(alpha: 0.35), width: 1),
           ),
           child: Text(
             message.text,
-            style: GoogleFonts.inter(fontSize: 12, color: theme.textPrimary, fontWeight: FontWeight.w500),
+            style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white, fontWeight: FontWeight.w500),
           ),
         ),
       );
@@ -1997,22 +1980,22 @@ class _CoachChatCardState extends State<CoachChatCard> {
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8, right: 32),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: theme.surfaceVariant,
+          color: const Color(0xFFEAF5EE),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(14),
             topRight: Radius.circular(14),
             bottomRight: Radius.circular(14),
             bottomLeft: Radius.circular(2),
           ),
-          border: Border.all(color: theme.border, width: 1),
+          border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.auto_awesome_rounded, color: theme.primary, size: 13),
+            const Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 13),
             const SizedBox(width: 6),
             Flexible(
               child: message.isTyping
@@ -2023,24 +2006,24 @@ class _CoachChatCardState extends State<CoachChatCard> {
                           isArabic ? 'المدرب يفكر...' : 'Coach is thinking...',
                           style: GoogleFonts.inter(
                             fontSize: 11.5,
-                            color: theme.textMuted,
+                            color: const Color(0xFF6B7C6E),
                             fontStyle: FontStyle.italic,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        SizedBox(
+                        const SizedBox(
                           width: 10,
                           height: 10,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(theme.primary),
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
                           ),
                         ),
                       ],
                     )
                   : Text(
                       message.text,
-                      style: GoogleFonts.inter(fontSize: 12, color: theme.textPrimary, height: 1.35),
+                      style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF1E3A2B), height: 1.35),
                     ),
             ),
           ],
