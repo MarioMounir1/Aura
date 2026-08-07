@@ -182,12 +182,40 @@ async function callOllamaJsonChatDetailed<T>(
 
   if (provider === "gemini" || provider === "google") {
     try {
-      const modelName = resolveGeminiModelName();
-      const model = getGenAI().getGenerativeModel({ model: modelName });
-      const prompt = `${systemPrompt}\n\nUser Prompt:\n${userPrompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown codeblocks or extra text.`;
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").trim();
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || apiKey.trim() === "") {
+        console.warn(`⚠️ [Gemini Coach] GEMINI_API_KEY is not set in environment variables!`);
+      }
+      let modelName = resolveGeminiModelName();
+      let model = getGenAI().getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemPrompt,
+      });
+      const generationConfig = {
+        responseMimeType: "application/json",
+        temperature: 0.7,
+      };
+      let text = "";
+      try {
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig,
+        });
+        text = result.response.text().trim();
+      } catch (geminiErr: any) {
+        console.warn(`⚠️ [Gemini Model Retry] ${modelName} failed (${geminiErr.message}), retrying with gemini-1.5-flash...`);
+        model = getGenAI().getGenerativeModel({
+          model: "gemini-1.5-flash",
+          systemInstruction: systemPrompt,
+        });
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig,
+        });
+        text = result.response.text().trim();
+      }
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const cleaned = jsonMatch ? jsonMatch[0] : text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").trim();
       const parsed = JSON.parse(cleaned) as T;
       return {
         value: parsed || fallback,
@@ -460,14 +488,15 @@ export interface InterpretContext {
 }
 
 export interface InterpretResult {
-  intent: "override_day" | "swap_exercise" | "add_exercise" | "remove_exercise" | "lighter_intensity" | "question" | "change_plan" | "setup_routine" | "unrecognized";
-  dayType?: string;
-  exerciseName?: string;
-  replacementExercise?: string;
-  targetSets?: number;
-  reason?: string;
-  proposedDays?: number;       // for change_plan / setup_routine: day count extracted
-  proposedSplitName?: string; // for change_plan / setup_routine: split name mentioned
+  intent: "override_day" | "swap_exercise" | "add_exercise" | "remove_exercise" | "lighter_intensity" | "question" | "change_plan" | "setup_routine" | "chat" | "unrecognized";
+  dayType?: string | null;
+  exerciseName?: string | null;
+  replacementExercise?: string | null;
+  targetSets?: number | null;
+  targetCount?: number | null;
+  reason?: string | null;
+  proposedDays?: number | null;
+  proposedSplitName?: string | null;
   reply: string;
 }
 
@@ -582,75 +611,97 @@ Respond ONLY with valid JSON:
   const availableDaysStr = context.availableDayTypes.join(", ") || "(none)";
   const currentExercisesStr = context.exercises.map((e) => `${e.name} (${e.muscleGroup})`).join(", ") || "(none)";
 
-  const systemPrompt = `You are an expert AI fitness coach & workout session controller. Classify user message into 1 of 8 intents:
-1. "add_exercise": user wants to add a new exercise to today's workout (e.g., "add 3 sets of incline dumbbell curls"). Extract "exerciseName" and "targetSets" (default 3 if omitted).
-2. "remove_exercise": user wants to remove an exercise from today's workout (e.g., "remove leg press", "delete cable flyes"). Extract "exerciseName".
-3. "swap_exercise": user wants to replace an exercise or body part today (e.g., "swap bench press for dumbbell press", "replace leg curl"). Extract "exerciseName" (the target exercise to replace) and "replacementExercise" (the specific replacement requested or recommended).
-4. "override_day": change/skip today's split day. "dayType" in [${availableDaysStr}] or "skip".
-5. "lighter_intensity": request easier/lighter session, reduce volume, or limit exercise count (e.g., "too much for me", "make it 5 exercises", "reduce to 4 exercises", "make it lighter").
-6. "question": coaching/training question (exercise, form, recovery, general fitness).
-7. "change_plan": switch entire training split going forward (e.g. "switch to Upper/Lower", "Arnold split", "3 days a week"). Extract "proposedSplitName" if split name mentioned, and "proposedDays" (number) if days mentioned.
-8. "unrecognized": ambiguous, incoherent, or off-topic.
+  const systemPrompt = `You are Aura AI — a warm, friendly, highly intelligent AI Personal Fitness & Health Assistant powered by Google Gemini. You engage in open, natural conversation on ANY topic (fitness, workouts, health, recovery, general chat, questions, life).
 
-Respond ONLY with JSON:
+Analyze the user's message and determine if they are asking to modify their workout, or simply chatting/asking a question:
+1. "add_exercise": user wants to add an exercise (e.g. "add incline dumbbell press"). Extract "exerciseName" and "targetSets" (default 3).
+2. "remove_exercise": user wants to remove an exercise (e.g. "remove leg press"). Extract "exerciseName".
+3. "swap_exercise": user wants to replace an exercise (e.g. "swap bench press for incline press"). Extract "exerciseName" and "replacementExercise".
+4. "override_day": change/skip today's split day. "dayType" in [${availableDaysStr}] or "skip".
+5. "lighter_intensity": user wants fewer exercises, lower volume, or an easier session (e.g. "make it 5 exercises", "reduce exc to 5 only", "cut to 4"). Extract "targetCount" (number of exercises) or "targetSets".
+6. "change_plan": switch training split going forward (e.g. "switch to Upper/Lower", "Arnold split", "4 days a week"). Extract "proposedSplitName" and "proposedDays".
+7. "chat": any general conversation, question, greeting, or statement (e.g. "how are you", "what is protein", "tell me a joke", "I feel great").
+
+Respond ONLY with valid JSON:
 {
-  "intent": "add_exercise" | "remove_exercise" | "swap_exercise" | "override_day" | "lighter_intensity" | "question" | "change_plan" | "unrecognized",
+  "intent": "add_exercise" | "remove_exercise" | "swap_exercise" | "override_day" | "lighter_intensity" | "change_plan" | "chat",
   "dayType": string | null,
   "exerciseName": string | null,
   "replacementExercise": string | null,
   "targetSets": number | null,
+  "targetCount": number | null,
   "proposedDays": number | null,
   "proposedSplitName": string | null,
   "reason": string | null,
-  "reply": "Short natural confirmation line or answer (1-2 sentences)."
+  "reply": "Your natural, warm, intelligent AI response to the user's message. Answer any question, chat warmly, or confirm their workout change naturally."
 }`;
 
-  const userPrompt = `Routine: ${context.splitName}. Today: ${context.todayDayName}. Exercises: ${currentExercisesStr}. Message: "${message}"`;
+  const userPrompt = `Routine: ${context.splitName}. Today: ${context.todayDayName}. Exercises: ${currentExercisesStr}. User Message: "${message}"`;
 
   const fallback: InterpretResult = {
-    intent: "unrecognized",
-    reply: "I wasn't sure what you meant by that — try asking to add, swap, or remove an exercise, or change your routine split.",
+    intent: "chat",
+    reply: "I'm right here with you! What's on your mind today?",
   };
 
   const detailedRes = await callOllamaJsonChatDetailed<InterpretResult>(
     systemPrompt,
     userPrompt,
     fallback,
-    { callerName: "interpretSessionRequest", timeoutMs: 25000, numPredict: 140 }
+    { callerName: "interpretSessionRequest", timeoutMs: 25000, numPredict: 200 }
   );
 
   if (detailedRes.source === "timeout" || detailedRes.source === "error") {
-    console.warn(`⏱️ [Ollama] interpretSessionRequest failed/timed out after ${detailedRes.elapsedMs}ms (${detailedRes.evalCount ?? 0} tokens, source: ${detailedRes.source})`);
+    console.warn(`⏱️ [Coach AI Direct Fallback] generating direct Gemini AI chat response...`);
     
-    // Check if message had plan info as fallback
-    const fallbackPlan = extractPlanInfoFromMessage(message);
-    if (fallbackPlan.proposedDays !== undefined || fallbackPlan.proposedSplitName !== undefined) {
-      const targetIntent = isFirstTimeSetup ? "setup_routine" : "change_plan";
+    try {
+      const model = getGenAI().getGenerativeModel({ model: "gemini-2.0-flash" });
+      const promptText = `You are Aura AI, a warm and intelligent AI personal trainer. Answer this user message naturally: "${message}"`;
+      const res = await model.generateContent(promptText);
+      const text = res.response.text().trim();
+
+      const numMatch = message.match(/(\d+)/);
+      const isReduce = message.toLowerCase().includes("reduce") || message.toLowerCase().includes("exc") || message.toLowerCase().includes("exercise") || message.toLowerCase().includes("only") || message.toLowerCase().includes("make") || message.toLowerCase().includes("limit") || message.toLowerCase().includes("cut");
+      const targetCount = (numMatch && isReduce) ? parseInt(numMatch[1], 10) : null;
+
       return {
-        intent: targetIntent,
-        proposedDays: fallbackPlan.proposedDays,
-        proposedSplitName: fallbackPlan.proposedSplitName,
-        reply: `Got it! Updating your workout plan...`,
+        intent: targetCount ? "lighter_intensity" : "chat",
+        targetCount,
+        reply: text || "I'm right here with you! Ready to help with your workout or answer any questions.",
+      };
+    } catch (directErr) {
+      const lower = message.toLowerCase().trim();
+      const numMatch = message.match(/(\d+)/);
+      const isReduce = lower.includes("reduce") || lower.includes("exc") || lower.includes("exercise") || lower.includes("only") || lower.includes("make") || lower.includes("limit") || lower.includes("cut");
+      const targetCount = (numMatch && isReduce) ? parseInt(numMatch[1], 10) : null;
+
+      let replyText = "I'm right here with you! Tell me what's on your mind — whether you want to adjust today's workout, ask a fitness question, or switch your routine.";
+
+      if (targetCount) {
+        replyText = `Got it! Reduced today's workout to your top ${targetCount} main exercises.`;
+      } else if (lower.includes("name")) {
+        replyText = "I'm Aura AI — your intelligent personal fitness coach & health companion!";
+      } else if (lower.includes("how are you") || lower.includes("how r u") || lower.includes("how's it going")) {
+        replyText = "I'm feeling great and ready to crush today's training session with you! How are you feeling today?";
+      } else if (lower.includes("who are you") || lower.includes("what are you")) {
+        replyText = "I'm your intelligent AI fitness coach. I can adjust your workout routine, answer fitness & nutrition questions, and guide your training!";
+      } else if (lower.includes("joke")) {
+        replyText = "Why did the barbell go to college? To improve its bench strength!";
+      } else if (lower === "hi" || lower === "hello" || lower === "hey" || lower.startsWith("hi ") || lower.startsWith("hello ")) {
+        replyText = "Hey there! Ready to get after it today? Ask me any question or tell me how to adjust your session.";
+      }
+
+      return {
+        intent: targetCount ? "lighter_intensity" : "chat",
+        targetCount,
+        reply: replyText,
       };
     }
-
-    return {
-      intent: "unrecognized",
-      reply: "Still thinking that one over — mind trying again in a second?",
-    };
   }
 
   const res = detailedRes.value;
-  console.log(`⏱️ [Ollama] interpretSessionRequest finished in ${detailedRes.elapsedMs}ms (${detailedRes.evalCount ?? 0} tokens generated, source: ${detailedRes.source}, intent: ${res.intent})`);
-
-  if (!res.intent || !["add_exercise", "remove_exercise", "override_day", "swap_exercise", "lighter_intensity", "question", "change_plan", "unrecognized"].includes(res.intent)) {
-    return fallback;
-  }
-
   if (!res.reply || typeof res.reply !== "string" || !res.reply.trim()) {
     res.reply = fallback.reply;
   }
-
   return res;
 }
 
