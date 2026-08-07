@@ -411,100 +411,223 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ══════════════════════════════════════════════════════════════
 
   Widget _buildHubView(bool isArabic) {
-    return Column(
-      key: const ValueKey('hub'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isArabic ? 'مركز التمرين' : 'Workout Hub',
-                style: GoogleFonts.inter(
-                  fontSize: 26, fontWeight: FontWeight.w900,
-                  color: context.auraTheme.textPrimary, letterSpacing: -0.5,
+    final exercises = _currentSession?.exercises ?? [];
+
+    return Container(
+      color: const Color(0xFFF6F8F5),
+      child: ListView(
+        key: const ValueKey('hub'),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        children: [
+          const SizedBox(height: 4),
+
+          // 1. Top Header
+          _WorkoutHeader(
+            onActionTap: _startWorkout,
+          ),
+          const SizedBox(height: 16),
+
+          // ── UNCONFIGURED: AI-chat onboarding ──────────
+          if (_state == WorkoutHubState.unconfigured)
+            CoachChatCard(
+              coachNote: null,
+              isArabic: isArabic,
+              dio: _dio,
+              isFirstTime: true,
+              onSessionUpdated: (updatedSession) {
+                setState(() {
+                  _currentSession = updatedSession;
+                });
+              },
+              onRoutineUpdated: () => _loadRoutine(silent: false),
+            ),
+
+          // ── READY: Timeline Hub content ──────────────
+          if (_state == WorkoutHubState.ready) ...[
+            // 2. Active Routine Banner
+            _WorkoutActiveSummaryBanner(
+              routineName: _activeRoutine?.name ?? 'Upper / Lower Split',
+              focusArea: _currentSession?.focusArea ?? 'Lower (Volume)',
+              exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
+              onTap: () => _showSplitCatalogueSheet(isArabic),
+            ),
+            const SizedBox(height: 22),
+
+            // 3. Exercise Timeline Section Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'EXERCISE TIMELINE',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF5A6E5D),
+                    letterSpacing: 0.6,
+                  ),
                 ),
+                GestureDetector(
+                  onTap: () => _showSplitCatalogueSheet(isArabic),
+                  child: Row(
+                    children: [
+                      Text(
+                        'See routine',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E3A2B),
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: Color(0xFF1E3A2B),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // 4. Exercise Timeline Items
+            if (exercises.isNotEmpty)
+              ...List.generate(exercises.length, (idx) {
+                final ex = exercises[idx];
+                final prText = (ex.targetWeightKg != null && ex.targetWeightKg! > 0)
+                    ? 'Last: ${ex.targetWeightKg!.toStringAsFixed(0)} kg x ${ex.targetReps}'
+                    : null;
+                return _ExerciseTimelineTile(
+                  key: ValueKey('${ex.name}_$idx'),
+                  index: idx,
+                  title: ex.name,
+                  targetSetsReps: '${ex.targetSets} Sets · Target: ${ex.targetReps}',
+                  prBadgeText: prText,
+                  restTime: '${ex.restSeconds ~/ 60}:${(ex.restSeconds % 60).toString().padLeft(2, '0')}',
+                  isLast: idx == exercises.length - 1,
+                  onTap: () {
+                    setState(() {
+                      _expandedExerciseIndex = _expandedExerciseIndex == idx ? null : idx;
+                    });
+                  },
+                );
+              })
+            else ...[
+              _ExerciseTimelineTile(
+                index: 0,
+                title: 'Warmup',
+                targetSetsReps: 'Active Stretching · 5 mins',
+                restTime: '5:00',
+                emoji: '🧘',
+                isLast: false,
+                onTap: () {},
               ),
-              const SizedBox(height: 2),
-              Text(
-                _state == WorkoutHubState.ready
-                    ? (isArabic ? 'روتينك نشط' : 'Your routine is active')
-                    : (isArabic ? 'لا يوجد روتين نشط' : 'No routine configured'),
-                style: GoogleFonts.inter(fontSize: 12, color: context.auraTheme.textMuted),
+              _ExerciseTimelineTile(
+                index: 1,
+                title: 'Leg Press',
+                targetSetsReps: '4 Sets · Target: 8-12 Reps',
+                prBadgeText: 'Last: 160 kg x 10',
+                restTime: '2:00',
+                emoji: '🦵',
+                isLast: false,
+                onTap: () {},
+              ),
+              _ExerciseTimelineTile(
+                index: 2,
+                title: 'Romanian Deadlift',
+                targetSetsReps: '3 Sets · Target: 10-12 Reps',
+                prBadgeText: 'Last: 90 kg x 12',
+                restTime: '2:00',
+                emoji: '🏋️',
+                isLast: false,
+                onTap: () {},
+              ),
+              _ExerciseTimelineTile(
+                index: 3,
+                title: 'Bulgarian Split Squat',
+                targetSetsReps: '3 Sets (ea. leg) · Target: 12 Reps',
+                prBadgeText: 'Last: 40 kg (DB) x 12',
+                restTime: '1:30',
+                emoji: '🦵',
+                isLast: true,
+                onTap: () {},
               ),
             ],
-          ),
-        ),
 
-        Expanded(
-          child: ListView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 100),
-            children: [
+            const SizedBox(height: 4),
 
-              // ── Error banner ──────────────────────────────
-              if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _C.error.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _C.error.withOpacity(0.3)),
-                    ),
-                    child: Text(_errorMessage!,
-                        style: GoogleFonts.inter(fontSize: 12, color: _C.error)),
+            // 5. Quick Action Card
+            _WorkoutQuickActionCard(
+              onTap: _startWorkout,
+            ),
+            const SizedBox(height: 20),
+
+            // 6. AI Coach Assistant Card
+            CoachChatCard(
+              coachNote: _currentSession?.coachNote,
+              isArabic: isArabic,
+              dio: _dio,
+              onSessionUpdated: (updatedSession) {
+                setState(() {
+                  _currentSession = updatedSession;
+                });
+              },
+              onRoutineUpdated: () => _loadRoutine(silent: true),
+            ),
+            const SizedBox(height: 20),
+
+            // 7. Weekly Progress Card
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0A000000),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
                   ),
-                ),
-
-              // ── UNCONFIGURED: AI-chat onboarding ──────────
-              if (_state == WorkoutHubState.unconfigured)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: CoachChatCard(
-                    coachNote: null,
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isArabic ? 'تقدمك' : 'Your Progress',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1C2B1E),
+                        ),
+                      ),
+                      Text(
+                        isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/wk',
+                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6B7C6E)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  WeeklyCalendarRow(
+                    weekScheduleDetails: _weekScheduleDetails,
+                    completedDaysThisWeek: _completedDaysThisWeek,
                     isArabic: isArabic,
-                    dio: _dio,
-                    isFirstTime: true,
-                    onSessionUpdated: (updatedSession) {
-                      setState(() {
-                        _currentSession = updatedSession;
-                      });
-                    },
-                    onRoutineUpdated: () => _loadRoutine(silent: false),
+                    onDayTap: (detail) => _showDayDetailSheet(detail, isArabic),
                   ),
-                ),
-
-              // ── READY: full hub content ───────────────────
-              if (_state == WorkoutHubState.ready) ...[
-
-                // Today's Session card
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _buildTodayCard(isArabic),
-                ),
-                const SizedBox(height: 16),
-
-                // Coach note + AI chat input
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: CoachChatCard(
-                    coachNote: _currentSession?.coachNote,
-                    isArabic: isArabic,
-                    dio: _dio,
-                    onSessionUpdated: (updatedSession) {
-                      setState(() {
-                        _currentSession = updatedSession;
-                      });
-                    },
-                    onRoutineUpdated: () => _loadRoutine(silent: true),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ],
+      ),
+    );
+  }
 
                 // ── Your Progress unified card ─────────────────
                 Padding(
@@ -2650,3 +2773,432 @@ class WeeklyCalendarRow extends StatelessWidget {
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// REDESIGNED WORKOUT TIMELINE WIDGETS
+// ══════════════════════════════════════════════════════════════
+
+class _WorkoutHeader extends StatelessWidget {
+  final VoidCallback onActionTap;
+  const _WorkoutHeader({required this.onActionTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr = DateFormat('EEEE, d MMM').format(DateTime.now()).toUpperCase();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              dateStr,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF7A8B7B),
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Workout Hub',
+              style: GoogleFonts.outfit(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1C2B1E),
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        GestureDetector(
+          onTap: onActionTap,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFF235A42),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x20235A42),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.bolt_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WorkoutActiveSummaryBanner extends StatelessWidget {
+  final String routineName;
+  final String focusArea;
+  final int exerciseCount;
+  final VoidCallback onTap;
+
+  const _WorkoutActiveSummaryBanner({
+    required this.routineName,
+    required this.focusArea,
+    required this.exerciseCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xFFDCEEE3),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.35),
+                    width: 18,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ACTIVE SUMMARY',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF4A6B56),
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.bolt_rounded, color: Color(0xFF235A42), size: 22),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          routineName,
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1E3A2B),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Today: $focusArea',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF235A42),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$exerciseCount Exercises · 60 mins · Est. 450 kcal',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF3B5745),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExerciseTimelineTile extends StatelessWidget {
+  final int index;
+  final String title;
+  final String targetSetsReps;
+  final String? prBadgeText;
+  final String? restTime;
+  final String? emoji;
+  final bool isLast;
+  final VoidCallback onTap;
+
+  const _ExerciseTimelineTile({
+    super.key,
+    required this.index,
+    required this.title,
+    required this.targetSetsReps,
+    this.prBadgeText,
+    this.restTime,
+    this.emoji,
+    required this.isLast,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 32,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                if (!isLast)
+                  Positioned(
+                    top: 24,
+                    bottom: 0,
+                    left: 15,
+                    child: Container(
+                      width: 2,
+                      color: const Color(0xFFE2EBE4),
+                    ),
+                  ),
+                Positioned(
+                  top: 20,
+                  left: 6,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: index == 0 ? const Color(0xFFDCEEE3) : const Color(0xFF235A42),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF235A42),
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        index == 0 ? '✓' : '$index',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: index == 0 ? const Color(0xFF235A42) : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            color: const Color(0xFFF1F6F2),
+                            child: Center(
+                              child: Text(emoji ?? '🏋️', style: const TextStyle(fontSize: 26)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1C2B1E),
+                                      ),
+                                    ),
+                                  ),
+                                  if (restTime != null) ...[
+                                    const Icon(Icons.timer_outlined, size: 12, color: Color(0xFF7A8B7B)),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      restTime!,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF7A8B7B),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                targetSetsReps,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.5,
+                                  color: const Color(0xFF6B7C6E),
+                                ),
+                              ),
+                              if (prBadgeText != null) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEAF5EE),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    prBadgeText!,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1E3A2B),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Color(0xFFB0C0B4),
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkoutQuickActionCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _WorkoutQuickActionCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F6F2),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFD3E4D7),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.play_arrow_rounded,
+                    color: Color(0xFF235A42),
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Start Workout Session',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E3A2B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap to begin live tracking & set logging',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFF6B7C6E),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
