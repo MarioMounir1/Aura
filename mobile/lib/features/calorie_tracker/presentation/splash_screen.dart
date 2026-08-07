@@ -134,7 +134,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background, // 0xFF090C15
+      backgroundColor: const Color(0xFFF6F8F5),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -160,7 +160,7 @@ class _SplashScreenState extends State<SplashScreen>
                 style: GoogleFonts.inter(
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.textPrimary, // 0xFFFFFFFF
+                  color: const Color(0xFF1C2B1E),
                   letterSpacing: 14,
                 ),
               ),
@@ -176,7 +176,7 @@ class _SplashScreenState extends State<SplashScreen>
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary, // 0xFF8E929C
+                  color: const Color(0xFF5A6E5D),
                   letterSpacing: 2.5,
                 ),
               ),
@@ -251,9 +251,9 @@ class _SplashScreenState extends State<SplashScreen>
                 height: 88,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.surface, // 0xFF121824
+                  color: Colors.white,
                   border: Border.all(
-                    color: AppColors.primary
+                    color: const Color(0xFF235A42)
                         .withOpacity(0.35 + 0.2 * _glowPulse.value),
                     width: 1.6,
                   ),
@@ -262,7 +262,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: CustomPaint(
                     size: const Size(46, 46),
                     painter: _AbstractAPainter(
-                      color: AppColors.primary,
+                      color: const Color(0xFF235A42),
                       glowIntensity: _glowPulse.value,
                     ),
                   ),
