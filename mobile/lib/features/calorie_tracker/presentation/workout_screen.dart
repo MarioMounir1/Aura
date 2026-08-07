@@ -50,9 +50,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     with SingleTickerProviderStateMixin {
 
   // ── State ──────────────────────────────────────────────────
-  WorkoutHubState _state = WorkoutHubState.ready;
+  WorkoutHubState _state = WorkoutHubState.unconfigured;
   int _activeDays = 4;
-  RoutineSuggestion? _activeRoutine = RoutineCatalogue.forDays(4).first;
+  RoutineSuggestion? _activeRoutine;
   CurrentSession? _currentSession;
   String? _errorMessage;
   String? _swapSuggestionNote;
@@ -144,27 +144,26 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         if (!mounted) return;
         setState(() {
           _isRefreshingInPlace = false;
-          if (!silent) _state = WorkoutHubState.unconfigured;
+          _state = WorkoutHubState.unconfigured;
+          _activeRoutine = null;
         });
       }
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() {
         _isRefreshingInPlace = false;
-        if (!silent) {
-          if (e.response?.statusCode == 404 || e.response?.statusCode == 401) {
-            _state = WorkoutHubState.unconfigured;
-          } else {
-            _state = WorkoutHubState.unconfigured;
-            _errorMessage = 'Could not load routine. Please try again.';
-          }
+        _state = WorkoutHubState.unconfigured;
+        _activeRoutine = null;
+        if (e.response?.statusCode != 404 && e.response?.statusCode != 401) {
+          _errorMessage = 'Could not load routine. Please try again.';
         }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isRefreshingInPlace = false;
-        if (!silent) _state = WorkoutHubState.unconfigured;
+        _state = WorkoutHubState.unconfigured;
+        _activeRoutine = null;
       });
     }
   }
