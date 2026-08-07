@@ -28,16 +28,14 @@ class _DashboardTabWrapperState extends State<DashboardTabWrapper> {
       builder: (context, state) {
         if (state is DashboardLoaded) {
           _lastLoaded = state;
-        }
-
-        if (_lastLoaded != null) {
           return MealsDashboard(
-            foodSummary: _lastLoaded!.foodSummary,
-            mealLogs: _lastLoaded!.todayMealLogs,
+            foodSummary: state.foodSummary,
+            mealLogs: state.todayMealLogs,
           );
         }
 
         if (state is DashboardInitial || state is DashboardLoading) {
+          _lastLoaded = null;
           return const MealsDashboard(
             foodSummary: null,
             mealLogs: [],
