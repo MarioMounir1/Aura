@@ -1792,8 +1792,9 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
         }
       }
     } else if (interpretation.intent === "lighter_intensity") {
-      const countMatch = message.match(/(\d+)\s*(?:ex|exs|exercise|exercises)/i);
-      const targetCount = countMatch ? parseInt(countMatch[1], 10) : null;
+      const countMatch = message.match(/(\d+)/);
+      const parsedMatch = countMatch ? parseInt(countMatch[1], 10) : null;
+      const targetCount = interpretation.targetCount ?? (parsedMatch && parsedMatch > 0 && parsedMatch <= 15 ? parsedMatch : null);
 
       let activeSession: any = await prisma.workoutSession.findFirst({
         where: { userId, endedAt: null },
