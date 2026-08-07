@@ -2812,27 +2812,27 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   }
 }
 
-String _get3DExerciseImageUrl(String title) {
+String _getRealExercisePhotoUrl(String title) {
   final lower = title.toLowerCase();
 
   if (lower.contains('incline')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Incline_Dumbbell_Press/0.jpg';
+    return 'https://images.pexels.com/photos/3838936/pexels-photo-3838936.jpeg?auto=compress&cs=tinysrgb&w=300';
   } else if (lower.contains('bench press') || lower.contains('barbell bench')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg';
+    return 'https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=300';
   } else if (lower.contains('fly') || lower.contains('crossover')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Cable_Chest_Fly/0.jpg';
-  } else if (lower.contains('overhead') || lower.contains('military')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Overhead_Press/0.jpg';
+    return 'https://images.pexels.com/photos/3838274/pexels-photo-3838274.jpeg?auto=compress&cs=tinysrgb&w=300';
+  } else if (lower.contains('overhead') || lower.contains('military press')) {
+    return 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=300';
   } else if (lower.contains('lateral') || lower.contains('delt') || lower.contains('raise')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Cable_Lateral_Raise/0.jpg';
+    return 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=300';
   } else if (lower.contains('deadlift') || lower.contains('rdl')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Deadlift/0.jpg';
-  } else if (lower.contains('split squat') || lower.contains('lunge')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Dumbbell_Lunge/0.jpg';
-  } else if (lower.contains('leg press') || lower.contains('squat')) {
-    return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Full_Squat/0.jpg';
+    return 'https://images.pexels.com/photos/841130/pexels-photo-841130.jpeg?auto=compress&cs=tinysrgb&w=300';
+  } else if (lower.contains('squat') || lower.contains('leg press')) {
+    return 'https://images.pexels.com/photos/1552249/pexels-photo-1552249.jpeg?auto=compress&cs=tinysrgb&w=300';
+  } else if (lower.contains('warmup') || lower.contains('stretch')) {
+    return 'https://images.pexels.com/photos/3076509/pexels-photo-3076509.jpeg?auto=compress&cs=tinysrgb&w=300';
   }
-  return 'https://raw.githubusercontent.com/yuhas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg';
+  return 'https://images.pexels.com/photos/3837781/pexels-photo-3837781.jpeg?auto=compress&cs=tinysrgb&w=300';
 }
 
 class _ExerciseTimelineTile extends StatelessWidget {
@@ -2858,49 +2858,61 @@ class _ExerciseTimelineTile extends StatelessWidget {
   });
 
   Widget _buildExerciseThumbnail(String title) {
-    final imageUrl = _get3DExerciseImageUrl(title);
+    final photoUrl = _getRealExercisePhotoUrl(title);
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
         width: 60,
         height: 60,
-        color: const Color(0xFFFFFFFF),
-        child: Image.network(
-          imageUrl,
-          fit: BoxFit.contain,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              color: const Color(0xFFF1F6F2),
-              child: const Center(
-                child: SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(color: const Color(0xFFEAF5EE)),
+            Image.network(
+              photoUrl,
+              fit: BoxFit.cover,
+              headers: const {
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: const Color(0xFFF1F6F2),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+                      ),
+                    ),
                   ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: const Color(0xFFEAF5EE),
+                  child: const Center(
+                    child: Icon(Icons.fitness_center_rounded, color: Color(0xFF235A42), size: 24),
+                  ),
+                );
+              },
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.2),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
                 ),
               ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: const Color(0xFFEAF5EE),
-              child: Center(
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF235A42),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
-                ),
-              ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
