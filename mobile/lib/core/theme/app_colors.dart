@@ -86,18 +86,18 @@ class AuraThemeExtension extends ThemeExtension<AuraThemeExtension> {
   );
 
   static const AuraThemeExtension light = AuraThemeExtension(
-    background: Color(0xFFF8FAFC),
+    background: Color(0xFFF6F8F5),
     card: Color(0xFFFFFFFF),
-    surface: Color(0xFFF1F5F9),
-    surfaceVariant: Color(0xFFE2E8F0),
-    border: Color(0xFFE2E8F0),
-    borderMid: Color(0xFFCBD5E1),
-    textPrimary: Color(0xFF0F172A),
-    textSecondary: Color(0xFF475569),
-    textMuted: Color(0xFF94A3B8),
-    primary: Color(0xFF00ACC1),
-    accentCyan: Color(0xFF00ACC1),
-    success: Color(0xFF10B981),
+    surface: Color(0xFFF1F6F2),
+    surfaceVariant: Color(0xFFEAF5EE),
+    border: Color(0xFFE2EBE4),
+    borderMid: Color(0xFFD3E4D7),
+    textPrimary: Color(0xFF1C2B1E),
+    textSecondary: Color(0xFF5A6E5D),
+    textMuted: Color(0xFF7A8B7B),
+    primary: Color(0xFF235A42),
+    accentCyan: Color(0xFF235A42),
+    success: Color(0xFF235A42),
     warning: Color(0xFFF59E0B),
     error: Color(0xFFEF4444),
     protein: Color(0xFF059669),
@@ -214,10 +214,10 @@ abstract class AppColors {
   static const Color textMuted     = Color(0xFF5D616B);
 
   // ── Primary Brand & Signature Accents ────────────────────────
-  static const Color primaryAccent = Color(0xFF00BCD4); // Cyan Accent
-  static const Color accent        = Color(0xFF00BCD4);
-  static const Color cyan          = Color(0xFF00BCD4);
-  static const Color primary       = Color(0xFF00BCD4);
+  static const Color primaryAccent = Color(0xFF235A42); // Dark Forest Green
+  static const Color accent        = Color(0xFF235A42);
+  static const Color cyan          = Color(0xFF235A42);
+  static const Color primary       = Color(0xFF235A42);
   static const Color lime          = Color(0xFFCDDC39);
 
   // ── Semantic Roles ──────────────────────────────────────────
