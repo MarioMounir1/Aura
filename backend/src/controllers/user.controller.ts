@@ -199,7 +199,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const SALT_ROUNDS = 12;
+    const SALT_ROUNDS = 10;
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
     const user = await prisma.user.create({
