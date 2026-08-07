@@ -487,6 +487,96 @@ class _MealsDashboardState extends State<MealsDashboard> {
   // ——— BUILD —————————————————————————————————————————————————————
 
   @override
+  void _showNutrientsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _NutrientsBottomSheet(
+        caloriesConsumed: caloriesConsumed,
+        caloriesTarget: caloriesTarget,
+        proteinConsumed: proteinConsumed,
+        proteinTarget: proteinTarget,
+        carbsConsumed: carbsConsumed,
+        carbsTarget: carbsTarget,
+        fatsConsumed: fatsConsumed,
+        fatsTarget: fatsTarget,
+      ),
+    );
+  }
+
+  void _showQuickLogChoiceSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD3E4D7),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Log a Meal',
+              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.camera_alt_rounded, color: Color(0xFF1E3A2B))),
+              title: Text('Snap Meal Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+              subtitle: Text('Scan food with AI camera', style: GoogleFonts.inter(fontSize: 12)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndAnalyze(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.photo_library_outlined, color: Color(0xFF1E3A2B))),
+              title: Text('Upload Screenshot', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+              subtitle: Text('Pick photo from gallery', style: GoogleFonts.inter(fontSize: 12)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickAndAnalyze(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF1E3A2B))),
+              title: Text('Scan Barcode', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+              subtitle: Text('Instant nutrition lookup', style: GoogleFonts.inter(fontSize: 12)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _scanBarcode();
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.search_rounded, color: Color(0xFF1E3A2B))),
+              title: Text('Search Foods', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
+              subtitle: Text('Global database lookup', style: GoogleFonts.inter(fontSize: 12)),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.of(context).pushNamed('/foods/search');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     bool isPremium = false;
     final profileState = context.read<ProfileBloc>().state;
@@ -494,57 +584,116 @@ class _MealsDashboardState extends State<MealsDashboard> {
       isPremium = profileState.isPremium;
     }
 
-    return Scaffold(
-      backgroundColor: context.auraTheme.background,
-      body: SafeArea(
+    if (_layoutState != LayoutState.idle) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF6F8F5),
+        body: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _DashboardHeader(streakCount: _calculateStreak(logs)),
-                const SizedBox(height: 8),
-
-                // ——— Daily Performance Rings ——————————————————
-                _MacroRingsSection(
-                  caloriesConsumed: caloriesConsumed,
-                  caloriesTarget:   caloriesTarget,
-                  proteinConsumed:  proteinConsumed,
-                  proteinTarget:    proteinTarget,
-                  carbsConsumed:    carbsConsumed,
-                  carbsTarget:      carbsTarget,
-                  fatsConsumed:     fatsConsumed,
-                  fatsTarget:       fatsTarget,
-                  onTap:            _showManualLogSheet,
-                ),
-                const SizedBox(height: 10),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 450),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: _buildAiCanvas(),
-                ),
-
-                const SizedBox(height: 14),
-                _FeedSection(
-                  logs:      logs,
-                  onSnap:    () => _pickAndAnalyze(ImageSource.gallery),
-                  onEdit:    _showEditSheet,
-                  onDelete:  _handleDeleteEntry,
-                ),
-                const SizedBox(height: 16),
-
-                // ——— Ads Banner for Free Users —————————————————
-                if (!isPremium) ...[
-                  const AdBanner(),
-                  const SizedBox(height: 32),
-                ],
-              ],
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: _buildAiCanvas(),
           ),
         ),
       );
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F8F5),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              // 1. Top Header
+              _TimelineDashboardHeader(
+                onCameraTap: () => _pickAndAnalyze(ImageSource.camera),
+              ),
+              const SizedBox(height: 16),
+
+              // 2. Daily Summary Banner
+              _DailySummaryBanner(
+                caloriesConsumed: caloriesConsumed,
+                caloriesTarget: caloriesTarget,
+              ),
+              const SizedBox(height: 22),
+
+              // 3. Meal Timeline Section Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'MEAL TIMELINE',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5A6E5D),
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _showNutrientsSheet,
+                    child: Row(
+                      children: [
+                        Text(
+                          'See nutrients',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E3A2B),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: Color(0xFF1E3A2B),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // 4. Meal Timeline Items
+              if (logs.isNotEmpty)
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: logs.length,
+                  itemBuilder: (ctx, index) {
+                    final meal = logs[index];
+                    return _MealTimelineTile(
+                      key: ValueKey(meal.id),
+                      meal: meal,
+                      isLast: index == logs.length - 1,
+                      onTap: () => _showEditSheet(meal),
+                    );
+                  },
+                ),
+
+              const SizedBox(height: 4),
+
+              // 5. Quick Log Card
+              _QuickLogCard(
+                onTap: _showQuickLogChoiceSheet,
+              ),
+
+              const SizedBox(height: 20),
+
+              // Ads Banner for Free Users
+              if (!isPremium) ...[
+                const AdBanner(),
+                const SizedBox(height: 24),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
 
@@ -3812,3 +3961,545 @@ class _BarcodeNamePromptSheetState extends State<_BarcodeNamePromptSheet> {
     );
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// REDESIGNED TIMELINE DASHBOARD WIDGETS
+// ══════════════════════════════════════════════════════════════
+
+class _TimelineDashboardHeader extends StatelessWidget {
+  final VoidCallback onCameraTap;
+  const _TimelineDashboardHeader({required this.onCameraTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr = DateFormat('EEEE, d MMM').format(DateTime.now()).toUpperCase();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              dateStr,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF7A8B7B),
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Your meals',
+              style: GoogleFonts.outfit(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1C2B1E),
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        GestureDetector(
+          onTap: onCameraTap,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1E3A2B),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x201E3A2B),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.camera_alt_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DailySummaryBanner extends StatelessWidget {
+  final double caloriesConsumed;
+  final double caloriesTarget;
+
+  const _DailySummaryBanner({
+    required this.caloriesConsumed,
+    required this.caloriesTarget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double target = caloriesTarget > 0 ? caloriesTarget : 2000.0;
+    final int percent = ((caloriesConsumed / target) * 100).clamp(0, 100).round();
+    final formatter = NumberFormat('#,###');
+    final String consumedStr = formatter.format(caloriesConsumed.round());
+    final String targetStr = formatter.format(target.round());
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCEEE3),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.35),
+                  width: 18,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 40,
+            bottom: -30,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.25),
+                  width: 14,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'DAILY SUMMARY',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF4A6B56),
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'A good day\nstarts here.',
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E3A2B),
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '$consumedStr of $targetStr kcal logged',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B5745),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x101E3A2B),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$percent%',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1E3A2B),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MealTimelineTile extends StatelessWidget {
+  final MealEntry meal;
+  final bool isLast;
+  final VoidCallback onTap;
+
+  const _MealTimelineTile({
+    super.key,
+    required this.meal,
+    required this.isLast,
+    required this.onTap,
+  });
+
+  String _getMealCategory(DateTime time) {
+    final hour = time.hour;
+    if (hour >= 5 && hour < 11) return 'Breakfast';
+    if (hour >= 11 && hour < 15) return 'Lunch';
+    if (hour >= 15 && hour < 18) return 'Afternoon';
+    return 'Dinner';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final category = _getMealCategory(meal.createdAt);
+    final timeStr = DateFormat('HH:mm').format(meal.createdAt);
+    final calStr = '${meal.calories.round()} kcal';
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 32,
+            child: Stack(
+              alignment: Alignment.topCenter,
+              children: [
+                if (!isLast)
+                  Positioned(
+                    top: 24,
+                    bottom: 0,
+                    left: 15,
+                    child: Container(
+                      width: 2,
+                      color: const Color(0xFFE2EBE4),
+                    ),
+                  ),
+                Positioned(
+                  top: 24,
+                  left: 9,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCEEE3),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF1E3A2B),
+                        width: 2.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(18),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            color: const Color(0xFFF1F6F2),
+                            child: const Center(
+                              child: Text('🥗', style: TextStyle(fontSize: 28)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    category,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1C2B1E),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.access_time_rounded,
+                                        size: 12,
+                                        color: Color(0xFF7A8B7B),
+                                      ),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        timeStr,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF7A8B7B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                meal.foodName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: const Color(0xFF6B7C6E),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Text(
+                                    '🔥 $calStr',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFE07A5F),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Color(0xFFB0C0B4),
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickLogCard extends StatelessWidget {
+  final VoidCallback onTap;
+  const _QuickLogCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F6F2),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: const Color(0xFFD3E4D7),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.add_rounded,
+                    color: Color(0xFF1E3A2B),
+                    size: 22,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Log your next meal',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E3A2B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Snap a photo or search foods',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFF6B7C6E),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NutrientsBottomSheet extends StatelessWidget {
+  final double caloriesConsumed;
+  final double caloriesTarget;
+  final double proteinConsumed;
+  final double proteinTarget;
+  final double carbsConsumed;
+  final double carbsTarget;
+  final double fatsConsumed;
+  final double fatsTarget;
+
+  const _NutrientsBottomSheet({
+    required this.caloriesConsumed,
+    required this.caloriesTarget,
+    required this.proteinConsumed,
+    required this.proteinTarget,
+    required this.carbsConsumed,
+    required this.carbsTarget,
+    required this.fatsConsumed,
+    required this.fatsTarget,
+  });
+
+  Widget _buildNutrientRow(String label, double consumed, double target, Color accentColor, String unit) {
+    final double pct = target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1C2B1E)),
+            ),
+            Text(
+              '${consumed.round()} / ${target.round()} $unit',
+              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF6B7C6E)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: pct,
+            minHeight: 8,
+            backgroundColor: const Color(0xFFE2EBE4),
+            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+          ),
+        ),
+        const SizedBox(height: 14),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD3E4D7),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Daily Nutrients',
+            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
+          ),
+          const SizedBox(height: 18),
+          _buildNutrientRow('Calories', caloriesConsumed, caloriesTarget, const Color(0xFFE07A5F), 'kcal'),
+          _buildNutrientRow('Protein', proteinConsumed, proteinTarget, const Color(0xFF2563EB), 'g'),
+          _buildNutrientRow('Carbs', carbsConsumed, carbsTarget, const Color(0xFFF59E0B), 'g'),
+          _buildNutrientRow('Fats', fatsConsumed, fatsTarget, const Color(0xFF10B981), 'g'),
+        ],
+      ),
+    );
+  }
+}
+
