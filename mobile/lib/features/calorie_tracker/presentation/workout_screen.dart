@@ -407,6 +407,58 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
+  void _showRoutineDetailsModal(bool isArabic) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD3E4D7),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              _activeRoutine?.name ?? 'Upper / Lower Split',
+              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Today: ${_currentSession?.todayDayName ?? "Training Day"}',
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF235A42)),
+            ),
+            const SizedBox(height: 16),
+            if (_activeRoutine != null)
+              ..._activeRoutine!.breakdown.map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF235A42)),
+                        const SizedBox(width: 8),
+                        Text(item, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1C2B1E))),
+                      ],
+                    ),
+                  )),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ══════════════════════════════════════════════════════════════
   // HUB VIEW  (unconfigured + ready)
   // ══════════════════════════════════════════════════════════════
@@ -449,9 +501,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             // 2. Active Routine Banner
             _WorkoutActiveSummaryBanner(
               routineName: _activeRoutine?.name ?? 'Upper / Lower Split',
-              focusArea: _currentSession?.focusArea ?? 'Lower (Volume)',
+              focusArea: _currentSession?.todayDayName ?? 'Lower (Volume)',
               exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
-              onTap: () => _showSplitCatalogueSheet(isArabic),
+              onTap: () => _showRoutineDetailsModal(isArabic),
             ),
             const SizedBox(height: 22),
 
@@ -469,7 +521,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => _showSplitCatalogueSheet(isArabic),
+                  onTap: () => _showRoutineDetailsModal(isArabic),
                   child: Row(
                     children: [
                       Text(
@@ -497,16 +549,16 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             if (exercises.isNotEmpty)
               ...List.generate(exercises.length, (idx) {
                 final ex = exercises[idx];
-                final prText = (ex.targetWeightKg != null && ex.targetWeightKg! > 0)
-                    ? 'Last: ${ex.targetWeightKg!.toStringAsFixed(0)} kg x ${ex.targetReps}'
+                final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
+                    ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
                     : null;
                 return _ExerciseTimelineTile(
                   key: ValueKey('${ex.name}_$idx'),
                   index: idx,
                   title: ex.name,
-                  targetSetsReps: '${ex.targetSets} Sets · Target: ${ex.targetReps}',
+                  targetSetsReps: '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}',
                   prBadgeText: prText,
-                  restTime: '${ex.restSeconds ~/ 60}:${(ex.restSeconds % 60).toString().padLeft(2, '0')}',
+                  restTime: null,
                   isLast: idx == exercises.length - 1,
                   onTap: () {
                     setState(() {
