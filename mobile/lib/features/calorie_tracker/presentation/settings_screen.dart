@@ -251,7 +251,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 22),
 
             // ── 6. Preferences Section ────────────────────────────────────
-            _buildSectionTitle(l10n.profileLanguage),
+            _buildSectionTitle(isArabic ? 'التفضيلات' : 'PREFERENCES'),
             const SizedBox(height: 10),
             _buildPreferencesGroup(context, isArabic),
             const SizedBox(height: 22),
@@ -857,7 +857,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Group 2: Preferences (Units & Theme) ─────────────────────────
+  // ── Group 2: Preferences (Units) ─────────────────────────────────
   Widget _buildPreferencesGroup(BuildContext context, bool isArabic) {
     return Container(
       decoration: BoxDecoration(
@@ -872,111 +872,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFEAF5EE),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.straighten_rounded, color: Color(0xFF235A42), size: 18),
-            ),
-            title: Text(
-              isArabic ? 'وحدات القياس' : 'Measurement Units',
-              style: GoogleFonts.outfit(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1C2B1E),
-              ),
-            ),
-            subtitle: Text(
-              isArabic ? 'المتري (كجم / سم)' : 'Metric (kg / cm)',
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
-            ),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1C2B1E),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'Metric',
-                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-            ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: Color(0xFFEAF5EE),
+            shape: BoxShape.circle,
           ),
-          const Divider(height: 1, color: Color(0xFFE2EBE4)),
-          BlocBuilder<ThemeCubit, ThemeMode>(
-            builder: (context, currentMode) {
-              return ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEAF5EE),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    currentMode == ThemeMode.light
-                        ? Icons.light_mode_rounded
-                        : (currentMode == ThemeMode.system ? Icons.brightness_auto_rounded : Icons.dark_mode_rounded),
-                    color: const Color(0xFF235A42),
-                    size: 18,
-                  ),
-                ),
-                title: Text(
-                  'App Theme',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1C2B1E),
-                  ),
-                ),
-                subtitle: Text(
-                  currentMode == ThemeMode.light
-                      ? 'Light Mode (Default)'
-                      : (currentMode == ThemeMode.system ? 'System Default' : 'Dark Mode'),
-                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildThemeChip(context, '🌙 Dark', ThemeMode.dark, currentMode == ThemeMode.dark),
-                    const SizedBox(width: 6),
-                    _buildThemeChip(context, '☀️ Light', ThemeMode.light, currentMode == ThemeMode.light),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemeChip(BuildContext context, String label, ThemeMode mode, bool isActive) {
-    return GestureDetector(
-      onTap: () => context.read<ThemeCubit>().setThemeMode(mode),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF235A42) : const Color(0xFFF1F6F2),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? const Color(0xFF235A42) : const Color(0xFFD3E4D7),
-            width: 1,
+          child: const Icon(Icons.straighten_rounded, color: Color(0xFF235A42), size: 18),
+        ),
+        title: Text(
+          isArabic ? 'وحدات القياس' : 'Measurement Units',
+          style: GoogleFonts.outfit(
+            fontSize: 14.5,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF1C2B1E),
           ),
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isActive ? Colors.white : const Color(0xFF5A6E5D),
+        subtitle: Text(
+          isArabic ? 'المتري (كجم / سم)' : 'Metric (kg / cm)',
+          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1C2B1E),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            'Metric',
+            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white),
           ),
         ),
       ),
