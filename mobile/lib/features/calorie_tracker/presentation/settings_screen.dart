@@ -298,28 +298,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(
-            color: Color(0xFF235A42),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x20235A42),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.settings_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-        ),
       ],
     );
   }
