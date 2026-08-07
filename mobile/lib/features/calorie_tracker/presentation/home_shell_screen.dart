@@ -115,19 +115,18 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   }
 
   Widget _buildCustomNavBar(BuildContext context) {
-    final theme = context.auraTheme;
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: theme.card,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: theme.border, width: 1.0),
-        boxShadow: [
+        border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 14,
+            color: Color(0x15000000),
+            blurRadius: 16,
             spreadRadius: 1,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -143,9 +142,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   }
 
   Widget _buildNavItem(IconData icon, int index, bool hasHalo) {
-    final theme = context.auraTheme;
     final isSelected = _currentIndex == index;
-    final color = isSelected ? theme.primary : theme.textSecondary.withValues(alpha: 0.6);
+    final color = isSelected ? const Color(0xFF235A42) : const Color(0xFF7A8B7B);
 
     return GestureDetector(
       onTap: () {
@@ -164,8 +162,8 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: theme.primary.withValues(alpha: 0.3),
-                        blurRadius: 12,
+                        color: const Color(0xFF235A42).withOpacity(0.25),
+                        blurRadius: 10,
                         spreadRadius: 2,
                       ),
                     ],
