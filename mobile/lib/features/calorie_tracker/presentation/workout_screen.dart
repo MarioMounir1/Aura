@@ -507,110 +507,152 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             ),
             const SizedBox(height: 22),
 
-            // 3. Exercise Timeline Section Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'EXERCISE TIMELINE',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF5A6E5D),
-                    letterSpacing: 0.6,
+            // 3. Exercise Timeline Section Header (Collapsible)
+            GestureDetector(
+              onTap: () => setState(() => _showAllExercises = !_showAllExercises),
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'EXERCISE TIMELINE',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5A6E5D),
+                      letterSpacing: 0.6,
+                    ),
                   ),
-                ),
-                GestureDetector(
-                  onTap: () => _showRoutineDetailsModal(isArabic),
-                  child: Row(
-                    children: [
-                      Text(
-                        'See routine',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1E3A2B),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        size: 16,
-                        color: Color(0xFF1E3A2B),
-                      ),
-                    ],
+                  const SizedBox(width: 6),
+                  Icon(
+                    _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: const Color(0xFF235A42),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 14),
 
-            // 4. Exercise Timeline Items
-            if (exercises.isNotEmpty)
-              ...List.generate(exercises.length, (idx) {
-                final ex = exercises[idx];
-                final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
-                    ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
-                    : null;
-                final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
-                return _ExerciseTimelineTile(
-                  key: ValueKey('${ex.name}_$idx'),
-                  index: idx,
-                  title: ex.name,
-                  targetSetsReps: setsRepsStr,
-                  prBadgeText: prText,
-                  restTime: null,
-                  isLast: idx == exercises.length - 1,
-                  onTap: () => _showAIExerciseGuideModal(context, ex.name, setsRepsStr, isArabic),
-                );
-              })
-            else ...[
-              _ExerciseTimelineTile(
-                index: 0,
-                title: 'Barbell Bench Press',
-                targetSetsReps: '3 Sets · Chest · Triceps',
-                prBadgeText: 'Last: 80 kg x 8',
-                restTime: '2:00',
-                isLast: false,
-                onTap: () => _showAIExerciseGuideModal(context, 'Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
+            // 4. Exercise Timeline Items (Foldable)
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              child: Builder(
+                builder: (context) {
+                  final List<Widget> tiles = exercises.isNotEmpty
+                      ? List.generate(exercises.length, (idx) {
+                          final ex = exercises[idx];
+                          final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
+                              ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
+                              : null;
+                          final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
+                          return _ExerciseTimelineTile(
+                            key: ValueKey('${ex.name}_$idx'),
+                            index: idx,
+                            title: ex.name,
+                            targetSetsReps: setsRepsStr,
+                            prBadgeText: prText,
+                            restTime: null,
+                            isLast: idx == exercises.length - 1,
+                            onTap: () => _showAIExerciseGuideModal(context, ex.name, setsRepsStr, isArabic),
+                          );
+                        })
+                      : [
+                          _ExerciseTimelineTile(
+                            index: 0,
+                            title: 'Barbell Bench Press',
+                            targetSetsReps: '3 Sets · Chest · Triceps',
+                            prBadgeText: 'Last: 80 kg x 8',
+                            restTime: '2:00',
+                            isLast: false,
+                            onTap: () => _showAIExerciseGuideModal(context, 'Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
+                          ),
+                          _ExerciseTimelineTile(
+                            index: 1,
+                            title: 'Incline Dumbbell Press',
+                            targetSetsReps: '3 Sets · Upper Chest',
+                            prBadgeText: 'Last: 28 kg x 10',
+                            restTime: '2:00',
+                            isLast: false,
+                            onTap: () => _showAIExerciseGuideModal(context, 'Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
+                          ),
+                          _ExerciseTimelineTile(
+                            index: 2,
+                            title: 'Overhead Press',
+                            targetSetsReps: '3 Sets · Front Delts',
+                            prBadgeText: 'Last: 50 kg x 8',
+                            restTime: '2:00',
+                            isLast: false,
+                            onTap: () => _showAIExerciseGuideModal(context, 'Overhead Press', '3 Sets · Front Delts', isArabic),
+                          ),
+                          _ExerciseTimelineTile(
+                            index: 3,
+                            title: 'Cable Lateral Raises',
+                            targetSetsReps: '3 Sets · Side Delts',
+                            prBadgeText: 'Last: 12 kg x 12',
+                            restTime: '1:30',
+                            isLast: false,
+                            onTap: () => _showAIExerciseGuideModal(context, 'Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
+                          ),
+                          _ExerciseTimelineTile(
+                            index: 4,
+                            title: 'Cable Chest Flyes',
+                            targetSetsReps: '3 Sets · Chest',
+                            prBadgeText: 'Last: 20 kg x 12',
+                            restTime: '1:30',
+                            isLast: true,
+                            onTap: () => _showAIExerciseGuideModal(context, 'Cable Chest Flyes', '3 Sets · Chest', isArabic),
+                          ),
+                        ];
+
+                  final visibleTiles = _showAllExercises ? tiles : tiles.take(2).toList();
+                  final remainingCount = tiles.length - visibleTiles.length;
+
+                  return Column(
+                    children: [
+                      ...visibleTiles,
+                      const SizedBox(height: 6),
+                      Center(
+                        child: InkWell(
+                          onTap: () => setState(() => _showAllExercises = !_showAllExercises),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEAF5EE),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _showAllExercises
+                                      ? (isArabic ? 'طّي الجدول' : 'Fold timeline')
+                                      : (isArabic ? 'عرض كل التمارين (+$remainingCount)' : 'Show all exercises (+$remainingCount)'),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF235A42),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                  size: 16,
+                                  color: const Color(0xFF235A42),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-              _ExerciseTimelineTile(
-                index: 1,
-                title: 'Incline Dumbbell Press',
-                targetSetsReps: '3 Sets · Upper Chest',
-                prBadgeText: 'Last: 28 kg x 10',
-                restTime: '2:00',
-                isLast: false,
-                onTap: () => _showAIExerciseGuideModal(context, 'Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
-              ),
-              _ExerciseTimelineTile(
-                index: 2,
-                title: 'Overhead Press',
-                targetSetsReps: '3 Sets · Front Delts',
-                prBadgeText: 'Last: 50 kg x 8',
-                restTime: '2:00',
-                isLast: false,
-                onTap: () => _showAIExerciseGuideModal(context, 'Overhead Press', '3 Sets · Front Delts', isArabic),
-              ),
-              _ExerciseTimelineTile(
-                index: 3,
-                title: 'Cable Lateral Raises',
-                targetSetsReps: '3 Sets · Side Delts',
-                prBadgeText: 'Last: 12 kg x 12',
-                restTime: '1:30',
-                isLast: false,
-                onTap: () => _showAIExerciseGuideModal(context, 'Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
-              ),
-              _ExerciseTimelineTile(
-                index: 4,
-                title: 'Cable Chest Flyes',
-                targetSetsReps: '3 Sets · Chest',
-                prBadgeText: 'Last: 20 kg x 12',
-                restTime: '1:30',
-                isLast: true,
-                onTap: () => _showAIExerciseGuideModal(context, 'Cable Chest Flyes', '3 Sets · Chest', isArabic),
-              ),
-            ],
+            ),
 
             const SizedBox(height: 4),
 
