@@ -1,8 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { OLLAMA_CONFIG, resolveGeminiModelName } from "../config";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(apiKey);
+function getGenAI(): GoogleGenerativeAI {
+  const apiKey = process.env.GEMINI_API_KEY || "";
+  return new GoogleGenerativeAI(apiKey);
+}
 
 interface ExerciseInput {
   name: string;
@@ -76,7 +78,7 @@ async function callOllamaChatDetailed(
   if (provider === "gemini" || provider === "google") {
     try {
       const modelName = resolveGeminiModelName();
-      const model = genAI.getGenerativeModel({ model: modelName });
+      const model = getGenAI().getGenerativeModel({ model: modelName });
       const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
@@ -181,7 +183,7 @@ async function callOllamaJsonChatDetailed<T>(
   if (provider === "gemini" || provider === "google") {
     try {
       const modelName = resolveGeminiModelName();
-      const model = genAI.getGenerativeModel({ model: modelName });
+      const model = getGenAI().getGenerativeModel({ model: modelName });
       const prompt = `${systemPrompt}\n\nUser Prompt:\n${userPrompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown codeblocks or extra text.`;
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();
@@ -576,32 +578,7 @@ Respond ONLY with valid JSON:
     return sr;
   }
 
-  // ── Existing-user fast-path regex shortcuts ────────────────
-  const countReductionMatch = message.match(/(?:make|reduce|limit|set|cut|just|too much|change|only|want)\s*(?:it|today|session)?\s*(?:to|for|is)?\s*(\d+)\s*(?:ex|exc|exs|exercise|exercises|per day|each day|a day)/i)
-    || message.match(/(\d+)\s*(?:ex|exc|exs|exercise|exercises)/i)
-    || message.match(/(\d+)\s*(?:exc|exs|exercises)\s*(?:only|per day|a day)/i);
-
-  if (countReductionMatch && !message.toLowerCase().includes("add") && !message.toLowerCase().includes("swap")) {
-    const targetNum = parseInt(countReductionMatch[1], 10);
-    if (targetNum > 0 && targetNum <= 15) {
-      return {
-        intent: "lighter_intensity",
-        reply: `Got it! Adjusting today's workout to your top ${targetNum} main exercises.`,
-      };
-    }
-  }
-
-  const setsReductionMatch = message.match(/(?:make|reduce|limit|set|cut|change|just)?\s*(?:it|today|session)?\s*(?:to|is|for)?\s*(\d+)\s*(?:set|sets)/i);
-  if (setsReductionMatch) {
-    const targetSetsNum = Math.min(5, Math.max(1, parseInt(setsReductionMatch[1], 10)));
-    return {
-      intent: "lighter_intensity",
-      targetSets: targetSetsNum,
-      reply: `Got it! Adjusted all exercises in today's workout to ${targetSetsNum} sets.`,
-    };
-  }
-
-  // ── Existing-user full AI classification ──────────────────
+  // ── Gemini AI classification & dynamic response ──────────────
   const availableDaysStr = context.availableDayTypes.join(", ") || "(none)";
   const currentExercisesStr = context.exercises.map((e) => `${e.name} (${e.muscleGroup})`).join(", ") || "(none)";
 
