@@ -552,60 +552,63 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
                     ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
                     : null;
+                final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
                 return _ExerciseTimelineTile(
                   key: ValueKey('${ex.name}_$idx'),
                   index: idx,
                   title: ex.name,
-                  targetSetsReps: '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}',
+                  targetSetsReps: setsRepsStr,
                   prBadgeText: prText,
                   restTime: null,
                   isLast: idx == exercises.length - 1,
-                  onTap: () {
-                    setState(() {
-                      _expandedExerciseIndex = _expandedExerciseIndex == idx ? null : idx;
-                    });
-                  },
+                  onTap: () => _showAIExerciseGuideModal(context, ex.name, setsRepsStr, isArabic),
                 );
               })
             else ...[
               _ExerciseTimelineTile(
                 index: 0,
-                title: 'Warmup',
-                targetSetsReps: 'Active Stretching · 5 mins',
-                restTime: '5:00',
-                emoji: '🧘',
+                title: 'Barbell Bench Press',
+                targetSetsReps: '3 Sets · Chest · Triceps',
+                prBadgeText: 'Last: 80 kg x 8',
+                restTime: '2:00',
                 isLast: false,
-                onTap: () {},
+                onTap: () => _showAIExerciseGuideModal(context, 'Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
               ),
               _ExerciseTimelineTile(
                 index: 1,
-                title: 'Leg Press',
-                targetSetsReps: '4 Sets · Target: 8-12 Reps',
-                prBadgeText: 'Last: 160 kg x 10',
+                title: 'Incline Dumbbell Press',
+                targetSetsReps: '3 Sets · Upper Chest',
+                prBadgeText: 'Last: 28 kg x 10',
                 restTime: '2:00',
-                emoji: '🦵',
                 isLast: false,
-                onTap: () {},
+                onTap: () => _showAIExerciseGuideModal(context, 'Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
               ),
               _ExerciseTimelineTile(
                 index: 2,
-                title: 'Romanian Deadlift',
-                targetSetsReps: '3 Sets · Target: 10-12 Reps',
-                prBadgeText: 'Last: 90 kg x 12',
+                title: 'Overhead Press',
+                targetSetsReps: '3 Sets · Front Delts',
+                prBadgeText: 'Last: 50 kg x 8',
                 restTime: '2:00',
-                emoji: '🏋️',
                 isLast: false,
-                onTap: () {},
+                onTap: () => _showAIExerciseGuideModal(context, 'Overhead Press', '3 Sets · Front Delts', isArabic),
               ),
               _ExerciseTimelineTile(
                 index: 3,
-                title: 'Bulgarian Split Squat',
-                targetSetsReps: '3 Sets (ea. leg) · Target: 12 Reps',
-                prBadgeText: 'Last: 40 kg (DB) x 12',
+                title: 'Cable Lateral Raises',
+                targetSetsReps: '3 Sets · Side Delts',
+                prBadgeText: 'Last: 12 kg x 12',
                 restTime: '1:30',
-                emoji: '🦵',
+                isLast: false,
+                onTap: () => _showAIExerciseGuideModal(context, 'Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
+              ),
+              _ExerciseTimelineTile(
+                index: 4,
+                title: 'Cable Chest Flyes',
+                targetSetsReps: '3 Sets · Chest',
+                prBadgeText: 'Last: 20 kg x 12',
+                restTime: '1:30',
                 isLast: true,
-                onTap: () {},
+                onTap: () => _showAIExerciseGuideModal(context, 'Cable Chest Flyes', '3 Sets · Chest', isArabic),
               ),
             ],
 
@@ -2812,9 +2815,236 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   }
 }
 
-String _getAIExercisePhotoUrl(String title) {
-  final cleanTitle = Uri.encodeComponent('$title exercise fitness gym demonstration 3d professional');
-  return 'https://image.pollinations.ai/prompt/$cleanTitle?width=300&height=300&nologo=true&seed=42';
+void _showAIExerciseGuideModal(BuildContext context, String title, String targetSetsReps, bool isArabic) {
+  final lower = title.toLowerCase();
+  String muscleGroup = 'Chest & Triceps';
+  String setupGuide = 'Lie flat on the bench, grip the bar slightly wider than shoulder-width, and retract your shoulder blades.';
+  String executionGuide = 'Unrack the weight, lower it steadily to mid-chest while keeping elbows at a 45° angle, then explode upward.';
+  String proTip = 'Maintain a solid arch with feet planted firmly. Focus on squeezing your chest at peak contraction.';
+
+  if (lower.contains('incline')) {
+    muscleGroup = 'Upper Chest & Front Delts';
+    setupGuide = 'Set the bench angle to 30°, press your back firmly against the pad, and position dumbbells at upper chest level.';
+    executionGuide = 'Drive dumbbells straight up toward the ceiling, keeping wrists neutral. Lower smoothly under full tension.';
+    proTip = 'Do not set bench angle higher than 30° to prevent shifting load away from upper chest onto front shoulders.';
+  } else if (lower.contains('overhead') || lower.contains('military')) {
+    muscleGroup = 'Shoulders (Front & Side Delts)';
+    setupGuide = 'Stand tall with core braced, hold dumbbells/barbell at collarbone height with elbows stacked under wrists.';
+    executionGuide = 'Press vertically overhead until arms are fully extended. Lower with control back to shoulder level.';
+    proTip = 'Brace glutes and abs tight to avoid arching lower back during heavy overhead pressing.';
+  } else if (lower.contains('lateral') || lower.contains('delt')) {
+    muscleGroup = 'Side Deltoids';
+    setupGuide = 'Stand with slight forward lean, hold handles with neutral grip, lead slightly with your elbows.';
+    executionGuide = 'Raise arms outward in a broad arc until parallel to floor. Pause briefly before lowering smoothly.';
+    proTip = 'Avoid using momentum or shrugging shoulders. Treat it as a controlled lateral sweep.';
+  } else if (lower.contains('fly') || lower.contains('crossover')) {
+    muscleGroup = 'Inner Chest & Pectoralis Major';
+    setupGuide = 'Set pulleys at chest height, step forward into a staggered stance, and keep a subtle bend in elbows.';
+    executionGuide = 'Hug the handles together in front of your chest, squeezing hard at peak contraction.';
+    proTip = 'Think about hugging a big tree trunk to maintain optimal elbow angle throughout the entire range.';
+  } else if (lower.contains('squat') || lower.contains('leg press')) {
+    muscleGroup = 'Quadriceps & Glutes';
+    setupGuide = 'Position feet shoulder-width apart, keep chest lifted, and brace your core deeply.';
+    executionGuide = 'Sit back and down between your hips until thighs are parallel. Press through full foot to drive up.';
+    proTip = 'Ensure knees track in line with your toes throughout the entire movement.';
+  } else if (lower.contains('deadlift') || lower.contains('rdl')) {
+    muscleGroup = 'Hamstrings, Glutes & Lower Back';
+    setupGuide = 'Stand hip-width apart, hinge at your hips while keeping spine flat and chest upright.';
+    executionGuide = 'Lower bar down along your shins until feeling a stretch in hamstrings, then drive hips forward to stand.';
+    proTip = 'Keep the bar close to your body at all times to protect lower back and maximize hamstring tension.';
+  }
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Container(
+      padding: const EdgeInsets.fromLTRB(22, 16, 22, 32),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD3E4D7),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF235A42),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1C2B1E),
+                      ),
+                    ),
+                    Text(
+                      targetSetsReps,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF235A42),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF5EE),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.track_changes_rounded, color: Color(0xFF235A42), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    isArabic ? 'العضلة المستهدفة: $muscleGroup' : 'Primary Target: $muscleGroup',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C2B1E),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isArabic ? '💡 دليل الأداء الفني' : '💡 Execution & Technique Guide',
+            style: GoogleFonts.outfit(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1C2B1E),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildGuideStep('1', isArabic ? 'الإعداد والوضعية' : 'Setup & Position', setupGuide),
+          const SizedBox(height: 8),
+          _buildGuideStep('2', isArabic ? 'طريقة الحركة' : 'Movement Drive', executionGuide),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF6F8F5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2EBE4)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.tips_and_updates_rounded, color: Color(0xFFFBBF24), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    proTip,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF3B5745),
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF235A42),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: Text(
+                isArabic ? 'تم، شكراً كوتش!' : 'Got it, Coach!',
+                style: GoogleFonts.outfit(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFFDCEEE3),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildGuideStep(String step, String title, String body) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Container(
+        width: 22,
+        height: 22,
+        decoration: const BoxDecoration(
+          color: Color(0xFF235A42),
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            step,
+            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1C2B1E)),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              body,
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D), height: 1.35),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 class _ExerciseTimelineTile extends StatelessWidget {
@@ -2840,55 +3070,71 @@ class _ExerciseTimelineTile extends StatelessWidget {
   });
 
   Widget _buildExerciseThumbnail(String title) {
-    final photoUrl = _getAIExercisePhotoUrl(title);
+    final lower = title.toLowerCase();
+    IconData icon = Icons.fitness_center_rounded;
+    String badge = 'CHEST';
+
+    if (lower.contains('incline')) {
+      icon = Icons.unfold_more_rounded;
+      badge = 'UPPER';
+    } else if (lower.contains('bench') || lower.contains('barbell bench')) {
+      icon = Icons.fitness_center_rounded;
+      badge = 'CHEST';
+    } else if (lower.contains('fly') || lower.contains('crossover')) {
+      icon = Icons.compare_arrows_rounded;
+      badge = 'FLYES';
+    } else if (lower.contains('overhead') || lower.contains('military')) {
+      icon = Icons.arrow_upward_rounded;
+      badge = 'DELTS';
+    } else if (lower.contains('lateral') || lower.contains('delt') || lower.contains('raise')) {
+      icon = Icons.open_in_full_rounded;
+      badge = 'SIDE';
+    } else if (lower.contains('deadlift') || lower.contains('rdl')) {
+      icon = Icons.download_rounded;
+      badge = 'BACK';
+    } else if (lower.contains('split squat') || lower.contains('lunge')) {
+      icon = Icons.nordic_walking_rounded;
+      badge = 'LEGS';
+    } else if (lower.contains('squat') || lower.contains('leg press')) {
+      icon = Icons.directions_walk_rounded;
+      badge = 'QUADS';
+    } else if (lower.contains('warmup') || lower.contains('stretch')) {
+      icon = Icons.self_improvement_rounded;
+      badge = 'WARM';
+    }
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
+      child: Container(
         width: 60,
         height: 60,
-        child: Stack(
-          fit: StackFit.expand,
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF5EE),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(color: const Color(0xFFEAF5EE)),
-            Image.network(
-              photoUrl,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
-                  color: const Color(0xFFF1F6F2),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
-                      ),
-                    ),
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: const Color(0xFFEAF5EE),
-                  child: const Center(
-                    child: Icon(Icons.fitness_center_rounded, color: Color(0xFF235A42), size: 24),
-                  ),
-                );
-              },
-            ),
             Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.black.withOpacity(0.25),
-                    Colors.transparent,
-                  ],
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                ),
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                color: Color(0xFF235A42),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Icon(icon, color: Colors.white, size: 17),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              badge,
+              style: GoogleFonts.inter(
+                fontSize: 8.5,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF235A42),
+                letterSpacing: 0.5,
               ),
             ),
           ],
