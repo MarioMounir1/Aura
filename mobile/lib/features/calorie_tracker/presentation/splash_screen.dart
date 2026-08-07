@@ -96,8 +96,8 @@ class _SplashScreenState extends State<SplashScreen>
     if (mounted) _textCtrl.forward();
     if (mounted) _loadingCtrl.forward();
 
-    // Check auth and navigate immediately without artificial delays
-    await Future.delayed(const Duration(milliseconds: 50));
+    // 4 seconds smooth splash display time
+    await Future.delayed(const Duration(seconds: 4));
     if (!mounted) return;
     await _checkAuthAndNavigate();
   }
@@ -285,19 +285,19 @@ class _SplashScreenState extends State<SplashScreen>
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: const LinearProgressIndicator(
-              backgroundColor: Color(0xFF1B2232),
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-              minHeight: 2,
+              backgroundColor: Color(0xFFE2EBE4),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+              minHeight: 3,
             ),
           ),
         ),
         const SizedBox(height: 14),
         Text(
-          'Loading local engines...',
+          'Preparing your experience...',
           style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: AppColors.primary.withOpacity(0.7),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF5A6E5D),
             letterSpacing: 0.5,
           ),
         ),
