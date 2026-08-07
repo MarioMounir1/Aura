@@ -79,7 +79,7 @@ const _goals = [
     label: 'Maintain Weight',
     subtitle: 'Stay at your current weight',
     emoji: '⚖️',
-    accent: Color(0xFF00BCD4),
+    accent: Color(0xFF235A42),
     calorieAdjust: 0,
   ),
   _GoalOption(
@@ -1205,8 +1205,8 @@ class _PlanCalorieCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF00BCD4).withOpacity(0.15),
-            const Color(0xFF0097A7).withOpacity(0.08),
+            const Color(0xFF235A42).withOpacity(0.12),
+            const Color(0xFF1E3A2B).withOpacity(0.06),
           ],
         ),
         border: Border.all(color: _T.cyan.withOpacity(0.3), width: 1.5),
@@ -1450,11 +1450,11 @@ class _GradientButtonState extends State<_GradientButton>
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF00BCD4), Color(0xFF0097A7)],
+              colors: [Color(0xFF235A42), Color(0xFF1E3A2B)],
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF00BCD4).withOpacity(0.35),
+                color: const Color(0xFF235A42).withOpacity(0.35),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
