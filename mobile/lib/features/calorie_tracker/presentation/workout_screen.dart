@@ -2812,6 +2812,26 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   }
 }
 
+String _getExerciseImageUrl(String title) {
+  final lower = title.toLowerCase();
+  if (lower.contains('bench') || lower.contains('chest') || lower.contains('fly')) {
+    return 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=300&auto=format&fit=crop';
+  } else if (lower.contains('press') || lower.contains('shoulder') || lower.contains('delt') || lower.contains('raise')) {
+    return 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?w=300&auto=format&fit=crop';
+  } else if (lower.contains('squat') || lower.contains('leg') || lower.contains('lunge')) {
+    return 'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=300&auto=format&fit=crop';
+  } else if (lower.contains('deadlift') || lower.contains('rdl') || lower.contains('hamstring')) {
+    return 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=300&auto=format&fit=crop';
+  } else if (lower.contains('pull') || lower.contains('row') || lower.contains('back') || lower.contains('lat')) {
+    return 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?w=300&auto=format&fit=crop';
+  } else if (lower.contains('curl') || lower.contains('tricep') || lower.contains('bicep') || lower.contains('arm')) {
+    return 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=300&auto=format&fit=crop';
+  } else if (lower.contains('warm') || lower.contains('stretch') || lower.contains('yoga')) {
+    return 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=300&auto=format&fit=crop';
+  }
+  return 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=300&auto=format&fit=crop';
+}
+
 class _ExerciseTimelineTile extends StatelessWidget {
   final int index;
   final String title;
@@ -2833,6 +2853,64 @@ class _ExerciseTimelineTile extends StatelessWidget {
     required this.isLast,
     required this.onTap,
   });
+
+  Widget _buildExerciseThumbnail(String title) {
+    final imageUrl = _getExerciseImageUrl(title);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SizedBox(
+        width: 60,
+        height: 60,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(color: const Color(0xFFEAF5EE)),
+            Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  color: const Color(0xFFF1F6F2),
+                  child: const Center(
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: const Color(0xFFF1F6F2),
+                  child: const Center(
+                    child: Icon(Icons.fitness_center_rounded, color: Color(0xFF235A42), size: 24),
+                  ),
+                );
+              },
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.25),
+                    Colors.transparent,
+                  ],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2908,17 +2986,7 @@ class _ExerciseTimelineTile extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            color: const Color(0xFFF1F6F2),
-                            child: Center(
-                              child: Text(emoji ?? '🏋️', style: const TextStyle(fontSize: 26)),
-                            ),
-                          ),
-                        ),
+                        _buildExerciseThumbnail(title),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
