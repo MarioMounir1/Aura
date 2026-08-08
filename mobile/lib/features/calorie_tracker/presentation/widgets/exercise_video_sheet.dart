@@ -87,23 +87,32 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
   }
 
   void _initWebPlayer() {
-    final videoId = _getYoutubeVideoId(widget.exerciseName);
-    final embedUrl = Uri.parse(
-        'https://www.youtube.com/embed/$videoId?autoplay=1&mute=1&loop=1&playlist=$videoId&controls=1&modestbranding=1&rel=0&playsinline=1');
+    try {
+      if (WebViewPlatform.instance == null) {
+        debugPrint('⚠️ [ExerciseVideoSheet] WebViewPlatform.instance is null');
+        return;
+      }
+      final videoId = _getYoutubeVideoId(widget.exerciseName);
+      final embedUrl = Uri.parse(
+          'https://www.youtube.com/embed/$videoId?autoplay=1&mute=1&loop=1&playlist=$videoId&controls=1&modestbranding=1&rel=0&playsinline=1');
 
-    _webCtrl = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF1E3A2B))
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageFinished: (_) {
-            if (mounted) {
-              setState(() => _isWebReady = true);
-            }
-          },
-        ),
-      )
-      ..loadRequest(embedUrl);
+      _webCtrl = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(const Color(0xFF1E3A2B))
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onPageFinished: (_) {
+              if (mounted) {
+                setState(() => _isWebReady = true);
+              }
+            },
+          ),
+        )
+        ..loadRequest(embedUrl);
+    } catch (e) {
+      debugPrint('⚠️ [ExerciseVideoSheet] _initWebPlayer error: $e');
+      _webCtrl = null;
+    }
   }
 
   Future<void> _fetchGeminiFormGuide() async {
