@@ -53,8 +53,8 @@ class ExerciseVideoSheet extends StatefulWidget {
 
 class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animCtrl;
-  late Animation<double> _pulseAnim;
+  AnimationController? _animCtrl;
+  Animation<double>? _pulseAnim;
   bool _isPlaying = true;
 
   String? _aiInstructions;
@@ -65,16 +65,40 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2400),
-    )..repeat(reverse: true);
-
-    _pulseAnim = Tween<double>(begin: 0.94, end: 1.06).animate(
-      CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOutSine),
-    );
-
+    _initAnimation();
     _fetchGeminiFormGuide();
+  }
+
+  void _initAnimation() {
+    if (_animCtrl == null) {
+      _animCtrl = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 2400),
+      );
+      _pulseAnim = Tween<double>(begin: 0.94, end: 1.06).animate(
+        CurvedAnimation(parent: _animCtrl!, curve: Curves.easeInOutSine),
+      );
+      _animCtrl!.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _animCtrl?.dispose();
+    super.dispose();
+  }
+
+  void _toggleMotionPlay() {
+    if (_animCtrl == null) return;
+    setState(() {
+      if (_animCtrl!.isAnimating) {
+        _animCtrl!.stop();
+        _isPlaying = false;
+      } else {
+        _animCtrl!.repeat(reverse: true);
+        _isPlaying = true;
+      }
+    });
   }
 
   Future<void> _fetchGeminiFormGuide() async {
@@ -108,24 +132,6 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
     }
   }
 
-  @override
-  void dispose() {
-    _animCtrl.dispose();
-    super.dispose();
-  }
-
-  void _toggleMotionPlay() {
-    setState(() {
-      if (_animCtrl.isAnimating) {
-        _animCtrl.stop();
-        _isPlaying = false;
-      } else {
-        _animCtrl.repeat(reverse: true);
-        _isPlaying = true;
-      }
-    });
-  }
-
   String _getTempoPhaseText(double value) {
     if (value < 0.4) {
       return 'Phase 1: Eccentric Lowering (2s Controlled)';
@@ -138,6 +144,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
 
   @override
   Widget build(BuildContext context) {
+    _initAnimation();
     final mediaQuery = MediaQuery.of(context);
     final maxHeight = mediaQuery.size.height * 0.88;
 
@@ -241,129 +248,148 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                         end: Alignment.bottomRight,
                       ),
                     ),
-                    child: AnimatedBuilder(
-                      animation: _animCtrl,
-                      builder: (context, child) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // Pulsing Target Muscle Halo
-                            ScaleTransition(
-                              scale: _pulseAnim,
-                              child: Container(
-                                width: 170,
-                                height: 170,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(0xFF81C784).withOpacity(0.18),
-                                ),
-                              ),
+                    child: (_animCtrl == null || _pulseAnim == null)
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF81C784)),
                             ),
-
-                            // Main Exercise Card Details
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                          )
+                        : AnimatedBuilder(
+                            animation: _animCtrl!,
+                            builder: (context, child) {
+                              return Stack(
+                                alignment: Alignment.center,
                                 children: [
-                                  GestureDetector(
-                                    onTap: _toggleMotionPlay,
+                                  // Pulsing Target Muscle Halo
+                                  ScaleTransition(
+                                    scale: _pulseAnim!,
                                     child: Container(
-                                      width: 62,
-                                      height: 62,
+                                      width: 170,
+                                      height: 170,
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.12),
                                         shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: const Color(0xFF81C784),
-                                            width: 2.2),
-                                      ),
-                                      child: Icon(
-                                        _isPlaying
-                                            ? Icons.fitness_center_rounded
-                                            : Icons.play_arrow_rounded,
-                                        color: const Color(0xFF81C784),
-                                        size: 30,
+                                        color: const Color(0xFF81C784)
+                                            .withOpacity(0.18),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    widget.exerciseName,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.outfit(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
 
-                                  // Dynamic Tempo Guide Chip
-                                  Container(
+                                  // Main Exercise Card Details
+                                  Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.45),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                          color: const Color(0xFF81C784).withOpacity(0.4),
-                                          width: 1),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
+                                        horizontal: 20),
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Container(
-                                          width: 7,
-                                          height: 7,
-                                          decoration: const BoxDecoration(
-                                            color: Color(0xFF81C784),
-                                            shape: BoxShape.circle,
+                                        GestureDetector(
+                                          onTap: _toggleMotionPlay,
+                                          child: Container(
+                                            width: 62,
+                                            height: 62,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white
+                                                  .withOpacity(0.12),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color:
+                                                      const Color(0xFF81C784),
+                                                  width: 2.2),
+                                            ),
+                                            child: Icon(
+                                              _isPlaying
+                                                  ? Icons
+                                                      .fitness_center_rounded
+                                                  : Icons.play_arrow_rounded,
+                                              color: const Color(0xFF81C784),
+                                              size: 30,
+                                            ),
                                           ),
                                         ),
-                                        const SizedBox(width: 7),
+                                        const SizedBox(height: 12),
                                         Text(
-                                          _getTempoPhaseText(_animCtrl.value),
-                                          style: GoogleFonts.inter(
-                                            color: const Color(0xFFA1C4AC),
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
+                                          widget.exerciseName,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.outfit(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+
+                                        // Dynamic Tempo Guide Chip
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.black.withOpacity(0.45),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                            border: Border.all(
+                                                color: const Color(0xFF81C784)
+                                                    .withOpacity(0.4),
+                                                width: 1),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 7,
+                                                height: 7,
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFF81C784),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 7),
+                                              Text(
+                                                _getTempoPhaseText(
+                                                    _animCtrl?.value ?? 0.0),
+                                                style: GoogleFonts.inter(
+                                                  color:
+                                                      const Color(0xFFA1C4AC),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
 
-                            // Top 60fps HD Badge
-                            Positioned(
-                              top: 12,
-                              right: 12,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 9, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.6),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '60 FPS HD Visualizer',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF81C784),
+                                  // Top 60fps HD Badge
+                                  Positioned(
+                                    top: 12,
+                                    right: 12,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 9, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        borderRadius:
+                                            BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        '60 FPS HD Visualizer',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF81C784),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                                ],
+                              );
+                            },
+                          ),
                   ),
                 ),
 
