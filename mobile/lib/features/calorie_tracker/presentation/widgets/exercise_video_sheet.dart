@@ -214,7 +214,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                   child: Container(
                     height: 210,
                     width: double.infinity,
-                    color: Colors.black,
+                    color: const Color(0xFF1E3A2B),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
@@ -353,72 +353,82 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
   }
 
   Widget _buildAnimatedExerciseVisualizer() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1E3A2B), Color(0xFF0F1E16)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Background Glow
-          Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF235A42).withOpacity(0.35),
-            ),
+    return SizedBox.expand(
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF1E3A2B), Color(0xFF0F1E16)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF235A42), width: 2),
-                ),
-                child: const Icon(
-                  Icons.fitness_center_rounded,
-                  color: Color(0xFF81C784),
-                  size: 32,
-                ),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Background Glow
+            Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF235A42).withOpacity(0.35),
               ),
-              const SizedBox(height: 12),
-              Text(
-                widget.exerciseName,
-                style: GoogleFonts.outfit(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.play_circle_fill_rounded,
-                      color: Color(0xFF81C784), size: 14),
-                  const SizedBox(width: 6),
-                  Text(
-                    'HD Exercise Form Demonstration',
-                    style: GoogleFonts.inter(
-                      color: const Color(0xFFA1C4AC),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF81C784), width: 1.8),
                     ),
+                    child: const Icon(
+                      Icons.fitness_center_rounded,
+                      color: Color(0xFF81C784),
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.exerciseName,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.play_circle_fill_rounded,
+                          color: Color(0xFF81C784), size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        'HD Exercise Form Guide & Video',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFA1C4AC),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
