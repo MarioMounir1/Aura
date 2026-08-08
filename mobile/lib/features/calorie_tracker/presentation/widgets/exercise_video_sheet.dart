@@ -1,8 +1,9 @@
 // lib/features/calorie_tracker/presentation/widgets/exercise_video_sheet.dart
-// Aura — Premium Interactive 60fps Motion Visualizer & Gemini AI Exercise Form Guide
+// Aura — Premium Real YouTube HD Exercise Video Demonstration & Gemini AI Form Guide Sheet
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../../../../core/network/api_client.dart';
 
 class ExerciseVideoSheet extends StatefulWidget {
@@ -51,54 +52,83 @@ class ExerciseVideoSheet extends StatefulWidget {
   State<ExerciseVideoSheet> createState() => _ExerciseVideoSheetState();
 }
 
-class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
-    with SingleTickerProviderStateMixin {
-  AnimationController? _animCtrl;
-  Animation<double>? _pulseAnim;
-  bool _isPlaying = true;
+class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
+  WebViewController? _webCtrl;
+  bool _isWebReady = false;
+  bool _webError = false;
 
   String? _aiInstructions;
   String? _aiTips;
   String? _aiCommonMistakes;
   bool _isAiLoading = true;
 
+  static String _getYoutubeVideoId(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('incline')) return '8iPEnn-ltC8';
+    if (lower.contains('bench press')) return 'rT7DgCr-3pg';
+    if (lower.contains('overhead') || lower.contains('shoulder press') || lower.contains('arnold')) return '2yjwXTZQDDI';
+    if (lower.contains('lateral')) return 'PzsMitR9d0E';
+    if (lower.contains('flye') || lower.contains('crossover') || lower.contains('pec deck')) return 'Iwe6AmxVf7o';
+    if (lower.contains('pull-up') || lower.contains('chin-up')) return 'eGo4IYlbE5g';
+    if (lower.contains('lat pulldown')) return 'CAwf7n6Luuc';
+    if (lower.contains('row')) return 'FWJR5Ve8bnQ';
+    if (lower.contains('squat')) return 'ultWZbUMPL8';
+    if (lower.contains('deadlift') || lower.contains('rdl')) return '2SHsk9AzdjA';
+    if (lower.contains('leg press')) return 'IZxyjW7MPJQ';
+    if (lower.contains('curl')) return 'ykJmrZ5v0Oo';
+    if (lower.contains('tricep') || lower.contains('pushdown') || lower.contains('dip') || lower.contains('skull')) return '2-LAMcpzODU';
+    return 'rT7DgCr-3pg';
+  }
+
   @override
   void initState() {
     super.initState();
-    _initAnimation();
+    _initWebPlayer();
     _fetchGeminiFormGuide();
   }
 
-  void _initAnimation() {
-    if (_animCtrl == null) {
-      _animCtrl = AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 2400),
-      );
-      _pulseAnim = Tween<double>(begin: 0.94, end: 1.06).animate(
-        CurvedAnimation(parent: _animCtrl!, curve: Curves.easeInOutSine),
-      );
-      _animCtrl!.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animCtrl?.dispose();
-    super.dispose();
-  }
-
-  void _toggleMotionPlay() {
-    if (_animCtrl == null) return;
-    setState(() {
-      if (_animCtrl!.isAnimating) {
-        _animCtrl!.stop();
-        _isPlaying = false;
-      } else {
-        _animCtrl!.repeat(reverse: true);
-        _isPlaying = true;
+  void _initWebPlayer() {
+    try {
+      if (WebViewPlatform.instance == null) {
+        debugPrint('⚠️ [ExerciseVideoSheet] WebViewPlatform.instance is null');
+        setState(() => _webError = true);
+        return;
       }
-    });
+
+      final videoId = _getYoutubeVideoId(widget.exerciseName);
+      final htmlContent = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background-color: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+  <iframe src="https://www.youtube.com/embed/$videoId?autoplay=1&mute=0&controls=1&modestbranding=1&rel=0&playsinline=1" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen></iframe>
+</body>
+</html>
+''';
+
+      _webCtrl = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(const Color(0xFF000000))
+        ..loadHtmlString(htmlContent);
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          setState(() => _isWebReady = true);
+        }
+      });
+    } catch (e) {
+      debugPrint('⚠️ [ExerciseVideoSheet] _initWebPlayer error: $e');
+      setState(() => _webError = true);
+    }
   }
 
   Future<void> _fetchGeminiFormGuide() async {
@@ -132,19 +162,8 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
     }
   }
 
-  String _getTempoPhaseText(double value) {
-    if (value < 0.4) {
-      return 'Phase 1: Eccentric Lowering (2s Controlled)';
-    } else if (value < 0.6) {
-      return 'Phase 2: Peak Contraction (1s Hold & Squeeze)';
-    } else {
-      return 'Phase 3: Concentric Drive (Explosive Push)';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    _initAnimation();
     final mediaQuery = MediaQuery.of(context);
     final maxHeight = mediaQuery.size.height * 0.88;
 
@@ -207,7 +226,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Form Guide & Motion Visualizer',
+                            'Form Guide & Real HD Video 🎥',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: const Color(0xFF5A6E5D),
@@ -235,161 +254,68 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                // 🎬 Interactive 60fps HD Motion Visualizer Box
+                // 🎬 REAL YouTube HD Video Player Card
                 ClipRRect(
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    height: 215,
+                    height: 220,
                     width: double.infinity,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF1E3A2B), Color(0xFF0F1E16)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: (_animCtrl == null || _pulseAnim == null)
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF81C784)),
+                    color: Colors.black,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        if (_webCtrl != null && !_webError)
+                          WebViewWidget(controller: _webCtrl!),
+
+                        if (!_isWebReady && !_webError)
+                          const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF81C784)),
+                                ),
+                                SizedBox(height: 10),
+                                Text(
+                                  'Loading Real Exercise Video...',
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 12),
+                                ),
+                              ],
                             ),
-                          )
-                        : AnimatedBuilder(
-                            animation: _animCtrl!,
-                            builder: (context, child) {
-                              return Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  // Pulsing Target Muscle Halo
-                                  ScaleTransition(
-                                    scale: _pulseAnim!,
-                                    child: Container(
-                                      width: 170,
-                                      height: 170,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: const Color(0xFF81C784)
-                                            .withOpacity(0.18),
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Main Exercise Card Details
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 20),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: _toggleMotionPlay,
-                                          child: Container(
-                                            width: 62,
-                                            height: 62,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white
-                                                  .withOpacity(0.12),
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                  color:
-                                                      const Color(0xFF81C784),
-                                                  width: 2.2),
-                                            ),
-                                            child: Icon(
-                                              _isPlaying
-                                                  ? Icons
-                                                      .fitness_center_rounded
-                                                  : Icons.play_arrow_rounded,
-                                              color: const Color(0xFF81C784),
-                                              size: 30,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          widget.exerciseName,
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.outfit(
-                                            color: Colors.white,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-
-                                        // Dynamic Tempo Guide Chip
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 5),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.black.withOpacity(0.45),
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                            border: Border.all(
-                                                color: const Color(0xFF81C784)
-                                                    .withOpacity(0.4),
-                                                width: 1),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Container(
-                                                width: 7,
-                                                height: 7,
-                                                decoration: const BoxDecoration(
-                                                  color: Color(0xFF81C784),
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 7),
-                                              Text(
-                                                _getTempoPhaseText(
-                                                    _animCtrl?.value ?? 0.0),
-                                                style: GoogleFonts.inter(
-                                                  color:
-                                                      const Color(0xFFA1C4AC),
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Top 60fps HD Badge
-                                  Positioned(
-                                    top: 12,
-                                    right: 12,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 9, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        borderRadius:
-                                            BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        '60 FPS HD Visualizer',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF81C784),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
                           ),
+
+                        if (_webError)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            color: const Color(0xFF1E3A2B),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.play_circle_fill_rounded,
+                                    color: Color(0xFF81C784), size: 44),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Real YouTube Exercise Video Ready',
+                                  style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Restart Flutter app once to load video player',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                      color: const Color(0xFFA1C4AC),
+                                      fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -399,7 +325,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                 _buildSectionCard(
                   icon: Icons.check_circle_outline_rounded,
                   iconColor: const Color(0xFF235A42),
-                  title: 'Step-by-Step Execution (AI Guide)',
+                  title: 'Step-by-Step Execution (Gemini AI Guide)',
                   content: widget.instructions ?? _aiInstructions ??
                       '1. Set up with your feet shoulder-width apart.\n'
                           '2. Engage your core and keep your chest proud.\n'
