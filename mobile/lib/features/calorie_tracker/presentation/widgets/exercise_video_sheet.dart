@@ -1,9 +1,9 @@
 // lib/features/calorie_tracker/presentation/widgets/exercise_video_sheet.dart
-// Aura — Premium HD Exercise Video Demonstration & Form Guide Sheet
+// Aura — Premium HD Exercise Video Demonstration & Gemini AI Form Guide Sheet
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:video_player/video_player.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import '../../../../core/network/api_client.dart';
 
 class ExerciseVideoSheet extends StatefulWidget {
@@ -53,23 +53,52 @@ class ExerciseVideoSheet extends StatefulWidget {
 }
 
 class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
-  VideoPlayerController? _videoCtrl;
-  bool _isInitialized = false;
-  bool _hasError = false;
-  bool _isPlaying = true;
+  late YoutubePlayerController _ytCtrl;
+  bool _isYtReady = false;
 
   String? _aiInstructions;
   String? _aiTips;
   String? _aiCommonMistakes;
   bool _isAiLoading = true;
 
-  // Universal H.264 MP4 video stream that plays on 100% of Android & iOS devices
-  static const _defaultVideoUrl = 'https://vjs.zencdn.net/v/oceans.mp4';
+  static String _getYoutubeVideoId(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('incline')) return '8iPEnn-ltC8';
+    if (lower.contains('bench press')) return 'rT7DgCr-3pg';
+    if (lower.contains('overhead') || lower.contains('shoulder press') || lower.contains('arnold')) return '2yjwXTZQDDI';
+    if (lower.contains('lateral')) return 'PzsMitR9d0E';
+    if (lower.contains('flye') || lower.contains('crossover') || lower.contains('pec deck')) return 'Iwe6AmxVf7o';
+    if (lower.contains('pull-up') || lower.contains('chin-up')) return 'eGo4IYlbE5g';
+    if (lower.contains('lat pulldown')) return 'CAwf7n6Luuc';
+    if (lower.contains('row')) return 'FWJR5Ve8bnQ';
+    if (lower.contains('squat')) return 'ultWZbUMPL8';
+    if (lower.contains('deadlift') || lower.contains('rdl')) return '2SHsk9AzdjA';
+    if (lower.contains('leg press')) return 'IZxyjW7MPJQ';
+    if (lower.contains('curl')) return 'ykJmrZ5v0Oo';
+    if (lower.contains('tricep') || lower.contains('pushdown') || lower.contains('dip') || lower.contains('skull')) return '2-LAMcpzODU';
+    return 'rT7DgCr-3pg';
+  }
 
   @override
   void initState() {
     super.initState();
-    _initVideo();
+    final videoId = _getYoutubeVideoId(widget.exerciseName);
+    _ytCtrl = YoutubePlayerController(
+      initialVideoId: videoId,
+      flags: const YoutubePlayerFlags(
+        autoPlay: true,
+        mute: false,
+        loop: true,
+        isLive: false,
+        forceHD: true,
+        enableCaption: false,
+      ),
+    )..addListener(() {
+        if (mounted && _ytCtrl.value.isReady && !_isYtReady) {
+          setState(() => _isYtReady = true);
+        }
+      });
+
     _fetchGeminiFormGuide();
   }
 
@@ -104,54 +133,10 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
     }
   }
 
-  Future<void> _initVideo() async {
-    final rawUrl = (widget.videoUrl != null && widget.videoUrl!.isNotEmpty)
-        ? widget.videoUrl!
-        : _defaultVideoUrl;
-
-    try {
-      final uri = Uri.parse(rawUrl);
-      _videoCtrl = VideoPlayerController.networkUrl(
-        uri,
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
-      );
-      await _videoCtrl!.initialize();
-      _videoCtrl!.setLooping(true);
-      await _videoCtrl!.play();
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-          _hasError = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('⚠️ [ExerciseVideoSheet] Video load error: $e');
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-        });
-      }
-    }
-  }
-
   @override
   void dispose() {
-    _videoCtrl?.dispose();
+    _ytCtrl.dispose();
     super.dispose();
-  }
-
-  void _togglePlayPause() {
-    if (_videoCtrl != null && _isInitialized) {
-      setState(() {
-        if (_videoCtrl!.value.isPlaying) {
-          _videoCtrl!.pause();
-          _isPlaying = false;
-        } else {
-          _videoCtrl!.play();
-          _isPlaying = true;
-        }
-      });
-    }
   }
 
   @override
@@ -218,7 +203,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Form Guide & Video',
+                            'Form Guide & HD Video',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: const Color(0xFF5A6E5D),
@@ -246,65 +231,32 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                // 🎬 HD Video Player Container
+                // 🎬 YouTube HD Video Player
                 ClipRRect(
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    height: 210,
+                    height: 215,
                     width: double.infinity,
                     color: const Color(0xFF1E3A2B),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        if (_isInitialized && _videoCtrl != null)
-                          GestureDetector(
-                            onTap: _togglePlayPause,
-                            child: SizedBox.expand(
-                              child: FittedBox(
-                                fit: BoxFit.cover,
-                                child: SizedBox(
-                                  width: _videoCtrl!.value.size.width > 0
-                                      ? _videoCtrl!.value.size.width
-                                      : 1280,
-                                  height: _videoCtrl!.value.size.height > 0
-                                      ? _videoCtrl!.value.size.height
-                                      : 720,
-                                  child: VideoPlayer(_videoCtrl!),
-                                ),
-                              ),
-                            ),
-                          )
-                        else
-                          // Animated Motion Graphic & Form Visualizer
-                          _buildAnimatedExerciseVisualizer(),
-
-                        // Play / Pause Overlay Icon
-                        if (_isInitialized && !_isPlaying)
-                          GestureDetector(
-                            onTap: _togglePlayPause,
-                            child: Container(
-                              width: 52,
-                              height: 52,
-                              decoration: const BoxDecoration(
-                                color: Color(0x99235A42),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.play_arrow_rounded,
-                                  color: Colors.white, size: 32),
-                            ),
-                          ),
-                      ],
+                    child: YoutubePlayer(
+                      controller: _ytCtrl,
+                      showVideoProgressIndicator: true,
+                      progressIndicatorColor: const Color(0xFF235A42),
+                      progressColors: const ProgressBarColors(
+                        playedColor: Color(0xFF235A42),
+                        handleColor: Color(0xFF81C784),
+                      ),
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
-                // 🎯 Form Instructions
+                // 🎯 Form Instructions (Gemini AI Powered)
                 _buildSectionCard(
                   icon: Icons.check_circle_outline_rounded,
                   iconColor: const Color(0xFF235A42),
-                  title: 'Step-by-Step Execution',
+                  title: 'Step-by-Step Execution (AI Guide)',
                   content: widget.instructions ?? _aiInstructions ??
                       '1. Set up with your feet shoulder-width apart.\n'
                           '2. Engage your core and keep your chest proud.\n'
@@ -320,7 +272,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                   iconColor: const Color(0xFFF59E0B),
                   title: 'Pro Coaching Cues',
                   content: widget.tips ?? _aiTips ??
-                      '• Squeeze the target muscle at the peak contraction for 1 second.\n'
+                      '• Squeeze the target muscle at peak contraction for 1 second.\n'
                           '• Keep your shoulder blades retracted and avoid using momentum.',
                 ),
 
@@ -374,6 +326,17 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                   color: const Color(0xFF1C2B1E),
                 ),
               ),
+              if (_isAiLoading && title.contains('AI')) ...[
+                const SizedBox(width: 8),
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
@@ -386,87 +349,6 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAnimatedExerciseVisualizer() {
-    return SizedBox.expand(
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1E3A2B), Color(0xFF0F1E16)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Background Glow
-            Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF235A42).withOpacity(0.35),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF81C784), width: 1.8),
-                    ),
-                    child: const Icon(
-                      Icons.fitness_center_rounded,
-                      color: Color(0xFF81C784),
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.exerciseName,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.play_circle_fill_rounded,
-                          color: Color(0xFF81C784), size: 14),
-                      const SizedBox(width: 6),
-                      Text(
-                        'HD Exercise Form Guide & Video',
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFFA1C4AC),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
