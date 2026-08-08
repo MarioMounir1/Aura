@@ -1,34 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Solid Light Mint Background matching Pre-Screen -->
     <item>
         <color android:color="#F6F8F5" />
     </item>
-
-    <!-- Centered Green Circular AURA Logo (Native Frame 0) -->
     <item
-        android:width="120dp"
-        android:height="120dp"
-        android:gravity="center">
-        <vector
-            android:width="120dp"
-            android:height="120dp"
-            android:viewportWidth="120"
-            android:viewportHeight="120">
-            <path
-                android:fillColor="#1F235A42"
-                android:pathData="M60,60m-52,0a52,52 0 1,0 104,0a52,52 0 1,0 -104,0"/>
-            <path
-                android:strokeColor="#235A42"
-                android:strokeWidth="1.5"
-                android:fillColor="#F6F8F5"
-                android:pathData="M60,60m-40,0a40,40 0 1,0 80,0a40,40 0 1,0 -80,0"/>
-            <path
-                android:strokeColor="#235A42"
-                android:strokeWidth="4.5"
-                android:strokeLineCap="round"
-                android:strokeLineJoin="round"
-                android:pathData="M44,78 L60,38 L76,78 M48,65 L72,65"/>
-        </vector>
-    </item>
+        android:width="108dp"
+        android:height="108dp"
+        android:gravity="center"
+        android:drawable="@drawable/aura_splash_icon" />
 </layer-list>
