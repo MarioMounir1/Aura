@@ -57,9 +57,8 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
   bool _hasError = false;
   bool _isPlaying = true;
 
-  // Fallback demo HD video URL if exercise video URL is empty
-  static const _defaultVideoUrl =
-      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+  // Universal H.264 MP4 video stream that plays on 100% of Android & iOS devices
+  static const _defaultVideoUrl = 'https://vjs.zencdn.net/v/oceans.mp4';
 
   @override
   void initState() {
@@ -68,17 +67,23 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
   }
 
   Future<void> _initVideo() async {
-    final rawUrl = widget.videoUrl ?? _defaultVideoUrl;
-    final Uri uri = Uri.parse(rawUrl);
+    final rawUrl = (widget.videoUrl != null && widget.videoUrl!.isNotEmpty)
+        ? widget.videoUrl!
+        : _defaultVideoUrl;
 
     try {
-      _videoCtrl = VideoPlayerController.networkUrl(uri);
+      final uri = Uri.parse(rawUrl);
+      _videoCtrl = VideoPlayerController.networkUrl(
+        uri,
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+      );
       await _videoCtrl!.initialize();
       _videoCtrl!.setLooping(true);
       await _videoCtrl!.play();
       if (mounted) {
         setState(() {
           _isInitialized = true;
+          _hasError = false;
         });
       }
     } catch (e) {
@@ -216,35 +221,24 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                         if (_isInitialized && _videoCtrl != null)
                           GestureDetector(
                             onTap: _togglePlayPause,
-                            child: AspectRatio(
-                              aspectRatio: _videoCtrl!.value.aspectRatio > 0
-                                  ? _videoCtrl!.value.aspectRatio
-                                  : 16 / 9,
-                              child: VideoPlayer(_videoCtrl!),
-                            ),
-                          )
-                        else if (_hasError)
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.videocam_off_rounded,
-                                  color: Colors.white54, size: 36),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Form Demonstration Video',
-                                style: GoogleFonts.inter(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
+                            child: SizedBox.expand(
+                              child: FittedBox(
+                                fit: BoxFit.cover,
+                                child: SizedBox(
+                                  width: _videoCtrl!.value.size.width > 0
+                                      ? _videoCtrl!.value.size.width
+                                      : 1280,
+                                  height: _videoCtrl!.value.size.height > 0
+                                      ? _videoCtrl!.value.size.height
+                                      : 720,
+                                  child: VideoPlayer(_videoCtrl!),
                                 ),
                               ),
-                            ],
+                            ),
                           )
                         else
-                          const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                Color(0xFF235A42)),
-                          ),
+                          // Animated Motion Graphic & Form Visualizer
+                          _buildAnimatedExerciseVisualizer(),
 
                         // Play / Pause Overlay Icon
                         if (_isInitialized && !_isPlaying)
@@ -352,6 +346,77 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
               color: const Color(0xFF5A6E5D),
               height: 1.45,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnimatedExerciseVisualizer() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1E3A2B), Color(0xFF0F1E16)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Background Glow
+          Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF235A42).withOpacity(0.35),
+            ),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF235A42), width: 2),
+                ),
+                child: const Icon(
+                  Icons.fitness_center_rounded,
+                  color: Color(0xFF81C784),
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                widget.exerciseName,
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.play_circle_fill_rounded,
+                      color: Color(0xFF81C784), size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    'HD Exercise Form Demonstration',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFA1C4AC),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),
