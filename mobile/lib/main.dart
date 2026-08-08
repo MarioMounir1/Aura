@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -250,7 +251,7 @@ class TeneenApp extends StatelessWidget {
                 final mediaQuery = MediaQuery.of(context);
                 return MediaQuery(
                   data: mediaQuery.copyWith(
-                    textScaler: const TextScaler.linear(0.90),
+                    textScaler: const TextScaler.linear(0.82),
                   ),
                   child: Directionality(
                     textDirection: TextDirection.ltr,
@@ -260,9 +261,9 @@ class TeneenApp extends StatelessWidget {
               },
 
               // ── Routes ──────────────────────────────────
-              initialRoute: '/splash',
+              initialRoute: '/',
               routes: {
-                '/splash':  (_) => const SplashScreen(),
+                '/splash':  (_) => const AuthWrapper(),
                 '/':        (_) => const AuthWrapper(),
                 '/login':   (_) => const LoginScreen(),
                 '/history': (_) => const HistoryScreen(),
@@ -283,8 +284,6 @@ class TeneenApp extends StatelessWidget {
 
 // ── Auth Wrapper ──────────────────────────────────────────────
 
-// ── Auth Wrapper ──────────────────────────────────────────────
-
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
 
@@ -295,6 +294,65 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   ProfileLoaded? _lastProfileLoaded;
 
+  Widget _buildPreScreenView() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F8F5),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFF6F8F5),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.15),
+                    blurRadius: 40,
+                    spreadRadius: 10,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  'A',
+                  style: GoogleFonts.outfit(
+                    fontSize: 52,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Text(
+              'AURA',
+              style: GoogleFonts.inter(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF1C2B1E),
+                letterSpacing: 12,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Track · Perform · Evolve',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF5A6E5D),
+                letterSpacing: 2.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -303,7 +361,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
           context.read<ProfileBloc>().add(LoadProfile());
           context.read<DashboardBloc>().add(const LoadDashboard());
           
-          // Defer non-critical background data fetches until after initial frame
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
             context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
@@ -358,14 +415,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   }
 
                   if (profileState is ProfileInitial || profileState is ProfileLoading) {
-                    return const Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        ),
-                      ),
-                    );
+                    return _buildPreScreenView();
                   }
 
                   if (profileState is ProfileFailure) {
@@ -392,14 +442,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             );
           }
           if (authState is AuthInitial || authState is AuthLoading) {
-            return const Scaffold(
-              backgroundColor: AppColors.background,
-              body: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-                ),
-              ),
-            );
+            return _buildPreScreenView();
           }
           return const LoginScreen();
         },
