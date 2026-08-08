@@ -2,7 +2,7 @@ name: calc_calories
 description: Calc-Calories — AI-powered calorie counter for Egyptian restaurants
 
 publish_to: "none"
-version: 1.0.0+19
+version: 1.0.0+20
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -43,6 +43,7 @@ dependencies:
   google_fonts: ^8.1.0
   fl_chart: ^1.2.0
   cached_network_image: ^3.4.1
+  video_player: ^2.8.6
 
   # Functional Programming
   dartz: ^0.10.1
