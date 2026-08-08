@@ -261,9 +261,9 @@ class TeneenApp extends StatelessWidget {
               },
 
               // ── Routes ──────────────────────────────────
-              initialRoute: '/',
+              initialRoute: '/splash',
               routes: {
-                '/splash':  (_) => const AuthWrapper(),
+                '/splash':  (_) => const SplashScreen(),
                 '/':        (_) => const AuthWrapper(),
                 '/login':   (_) => const LoginScreen(),
                 '/history': (_) => const HistoryScreen(),
