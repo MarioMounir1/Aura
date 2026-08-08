@@ -54,8 +54,8 @@ class ExerciseVideoSheet extends StatefulWidget {
 
 class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
     with TickerProviderStateMixin {
-  late AnimationController _repCtrl;
-  late AnimationController _pulseCtrl;
+  AnimationController? _repCtrl;
+  AnimationController? _pulseCtrl;
   bool _isPlaying = true;
   bool _isSlowMo = false;
   int _currentRep = 1;
@@ -70,7 +70,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
   void initState() {
     super.initState();
 
-    _repCtrl = AnimationController(
+    _repCtrl ??= AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
     )..addStatusListener((status) {
@@ -81,47 +81,49 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                   _currentRep < _totalReps ? _currentRep + 1 : 1;
             });
           }
-          _repCtrl.forward(from: 0.0);
+          _repCtrl?.forward(from: 0.0);
         }
       });
 
-    _pulseCtrl = AnimationController(
+    _pulseCtrl ??= AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat(reverse: true);
 
-    _repCtrl.forward();
+    _repCtrl!.forward();
     _fetchGeminiFormGuide();
   }
 
   @override
   void dispose() {
-    _repCtrl.dispose();
-    _pulseCtrl.dispose();
+    _repCtrl?.dispose();
+    _pulseCtrl?.dispose();
     super.dispose();
   }
 
   void _togglePlayPause() {
+    if (_repCtrl == null || _pulseCtrl == null) return;
     setState(() {
-      if (_repCtrl.isAnimating) {
-        _repCtrl.stop();
-        _pulseCtrl.stop();
+      if (_repCtrl!.isAnimating) {
+        _repCtrl!.stop();
+        _pulseCtrl!.stop();
         _isPlaying = false;
       } else {
-        _repCtrl.forward();
-        _pulseCtrl.repeat(reverse: true);
+        _repCtrl!.forward();
+        _pulseCtrl!.repeat(reverse: true);
         _isPlaying = true;
       }
     });
   }
 
   void _toggleSpeed() {
+    if (_repCtrl == null) return;
     setState(() {
       _isSlowMo = !_isSlowMo;
-      final currentVal = _repCtrl.value;
-      _repCtrl.duration =
+      final currentVal = _repCtrl!.value;
+      _repCtrl!.duration =
           Duration(milliseconds: _isSlowMo ? 5000 : 2400);
-      if (_isPlaying) _repCtrl.forward(from: currentVal);
+      if (_isPlaying) _repCtrl!.forward(from: currentVal);
     });
   }
 
@@ -241,35 +243,36 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                             ),
                           ),
                           const SizedBox(width: 8),
-                          AnimatedBuilder(
-                            animation: _pulseCtrl,
-                            builder: (_, __) => Opacity(
-                              opacity: _isPlaying
-                                  ? 0.5 + _pulseCtrl.value * 0.5
-                                  : 0.5,
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF81C784),
-                                      shape: BoxShape.circle,
+                          if (_pulseCtrl != null)
+                            AnimatedBuilder(
+                              animation: _pulseCtrl!,
+                              builder: (_, __) => Opacity(
+                                opacity: _isPlaying
+                                    ? 0.5 + _pulseCtrl!.value * 0.5
+                                    : 0.5,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF81C784),
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'AI Form Video',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: const Color(0xFF235A42),
-                                      fontWeight: FontWeight.w600,
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'AI Form Video',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: const Color(0xFF235A42),
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ],
@@ -303,12 +306,13 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                         end: Alignment.bottomRight,
                       ),
                     ),
-                    child: AnimatedBuilder(
-                      animation: _repCtrl,
+                    child: _repCtrl == null
+                        ? const SizedBox.shrink()
+                        : AnimatedBuilder(
+                      animation: _repCtrl!,
                       builder: (context, _) {
-                        // Smooth eased motion 0→1→0
-                        final raw = _repCtrl.value;
-                        final t = math.sin(raw * math.pi); // 0→1→0
+                        final raw = _repCtrl!.value;
+                        final t = math.sin(raw * math.pi);
                         return Stack(
                           children: [
                             // Background grid
@@ -340,8 +344,10 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                                       color: Colors.black.withOpacity(0.6),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
-                                    child: AnimatedBuilder(
-                                      animation: _pulseCtrl,
+                                    child: _pulseCtrl == null
+                                        ? const SizedBox.shrink()
+                                        : AnimatedBuilder(
+                                      animation: _pulseCtrl!,
                                       builder: (_, __) => Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -353,7 +359,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet>
                                                   ? Color.lerp(
                                                       const Color(0xFF81C784),
                                                       Colors.white,
-                                                      _pulseCtrl.value * 0.4)
+                                                      _pulseCtrl!.value * 0.4)
                                                   : Colors.grey,
                                               shape: BoxShape.circle,
                                             ),
