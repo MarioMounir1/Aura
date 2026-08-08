@@ -10,15 +10,21 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
-import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote, generateExerciseAlternatives, generateSessionRecommendations } from "../services/coach.service";
+import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote, generateExerciseAlternatives, generateSessionRecommendations, generateExerciseFormGuide } from "../services/coach.service";
 
 // ── Types ──────────────────────────────────────────────────
 
 interface SessionExercise {
   id?: string;
+  workoutExerciseId?: string;
   name: string;
   targetSets: number;
   muscleGroup: string;
+  videoUrl?: string | null;
+  thumbnailUrl?: string | null;
+  instructions?: string | null;
+  tips?: string | null;
+  commonMistakes?: string | null;
   lastWeekWeight?: number | null;
   lastWeekReps?: number | null;
   isPlateaued?: boolean;
@@ -2029,5 +2035,24 @@ export async function getWeeklyRecap(req: Request, res: Response): Promise<void>
   } catch (err) {
     console.error("❌ [Workout] getWeeklyRecap error:", err);
     res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+export async function getExerciseFormGuide(req: Request, res: Response): Promise<void> {
+  try {
+    const name = String(req.query.name || "Exercise");
+    const muscleGroup = String(req.query.muscleGroup || "Target Muscle");
+
+    const guide = await generateExerciseFormGuide(name, muscleGroup);
+
+    res.status(200).json({
+      success: true,
+      data: guide,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Failed to generate exercise form guide",
+    });
   }
 }

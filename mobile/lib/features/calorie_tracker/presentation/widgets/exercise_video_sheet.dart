@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
+import '../../../../core/network/api_client.dart';
 
 class ExerciseVideoSheet extends StatefulWidget {
   final String exerciseName;
@@ -57,6 +58,11 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
   bool _hasError = false;
   bool _isPlaying = true;
 
+  String? _aiInstructions;
+  String? _aiTips;
+  String? _aiCommonMistakes;
+  bool _isAiLoading = true;
+
   // Universal H.264 MP4 video stream that plays on 100% of Android & iOS devices
   static const _defaultVideoUrl = 'https://vjs.zencdn.net/v/oceans.mp4';
 
@@ -64,6 +70,38 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
   void initState() {
     super.initState();
     _initVideo();
+    _fetchGeminiFormGuide();
+  }
+
+  Future<void> _fetchGeminiFormGuide() async {
+    try {
+      final dio = ApiClient().dio;
+      final response = await dio.get('/workouts/exercise-guide', queryParameters: {
+        'name': widget.exerciseName,
+        'muscleGroup': widget.muscleGroup,
+      });
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final data = response.data['data'];
+        if (mounted) {
+          setState(() {
+            _aiInstructions = data['instructions'];
+            _aiTips = data['tips'];
+            _aiCommonMistakes = data['commonMistakes'];
+            _isAiLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isAiLoading = false);
+      }
+    } catch (e) {
+      debugPrint('⚠️ [ExerciseVideoSheet] AI form guide fetch error: $e');
+      if (mounted) {
+        setState(() {
+          _isAiLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _initVideo() async {
@@ -267,7 +305,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                   icon: Icons.check_circle_outline_rounded,
                   iconColor: const Color(0xFF235A42),
                   title: 'Step-by-Step Execution',
-                  content: widget.instructions ??
+                  content: widget.instructions ?? _aiInstructions ??
                       '1. Set up with your feet shoulder-width apart.\n'
                           '2. Engage your core and keep your chest proud.\n'
                           '3. Control the eccentric phase for 2-3 seconds.\n'
@@ -281,7 +319,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                   icon: Icons.lightbulb_outline_rounded,
                   iconColor: const Color(0xFFF59E0B),
                   title: 'Pro Coaching Cues',
-                  content: widget.tips ??
+                  content: widget.tips ?? _aiTips ??
                       '• Squeeze the target muscle at the peak contraction for 1 second.\n'
                           '• Keep your shoulder blades retracted and avoid using momentum.',
                 ),
@@ -293,7 +331,7 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
                   icon: Icons.warning_amber_rounded,
                   iconColor: const Color(0xFFEF4444),
                   title: 'Common Mistakes to Avoid',
-                  content: widget.commonMistakes ??
+                  content: widget.commonMistakes ?? _aiCommonMistakes ??
                       '• Arching lower back excessively.\n'
                           '• Cutting range of motion short.\n'
                           '• Rushing repetitions without controlled tempo.',

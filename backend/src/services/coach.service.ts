@@ -823,3 +823,39 @@ Produce exactly 3 to 4 recommendations. No markdown formatting, no intro text.`;
     (r) => typeof r.name === "string" && r.name.trim().length > 0
   );
 }
+
+export interface FormGuideResult {
+  instructions: string;
+  tips: string;
+  commonMistakes: string;
+}
+
+export async function generateExerciseFormGuide(
+  exerciseName: string,
+  muscleGroup: string
+): Promise<FormGuideResult> {
+  const systemPrompt = `You are a certified master fitness coach and biomechanics expert. Generate a detailed, professional exercise form guide for "${exerciseName}" targeting "${muscleGroup}".
+Respond ONLY with a valid JSON object matching this schema:
+{
+  "instructions": "4 numbered bullet steps covering setup, grip, movement path, and lockout.",
+  "tips": "2-3 high-yield coaching cues for maximum target muscle activation and joint safety.",
+  "commonMistakes": "2-3 critical form errors to avoid."
+}`;
+
+  const userPrompt = `Generate a form guide for ${exerciseName} (${muscleGroup}).`;
+
+  const fallback: FormGuideResult = {
+    instructions: `1. Set up with feet shoulder-width apart.\n2. Engage your core and keep your chest proud.\n3. Control the eccentric phase for 2-3 seconds.\n4. Drive powerfully through the full range of motion.`,
+    tips: `• Squeeze the target muscle at peak contraction for 1 second.\n• Retract shoulder blades and maintain tension.`,
+    commonMistakes: `• Arching lower back excessively.\n• Cutting range of motion short.\n• Rushing tempo without control.`,
+  };
+
+  const res = await callOllamaJsonChat<FormGuideResult>(
+    systemPrompt,
+    userPrompt,
+    fallback,
+    { callerName: "generateExerciseFormGuide", timeoutMs: 12000 }
+  );
+
+  return res ?? fallback;
+}

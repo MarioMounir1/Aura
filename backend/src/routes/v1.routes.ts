@@ -17,7 +17,7 @@ import { logFood, getTodayFoodLogs, deleteFoodLog, updateFoodLog } from "../cont
 import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.controller";
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
-import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine, interpretWorkoutSessionRequest, getWeeklyRecap } from "../controllers/workout.controller";
+import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine, interpretWorkoutSessionRequest, getWeeklyRecap, getExerciseFormGuide } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter, barcodeLimiter } from "../middleware/rateLimit.middleware";
 
@@ -360,6 +360,13 @@ router.post("/workouts/setup", requireAuth, setupWorkoutRoutine);
  * @access  Private (JWT required)
  */
 router.get("/workouts/routine", requireAuth, getWorkoutRoutine);
+
+/**
+ * @route   GET /api/v1/workouts/exercise-guide
+ * @desc    Generate a dynamic Gemini AI exercise form guide
+ * @access  Private (JWT required)
+ */
+router.get("/workouts/exercise-guide", requireAuth, getExerciseFormGuide);
 
 /**
  * @route   POST /api/v1/workouts/session/start
