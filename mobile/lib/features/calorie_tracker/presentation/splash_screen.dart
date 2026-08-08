@@ -96,8 +96,8 @@ class _SplashScreenState extends State<SplashScreen>
     if (mounted) _textCtrl.forward();
     if (mounted) _loadingCtrl.forward();
 
-    // 4 seconds smooth splash display time
-    await Future.delayed(const Duration(seconds: 4));
+    // 3 seconds smooth splash display time
+    await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
     await _checkAuthAndNavigate();
   }
