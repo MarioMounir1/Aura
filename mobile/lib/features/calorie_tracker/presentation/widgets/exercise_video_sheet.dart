@@ -3,7 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../../../../core/network/api_client.dart';
 
 class ExerciseVideoSheet extends StatefulWidget {
@@ -53,8 +53,8 @@ class ExerciseVideoSheet extends StatefulWidget {
 }
 
 class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
-  late YoutubePlayerController _ytCtrl;
-  bool _isYtReady = false;
+  WebViewController? _webCtrl;
+  bool _isWebReady = false;
 
   String? _aiInstructions;
   String? _aiTips;
@@ -82,24 +82,28 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
   @override
   void initState() {
     super.initState();
-    final videoId = _getYoutubeVideoId(widget.exerciseName);
-    _ytCtrl = YoutubePlayerController(
-      initialVideoId: videoId,
-      flags: const YoutubePlayerFlags(
-        autoPlay: true,
-        mute: false,
-        loop: true,
-        isLive: false,
-        forceHD: true,
-        enableCaption: false,
-      ),
-    )..addListener(() {
-        if (mounted && _ytCtrl.value.isReady && !_isYtReady) {
-          setState(() => _isYtReady = true);
-        }
-      });
-
+    _initWebPlayer();
     _fetchGeminiFormGuide();
+  }
+
+  void _initWebPlayer() {
+    final videoId = _getYoutubeVideoId(widget.exerciseName);
+    final embedUrl = Uri.parse(
+        'https://www.youtube.com/embed/$videoId?autoplay=1&mute=1&loop=1&playlist=$videoId&controls=1&modestbranding=1&rel=0&playsinline=1');
+
+    _webCtrl = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0xFF1E3A2B))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (_) {
+            if (mounted) {
+              setState(() => _isWebReady = true);
+            }
+          },
+        ),
+      )
+      ..loadRequest(embedUrl);
   }
 
   Future<void> _fetchGeminiFormGuide() async {
@@ -131,12 +135,6 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
         });
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _ytCtrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -231,21 +229,24 @@ class _ExerciseVideoSheetState extends State<ExerciseVideoSheet> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               children: [
-                // 🎬 YouTube HD Video Player
+                // 🎬 YouTube HD Embedded Video Player
                 ClipRRect(
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
                     height: 215,
                     width: double.infinity,
                     color: const Color(0xFF1E3A2B),
-                    child: YoutubePlayer(
-                      controller: _ytCtrl,
-                      showVideoProgressIndicator: true,
-                      progressIndicatorColor: const Color(0xFF235A42),
-                      progressColors: const ProgressBarColors(
-                        playedColor: Color(0xFF235A42),
-                        handleColor: Color(0xFF81C784),
-                      ),
+                    child: Stack(
+                      children: [
+                        if (_webCtrl != null) WebViewWidget(controller: _webCtrl!),
+                        if (!_isWebReady)
+                          const Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF81C784)),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
