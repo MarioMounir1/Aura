@@ -49,7 +49,6 @@ import 'features/calorie_tracker/presentation/bloc/water_bloc.dart';
 import 'features/calorie_tracker/presentation/water_tracking_screen.dart';
 import 'features/calorie_tracker/presentation/bloc/weight_bloc.dart';
 import 'features/calorie_tracker/presentation/bloc/meal_plan_bloc.dart';
-import 'features/calorie_tracker/presentation/splash_screen.dart';
 import 'features/calorie_tracker/domain/repositories/workout_repository.dart';
 import 'features/calorie_tracker/data/repositories/workout_repository_impl.dart';
 import 'features/calorie_tracker/presentation/bloc/workout_bloc.dart';
@@ -261,9 +260,8 @@ class TeneenApp extends StatelessWidget {
               },
 
               // ── Routes ──────────────────────────────────
-              initialRoute: '/splash',
+              initialRoute: '/',
               routes: {
-                '/splash':  (_) => const SplashScreen(),
                 '/':        (_) => const AuthWrapper(),
                 '/login':   (_) => const LoginScreen(),
                 '/history': (_) => const HistoryScreen(),
@@ -293,6 +291,31 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   ProfileLoaded? _lastProfileLoaded;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authState = context.read<AuthBloc>().state;
+      if (authState is Authenticated) {
+        _loadAllUserData(context);
+      }
+    });
+  }
+
+  void _loadAllUserData(BuildContext context) {
+    final profileBloc = context.read<ProfileBloc>();
+    if (profileBloc.state is ProfileInitial) {
+      profileBloc.add(LoadProfile());
+      context.read<DashboardBloc>().add(const LoadDashboard());
+      context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
+      context.read<WaterBloc>().add(const LoadWaterToday());
+      context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
+      context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
+      context.read<FoodSearchBloc>().add(LoadFoodCategories());
+    }
+  }
 
   Widget _buildPreScreenView() {
     return Scaffold(
@@ -358,17 +381,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
         if (authState is Authenticated) {
-          context.read<ProfileBloc>().add(LoadProfile());
-          context.read<DashboardBloc>().add(const LoadDashboard());
-          
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
-            context.read<WaterBloc>().add(const LoadWaterToday());
-            context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
-            context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
-            context.read<FoodSearchBloc>().add(LoadFoodCategories());
-          });
+          _loadAllUserData(context);
         } else if (authState is Unauthenticated) {
           _lastProfileLoaded = null;
           context.read<ProfileBloc>().add(ResetProfileEvent());
@@ -384,6 +397,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
           if (authState is Authenticated) {
+            final profileState = context.watch<ProfileBloc>().state;
+            if (profileState is ProfileInitial) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _loadAllUserData(context);
+              });
+            }
             return BlocListener<ProfileBloc, ProfileState>(
               listener: (context, profileState) {
                 if (profileState is ProfileLoaded) {
