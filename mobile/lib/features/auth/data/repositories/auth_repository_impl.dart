@@ -29,6 +29,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
       await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
 
       return Right(authResponse.token);
@@ -53,6 +54,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
       await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
 
       return Right(authResponse.token);
@@ -98,6 +100,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
       await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
 
       return Right(authResponse.token);
@@ -128,6 +131,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
       await _apiClient.saveToken(authResponse.token);
+      await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
 
       return Right(authResponse.token);
