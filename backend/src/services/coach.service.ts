@@ -501,15 +501,22 @@ export interface InterpretResult {
 }
 
 export function extractPlanInfoFromMessage(msg: string): { proposedDays: number | undefined; proposedSplitName: string | undefined } {
-  const lower = msg.toLowerCase();
+  const lower = msg.toLowerCase().trim();
   let proposedDays: number | undefined = undefined;
   let proposedSplitName: string | undefined = undefined;
 
-  const daysMatch = lower.match(/(\d+)\s*(?:days?|d|times?|x|\/wk|a week|per week|-day)/i);
-  if (daysMatch) {
-    const parsed = parseInt(daysMatch[1], 10);
-    if (parsed >= 3 && parsed <= 6) {
-      proposedDays = parsed;
+  const numberWords: Record<string, number> = { three: 3, four: 4, five: 5, six: 6 };
+  if (/^[3-6]$/.test(lower)) {
+    proposedDays = parseInt(lower, 10);
+  } else if (numberWords[lower]) {
+    proposedDays = numberWords[lower];
+  } else {
+    const daysMatch = lower.match(/(\d+)\s*(?:days?|d|times?|x|\/wk|a week|per week|-day)?/i);
+    if (daysMatch) {
+      const parsed = parseInt(daysMatch[1], 10);
+      if (parsed >= 3 && parsed <= 6) {
+        proposedDays = parsed;
+      }
     }
   }
 
