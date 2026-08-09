@@ -105,6 +105,11 @@ class ApiClient {
     return val == 'true';
   }
 
+  /// Save active userId to secure storage
+  Future<void> saveUserId(String userId) async {
+    await _secureStorage.write(key: AppConstants.userIdKey, value: userId);
+  }
+
   /// Get active userId from secure storage
   Future<String?> getUserId() async {
     return await _secureStorage.read(key: AppConstants.userIdKey);
