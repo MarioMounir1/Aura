@@ -171,14 +171,14 @@ class TeneenApp extends StatelessWidget {
           BlocProvider<ProfileBloc>(
             create: (ctx) => ProfileBloc(
               repository: ctx.read<ProfileRepository>(),
-            ),
+            )..add(LoadProfile()),
           ),
           // Dashboard
           BlocProvider<DashboardBloc>(
             create: (ctx) => DashboardBloc(
               repository: ctx.read<TrackerRepository>(),
               mealRepository: ctx.read<MealRepository>(),
-            ),
+            )..add(const LoadDashboard()),
           ),
           // Meal tracker
           BlocProvider<CalorieTrackerBloc>(

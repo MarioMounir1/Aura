@@ -3,9 +3,4 @@
     <item>
         <color android:color="#F6F8F5" />
     </item>
-    <item
-        android:width="108dp"
-        android:height="108dp"
-        android:gravity="center"
-        android:drawable="@drawable/aura_splash_icon" />
 </layer-list>

@@ -125,10 +125,27 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = await apiClient.getUserId();
-      final key = userId != null && userId.isNotEmpty ? '${_profileCacheKey}_$userId' : _profileCacheKey;
-      final rawJson = prefs.getString(key);
-      if (rawJson != null && rawJson.isNotEmpty) {
-        return jsonDecode(rawJson) as Map<String, dynamic>;
+      if (userId != null && userId.isNotEmpty) {
+        final userKey = '${_profileCacheKey}_$userId';
+        final rawJson = prefs.getString(userKey);
+        if (rawJson != null && rawJson.isNotEmpty) {
+          return jsonDecode(rawJson) as Map<String, dynamic>;
+        }
+      }
+      
+      final genericJson = prefs.getString(_profileCacheKey);
+      if (genericJson != null && genericJson.isNotEmpty) {
+        return jsonDecode(genericJson) as Map<String, dynamic>;
+      }
+
+      final allKeys = prefs.getKeys();
+      for (final k in allKeys) {
+        if (k.startsWith(_profileCacheKey)) {
+          final val = prefs.getString(k);
+          if (val != null && val.isNotEmpty) {
+            return jsonDecode(val) as Map<String, dynamic>;
+          }
+        }
       }
     } catch (e) {
       print('Failed to read cached user profile: $e');
@@ -141,8 +158,11 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = user['id'] as String? ?? await apiClient.getUserId();
-      final key = userId != null && userId.isNotEmpty ? '${_profileCacheKey}_$userId' : _profileCacheKey;
-      await prefs.setString(key, jsonEncode(user));
+      if (userId != null && userId.isNotEmpty) {
+        await apiClient.saveUserId(userId);
+        await prefs.setString('${_profileCacheKey}_$userId', jsonEncode(user));
+      }
+      await prefs.setString(_profileCacheKey, jsonEncode(user));
     } catch (e) {
       print('Failed to cache user profile: $e');
     }

@@ -6,18 +6,20 @@
 import Redis from "ioredis";
 
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+const isTls = redisUrl.startsWith("rediss://") || process.env.RENDER === "true";
 
-console.log(`🔌 Initializing Redis Client targeting: ${redisUrl}`);
+console.log(`🔌 Initializing Redis Client targeting: ${redisUrl} (TLS: ${isTls})`);
 
 const redis = new Redis(redisUrl, {
   // Connect lazily — don't attempt connection at module load time
   lazyConnect: true,
   // Limit retries so Redis being offline doesn't flood the console
   maxRetriesPerRequest: 1,
-  connectTimeout: 3000,
+  connectTimeout: 10000,
+  tls: isTls ? { rejectUnauthorized: false } : undefined,
   // Return null (no retry) so the process keeps running when Redis is down
   retryStrategy(times) {
-    if (times > 3) {
+    if (times > 5) {
       console.warn("⚠️  [Redis] Max retries reached — Redis is offline. API continues without caching.");
       return null; // stop retrying
     }
