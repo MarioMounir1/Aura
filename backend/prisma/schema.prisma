@@ -9,6 +9,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ── Existing Models (Preserved) ─────────────────────────────
@@ -292,6 +293,11 @@ model Exercise {
   muscleGroup     String
   mediaUrl        String?               // Image or Video URL
   mediaType       String?               // "image" or "video"
+  videoUrl        String?               // High-definition demonstration video URL
+  thumbnailUrl    String?               // Video preview thumbnail
+  instructions    String?               // Step-by-step form execution instructions
+  tips            String?               // Key cues for muscle engagement
+  commonMistakes  String?               // Form errors to avoid
   alternatives    ExerciseAlternative[] @relation("ExerciseToAlternatives")
   alternativeTo   ExerciseAlternative[] @relation("AlternativeToExercise")
   workoutExercises WorkoutExercise[]
