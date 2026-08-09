@@ -93,7 +93,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      GoogleSignIn googleSignIn = GoogleSignIn(
+      final googleSignIn = GoogleSignIn(
+        serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
         scopes: ['email', 'profile'],
       );
 
@@ -105,16 +106,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       try {
         account = await googleSignIn.signIn();
       } catch (e) {
-        debugPrint('⚠️ Native Google Sign-In failed, attempting fallback: $e');
-      }
-
-      // If null, retry with serverClientId if configured
-      if (account == null) {
-        googleSignIn = GoogleSignIn(
-          serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
-          scopes: ['email', 'profile'],
-        );
-        account = await googleSignIn.signIn();
+        debugPrint('⚠️ Native Google Sign-In error: $e');
       }
 
       if (account == null) {
