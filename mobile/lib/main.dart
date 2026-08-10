@@ -438,19 +438,50 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   }
 
                   if (profileState is ProfileFailure) {
+                    final msg = profileState.message.toLowerCase();
+                    final isAuthErr = msg.contains("authentication required") ||
+                        msg.contains("unauthorized") ||
+                        msg.contains("token") ||
+                        msg.contains("bearer") ||
+                        msg.contains("session expired") ||
+                        msg.contains("401");
+
+                    if (isAuthErr) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          context.read<AuthBloc>().add(LogoutRequested());
+                        }
+                      });
+                      return const LoginScreen();
+                    }
+
                     return Scaffold(
                       backgroundColor: AppColors.background,
                       body: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(profileState.message, style: const TextStyle(color: Colors.red)),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () => context.read<ProfileBloc>().add(LoadProfile()),
-                              child: const Text('Retry'),
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.textMuted),
+                              const SizedBox(height: 16),
+                              Text(
+                                profileState.message,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                              ),
+                              const SizedBox(height: 20),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: () => context.read<ProfileBloc>().add(LoadProfile()),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
