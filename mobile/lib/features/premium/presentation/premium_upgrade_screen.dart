@@ -224,40 +224,34 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                       const SizedBox(height: 12),
                       
                       const Text(
-                        'Get the ultimate Smart nutrition and fitness experience for just \$1/month.',
+                        'Get 10 AI scans per day, unlimited AI Workout Coach Chat & an ad-free experience.',
                         style: TextStyle(
                           color: Color(0xFF8E929C),
-                          fontSize: 16,
+                          fontSize: 15,
                           height: 1.5,
                         ),
                         textAlign: TextAlign.center,
                       ),
                       
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 36),
                       
                       // Features List
                       _buildFeatureRow(
                         icon: Icons.auto_awesome,
-                        title: 'Smart Meal Scanner',
-                        subtitle: '100% Offline & Private.',
+                        title: '10 AI Meal Scans Daily',
+                        subtitle: '10 scans/day (2/day on free tier).',
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
                       _buildFeatureRow(
-                        icon: Icons.fitness_center_rounded,
-                        title: 'Advanced Set Tracker & Progressive Overload',
-                        subtitle: 'Live session tracking & analytics.',
+                        icon: Icons.chat_bubble_outline_rounded,
+                        title: 'Unlimited AI Workout Coach Chat',
+                        subtitle: 'Interactive AI coach & routine builder.',
                       ),
-                      const SizedBox(height: 18),
-                      _buildFeatureRow(
-                        icon: Icons.repeat_rounded,
-                        title: 'Unlimited Custom Training Splits',
-                        subtitle: 'Design and customize your routines.',
-                      ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 16),
                       _buildFeatureRow(
                         icon: Icons.block_rounded,
                         title: '100% Ad-Free Experience',
-                        subtitle: 'Focus entirely on your goals without distractions.',
+                        subtitle: 'Zero banner or popup ads.',
                       ),
                       
                       const SizedBox(height: 32),
@@ -309,7 +303,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Monthly Premium Access',
+                                    'New User Special Offer',
                                     style: GoogleFonts.inter(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -318,7 +312,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Cancel anytime, no commitment.',
+                                    'Then \$4.99/mo · Cancel anytime',
                                     style: GoogleFonts.inter(
                                       color: const Color(0xFF8E929C),
                                       fontSize: 12,
@@ -331,15 +325,15 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '\$1.00',
+                                  '\$0.99',
                                   style: GoogleFonts.inter(
-                                    color: Colors.white,
+                                    color: const Color(0xFFFBBF24),
                                     fontWeight: FontWeight.w800,
                                     fontSize: 20,
                                   ),
                                 ),
                                 Text(
-                                  '/mo',
+                                  '1st Month',
                                   style: GoogleFonts.inter(
                                     color: const Color(0xFF8E929C),
                                     fontSize: 12,

@@ -1498,6 +1498,15 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       return;
     }
 
+    if (!user.isPremium) {
+      res.status(403).json({
+        success: false,
+        error: "AI Workout Coach is a Premium feature. Upgrade to Premium for unlimited AI workout guidance!",
+        code: "PREMIUM_REQUIRED",
+      });
+      return;
+    }
+
     const targetDateStr = new Date().toISOString().split("T")[0];
     const isFirstTimeUser = !user.workoutSplitType;
 

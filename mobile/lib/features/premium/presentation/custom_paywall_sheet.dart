@@ -210,7 +210,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Get unlimited AI nutrition analysis, progressive workout tracking & an ad-free experience.',
+                      'Get 10 AI scans per day, unlimited AI Workout Coach Chat & an ad-free experience.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF5A6E5D),
                         fontSize: 13.5,
@@ -223,29 +223,22 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     _buildFeatureItem(
                       icon: Icons.auto_awesome_rounded,
                       iconColor: const Color(0xFF235A42),
-                      title: 'Smart AI Meal Scanner',
-                      subtitle: 'Offline, private and instant meal analysis.',
+                      title: '10 AI Meal Scans Daily',
+                      subtitle: '10 scans/day (2/day on free tier).',
                     ),
                     const SizedBox(height: 12),
                     _buildFeatureItem(
-                      icon: Icons.fitness_center_rounded,
+                      icon: Icons.chat_bubble_outline_rounded,
                       iconColor: const Color(0xFF235A42),
-                      title: 'Pro Workout Tracker',
-                      subtitle: 'Live session tracking with progressive overload analytics.',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildFeatureItem(
-                      icon: Icons.repeat_rounded,
-                      iconColor: const Color(0xFF235A42),
-                      title: 'Unlimited Training Splits',
-                      subtitle: 'Custom routine builder with zero caps.',
+                      title: 'Unlimited AI Workout Coach Chat',
+                      subtitle: 'Interactive AI coach & training plan builder.',
                     ),
                     const SizedBox(height: 12),
                     _buildFeatureItem(
                       icon: Icons.block_rounded,
                       iconColor: const Color(0xFF235A42),
                       title: '100% Ad-Free Experience',
-                      subtitle: 'Focus entirely on your health without interruptions.',
+                      subtitle: 'Zero banner or popup ads.',
                     ),
                     const SizedBox(height: 24),
                     // Pricing Box
@@ -280,7 +273,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Monthly Membership',
+                                  'New User Special Offer',
                                   style: GoogleFonts.outfit(
                                     color: const Color(0xFF1C2B1E),
                                     fontWeight: FontWeight.w800,
@@ -289,7 +282,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Cancel anytime, no commitment',
+                                  'Then \$4.99/mo · Cancel anytime',
                                   style: GoogleFonts.inter(
                                     color: const Color(0xFF5A6E5D),
                                     fontSize: 12,
@@ -302,15 +295,15 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                displayPrice,
+                                '\$0.99',
                                 style: GoogleFonts.outfit(
-                                  color: const Color(0xFF1C2B1E),
+                                  color: const Color(0xFF235A42),
                                   fontWeight: FontWeight.w800,
                                   fontSize: 22,
                                 ),
                               ),
                               Text(
-                                '/month',
+                                '1st Month',
                                 style: GoogleFonts.inter(
                                   color: const Color(0xFF5A6E5D),
                                   fontSize: 12,

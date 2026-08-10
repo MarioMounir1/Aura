@@ -41,7 +41,7 @@ export const OLLAMA_CONFIG = {
 
 export const AI_SCAN_QUOTA = {
   freeLimit: 2,
-  premiumLimit: 7,
+  premiumLimit: 10,
 };
 
 export function getAiScanLimit(isPremium: boolean): number {
