@@ -271,14 +271,22 @@ class _MealsDashboardState extends State<MealsDashboard> {
         _errorMessage = e.message;
         _layoutState  = LayoutState.idle;
       });
-      _showErrorSnackbar(e.message);
+      if (e.message.toLowerCase().contains('limit') || e.message.toLowerCase().contains('upgrade')) {
+        PurchaseService.instance.presentPaywall(context);
+      } else {
+        _showErrorSnackbar(e.message);
+      }
     } on LlamaNetworkException catch (e) {
       if (!mounted) return;
       setState(() {
         _errorMessage = e.message;
         _layoutState  = LayoutState.idle;
       });
-      _showErrorSnackbar(e.message);
+      if (e.message.toLowerCase().contains('limit') || e.message.toLowerCase().contains('upgrade')) {
+        PurchaseService.instance.presentPaywall(context);
+      } else {
+        _showErrorSnackbar(e.message);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {

@@ -1831,17 +1831,31 @@ class _CoachChatCardState extends State<CoachChatCard> {
       }
     } catch (e) {
       if (mounted) {
+        final isPremiumRequired = e is DioException &&
+            (e.response?.statusCode == 403 ||
+                (e.response?.data is Map &&
+                    (e.response?.data['code'] == 'PREMIUM_REQUIRED' ||
+                        (e.response?.data['error'] as String? ?? '').contains('Premium'))));
+
         setState(() {
           _messages.removeWhere((m) => m.isTyping);
           _messages.add(CoachChatMessage(
-            text: widget.isArabic
-                ? 'فشل في معالجة الطلب. يرجى المحاولة مرة أخرى.'
-                : 'Failed to process command. Please try again.',
+            text: isPremiumRequired
+                ? (widget.isArabic
+                    ? 'المدرب الشخصي بالذكاء الاصطناعي ميزة للمشتركين فقط. اشترك في Premium للوصول الكامل!'
+                    : 'AI Workout Coach is a Premium feature. Upgrade to Premium for unlimited AI workout guidance!')
+                : (widget.isArabic
+                    ? 'فشل في معالجة الطلب. يرجى المحاولة مرة أخرى.'
+                    : 'Failed to process command. Please try again.'),
             isUser: false,
           ));
           _isInterpreting = false;
         });
         _scrollToBottom();
+
+        if (isPremiumRequired) {
+          PurchaseService.instance.presentPaywall(context);
+        }
       }
     }
   }
