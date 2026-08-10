@@ -251,7 +251,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _nextStep() {
     if (!_validateCurrent()) return;
     HapticFeedback.lightImpact();
-    if (_currentStep < 5) {
+    if (_currentStep < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 380),
         curve: Curves.easeInOutCubic,
@@ -273,7 +273,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   bool _validateCurrent() {
     switch (_currentStep) {
-      case 2:
+      case 1:
         if (_ageController.text.trim().isEmpty) {
           _showError('Please enter your age');
           return false;
@@ -284,7 +284,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           return false;
         }
         return true;
-      case 3:
+      case 2:
         final h = double.tryParse(_heightController.text.trim());
         final w = double.tryParse(_weightController.text.trim());
         if (h == null || h < 100 || h > 250) {
@@ -364,7 +364,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       physics: const NeverScrollableScrollPhysics(),
                       onPageChanged: (p) => setState(() => _currentStep = p),
                       children: [
-                        _buildStep0_Language(),
                         _buildStep1_Goal(),
                         _buildStep2_BasicInfo(),
                         _buildStep3_BodyStats(),
@@ -386,7 +385,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ── Header: Progress + Step label ─────────────────────────
   Widget _buildHeader() {
     const stepLabels = [
-      'Language', 'Your Goal', 'About You',
+      'Your Goal', 'About You',
       'Body Stats', 'Activity', 'Your Plan',
     ];
     return Padding(
@@ -396,13 +395,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         children: [
           // Progress bar
           Row(
-            children: List.generate(6, (i) {
+            children: List.generate(5, (i) {
               final done = i < _currentStep;
               final active = i == _currentStep;
               return Expanded(
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  margin: EdgeInsets.only(right: i < 5 ? 4 : 0),
+                  margin: EdgeInsets.only(right: i < 4 ? 4 : 0),
                   height: 4,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
@@ -422,7 +421,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Step ${_currentStep + 1} of 6',
+                'Step ${_currentStep + 1} of 5',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: _T.textMut,
@@ -457,7 +456,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ── Bottom navigation bar ──────────────────────────────────
   Widget _buildBottomBar() {
     final isFirst = _currentStep == 0;
-    final isLast  = _currentStep == 5;
+    final isLast  = _currentStep == 4;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
@@ -496,50 +495,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               label: isLast ? 'Start My Journey 🚀' : 'Continue',
               isLoading: _isSubmitting && isLast,
               onTap: _nextStep,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════
-  // STEP 0 — Language Selection
-  // ══════════════════════════════════════════════════════════
-
-  Widget _buildStep0_Language() {
-    final currentLang = Localizations.localeOf(context).languageCode;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          _StepTitle(
-            emoji: '🌍',
-            title: 'Choose Your Language',
-            subtitle: 'You can change this anytime in Settings.',
-          ),
-          const SizedBox(height: 32),
-          _ChoiceCard(
-            isSelected: true,
-            onTap: () => context.read<LanguageCubit>().setLanguage('en'),
-            child: Row(
-              children: [
-                const Text('🇺🇸', style: TextStyle(fontSize: 28)),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('English', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: _T.textPri)),
-                      Text('Default Language', style: GoogleFonts.inter(fontSize: 13, color: _T.textSec)),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.check_circle_rounded, color: _T.cyan),
-              ],
             ),
           ),
         ],
