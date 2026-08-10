@@ -16,8 +16,13 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         surface: AppColors.card,
         primary: AppColors.primaryAccent,
-        secondary: AppColors.cyan,
+        secondary: AppColors.primaryAccent,
         error: AppColors.error,
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppColors.primaryAccent,
+        selectionColor: Color(0x3310B981),
+        selectionHandleColor: AppColors.primaryAccent,
       ),
       extensions: const [
         AuraThemeExtension.dark,
@@ -49,9 +54,14 @@ class AppTheme {
       scaffoldBackgroundColor: const Color(0xFFF8FAFC),
       colorScheme: const ColorScheme.light(
         surface: Color(0xFFFFFFFF),
-        primary: Color(0xFF00ACC1),
-        secondary: Color(0xFF00ACC1),
+        primary: AppColors.primary,
+        secondary: AppColors.primary,
         error: Color(0xFFEF4444),
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppColors.primary,
+        selectionColor: Color(0x33235A42),
+        selectionHandleColor: AppColors.primary,
       ),
       extensions: const [
         AuraThemeExtension.light,
