@@ -9,16 +9,9 @@ import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _authRepository;
-  final String? _cachedToken;
-  final bool _cachedIsPremium;
 
-  AuthBloc({
-    required AuthRepository authRepository,
-    String? cachedToken,
-    bool cachedIsPremium = false,
-  })  : _authRepository = authRepository,
-        _cachedToken = cachedToken,
-        _cachedIsPremium = cachedIsPremium,
+  AuthBloc({required AuthRepository authRepository})
+      : _authRepository = authRepository,
         super(AuthInitial()) {
     on<AppStarted>(_onAppStarted);
     on<LoginSubmitted>(_onLoginSubmitted);
@@ -32,17 +25,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AppStarted event,
     Emitter<AuthState> emit,
   ) async {
-    // Use pre-warmed values from main() to skip Keystore cold-start delay
-    if (_cachedToken != null) {
-      final isAuthenticated = _cachedToken!.isNotEmpty;
-      if (isAuthenticated) {
-        emit(Authenticated(token: _cachedToken!, isPremium: _cachedIsPremium));
-      } else {
-        emit(Unauthenticated());
-      }
-      return;
-    }
-    // Fallback: read from storage (first-ever install, no cache yet)
     final results = await Future.wait<bool>([
       _authRepository.checkAuthStatus(),
       _authRepository.isUserPremium(),
