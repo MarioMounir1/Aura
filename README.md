@@ -1,10 +1,10 @@
 # Aura
 
 <p align="center">
-  <img src="mobile/assets/images/logo.png" width="180" alt="Aura Logo" />
+  <img src="mobile/assets/images/aura_logo.png" width="220" alt="Aura Logo" />
 </p>
 
-> **A premium, full-stack AI-powered nutrition & fitness ecosystem. Track calories, analyze meals with Google Gemini or a local Llama vision model, scan product barcodes, log water & weight, plan workouts with NLP commands, and get AI-powered macro suggestions — all from one beautiful dark-mode mobile app.**
+> **A premium, full-stack AI-powered nutrition & fitness ecosystem. Track calories with dual AI engines (Google Gemini 2.0 Flash & local Ollama Vision), scan product barcodes, log water & weight, manage workout splits with natural language commands, access Egyptian & international food databases, and upgrade seamlessly with RevenueCat subscriptions — all wrapped in a state-of-the-art dark mode Flutter experience.**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
@@ -19,7 +19,7 @@
 
 **Aura** is an elite, hybrid-AI fitness suite designed to solve the challenge of tracking calories and macros in international and local markets. The ecosystem is composed of two primary pillars:
 
-1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) with full RTL layout support. Features include camera barcode scanning, an active workout tracker with NLP commands, water & weight logging, a food search database, weekly meal plans, AI meal analysis, a dedicated Local AI Meal Scan interface, and one-tap **Google & Apple Sign-In**.
+1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) featuring the **Leaf & Flame Hybrid Brand Emblem**, fast parallel splash initialization, camera barcode scanning, interactive workout routines with NLP commands, water & weight tracking, local Ollama AI meal vision, RevenueCat custom glassmorphic paywalls, and one-tap **Google & Apple Sign-In**.
 2. **Multimodal REST Backend (`backend/`)** — A production-grade Express API (v2.0.0) built with TypeScript and Prisma. Orchestrates queries to Google Gemini, Open Food Facts, and local Ollama inference models, manages user authentication (JWT + Social OAuth), handles RevenueCat webhooks & subscription quotas, tracks user data in PostgreSQL, and enforces rate limiting via Redis.
 
 ---
