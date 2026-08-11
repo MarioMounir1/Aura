@@ -95,31 +95,45 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Configure status bar for dark theme
+  // Configure status bar for light pre-screen
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor:                   Colors.transparent,
-      statusBarIconBrightness:          Brightness.light,
-      systemNavigationBarColor:         Color(0xFF0D1117),
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness:          Brightness.dark,
+      systemNavigationBarColor:         Color(0xFFF6F8F5),
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
-  // Initialize Hive
-  await Hive.initFlutter();
-  Hive.registerAdapter(IngredientBreakdownModelAdapter());
-  Hive.registerAdapter(MealLogModelAdapter());
-  await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
-
-  // Load saved preferences concurrently
-  final results = await Future.wait([
+  // Pre-warm secure storage + Hive + prefs ALL in parallel
+  // so AppStarted resolves instantly with no Keystore cold-start delay.
+  const secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  final bootResults = await Future.wait([
     LanguageCubit.getSavedLanguage(),
     ThemeCubit.getSavedThemeMode(),
+    secureStorage.read(key: AppConstants.tokenKey),
+    secureStorage.read(key: 'is_premium'),
+    Future(() async {
+      await Hive.initFlutter();
+      Hive.registerAdapter(IngredientBreakdownModelAdapter());
+      Hive.registerAdapter(MealLogModelAdapter());
+      await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
+    }),
   ]);
-  final savedLang = results[0] as String;
-  final savedThemeMode = results[1] as ThemeMode;
 
-  runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
+  final savedLang      = bootResults[0] as String;
+  final savedThemeMode = bootResults[1] as ThemeMode;
+  final cachedToken    = bootResults[2] as String?;
+  final cachedPremium  = bootResults[3] as String?;
+
+  runApp(TeneenApp(
+    initialLang: savedLang,
+    initialThemeMode: savedThemeMode,
+    cachedToken: cachedToken,
+    cachedIsPremium: cachedPremium == 'true',
+  ));
 
   // Non-blocking initialization of RevenueCat SDK in background
   PurchaseService.instance.init().catchError((e) {
@@ -132,7 +146,15 @@ Future<void> main() async {
 class TeneenApp extends StatelessWidget {
   final String initialLang;
   final ThemeMode initialThemeMode;
-  const TeneenApp({super.key, required this.initialLang, required this.initialThemeMode});
+  final String? cachedToken;
+  final bool cachedIsPremium;
+  const TeneenApp({
+    super.key,
+    required this.initialLang,
+    required this.initialThemeMode,
+    this.cachedToken,
+    this.cachedIsPremium = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -161,10 +183,12 @@ class TeneenApp extends StatelessWidget {
           BlocProvider<LanguageCubit>(
             create: (_) => LanguageCubit(initialLang),
           ),
-          // Auth Session
+          // Auth Session — resolves instantly from pre-warmed cache
           BlocProvider<AuthBloc>(
             create: (ctx) => AuthBloc(
               authRepository: ctx.read<AuthRepository>(),
+              cachedToken: cachedToken,
+              cachedIsPremium: cachedIsPremium,
             )..add(AppStarted()),
           ),
           // Profile
@@ -318,60 +342,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Widget _buildPreScreenView() {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8F5),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFF6F8F5),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.15),
-                    blurRadius: 40,
-                    spreadRadius: 10,
-                  ),
-                ],
-              ),
-              child: ClipOval(
-                child: Image.asset(
-                  'assets/images/aura_logo.png',
-                  width: 110,
-                  height: 110,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            const SizedBox(height: 28),
-            Text(
-              'AURA',
-              style: GoogleFonts.inter(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF1C2B1E),
-                letterSpacing: 12,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Track · Perform · Evolve',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF5A6E5D),
-                letterSpacing: 2.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    return const _PreScreenView();
   }
 
   @override
@@ -499,3 +470,139 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 }
 
+// ── Pre-Screen Loading View ───────────────────────────────────────────────────
+
+class _PreScreenView extends StatefulWidget {
+  const _PreScreenView();
+
+  @override
+  State<_PreScreenView> createState() => _PreScreenViewState();
+}
+
+class _PreScreenViewState extends State<_PreScreenView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _barCtrl;
+  late final Animation<double> _barAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _barCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+    _barAnim = CurvedAnimation(parent: _barCtrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _barCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F8F5),
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFF6F8F5),
+                    border: Border.all(
+                      color: const Color(0xFF2E7D5E).withOpacity(0.25),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2E7D5E).withOpacity(0.12),
+                        blurRadius: 40,
+                        spreadRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/aura_logo.png',
+                      width: 110,
+                      height: 110,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  'AURA',
+                  style: GoogleFonts.inter(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF1C2B1E),
+                    letterSpacing: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Track · Perform · Evolve',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF5A6E5D),
+                    letterSpacing: 2.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Slim shimmer loading bar at the very bottom
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: AnimatedBuilder(
+              animation: _barAnim,
+              builder: (_, __) {
+                const barWidth = 0.45;
+                final travel = screenWidth * (1 + barWidth);
+                final offset = _barAnim.value * travel - screenWidth * barWidth;
+                return SizedBox(
+                  height: 3,
+                  child: Stack(
+                    children: [
+                      // Track
+                      Container(color: const Color(0xFF2E7D5E).withOpacity(0.10)),
+                      // Travelling shimmer pill
+                      Positioned(
+                        left: offset,
+                        child: Container(
+                          width: screenWidth * barWidth,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF2E7D5E).withOpacity(0),
+                                const Color(0xFF2E7D5E),
+                                const Color(0xFF2E7D5E).withOpacity(0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
