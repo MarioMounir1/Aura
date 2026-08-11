@@ -107,9 +107,8 @@ Future<void> main() async {
 
   // Pre-warm secure storage + Hive + prefs ALL in parallel
   // so AppStarted resolves instantly with no Keystore cold-start delay.
-  const secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  // MUST use same constructor as ApiClient (default, no AndroidOptions).
+  const secureStorage = FlutterSecureStorage();
   final bootResults = await Future.wait([
     LanguageCubit.getSavedLanguage(),
     ThemeCubit.getSavedThemeMode(),
