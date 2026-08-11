@@ -52,6 +52,7 @@ function calculateTDEE(
   gender: "male" | "female",
   activityLevel: string,
   goal: string,
+  targetWeightKg?: number | null,
 ): {
   bmr: number;
   tdee: number;
@@ -68,11 +69,22 @@ function calculateTDEE(
   const multiplier = ACTIVITY_MULTIPLIERS[activityLevel] ?? 1.55;
   const tdee = Math.round(bmr * multiplier);
 
-  const adjustment = GOAL_ADJUSTMENTS[goal] ?? 0;
+  // Auto-detect goal mismatch if targetWeight is provided
+  let effectiveGoal = goal;
+  if (targetWeightKg && targetWeightKg > weightKg + 1 && goal === "maintain") {
+    effectiveGoal = "gain";
+  } else if (targetWeightKg && targetWeightKg < weightKg - 1 && goal === "maintain") {
+    effectiveGoal = "lose";
+  }
+
+  const adjustment = GOAL_ADJUSTMENTS[effectiveGoal] ?? 0;
   const recommendedCalories = Math.max(1200, tdee + adjustment);
 
-  // Realistic macro split for general fitness: Protein 20% (~1.6g/kg) | Carbs 55% | Fat 25%
-  const recommendedProtein = Math.min(145, Math.round((recommendedCalories * 0.20) / 4));
+  // Dynamic Macro Calculation:
+  // Protein: ~2.0g / kg bodyweight (standard for active individuals and muscle building/preservation)
+  const proteinFromWeight = Math.round(weightKg * 2.0);
+  const proteinFromCalories = Math.round((recommendedCalories * 0.25) / 4);
+  const recommendedProtein = Math.max(80, Math.min(250, Math.max(proteinFromWeight, proteinFromCalories)));
   const recommendedFats    = Math.round((recommendedCalories * 0.25) / 9);
   const recommendedCarbs   = Math.round((recommendedCalories - (recommendedProtein * 4 + recommendedFats * 9)) / 4);
 
@@ -127,12 +139,22 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     const age          = data.age          ?? currentUser.age;
     const gender       = (data.gender      ?? currentUser.gender) as "male" | "female" | null;
     const activityLevel = data.activityLevel ?? currentUser.activityLevel;
-    const goal         = data.goal         ?? currentUser.goal;
+    const targetWeightKg = data.targetWeightKg ?? currentUser.targetWeightKg;
+    let goal           = data.goal         ?? currentUser.goal;
+
+    // Auto-adjust goal if target weight contradicts selected goal
+    if (weightKg && targetWeightKg) {
+      if (targetWeightKg > weightKg + 1 && goal === "maintain") {
+        goal = "gain";
+      } else if (targetWeightKg < weightKg - 1 && goal === "maintain") {
+        goal = "lose";
+      }
+    }
 
     if (weightKg && heightCm && age && gender) {
       // Only auto-calculate if user didn't override dailyCalorieGoal explicitly
       if (data.dailyCalorieGoal === undefined) {
-        const tdee = calculateTDEE(weightKg, heightCm, age, gender, activityLevel, goal);
+        const tdee = calculateTDEE(weightKg, heightCm, age, gender, activityLevel, goal, targetWeightKg);
         autoGoals = {
           dailyCalorieGoal: tdee.recommendedCalories,
           proteinGoal:      tdee.recommendedProtein,
