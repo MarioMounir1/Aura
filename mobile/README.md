@@ -1,4 +1,4 @@
-# calc_calories
+# Aura — Mobile Application
 
 A new Flutter project.
 

@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/bloc/calorie_tracker_state.dart
-// Calc-Calories — BLoC States
+// Aura — BLoC States
 
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/meal_log_entity.dart';

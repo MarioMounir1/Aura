@@ -1,5 +1,5 @@
 # ============================================================
-#  Dockerfile — Calc-Calories Node.js API
+#  Dockerfile — Aura Node.js API
 #  Multi-stage build: TypeScript compiler → lean production image
 # ============================================================
 

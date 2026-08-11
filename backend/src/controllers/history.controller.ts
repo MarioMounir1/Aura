@@ -1,6 +1,6 @@
 // ============================================================
 //  src/controllers/history.controller.ts
-//  Calc-Calories — Meal History endpoints
+//  Aura — Meal History endpoints
 //  GET    /api/v1/meals/history
 //  DELETE /api/v1/meals/:id
 // ============================================================

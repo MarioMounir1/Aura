@@ -1,6 +1,6 @@
 // ============================================================
 //  src/services/ai.service.ts
-//  Calc-Calories — Multimodal AI Service (text + image → macros)
+//  Aura — Multimodal AI Service (text + image → macros)
 //  Automatically switches between Google Gemini and Local Ollama (Llama 3)
 // ============================================================
 

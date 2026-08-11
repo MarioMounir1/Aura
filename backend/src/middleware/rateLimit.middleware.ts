@@ -1,6 +1,6 @@
 // ============================================================
 //  src/middleware/rateLimit.middleware.ts
-//  Redis-backed rate limiter for Calc-Calories v1 API
+//  Redis-backed rate limiter for Aura v1 API
 // ============================================================
 
 import { Request, Response, NextFunction } from "express";

@@ -1,5 +1,5 @@
 // lib/core/error/failures.dart
-// Calc-Calories — Failure types for clean architecture
+// Aura — Failure types for clean architecture
 
 import 'package:equatable/equatable.dart';
 

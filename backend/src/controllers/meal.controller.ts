@@ -1,6 +1,6 @@
 // ============================================================
 //  src/controllers/meal.controller.ts
-//  Calc-Calories — Multimodal Meal Analysis endpoint
+//  Aura — Multimodal Meal Analysis endpoint
 //  POST /api/v1/meals/analyze
 // ============================================================
 

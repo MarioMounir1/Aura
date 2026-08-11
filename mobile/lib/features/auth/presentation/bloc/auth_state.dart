@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/bloc/auth_state.dart
-// Calc-Calories — Auth States
+// Aura — Auth States
 
 import 'package:equatable/equatable.dart';
 

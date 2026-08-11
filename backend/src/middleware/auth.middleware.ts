@@ -1,6 +1,6 @@
 // ============================================================
 //  src/middleware/auth.middleware.ts
-//  JWT-based user authentication for the Calc-Calories mobile API
+//  JWT-based user authentication for the Aura mobile API
 // ============================================================
 
 import { Request, Response, NextFunction } from "express";

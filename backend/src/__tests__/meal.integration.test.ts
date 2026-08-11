@@ -68,7 +68,7 @@ const prisma = require('../services/prisma.service').default;
 
 const TEST_USER = {
   id: 'test-user-id-123',
-  email: 'test@calc-calories.io',
+  email: 'test@aura.io',
   name: 'Test User',
   isActive: true,
 };

@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/history_screen.dart
-// Calc-Calories — Meal History Screen
+// Aura — Meal History Screen
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

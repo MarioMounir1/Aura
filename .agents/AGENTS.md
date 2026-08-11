@@ -1,4 +1,4 @@
-# Project Rules — Calc-Calories
+# Project Rules — Aura
 
 ## Git Commit Rule (CRITICAL)
 After **every single file change**, stop immediately and provide the user with the exact

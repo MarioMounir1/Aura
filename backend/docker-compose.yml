@@ -1,5 +1,5 @@
 # ============================================================
-#  docker-compose.yml — Calc-Calories Full Stack
+#  docker-compose.yml — Aura Full Stack
 #  Services: api, postgres, redis
 # ============================================================
 
@@ -10,18 +10,18 @@ services:
   # ── PostgreSQL Database ──────────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: calc_calories_postgres
+    container_name: aura_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-calcuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-calcpassword}
-      POSTGRES_DB: ${POSTGRES_DB:-calc_calories}
+      POSTGRES_USER: ${POSTGRES_USER:-aurauser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aurapassword}
+      POSTGRES_DB: ${POSTGRES_DB:-aura_db}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-calcuser} -d ${POSTGRES_DB:-calc_calories}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aurauser} -d ${POSTGRES_DB:-aura_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,7 +30,7 @@ services:
   # ── Redis Cache ──────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    container_name: calc_calories_redis
+    container_name: aura_redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
@@ -49,7 +49,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-    container_name: calc_calories_api
+    container_name: aura_api
     restart: unless-stopped
     depends_on:
       postgres:
@@ -59,7 +59,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-calcuser}:${POSTGRES_PASSWORD:-calcpassword}@postgres:5432/${POSTGRES_DB:-calc_calories}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aurauser}:${POSTGRES_PASSWORD:-aurapassword}@postgres:5432/${POSTGRES_DB:-aura_db}?schema=public
       REDIS_URL: redis://redis:6379
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
@@ -86,4 +86,4 @@ volumes:
 
 networks:
   default:
-    name: calc_calories_network
+    name: aura_network

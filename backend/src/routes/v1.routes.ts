@@ -1,6 +1,6 @@
 // ============================================================
 //  src/routes/v1.routes.ts
-//  Calc-Calories — API v1 Router
+//  Aura — API v1 Router
 //  All mobile app endpoints live here under /api/v1
 // ============================================================
 
@@ -27,7 +27,7 @@ const router = Router();
 
 /**
  * @route   POST /api/v1/auth/register
- * @desc    Create a new Calc-Calories user account
+ * @desc    Create a new Aura user account
  * @access  Public
  * @body    { name, email, password, dailyCalorieGoal? }
  */

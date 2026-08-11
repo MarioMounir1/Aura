@@ -2,7 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 
 // lib/core/utils/constants.dart
-// Calc-Calories — App-wide constants
+// Aura — App-wide constants
 
 class AppConstants {
   AppConstants._();

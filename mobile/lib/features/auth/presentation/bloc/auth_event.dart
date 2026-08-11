@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/bloc/auth_event.dart
-// Calc-Calories — Auth Events
+// Aura — Auth Events
 
 import 'package:equatable/equatable.dart';
 

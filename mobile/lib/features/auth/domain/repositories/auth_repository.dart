@@ -1,5 +1,5 @@
 // lib/features/auth/domain/repositories/auth_repository.dart
-// Calc-Calories — Auth Repository Interface
+// Aura — Auth Repository Interface
 
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';

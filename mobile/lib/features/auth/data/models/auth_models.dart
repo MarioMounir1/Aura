@@ -1,5 +1,5 @@
 // lib/features/auth/data/models/auth_models.dart
-// Calc-Calories — User, AuthRequest, and AuthResponse Data Models
+// Aura — User, AuthRequest, and AuthResponse Data Models
 
 class User {
   final String id;

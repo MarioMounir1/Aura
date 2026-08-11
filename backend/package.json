@@ -1,7 +1,7 @@
 {
-  "name": "calc-calories-api",
+  "name": "aura-api",
   "version": "2.0.0",
-  "description": "Calc-Calories — AI-powered calorie counter for Egyptian restaurants. Production API.",
+  "description": "Aura — AI-powered nutrition & fitness ecosystem. Production API.",
   "main": "dist/app.js",
   "scripts": {
     "build": "npx prisma generate && tsc",

@@ -1,17 +1,17 @@
 // test/calorie_tracker/bloc/calorie_tracker_bloc_test.dart
-// Calc-Calories — BLoC Unit Tests
+// Aura — BLoC Unit Tests
 
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:calc_calories/core/error/failures.dart';
-import 'package:calc_calories/features/auth/domain/repositories/auth_repository.dart';
-import 'package:calc_calories/features/calorie_tracker/domain/entities/meal_log_entity.dart';
-import 'package:calc_calories/features/calorie_tracker/domain/repositories/meal_repository.dart';
-import 'package:calc_calories/features/calorie_tracker/presentation/bloc/calorie_tracker_bloc.dart';
-import 'package:calc_calories/features/calorie_tracker/presentation/bloc/calorie_tracker_event.dart';
-import 'package:calc_calories/features/calorie_tracker/presentation/bloc/calorie_tracker_state.dart';
+import 'package:aura/core/error/failures.dart';
+import 'package:aura/features/auth/domain/repositories/auth_repository.dart';
+import 'package:aura/features/calorie_tracker/domain/entities/meal_log_entity.dart';
+import 'package:aura/features/calorie_tracker/domain/repositories/meal_repository.dart';
+import 'package:aura/features/calorie_tracker/presentation/bloc/calorie_tracker_bloc.dart';
+import 'package:aura/features/calorie_tracker/presentation/bloc/calorie_tracker_event.dart';
+import 'package:aura/features/calorie_tracker/presentation/bloc/calorie_tracker_state.dart';
 
 class MockMealRepository extends Mock implements MealRepository {}
 class MockAuthRepository extends Mock implements AuthRepository {}

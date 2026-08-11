@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/domain/repositories/meal_repository.dart
-// Calc-Calories — Repository Interface (Domain Layer)
+// Aura — Repository Interface (Domain Layer)
 
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';

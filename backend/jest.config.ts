@@ -1,6 +1,6 @@
 // ============================================================
 //  jest.config.ts
-//  Calc-Calories — Jest test configuration
+//  Aura — Jest test configuration
 // ============================================================
 
 import type { Config } from 'jest';

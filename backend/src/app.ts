@@ -1,6 +1,6 @@
 // ============================================================
 //  src/app.ts
-//  Calc-Calories — Express entry point
+//  Aura — Express entry point
 //  Registers both existing /api/nutrition AND new /api/v1 routes
 // ============================================================
 
@@ -43,7 +43,7 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({
     status: "ok",
     version: "2.0.0",
-    engine: "Calc-Calories AI Nutrition Engine",
+    engine: "Aura AI Nutrition Engine",
     timestamp: new Date().toISOString(),
   });
 });
@@ -78,7 +78,7 @@ if (process.env.NODE_ENV !== "test") {
   }
 
   app.listen(Number(PORT), "0.0.0.0", () => {
-    console.log(`🚀  Calc-Calories API running on http://0.0.0.0:${PORT}`);
+    console.log(`🚀  Aura API running on http://0.0.0.0:${PORT}`);
     console.log(`📱  Mobile API (v1):`);
     console.log(`   Auth:     POST /api/v1/auth/register`);
     console.log(`   Auth:     POST /api/v1/auth/login`);

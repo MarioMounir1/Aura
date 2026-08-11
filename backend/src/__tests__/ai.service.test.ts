@@ -1,6 +1,6 @@
 // ============================================================
 //  src/__tests__/ai.service.test.ts
-//  Calc-Calories — Unit tests for multimodal AI service
+//  Aura — Unit tests for multimodal AI service
 // ============================================================
 
 import { analyzeMeal, AnalyzeTextInput } from '../services/ai.service';

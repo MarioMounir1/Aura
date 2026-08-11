@@ -1,6 +1,6 @@
 // ============================================================
 //  src/controllers/local-llama.controller.ts
-//  Calc-Calories — Local Llama Image Scan Endpoint
+//  Aura — Local Llama Image Scan Endpoint
 //  POST /api/v1/meals/scan-local
 //
 //  Flow:

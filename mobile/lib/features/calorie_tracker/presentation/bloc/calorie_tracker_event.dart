@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/bloc/calorie_tracker_event.dart
-// Calc-Calories — BLoC Events
+// Aura — BLoC Events
 
 import 'package:equatable/equatable.dart';
 

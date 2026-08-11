@@ -32,7 +32,7 @@ describe('GET /api/v1/meals/suggestions', () => {
 
   beforeAll(() => {
     authToken = jwt.sign(
-      { userId: 'test-user-id-123', email: 'test@calc-calories.io' },
+      { userId: 'test-user-id-123', email: 'test@aura.io' },
       process.env.JWT_SECRET!
     );
   });
@@ -51,7 +51,7 @@ describe('GET /api/v1/meals/suggestions', () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'test-user-id-123',
       name: 'Test User',
-      email: 'test@calc-calories.io',
+      email: 'test@aura.io',
       proteinGoal: 150,
       carbsGoal: 200,
       fatsGoal: 65,
@@ -100,7 +100,7 @@ describe('GET /api/v1/meals/suggestions', () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'test-user-id-123',
       name: 'Test User',
-      email: 'test@calc-calories.io',
+      email: 'test@aura.io',
       proteinGoal: 150,
       carbsGoal: 200,
       fatsGoal: 65,

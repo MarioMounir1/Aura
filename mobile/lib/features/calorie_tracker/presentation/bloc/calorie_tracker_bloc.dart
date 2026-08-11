@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/bloc/calorie_tracker_bloc.dart
-// Calc-Calories — BLoC (pure business logic, no UI dependencies)
+// Aura — BLoC (pure business logic, no UI dependencies)
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/widgets/admob_mock.dart';

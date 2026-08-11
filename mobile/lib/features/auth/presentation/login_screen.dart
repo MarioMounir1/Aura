@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/login_screen.dart
-// Calc-Calories — Login Screen (Dynamic Theme & Keyboard Dismissal Enabled)
+// Aura — Login Screen (Dynamic Theme & Keyboard Dismissal Enabled)
 
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';

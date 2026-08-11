@@ -1,5 +1,5 @@
-name: calc_calories
-description: Calc-Calories — AI-powered calorie counter for Egyptian restaurants
+name: aura
+description: Aura — AI-powered nutrition & fitness ecosystem
 
 publish_to: "none"
 version: 1.0.0+26

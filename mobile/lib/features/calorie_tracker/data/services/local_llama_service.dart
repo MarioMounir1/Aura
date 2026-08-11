@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/data/services/local_llama_service.dart
-// Calc-Calories — Local Llama Dio Network Service
+// Aura — Local Llama Dio Network Service
 //
 // Handles the multipart/form-data image upload to:
 //   POST http://10.0.2.2:3000/api/v1/meals/scan-local

@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/domain/entities/meal_log_entity.dart
-// Calc-Calories — Domain entity (pure, no framework deps)
+// Aura — Domain entity (pure, no framework deps)
 
 import 'package:equatable/equatable.dart';
 

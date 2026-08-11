@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/data/models/meal_log_model.dart
-// Calc-Calories — Data model with Hive + JSON serialization
+// Aura — Data model with Hive + JSON serialization
 
 import 'package:hive/hive.dart';
 import '../../domain/entities/meal_log_entity.dart';

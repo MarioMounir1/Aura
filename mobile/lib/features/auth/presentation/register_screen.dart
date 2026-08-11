@@ -1,5 +1,5 @@
 // lib/features/auth/presentation/register_screen.dart
-// Calc-Calories — Register Screen (Dynamic Theme & Keyboard Dismissal Enabled)
+// Aura — Register Screen (Dynamic Theme & Keyboard Dismissal Enabled)
 
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';

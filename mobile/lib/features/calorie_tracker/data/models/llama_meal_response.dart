@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/data/models/llama_meal_response.dart
-// Calc-Calories — Local Llama Meal Response Data Model
+// Aura — Local Llama Meal Response Data Model
 //
 // Matches exactly the JSON payload from:
 //   POST /api/v1/meals/scan-local

@@ -1,5 +1,5 @@
 // lib/core/network/api_client.dart
-// Calc-Calories — Dio HTTP Client with Auth Interceptor
+// Aura — Dio HTTP Client with Auth Interceptor
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

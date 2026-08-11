@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/meals_dashboard_screen.dart
-// Calc-Calories â€” Meals Dashboard (Smart Scanner Rebuild)
+// Aura — Meals Dashboard (Smart Scanner Rebuild)
 //
 // Architecture: StatefulWidget with 3 LayoutStates
 //   - LayoutState.idle       â†’ Clean slate with Snap/Upload action cards

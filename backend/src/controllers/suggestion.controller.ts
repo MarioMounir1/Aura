@@ -1,6 +1,6 @@
 // ============================================================
 //  src/controllers/suggestion.controller.ts
-//  Calc-Calories — Smart Product Recommendation Engine
+//  Aura — Smart Product Recommendation Engine
 // ============================================================
 
 import { Request, Response } from "express";

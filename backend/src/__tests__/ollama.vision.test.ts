@@ -1,6 +1,6 @@
 // ============================================================
 //  src/__tests__/ollama.vision.test.ts
-//  Calc-Calories — Unit tests for local Ollama vision service
+//  Aura — Unit tests for local Ollama vision service
 // ============================================================
 
 import { analyzeMeal, AnalyzeImageInput } from '../services/ai.service';
