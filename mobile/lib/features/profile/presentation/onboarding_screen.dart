@@ -176,7 +176,10 @@ Map<String, int> _calcTdee({
   final bmr = (10 * weight + 6.25 * height - 5 * age + genderFactor);
   final tdee = (bmr * multiplier).round();
   final recommended = math.max(1200, tdee + calorieAdjust);
-  final protein = math.min(145, ((recommended * 0.20) / 4).round());
+  
+  final proteinFromWeight = (weight * 2.0).round();
+  final proteinFromCal = ((recommended * 0.25) / 4).round();
+  final protein = math.max(80, math.min(250, math.max(proteinFromWeight, proteinFromCal)));
   final fats    = ((recommended * 0.25) / 9).round();
   final carbs   = ((recommended - (protein * 4 + fats * 9)) / 4).round();
   return {
@@ -324,6 +327,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final targetWeight = double.tryParse(_targetWeightController.text.trim()) ?? 70.0;
     final isArabic   = Localizations.localeOf(context).languageCode == 'ar';
 
+    String effectiveGoalId = goal.id;
+    if (targetWeight > weight + 1 && goal.id == 'maintain') {
+      effectiveGoalId = 'gain';
+    } else if (targetWeight < weight - 1 && goal.id == 'maintain') {
+      effectiveGoalId = 'lose';
+    }
+
     // Update profile on the backend first, then trigger onboarding complete on success
     context.read<ProfileBloc>().add(UpdateProfileEvent(
       age: age,
@@ -332,7 +342,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       targetWeightKg: targetWeight,
       gender: _gender,
       activityLevel: activity.id,
-      goal: goal.id,
+      goal: effectiveGoalId,
       language: isArabic ? 'ar' : 'en',
     ));
   }
@@ -712,8 +722,24 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final weight   = double.tryParse(_weightController.text.trim()) ?? 70.0;
     final height   = double.tryParse(_heightController.text.trim()) ?? 170.0;
     final age      = int.tryParse(_ageController.text.trim()) ?? 25;
-    final goal     = _goals[_selectedGoalIndex];
+    var goal       = _goals[_selectedGoalIndex];
     final activity = _activities[_selectedActivityIndex];
+    final targetW  = double.tryParse(_targetWeightController.text.trim());
+
+    bool isAutoAdjusted = false;
+    String autoAdjustMessage = '';
+
+    if (targetW != null) {
+      if (targetW > weight + 1 && goal.id == 'maintain') {
+        goal = _goals[3]; // Gain Muscle Slowly (+200 kcal)
+        isAutoAdjusted = true;
+        autoAdjustMessage = 'Since your target weight (${targetW.toStringAsFixed(0)} kg) is higher than current weight (${weight.toStringAsFixed(0)} kg), we automatically set your plan to Gain Muscle (+200 kcal surplus).';
+      } else if (targetW < weight - 1 && goal.id == 'maintain') {
+        goal = _goals[1]; // Lose Weight Slowly (-300 kcal)
+        isAutoAdjusted = true;
+        autoAdjustMessage = 'Since your target weight (${targetW.toStringAsFixed(0)} kg) is lower than current weight (${weight.toStringAsFixed(0)} kg), we automatically set your plan to Lose Weight (-300 kcal deficit).';
+      }
+    }
 
     final tdee = _calcTdee(
       weight: weight,
@@ -729,13 +755,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _selectedActivityIndex >= 3 ? 5 : (_selectedActivityIndex >= 2 ? 4 : _selectedActivityIndex + 1),
     );
 
-    final targetW = double.tryParse(_targetWeightController.text.trim());
     String? timelineText;
     if (targetW != null && targetW != weight && goal.calorieAdjust != 0) {
       final diff = (weight - targetW).abs();
       final weeklyLossKg = goal.calorieAdjust.abs() / 7700.0 * 7;
       final weeks = (diff / weeklyLossKg).round();
-      timelineText = 'Estimated ${weeks} weeks to reach ${targetW.toStringAsFixed(0)} kg';
+      timelineText = 'Estimated $weeks weeks to reach ${targetW.toStringAsFixed(0)} kg';
     }
 
     return SingleChildScrollView(
@@ -750,6 +775,35 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             subtitle: 'Tailored for your fitness goals & metabolic profile',
           ),
           const SizedBox(height: 20),
+
+          if (isAutoAdjusted) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2196F3).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF2196F3).withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Text('💡', style: TextStyle(fontSize: 20)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      autoAdjustMessage,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF1565C0),
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
 
           // Main calories card
           _PlanCalorieCard(
