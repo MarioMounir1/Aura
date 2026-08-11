@@ -75,21 +75,6 @@ flutter_launcher_icons:
   image_path: "assets/images/aura_logo.png"
   min_sdk_android: 21
 
-flutter_native_splash:
-  color: "#235A42"
-  image: assets/images/aura_logo.png
-  color_dark: "#0D1117"
-  image_dark: assets/images/aura_logo.png
-  android_12:
-    color: "#235A42"
-    image: assets/images/aura_logo.png
-    icon_background_color: "#235A42"
-    color_dark: "#0D1117"
-    image_dark: assets/images/aura_logo.png
-    icon_background_color_dark: "#0D1117"
-  android: true
-  ios: true
-  web: false
 
 flutter:
   uses-material-design: true
