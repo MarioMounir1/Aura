@@ -95,44 +95,31 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Configure status bar for light pre-screen
+  // Configure status bar for dark theme
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor:                   Colors.transparent,
-      statusBarIconBrightness:          Brightness.dark,
-      systemNavigationBarColor:         Color(0xFFF6F8F5),
-      systemNavigationBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness:          Brightness.light,
+      systemNavigationBarColor:         Color(0xFF0D1117),
+      systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
 
-  // Pre-warm secure storage + Hive + prefs ALL in parallel
-  // so AppStarted resolves instantly with no Keystore cold-start delay.
-  // MUST use same constructor as ApiClient (default, no AndroidOptions).
-  const secureStorage = FlutterSecureStorage();
-  final bootResults = await Future.wait([
+  // Initialize Hive
+  await Hive.initFlutter();
+  Hive.registerAdapter(IngredientBreakdownModelAdapter());
+  Hive.registerAdapter(MealLogModelAdapter());
+  await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
+
+  // Load saved preferences concurrently
+  final results = await Future.wait([
     LanguageCubit.getSavedLanguage(),
     ThemeCubit.getSavedThemeMode(),
-    secureStorage.read(key: AppConstants.tokenKey),
-    secureStorage.read(key: 'is_premium'),
-    Future(() async {
-      await Hive.initFlutter();
-      Hive.registerAdapter(IngredientBreakdownModelAdapter());
-      Hive.registerAdapter(MealLogModelAdapter());
-      await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
-    }),
   ]);
+  final savedLang = results[0] as String;
+  final savedThemeMode = results[1] as ThemeMode;
 
-  final savedLang      = bootResults[0] as String;
-  final savedThemeMode = bootResults[1] as ThemeMode;
-  final cachedToken    = bootResults[2] as String?;
-  final cachedPremium  = bootResults[3] as String?;
-
-  runApp(TeneenApp(
-    initialLang: savedLang,
-    initialThemeMode: savedThemeMode,
-    cachedToken: cachedToken,
-    cachedIsPremium: cachedPremium == 'true',
-  ));
+  runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
 
   // Non-blocking initialization of RevenueCat SDK in background
   PurchaseService.instance.init().catchError((e) {
@@ -145,15 +132,7 @@ Future<void> main() async {
 class TeneenApp extends StatelessWidget {
   final String initialLang;
   final ThemeMode initialThemeMode;
-  final String? cachedToken;
-  final bool cachedIsPremium;
-  const TeneenApp({
-    super.key,
-    required this.initialLang,
-    required this.initialThemeMode,
-    this.cachedToken,
-    this.cachedIsPremium = false,
-  });
+  const TeneenApp({super.key, required this.initialLang, required this.initialThemeMode});
 
   @override
   Widget build(BuildContext context) {
@@ -182,12 +161,10 @@ class TeneenApp extends StatelessWidget {
           BlocProvider<LanguageCubit>(
             create: (_) => LanguageCubit(initialLang),
           ),
-          // Auth Session — resolves instantly from pre-warmed cache
+          // Auth Session
           BlocProvider<AuthBloc>(
             create: (ctx) => AuthBloc(
               authRepository: ctx.read<AuthRepository>(),
-              cachedToken: cachedToken,
-              cachedIsPremium: cachedIsPremium,
             )..add(AppStarted()),
           ),
           // Profile
