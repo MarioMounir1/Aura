@@ -339,14 +339,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
                   ),
                 ],
               ),
-              child: Center(
-                child: Text(
-                  'A',
-                  style: GoogleFonts.outfit(
-                    fontSize: 52,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/aura_logo.png',
+                  width: 110,
+                  height: 110,
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
