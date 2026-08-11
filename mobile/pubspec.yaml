@@ -2,7 +2,7 @@ name: calc_calories
 description: Calc-Calories — AI-powered calorie counter for Egyptian restaurants
 
 publish_to: "none"
-version: 1.0.0+25
+version: 1.0.0+26
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -76,17 +76,17 @@ flutter_launcher_icons:
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#F6F8F5"
+  color: "#235A42"
   image: assets/images/aura_logo.png
-  color_dark: "#F6F8F5"
+  color_dark: "#0D1117"
   image_dark: assets/images/aura_logo.png
   android_12:
-    color: "#F6F8F5"
+    color: "#235A42"
     image: assets/images/aura_logo.png
-    icon_background_color: "#F6F8F5"
-    color_dark: "#F6F8F5"
+    icon_background_color: "#235A42"
+    color_dark: "#0D1117"
     image_dark: assets/images/aura_logo.png
-    icon_background_color_dark: "#F6F8F5"
+    icon_background_color_dark: "#0D1117"
   android: true
   ios: true
   web: false
