@@ -248,10 +248,10 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                       isSelected: _isAnnualSelected,
                       badgeText: 'BEST VALUE — SAVE 58%',
                       title: 'Annual Pass',
-                      subtitle: '$2.08/mo · Billed $24.99/year',
+                      subtitle: '\$2.08/mo · Billed \$24.99/year',
                       priceText: '\$24.99',
                       periodText: '/year',
-                      comparisonText: '🔥 69% cheaper than MyFitnessPal ($79.99/yr)',
+                      comparisonText: '🔥 69% cheaper than MyFitnessPal (\$79.99/yr)',
                       onTap: () => setState(() => _isAnnualSelected = true),
                     ),
                     const SizedBox(height: 12),
@@ -385,6 +385,11 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPlanOptionTile({
     required bool isAnnual,
     required bool isSelected,
