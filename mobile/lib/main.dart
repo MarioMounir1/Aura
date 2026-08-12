@@ -325,8 +325,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    // Guarantee pre-screen logo animation is displayed for at least 4 seconds
-    Future.delayed(const Duration(seconds: 4), () {
+    // Guarantee pre-screen logo animation is displayed for at least 8 seconds
+    Future.delayed(const Duration(seconds: 8), () {
       if (mounted) {
         setState(() {
           _isMinPreScreenTimeElapsed = true;
