@@ -15,7 +15,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.mario.aura"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
