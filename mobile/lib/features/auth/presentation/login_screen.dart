@@ -131,12 +131,25 @@ class _LoginScreenState extends State<LoginScreen>
                                     ),
                                   ],
                                 ),
-                                child: Center(
-                                  child: CustomPaint(
-                                    size: const Size(36, 36),
-                                    painter: _AuraLogoPainter(
-                                      color: auraTheme.primary,
-                                    ),
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    'assets/images/aura_logo.png',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: auraTheme.primary,
+                                        child: Center(
+                                          child: Text(
+                                            'A',
+                                            style: GoogleFonts.outfit(
+                                              color: Colors.white,
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),
