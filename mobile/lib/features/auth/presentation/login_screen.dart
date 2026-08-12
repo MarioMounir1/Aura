@@ -68,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen>
       child: Scaffold(
         backgroundColor: auraTheme.background,
         body: BlocConsumer<AuthBloc, AuthState>(
-          listenWhen: (_, cur) => cur is AuthFailure,
+          listenWhen: (_, cur) => cur is AuthFailure || cur is Authenticated,
           listener: (context, state) {
             if (state is AuthFailure) {
               ScaffoldMessenger.of(context)
@@ -89,6 +89,10 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
                 );
+            } else if (state is Authenticated) {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
             }
           },
           buildWhen: (prev, cur) => (prev is AuthLoading) != (cur is AuthLoading),
