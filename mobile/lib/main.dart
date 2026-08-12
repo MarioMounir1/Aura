@@ -95,29 +95,30 @@ Future<void> main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Configure status bar for dark theme
+  // Configure status bar for light pre-screen
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor:                   Colors.transparent,
-      statusBarIconBrightness:          Brightness.light,
-      systemNavigationBarColor:         Color(0xFF0D1117),
-      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarIconBrightness:          Brightness.dark,
+      systemNavigationBarColor:         Color(0xFFF6F8F5),
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
-  // Initialize Hive
-  await Hive.initFlutter();
-  Hive.registerAdapter(IngredientBreakdownModelAdapter());
-  Hive.registerAdapter(MealLogModelAdapter());
-  await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
-
-  // Load saved preferences concurrently
-  final results = await Future.wait([
+  // Parallelize Hive init, language, and theme loads for fast <3s boot
+  final bootResults = await Future.wait([
     LanguageCubit.getSavedLanguage(),
     ThemeCubit.getSavedThemeMode(),
+    Future(() async {
+      await Hive.initFlutter();
+      Hive.registerAdapter(IngredientBreakdownModelAdapter());
+      Hive.registerAdapter(MealLogModelAdapter());
+      await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
+    }),
   ]);
-  final savedLang = results[0] as String;
-  final savedThemeMode = results[1] as ThemeMode;
+
+  final savedLang      = bootResults[0] as String;
+  final savedThemeMode = bootResults[1] as ThemeMode;
 
   runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
 
@@ -532,6 +533,34 @@ class _PreScreenViewState extends State<_PreScreenView>
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF5A6E5D),
                     letterSpacing: 2.5,
+                  ),
+                ),
+                const SizedBox(height: 36),
+                // Centered sleek animated loading bar
+                Container(
+                  width: 130,
+                  height: 4,
+                  clipBehavior: Clip.hardEdge,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D5E).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: AnimatedBuilder(
+                    animation: _barAnim,
+                    builder: (_, __) {
+                      return FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: 0.25 + (_barAnim.value * 0.75),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2E7D5E), Color(0xFF1E3A2B)],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
