@@ -10,7 +10,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'l10n/app_localizations.dart';
 import 'core/network/api_client.dart';
@@ -147,21 +146,13 @@ Future<void> main() async {
 
   runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
 
-  // Non-blocking initialization of RevenueCat & Google Mobile Ads in background
+  // Non-blocking initialization of RevenueCat SDK in background
   try {
     PurchaseService.instance.init().catchError((e) {
       debugPrint('PurchaseService background init error: $e');
     });
   } catch (e) {
     debugPrint('PurchaseService init error: $e');
-  }
-
-  try {
-    MobileAds.instance.initialize().catchError((e) {
-      debugPrint('MobileAds background init error: $e');
-    });
-  } catch (e) {
-    debugPrint('MobileAds init error: $e');
   }
 }
 
