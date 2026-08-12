@@ -684,13 +684,21 @@ Respond ONLY with valid JSON:
       let replyText = "I'm right here with you! Tell me what's on your mind — whether you want to adjust today's workout, ask a fitness question, or switch your routine.";
 
       if (targetCount) {
-        replyText = `Got it! Reduced today's workout to your top ${targetCount} main exercises.`;
+        replyText = `Got it! Adjusted today's workout to focus on your top ${targetCount} main exercises.`;
       } else if (lower.includes("name")) {
         replyText = "I'm Aura AI — your intelligent personal fitness coach & health companion!";
       } else if (lower.includes("how are you") || lower.includes("how r u") || lower.includes("how's it going")) {
         replyText = "I'm feeling great and ready to crush today's training session with you! How are you feeling today?";
       } else if (lower.includes("who are you") || lower.includes("what are you")) {
         replyText = "I'm your intelligent AI fitness coach. I can adjust your workout routine, answer fitness & nutrition questions, and guide your training!";
+      } else if (lower.includes("protein") || lower.includes("macro") || lower.includes("carbs") || lower.includes("fat") || lower.includes("diet")) {
+        replyText = "For optimal muscle growth and recovery, aim for around 1.6–2.2g of protein per kg of bodyweight daily, paired with complex carbs around your workouts!";
+      } else if (lower.includes("sore") || lower.includes("pain") || lower.includes("hurt") || lower.includes("fatigue") || lower.includes("tired")) {
+        replyText = "If you're feeling overtrained or unusually sore, prioritize light movement, hydration, and extra sleep. Never push through sharp pain — rest is where muscle grows!";
+      } else if (lower.includes("swap") || lower.includes("change") || lower.includes("replace")) {
+        replyText = "You can swap any exercise by opening its details card or letting me know which exercise you'd like to replace!";
+      } else if (lower.includes("cardio") || lower.includes("run") || lower.includes("treadmill")) {
+        replyText = "Adding 15–20 minutes of moderate cardio after strength sessions is great for cardiovascular health without impairing muscle gains.";
       } else if (lower.includes("joke")) {
         replyText = "Why did the barbell go to college? To improve its bench strength!";
       } else if (lower === "hi" || lower === "hello" || lower === "hey" || lower.startsWith("hi ") || lower.startsWith("hello ")) {
