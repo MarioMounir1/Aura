@@ -94,22 +94,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      final googleSignIn = GoogleSignIn(
-        serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
-        scopes: ['email', 'profile'],
-      );
-
-      try {
-        await googleSignIn.signOut();
-      } catch (_) {}
-
       GoogleSignInAccount? account;
+
+      // 1. Try standard Google Sign-In first (prevents Error 10 on release builds)
       try {
-        account = await googleSignIn.signIn();
-      } catch (e) {
-        debugPrint('⚠️ Native Google Sign-In error: $e');
-        emit(AuthFailure('Google sign-in error: ${e.toString()}'));
-        return;
+        final stdGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+        try { await stdGoogleSignIn.signOut(); } catch (_) {}
+        account = await stdGoogleSignIn.signIn();
+      } catch (stdErr) {
+        debugPrint('⚠️ Standard Google Sign-In error: $stdErr');
+        // 2. Try with serverClientId if standard fails
+        try {
+          final serverGoogleSignIn = GoogleSignIn(
+            serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
+            scopes: ['email', 'profile'],
+          );
+          try { await serverGoogleSignIn.signOut(); } catch (_) {}
+          account = await serverGoogleSignIn.signIn();
+        } catch (serverErr) {
+          debugPrint('⚠️ Server Google Sign-In error: $serverErr');
+          emit(const AuthFailure('Google sign-in is unavailable on this device.'));
+          return;
+        }
       }
 
       if (account == null) {
