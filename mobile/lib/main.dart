@@ -376,18 +376,81 @@ class _AuthWrapperState extends State<AuthWrapper> {
         builder: (context, authState) {
           if (authState is Authenticated) {
             final profileState = context.watch<ProfileBloc>().state;
+
+            if (profileState is ProfileLoaded) {
+              _lastProfileLoaded = profileState;
+            }
+
+            // Guarantee 2-second brand pre-screen presentation on boot
+            if (!_isMinPreScreenTimeElapsed) {
+              return const _PreScreenView();
+            }
+
+            if (_lastProfileLoaded != null) {
+              if (_lastProfileLoaded!.isOnboardingCompleted) {
+                return const HomeShellScreen();
+              } else {
+                return const OnboardingScreen();
+              }
+            }
+
+            if (profileState is ProfileInitial || profileState is ProfileLoading) {
+              return const _PreScreenView();
+            }
+
+            if (profileState is ProfileFailure) {
+              return Scaffold(
+                backgroundColor: AppColors.background,
+                body: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.textMuted),
+                        const SizedBox(height: 16),
+                        Text(
+                          profileState.message,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(color: AppColors.textSecondary, fontSize: 14),
                         ),
-                      ),
-                    );
-                  }
-                  return const OnboardingScreen();
-                },
-              ),
-            );
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          onPressed: () => _loadAllUserData(context),
+                          child: Text(
+                            'Retry Loading Profile',
+                            style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () {
+                            context.read<AuthBloc>().add(LogoutRequested());
+                          },
+                          child: Text(
+                            'Log Out & Return to Login',
+                            style: GoogleFonts.inter(color: AppColors.textMuted, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return const _PreScreenView();
           }
+
           if (authState is AuthInitial || authState is AuthLoading) {
-            return _buildPreScreenView();
+            return const _PreScreenView();
           }
+
           return const LoginScreen();
         },
       ),
