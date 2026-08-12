@@ -458,155 +458,116 @@ class _PreScreenView extends StatefulWidget {
 
 class _PreScreenViewState extends State<_PreScreenView>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _barCtrl;
-  late final Animation<double> _barAnim;
+  late final AnimationController _ringCtrl;
 
   @override
   void initState() {
     super.initState();
-    _barCtrl = AnimationController(
+    _ringCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1600),
     )..repeat();
-    _barAnim = CurvedAnimation(parent: _barCtrl, curve: Curves.easeInOut);
   }
 
   @override
   void dispose() {
-    _barCtrl.dispose();
+    _ringCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F5),
-      body: Stack(
-        children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 110,
-                  height: 110,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFF6F8F5),
-                    border: Border.all(
-                      color: const Color(0xFF2E7D5E).withOpacity(0.25),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF2E7D5E).withOpacity(0.12),
-                        blurRadius: 40,
-                        spreadRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/aura_logo.png',
-                      width: 110,
-                      height: 110,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  'AURA',
-                  style: GoogleFonts.inter(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF1C2B1E),
-                    letterSpacing: 12,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Track · Perform · Evolve',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF5A6E5D),
-                    letterSpacing: 2.5,
-                  ),
-                ),
-                const SizedBox(height: 36),
-                // Centered sleek animated loading bar
-                Container(
-                  width: 130,
-                  height: 4,
-                  clipBehavior: Clip.hardEdge,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D5E).withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: AnimatedBuilder(
-                    animation: _barAnim,
-                    builder: (_, __) {
-                      return FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: 0.25 + (_barAnim.value * 0.75),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF2E7D5E), Color(0xFF1E3A2B)],
-                            ),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Circular Logo with Rotating Accent Ring (Option 2)
+            SizedBox(
+              width: 126,
+              height: 126,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Smooth Rotating Accent Ring
+                  RotationTransition(
+                    turns: _ringCtrl,
+                    child: Container(
+                      width: 124,
+                      height: 124,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: SweepGradient(
+                          colors: [
+                            Color(0xFF2E7D5E),
+                            Color(0xFF81C784),
+                            Colors.transparent,
+                          ],
+                          stops: [0.0, 0.45, 1.0],
                         ),
-                      );
-                    },
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Slim shimmer loading bar at the very bottom
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: AnimatedBuilder(
-              animation: _barAnim,
-              builder: (_, __) {
-                const barWidth = 0.45;
-                final travel = screenWidth * (1 + barWidth);
-                final offset = _barAnim.value * travel - screenWidth * barWidth;
-                return SizedBox(
-                  height: 3,
-                  child: Stack(
-                    children: [
-                      // Track
-                      Container(color: const Color(0xFF2E7D5E).withOpacity(0.10)),
-                      // Travelling shimmer pill
-                      Positioned(
-                        left: offset,
-                        child: Container(
-                          width: screenWidth * barWidth,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF2E7D5E).withOpacity(0),
-                                const Color(0xFF2E7D5E),
-                                const Color(0xFF2E7D5E).withOpacity(0),
-                              ],
+                  // Inner cutout / logo container
+                  Container(
+                    width: 116,
+                    height: 116,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFF6F8F5),
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 108,
+                        height: 108,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFFF6F8F5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF2E7D5E).withOpacity(0.12),
+                              blurRadius: 30,
+                              spreadRadius: 6,
                             ),
+                          ],
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/images/aura_logo.png',
+                            width: 108,
+                            height: 108,
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                );
-              },
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 32),
+            Text(
+              'AURA',
+              style: GoogleFonts.inter(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF1C2B1E),
+                letterSpacing: 12,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Track · Perform · Evolve',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF5A6E5D),
+                letterSpacing: 2.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
