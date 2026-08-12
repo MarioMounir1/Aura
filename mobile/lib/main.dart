@@ -325,8 +325,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    // Guarantee pre-screen logo animation is displayed for at least 8 seconds
-    Future.delayed(const Duration(seconds: 8), () {
+    // Instagram-style splash screen duration (3 seconds)
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         setState(() {
           _isMinPreScreenTimeElapsed = true;
@@ -374,16 +374,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
+          // Instagram-style splash: ALWAYS display pre-screen emblem for 3 seconds on app launch
+          if (!_isMinPreScreenTimeElapsed) {
+            return const _PreScreenView();
+          }
+
           if (authState is Authenticated) {
             final profileState = context.watch<ProfileBloc>().state;
 
             if (profileState is ProfileLoaded) {
               _lastProfileLoaded = profileState;
-            }
-
-            // Guarantee 2-second brand pre-screen presentation on boot
-            if (!_isMinPreScreenTimeElapsed) {
-              return const _PreScreenView();
             }
 
             if (_lastProfileLoaded != null) {
