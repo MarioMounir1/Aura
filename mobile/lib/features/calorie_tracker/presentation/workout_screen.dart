@@ -660,7 +660,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             _WorkoutQuickActionCard(
               onTap: _startWorkout,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+
+            // Free Tier Ad Banner
+            const AdBanner(),
+            const SizedBox(height: 10),
 
             // 6. AI Coach Assistant Card
             CoachChatCard(
