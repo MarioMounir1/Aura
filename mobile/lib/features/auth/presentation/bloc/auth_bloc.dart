@@ -94,26 +94,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      GoogleSignInAccount? account;
+      final googleSignIn = GoogleSignIn(
+        serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
+        scopes: ['email', 'profile'],
+      );
 
-      // 1. Attempt standard native Google Sign-In
       try {
-        final stdGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-        account = await stdGoogleSignIn.signIn();
-      } catch (stdErr) {
-        debugPrint('⚠️ Standard Google Sign-In error: $stdErr');
-      }
+        await googleSignIn.signOut();
+      } catch (_) {}
 
-      // 2. Fallback to serverClientId configuration if standard returned null
-      if (account == null) {
+      GoogleSignInAccount? account;
+      try {
+        account = await googleSignIn.signIn();
+      } catch (e) {
+        debugPrint('⚠️ Primary Google Sign-In error: $e');
         try {
-          final serverGoogleSignIn = GoogleSignIn(
-            serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
-            scopes: ['email', 'profile'],
-          );
-          account = await serverGoogleSignIn.signIn();
-        } catch (serverErr) {
-          debugPrint('⚠️ Server Google Sign-In error: $serverErr');
+          final stdGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+          account = await stdGoogleSignIn.signIn();
+        } catch (stdErr) {
+          debugPrint('⚠️ Fallback Google Sign-In error: $stdErr');
         }
       }
 
