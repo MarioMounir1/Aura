@@ -97,9 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 );
             } else if (state is Authenticated) {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
+              Navigator.of(context).popUntil((route) => route.isFirst);
             }
           },
           buildWhen: (prev, cur) => (prev is AuthLoading) != (cur is AuthLoading),
