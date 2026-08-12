@@ -24,8 +24,8 @@ android {
     }
 
     defaultConfig {
-        // Production unique Application ID for Google Play Console
-        applicationId = "com.mario.Aura"
+        // Production unique Application ID for Google Play Console (strictly lowercase)
+        applicationId = "com.mario.aura"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
