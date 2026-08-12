@@ -95,6 +95,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       final googleSignIn = GoogleSignIn(
+        serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
         scopes: ['email', 'profile'],
       );
 
@@ -107,6 +108,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         account = await googleSignIn.signIn();
       } catch (e) {
         debugPrint('⚠️ Native Google Sign-In error: $e');
+        emit(AuthFailure('Google sign-in error: ${e.toString()}'));
+        return;
       }
 
       if (account == null) {
