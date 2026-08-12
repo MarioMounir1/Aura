@@ -553,7 +553,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isArabic ? 'ترقية إلى أورا برو' : 'Upgrade to Aura Pro',
+                      isArabic ? 'ترقية إلى أورا بريميوم' : 'Upgrade to Aura Premium',
                       style: GoogleFonts.outfit(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
