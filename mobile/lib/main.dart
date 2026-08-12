@@ -320,10 +320,20 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   ProfileLoaded? _lastProfileLoaded;
+  bool _isMinPreScreenTimeElapsed = false;
 
   @override
   void initState() {
     super.initState();
+    // Guarantee pre-screen logo animation is displayed for at least 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _isMinPreScreenTimeElapsed = true;
+        });
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authState = context.read<AuthBloc>().state;
@@ -335,19 +345,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   void _loadAllUserData(BuildContext context) {
     final profileBloc = context.read<ProfileBloc>();
-    if (profileBloc.state is ProfileInitial) {
-      profileBloc.add(LoadProfile());
-      context.read<DashboardBloc>().add(const LoadDashboard());
-      context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
-      context.read<WaterBloc>().add(const LoadWaterToday());
-      context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
-      context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
-      context.read<FoodSearchBloc>().add(LoadFoodCategories());
-    }
-  }
-
-  Widget _buildPreScreenView() {
-    return const _PreScreenView();
+    profileBloc.add(LoadProfile());
+    context.read<DashboardBloc>().add(const LoadDashboard());
+    context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
+    context.read<WaterBloc>().add(const LoadWaterToday());
+    context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
+    context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
+    context.read<FoodSearchBloc>().add(LoadFoodCategories());
   }
 
   @override
@@ -372,90 +376,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
         builder: (context, authState) {
           if (authState is Authenticated) {
             final profileState = context.watch<ProfileBloc>().state;
-            if (profileState is ProfileInitial) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) _loadAllUserData(context);
-              });
-            }
-            return BlocListener<ProfileBloc, ProfileState>(
-              listener: (context, profileState) {
-                if (profileState is ProfileLoaded) {
-                  _lastProfileLoaded = profileState;
-                  if (profileState.isOnboardingCompleted) {
-                    context.read<DashboardBloc>().add(const LoadDashboard());
-                  }
-                }
-                if (profileState is ProfileFailure &&
-                    (profileState.message.contains("Authentication required") ||
-                     profileState.message.contains("Unauthorized") ||
-                     profileState.message.contains("token") ||
-                     profileState.message.contains("Session expired"))) {
-                  context.read<AuthBloc>().add(LogoutRequested());
-                }
-              },
-              child: BlocBuilder<ProfileBloc, ProfileState>(
-                builder: (context, profileState) {
-                  if (profileState is ProfileLoaded) {
-                    _lastProfileLoaded = profileState;
-                  }
-
-                  if (_lastProfileLoaded != null) {
-                    if (_lastProfileLoaded!.isOnboardingCompleted) {
-                      return const HomeShellScreen();
-                    } else {
-                      return const OnboardingScreen();
-                    }
-                  }
-
-                  if (profileState is ProfileInitial || profileState is ProfileLoading) {
-                    return _buildPreScreenView();
-                  }
-
-                  if (profileState is ProfileFailure) {
-                    final msg = profileState.message.toLowerCase();
-                    final isAuthErr = msg.contains("authentication required") ||
-                        msg.contains("unauthorized") ||
-                        msg.contains("token") ||
-                        msg.contains("bearer") ||
-                        msg.contains("session expired") ||
-                        msg.contains("401");
-
-                    if (isAuthErr) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          context.read<AuthBloc>().add(LogoutRequested());
-                        }
-                      });
-                      return const LoginScreen();
-                    }
-
-                    return Scaffold(
-                      backgroundColor: AppColors.background,
-                      body: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.textMuted),
-                              const SizedBox(height: 16),
-                              Text(
-                                profileState.message,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-                              ),
-                              const SizedBox(height: 20),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                                onPressed: () => context.read<ProfileBloc>().add(LoadProfile()),
-                                child: const Text('Retry'),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     );
