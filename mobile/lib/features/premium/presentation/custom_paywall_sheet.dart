@@ -22,6 +22,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
   bool _loadingOfferings = true;
   String? _offeringsError;
   bool _isUpgrading = false;
+  bool _isAnnualSelected = true;
 
   @override
   void initState() {
@@ -241,81 +242,32 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                       subtitle: 'Zero banner or popup ads.',
                     ),
                     const SizedBox(height: 24),
-                    // Pricing Box
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEAF5EE),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: const Color(0xFF235A42),
-                          width: 1.8,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF235A42),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.stars_rounded,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'New User Special Offer',
-                                  style: GoogleFonts.outfit(
-                                    color: const Color(0xFF1C2B1E),
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Then \$4.99/mo · Cancel anytime',
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF5A6E5D),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                '\$0.99',
-                                style: GoogleFonts.outfit(
-                                  color: const Color(0xFF235A42),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 22,
-                                ),
-                              ),
-                              Text(
-                                '1st Month',
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFF5A6E5D),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    // Plan Selection Section
+                    _buildPlanOptionTile(
+                      isAnnual: true,
+                      isSelected: _isAnnualSelected,
+                      badgeText: 'BEST VALUE — SAVE 58%',
+                      title: 'Annual Pass',
+                      subtitle: '$2.08/mo · Billed $24.99/year',
+                      priceText: '\$24.99',
+                      periodText: '/year',
+                      comparisonText: '🔥 69% cheaper than MyFitnessPal ($79.99/yr)',
+                      onTap: () => setState(() => _isAnnualSelected = true),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPlanOptionTile(
+                      isAnnual: false,
+                      isSelected: !_isAnnualSelected,
+                      badgeText: null,
+                      title: 'Monthly Pass',
+                      subtitle: 'Flexible · Cancel anytime',
+                      priceText: '\$4.99',
+                      periodText: '/month',
+                      comparisonText: null,
+                      onTap: () => setState(() => _isAnnualSelected = false),
                     ),
                     const SizedBox(height: 24),
+
                     // Subscribe Action Button
                     SizedBox(
                       width: double.infinity,
@@ -329,7 +281,11 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                           : ElevatedButton(
                               onPressed: _isUpgrading
                                   ? null
-                                  : () => _handleSubscribe(package),
+                                  : () => _handleSubscribe(
+                                        _isAnnualSelected
+                                            ? (_offerings?.current?.annual ?? package)
+                                            : package,
+                                      ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF235A42),
                                 foregroundColor: Colors.white,
@@ -348,9 +304,11 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                                       ),
                                     )
                                   : Text(
-                                      'Unlock Aura Premium — $displayPrice/mo',
+                                      _isAnnualSelected
+                                          ? 'Unlock Annual Pass — \$24.99/yr (\$2.08/mo)'
+                                          : 'Unlock Monthly Pass — \$4.99/mo',
                                       style: GoogleFonts.inter(
-                                        fontSize: 15.5,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w800,
                                         color: Colors.white,
                                       ),
@@ -359,7 +317,9 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Auto-renews monthly. Manage or cancel anytime.',
+                      _isAnnualSelected
+                          ? 'Billed \$24.99 annually. Cancel anytime.'
+                          : 'Billed \$4.99 monthly. Cancel anytime.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF7A8B7B),
                         fontSize: 12,
@@ -425,7 +385,130 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
               ],
             ),
           ),
-        ],
+  Widget _buildPlanOptionTile({
+    required bool isAnnual,
+    required bool isSelected,
+    required String? badgeText,
+    required String title,
+    required String subtitle,
+    required String priceText,
+    required String periodText,
+    required String? comparisonText,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFEAF5EE) : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF235A42) : const Color(0xFFE2EBE4),
+            width: isSelected ? 2.0 : 1.0,
+          ),
+          boxShadow: isSelected
+              ? [
+                  const BoxShadow(
+                    color: Color(0x12235A42),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (badgeText != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF235A42),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  badgeText,
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Row(
+              children: [
+                Icon(
+                  isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                  color: isSelected ? const Color(0xFF235A42) : const Color(0xFF7A8B7B),
+                  size: 22,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.outfit(
+                          color: const Color(0xFF1C2B1E),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF5A6E5D),
+                          fontSize: 12.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      priceText,
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFF235A42),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 22,
+                      ),
+                    ),
+                    Text(
+                      periodText,
+                      style: GoogleFonts.inter(
+                        color: const Color(0xFF5A6E5D),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (comparisonText != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                comparisonText,
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF235A42),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
