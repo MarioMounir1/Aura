@@ -96,25 +96,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       GoogleSignInAccount? account;
 
-      // 1. Try standard Google Sign-In first (prevents Error 10 on release builds)
+      // 1. Attempt standard native Google Sign-In
       try {
         final stdGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-        try { await stdGoogleSignIn.signOut(); } catch (_) {}
         account = await stdGoogleSignIn.signIn();
       } catch (stdErr) {
         debugPrint('⚠️ Standard Google Sign-In error: $stdErr');
-        // 2. Try with serverClientId if standard fails
+      }
+
+      // 2. Fallback to serverClientId configuration if standard returned null
+      if (account == null) {
         try {
           final serverGoogleSignIn = GoogleSignIn(
             serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
             scopes: ['email', 'profile'],
           );
-          try { await serverGoogleSignIn.signOut(); } catch (_) {}
           account = await serverGoogleSignIn.signIn();
         } catch (serverErr) {
           debugPrint('⚠️ Server Google Sign-In error: $serverErr');
-          emit(const AuthFailure('Google sign-in is unavailable on this device.'));
-          return;
         }
       }
 
