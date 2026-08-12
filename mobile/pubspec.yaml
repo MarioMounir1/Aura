@@ -2,7 +2,7 @@ name: aura
 description: Aura — AI-powered nutrition & fitness ecosystem
 
 publish_to: "none"
-version: 1.0.0+37
+version: 1.0.0+38
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
