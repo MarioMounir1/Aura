@@ -1715,11 +1715,15 @@ class CoachChatMessage {
   final String text;
   final bool isUser;
   final bool isTyping;
+  final bool isError;
+  final String? retryQuery;
 
   const CoachChatMessage({
     required this.text,
     required this.isUser,
     this.isTyping = false,
+    this.isError = false,
+    this.retryQuery,
   });
 }
 
@@ -1791,15 +1795,20 @@ class _CoachChatCardState extends State<CoachChatCard> {
     });
   }
 
-  Future<void> _submit() async {
-    final msg = _controller.text.trim();
+  Future<void> _submit([String? retryMsg]) async {
+    final msg = retryMsg ?? _controller.text.trim();
     if (msg.isEmpty || _isInterpreting) return;
 
-    _controller.clear();
+    if (retryMsg == null) {
+      _controller.clear();
+    }
 
     setState(() {
-      _messages.add(CoachChatMessage(text: msg, isUser: true));
-      _messages.add(CoachChatMessage(text: '', isUser: false, isTyping: true));
+      _messages.removeWhere((m) => m.isError && m.retryQuery == msg);
+      if (retryMsg == null) {
+        _messages.add(CoachChatMessage(text: msg, isUser: true));
+      }
+      _messages.add(const CoachChatMessage(text: '', isUser: false, isTyping: true));
       _isInterpreting = true;
     });
     _scrollToBottom();
@@ -1845,9 +1854,11 @@ class _CoachChatCardState extends State<CoachChatCard> {
                     ? 'المدرب الشخصي بالذكاء الاصطناعي ميزة للمشتركين فقط. اشترك في Premium للوصول الكامل!'
                     : 'AI Workout Coach is a Premium feature. Upgrade to Premium for unlimited AI workout guidance!')
                 : (widget.isArabic
-                    ? 'فشل في معالجة الطلب. يرجى المحاولة مرة أخرى.'
-                    : 'Failed to process command. Please try again.'),
+                    ? 'تعذر الاتصال بالخادم الآن. اضغط لإعادة المحاولة.'
+                    : 'Connection issue. Tap to retry sending.'),
             isUser: false,
+            isError: !isPremiumRequired,
+            retryQuery: isPremiumRequired ? null : msg,
           ));
           _isInterpreting = false;
         });
@@ -2041,50 +2052,89 @@ class _CoachChatCardState extends State<CoachChatCard> {
         margin: const EdgeInsets.only(bottom: 8, right: 32),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
-          color: const Color(0xFFEAF5EE),
+          color: message.isError ? const Color(0xFFFFF3F3) : const Color(0xFFEAF5EE),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(14),
             topRight: Radius.circular(14),
             bottomRight: Radius.circular(14),
             bottomLeft: Radius.circular(2),
           ),
-          border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
+          border: Border.all(
+            color: message.isError ? const Color(0xFFEF9A9A) : const Color(0xFFD3E4D7),
+            width: 1,
+          ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 13),
-            const SizedBox(width: 6),
-            Flexible(
-              child: message.isTyping
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          isArabic ? 'المدرب يفكر...' : 'Coach is thinking...',
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  message.isError ? Icons.error_outline_rounded : Icons.auto_awesome_rounded,
+                  color: message.isError ? const Color(0xFFD32F2F) : const Color(0xFF235A42),
+                  size: 13,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: message.isTyping
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isArabic ? 'المدرب يفكر...' : 'Coach is thinking...',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                color: const Color(0xFF6B7C6E),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const SizedBox(
+                              width: 10,
+                              height: 10,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          message.text,
                           style: GoogleFonts.inter(
-                            fontSize: 11.5,
-                            color: const Color(0xFF6B7C6E),
-                            fontStyle: FontStyle.italic,
+                            fontSize: 12.5,
+                            color: message.isError ? const Color(0xFFC62828) : const Color(0xFF1E3A2B),
+                            height: 1.35,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const SizedBox(
-                          width: 10,
-                          height: 10,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      message.text,
-                      style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF1E3A2B), height: 1.35),
-                    ),
+                ),
+              ],
             ),
+            if (message.isError && message.retryQuery != null) ...[
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () => _submit(message.retryQuery),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.refresh_rounded, size: 12, color: Color(0xFFD32F2F)),
+                    const SizedBox(width: 4),
+                    Text(
+                      isArabic ? 'إعادة المحاولة 🔄' : 'Tap to retry 🔄',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFFD32F2F),
+                        fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
