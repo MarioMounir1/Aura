@@ -90,46 +90,79 @@ class LanguageCubit extends Cubit<Locale> {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Catch Flutter framework errors gracefully
+  FlutterError.onError = (details) {
+    FlutterError.dumpErrorToConsole(details);
+  };
+
   // Force portrait orientation
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+  try {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  } catch (e) {
+    debugPrint('Orientation setup error: $e');
+  }
 
   // Configure status bar for light pre-screen
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor:                   Colors.transparent,
-      statusBarIconBrightness:          Brightness.dark,
-      systemNavigationBarColor:         Color(0xFFF6F8F5),
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Color(0xFFF6F8F5),
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
-  // Parallelize Hive init, language, and theme loads for fast <3s boot
-  final bootResults = await Future.wait([
-    LanguageCubit.getSavedLanguage(),
-    ThemeCubit.getSavedThemeMode(),
-    Future(() async {
-      await Hive.initFlutter();
+  // Safe Hive Storage Initialization
+  try {
+    await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(IngredientBreakdownModelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(MealLogModelAdapter());
-      await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
-    }),
-  ]);
+    }
+    await Hive.openBox<MealLogModel>(AppConstants.mealLogsBox);
+  } catch (e) {
+    debugPrint('Hive storage init error: $e');
+  }
 
-  final savedLang      = bootResults[0] as String;
-  final savedThemeMode = bootResults[1] as ThemeMode;
+  // Fallback defaults for Language and Theme
+  String savedLang = 'en';
+  ThemeMode savedThemeMode = ThemeMode.light;
+
+  try {
+    savedLang = await LanguageCubit.getSavedLanguage();
+  } catch (e) {
+    debugPrint('LanguageCubit load error: $e');
+  }
+
+  try {
+    savedThemeMode = await ThemeCubit.getSavedThemeMode();
+  } catch (e) {
+    debugPrint('ThemeCubit load error: $e');
+  }
 
   runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
 
   // Non-blocking initialization of RevenueCat & Google Mobile Ads in background
-  PurchaseService.instance.init().catchError((e) {
-    debugPrint('PurchaseService background init error: $e');
-  });
-  MobileAds.instance.initialize().catchError((e) {
-    debugPrint('MobileAds background init error: $e');
-  });
+  try {
+    PurchaseService.instance.init().catchError((e) {
+      debugPrint('PurchaseService background init error: $e');
+    });
+  } catch (e) {
+    debugPrint('PurchaseService init error: $e');
+  }
+
+  try {
+    MobileAds.instance.initialize().catchError((e) {
+      debugPrint('MobileAds background init error: $e');
+    });
+  } catch (e) {
+    debugPrint('MobileAds init error: $e');
+  }
 }
 
 // ── Root App Widget ───────────────────────────────────────────
