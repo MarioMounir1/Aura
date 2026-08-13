@@ -95,7 +95,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       GoogleSignInAccount? account;
-      String? lastError;
 
       // 1. Primary: Standard native device Google Sign-In
       try {
@@ -103,7 +102,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         account = await stdGoogleSignIn.signIn();
       } catch (stdErr) {
         debugPrint('⚠️ Standard Google Sign-In error: $stdErr');
-        lastError = stdErr.toString();
       }
 
       // 2. Fallback: Server Client ID configuration
@@ -116,19 +114,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           account = await serverGoogleSignIn.signIn();
         } catch (serverErr) {
           debugPrint('⚠️ Server Google Sign-In error: $serverErr');
-          lastError ??= serverErr.toString();
         }
       }
 
       if (account == null) {
-        if (lastError != null &&
-            !lastError.contains('canceled') &&
-            !lastError.contains('cancelled') &&
-            !lastError.contains('CLOSED')) {
-          emit(AuthFailure('Google sign-in error: $lastError'));
-        } else {
-          emit(Unauthenticated());
-        }
+        emit(Unauthenticated());
         return;
       }
 
