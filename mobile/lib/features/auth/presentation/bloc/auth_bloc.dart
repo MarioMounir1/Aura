@@ -122,20 +122,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         return;
       }
 
-      GoogleSignInAuthentication? authentication;
-      try {
-        authentication = await account.authentication;
-      } catch (e) {
-        debugPrint('⚠️ Could not get Google authentication tokens: $e');
-      }
-
-      final idToken = authentication?.idToken;
+      // Extract user credentials instantly without blocking on authentication tokens
+      final googleId = account.id;
+      final email = account.email;
+      final name = (account.displayName != null && account.displayName!.trim().isNotEmpty)
+          ? account.displayName!.trim()
+          : 'Google User';
 
       final result = await _authRepository.loginWithGoogle(
-        googleId: account.id,
-        email: account.email,
-        name: account.displayName ?? 'Google User',
-        idToken: idToken,
+        googleId: googleId,
+        email: email,
+        name: name,
+        idToken: null,
       );
 
       await result.fold(
