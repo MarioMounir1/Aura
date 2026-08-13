@@ -39,6 +39,14 @@ class RegisterSubmitted extends AuthEvent {
 
 class LogoutRequested extends AuthEvent {}
 
-class GoogleSignInSubmitted extends AuthEvent {}
+class GoogleSignInSubmitted extends AuthEvent {
+  final String? overrideEmail;
+  final String? overrideName;
+
+  const GoogleSignInSubmitted({this.overrideEmail, this.overrideName});
+
+  @override
+  List<Object?> get props => [overrideEmail, overrideName];
+}
 
 class AppleSignInSubmitted extends AuthEvent {}
