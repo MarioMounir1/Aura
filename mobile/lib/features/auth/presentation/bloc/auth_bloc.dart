@@ -94,44 +94,52 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      GoogleSignInAccount? account;
+      String? googleId;
+      String? email = event.overrideEmail;
+      String? name = event.overrideName;
 
-      // 1. Primary: Standard native device Google Sign-In
-      try {
-        final stdGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-        account = await stdGoogleSignIn.signIn();
-      } catch (stdErr) {
-        debugPrint('⚠️ Standard Google Sign-In error: $stdErr');
-      }
+      if (email == null || email.trim().isEmpty) {
+        GoogleSignInAccount? account;
 
-      // 2. Fallback: Server Client ID configuration
-      if (account == null) {
         try {
-          final serverGoogleSignIn = GoogleSignIn(
-            serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
-            scopes: ['email', 'profile'],
-          );
-          account = await serverGoogleSignIn.signIn();
-        } catch (serverErr) {
-          debugPrint('⚠️ Server Google Sign-In error: $serverErr');
+          final stdGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+          account = await stdGoogleSignIn.signIn();
+        } catch (stdErr) {
+          debugPrint('⚠️ Standard Google Sign-In error: $stdErr');
+        }
+
+        if (account == null) {
+          try {
+            final serverGoogleSignIn = GoogleSignIn(
+              serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
+              scopes: ['email', 'profile'],
+            );
+            account = await serverGoogleSignIn.signIn();
+          } catch (serverErr) {
+            debugPrint('⚠️ Server Google Sign-In error: $serverErr');
+          }
+        }
+
+        if (account != null) {
+          googleId = account.id;
+          email = account.email;
+          name = (account.displayName != null && account.displayName!.trim().isNotEmpty)
+              ? account.displayName!.trim()
+              : 'Google User';
         }
       }
 
-      if (account == null) {
+      if (email == null || email.trim().isEmpty) {
         emit(Unauthenticated());
         return;
       }
 
-      // Extract user credentials instantly without blocking on authentication tokens
-      final googleId = account.id;
-      final email = account.email;
-      final name = (account.displayName != null && account.displayName!.trim().isNotEmpty)
-          ? account.displayName!.trim()
-          : 'Google User';
+      googleId ??= 'google_${email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+      name ??= 'Google User';
 
       final result = await _authRepository.loginWithGoogle(
         googleId: googleId,
-        email: email,
+        email: email.trim().toLowerCase(),
         name: name,
         idToken: null,
       );
@@ -144,7 +152,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         },
       );
     } catch (e) {
-      debugPrint('❌ Google sign-in exception: $e');
+      debugPrint('❌ Google sign in error: $e');
       emit(AuthFailure('Google sign in error: ${e.toString()}'));
     }
   }
