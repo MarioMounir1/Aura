@@ -494,6 +494,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                   ),
                 ),
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleGoogleSignIn(BuildContext context) async {
     final authBloc = context.read<AuthBloc>();
     authBloc.add(const GoogleSignInSubmitted());

@@ -518,6 +518,13 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleGoogleSignIn(BuildContext context) async {
     final authBloc = context.read<AuthBloc>();
     authBloc.add(const GoogleSignInSubmitted());

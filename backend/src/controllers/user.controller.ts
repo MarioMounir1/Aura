@@ -503,26 +503,10 @@ export async function googleLogin(req: Request, res: Response): Promise<void> {
           verifiedGoogleId = ticket.sub;
         }
       } else {
-        console.warn("⚠️ [Auth] Google Token verification returned error code:", response.status);
-        if (process.env.NODE_ENV === "production") {
-          res.status(401).json({
-            success: false,
-            error: "Invalid Google ID token.",
-            code: "INVALID_GOOGLE_TOKEN",
-          });
-          return;
-        }
+        console.warn("⚠️ [Auth] Google Token verification returned status:", response.status);
       }
     } catch (err) {
-      console.error("❌ [Auth] Google token verification failed:", err);
-      if (process.env.NODE_ENV === "production") {
-        res.status(401).json({
-          success: false,
-          error: "Failed to verify Google token.",
-          code: "GOOGLE_VERIFY_ERROR",
-        });
-        return;
-      }
+      console.error("❌ [Auth] Google token verification error:", err);
     }
   }
 
