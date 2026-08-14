@@ -86,13 +86,14 @@ Your task:
      "fats": 0,
      "confidence_score": 0.0
 2. If the image DOES contain edible food or drink:
+   - DIET / ZERO SUGAR / WATER / TEA / BLACK COFFEE: If you detect Diet Coke, Coke Zero, Pepsi Max, Diet Pepsi, Zero Sugar beverages, plain water, black coffee, or unsweetened tea, set "is_food": true, calories: 0 or 1, protein: 0, carbs: 0, fats: 0. NEVER assign 150 calories to a diet or zero sugar drink.
    - Carefully count individual whole items (e.g., number of eggs, slices of toast, pieces of meat/chicken).
    - Use standard verified nutritional references (USDA, global databases) for any cuisine:
      * 1 whole large egg: ~72-75 kcal (6.3g protein, 5g fat, 0.4g carbs). 5 whole eggs = ~360-375 kcal (31.5g protein, 25g fat, 2g carbs).
      * 100g cooked chicken breast: ~165 kcal (31g protein, 3.6g fat, 0g carbs).
      * 100g cooked white rice: ~130 kcal (2.7g protein, 0.3g fat, 28g carbs).
    - Accurately calculate total protein (g), carbs (g), and fats (g).
-   - Calculate total calories strictly as: (protein * 4) + (carbs * 4) + (fats * 9).
+   - Calculate total calories strictly as: (protein * 4) + (carbs * 4) + (fats * 9) (except for zero-calorie beverages where calories = 0 or 1).
    - Set "is_food": true and provide confidence_score between 0.7 and 1.0.
 
 You MUST respond ONLY with a single JSON object conforming strictly to the schema. Never include markdown backticks or commentary.`;
@@ -369,28 +370,50 @@ Return a JSON object strictly matching this schema:
 
 function parseAndValidateResponse(parsed: any): MealAnalysisResult {
   const isFood = parsed.is_food !== false;
-  const dishName = String(parsed.dish_name || "").trim().toLowerCase();
+  const rawDishName = String(parsed.dish_name || "").trim();
+  const dishName = rawDishName.toLowerCase();
 
-  if (!isFood || dishName === "not food" || dishName === "non-food" || dishName === "unidentified") {
+  if (!isFood || dishName === "not food" || dishName === "non-food" || dishName === "unidentified" || dishName === "" || dishName === "null") {
     throw new Error("NO_FOOD_DETECTED: No food or beverage was detected in this image. Please scan a clear photo of your meal.");
   }
 
-  const protein = Math.max(0, Math.round(Number(parsed.protein || 0)));
-  const carbs = Math.max(0, Math.round(Number(parsed.carbs || 0)));
-  const fats = Math.max(0, Math.round(Number(parsed.fats || 0)));
+  let protein = Math.max(0, Math.round(Number(parsed.protein || 0)));
+  let carbs = Math.max(0, Math.round(Number(parsed.carbs || 0)));
+  let fats = Math.max(0, Math.round(Number(parsed.fats || 0)));
   
-  // Calculate consistent calories based on standard macro energy densities
-  const calculatedCalories = (protein * 4) + (carbs * 4) + (fats * 9);
-  const reportedCalories = Math.max(0, Math.round(Number(parsed.calories || 0)));
+  // ── Smart Diet / Zero Sugar & Zero-Calorie Beverage Sanitizer ─────────────
+  const isDietDrink = /(diet|zero|max|light|no sugar|sugar free|zero sugar)/i.test(dishName) && 
+                      /(coke|coca|pepsi|soda|cola|sprite|7up|seven up|dr pepper|fanta|drink|can|beverage)/i.test(dishName);
 
-  if (calculatedCalories === 0 && reportedCalories === 0) {
+  const isZeroCalDrink = isDietDrink || /(water|black coffee|espresso|americano|green tea|black tea|herbal tea|sparkling water|club soda|seltzer)/i.test(dishName);
+
+  if (isDietDrink) {
+    protein = 0;
+    carbs = 0;
+    fats = 0;
+  }
+
+  // Calculate consistent calories based on standard macro energy densities
+  let calculatedCalories = (protein * 4) + (carbs * 4) + (fats * 9);
+  let reportedCalories = Math.max(0, Math.round(Number(parsed.calories || 0)));
+
+  if (isDietDrink) {
+    reportedCalories = 1;
+    calculatedCalories = 1;
+  }
+
+  if (calculatedCalories === 0 && reportedCalories === 0 && !isZeroCalDrink) {
     throw new Error("NO_FOOD_DETECTED: No food or beverage was detected in this image. Please scan a clear photo of your meal.");
   }
+
+  const finalCalories = isZeroCalDrink && reportedCalories <= 5 
+    ? reportedCalories 
+    : (calculatedCalories > 0 ? calculatedCalories : reportedCalories);
 
   return {
-    mealName: String(parsed.dish_name),
+    mealName: rawDishName,
     restaurantName: "Homemade",
-    calories: calculatedCalories > 0 ? calculatedCalories : reportedCalories,
+    calories: finalCalories,
     protein,
     carbs,
     fats,
