@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/cubit/unit_cubit.dart';
+import '../../../core/utils/unit_converter.dart';
 import '../../../l10n/app_localizations.dart';
 import 'bloc/weight_bloc.dart';
 import 'bloc/weight_event.dart';
@@ -110,6 +112,7 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
 
   Widget _buildContent(BuildContext context, WeightLoaded state, AppLocalizations l10n) {
     final hasHistory = state.logs.isNotEmpty;
+    final unitSystem = context.watch<UnitCubit>().state;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -150,7 +153,7 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
 
           // ── Line Chart of Weight Progress ─────────────────────────────────
           if (hasHistory)
-            _buildWeightChart(state.logs)
+            _buildWeightChart(state.logs, unitSystem)
           else
             Container(
               height: 200,
@@ -203,7 +206,7 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
 
           // ── Stats Summary Grid ────────────────────────────────────────────
           if (hasHistory && state.stats != null)
-            _buildStatsGrid(state.stats!, l10n),
+            _buildStatsGrid(state.stats!, l10n, unitSystem),
           const SizedBox(height: 32),
 
           // ── Recent Weight logs ────────────────────────────────────────────
@@ -215,28 +218,29 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _buildLogsList(context, state.logs, l10n),
+          _buildLogsList(context, state.logs, l10n, unitSystem),
         ],
       ),
     );
   }
 
-  Widget _buildWeightChart(List<dynamic> logs) {
+  Widget _buildWeightChart(List<dynamic> logs, UnitSystem unitSystem) {
     // Parse data points
     final List<FlSpot> spots = [];
-    double minWeight = 400.0;
+    double minWeight = 2000.0;
     double maxWeight = 0.0;
 
     for (int i = 0; i < logs.length; i++) {
-      final double weight = (logs[i]['weightKg'] as num).toDouble();
+      final double weightKg = (logs[i]['weightKg'] as num).toDouble();
+      final double weight = unitSystem == UnitSystem.imperial ? UnitConverter.kgToLbs(weightKg) : weightKg;
       spots.add(FlSpot(i.toDouble(), weight));
 
       if (weight < minWeight) minWeight = weight;
       if (weight > maxWeight) maxWeight = weight;
     }
 
-    final double yPadding = 2.0;
-    final double minY = (minWeight - yPadding).clamp(0.0, 400.0);
+    final double yPadding = unitSystem == UnitSystem.imperial ? 4.0 : 2.0;
+    final double minY = (minWeight - yPadding).clamp(0.0, 2000.0);
     final double maxY = maxWeight + yPadding;
 
     return Container(
@@ -258,10 +262,10 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 45,
+                reservedSize: 48,
                 getTitlesWidget: (value, meta) {
                   return Text(
-                    '${value.toStringAsFixed(1)}',
+                    value.toStringAsFixed(1),
                     style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
                   );
                 },
@@ -300,22 +304,30 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
     );
   }
 
-  Widget _buildStatsGrid(Map<String, dynamic> stats, AppLocalizations l10n) {
-    final double totalDelta = (stats['totalDelta'] as num).toDouble();
+  Widget _buildStatsGrid(Map<String, dynamic> stats, AppLocalizations l10n, UnitSystem unitSystem) {
+    final double totalDeltaKg = (stats['totalDelta'] as num).toDouble();
+    final double deltaVal = unitSystem == UnitSystem.imperial ? UnitConverter.kgToLbs(totalDeltaKg) : totalDeltaKg;
+    final String unitSuffix = unitSystem == UnitSystem.imperial ? 'lbs' : 'kg';
+
     String deltaText = l10n.weightStable;
     Color deltaColor = AppColors.textSecondary;
 
-    if (totalDelta < 0) {
-      deltaText = '-${totalDelta.abs().toStringAsFixed(1)} kg';
+    if (deltaVal < 0) {
+      deltaText = '-${deltaVal.abs().toStringAsFixed(1)} $unitSuffix';
       deltaColor = AppColors.primary;
-    } else if (totalDelta > 0) {
-      deltaText = '+${totalDelta.toStringAsFixed(1)} kg';
+    } else if (deltaVal > 0) {
+      deltaText = '+${deltaVal.toStringAsFixed(1)} $unitSuffix';
       deltaColor = AppColors.accent;
     }
 
     String trendText = l10n.weightTrendStable;
     if (stats['trend'] == 'losing') trendText = l10n.weightTrendLosing;
     if (stats['trend'] == 'gaining') trendText = l10n.weightTrendGaining;
+
+    final double minKg = (stats['minWeight'] as num).toDouble();
+    final double maxKg = (stats['maxWeight'] as num).toDouble();
+    final String minStr = UnitConverter.formatWeight(minKg, unitSystem);
+    final String maxStr = UnitConverter.formatWeight(maxKg, unitSystem);
 
     return GridView.count(
       shrinkWrap: true,
@@ -327,8 +339,8 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
       children: [
         _buildStatTile(l10n.homeGoal.replaceFirst(l10n.homeGoal.split(' ')[0], 'Delta'), deltaText, deltaColor),
         _buildStatTile('Trend', trendText, deltaColor),
-        _buildStatTile('Minimum', '${stats['minWeight']} kg', AppColors.textPrimary),
-        _buildStatTile('Maximum', '${stats['maxWeight']} kg', AppColors.textPrimary),
+        _buildStatTile('Minimum', minStr, AppColors.textPrimary),
+        _buildStatTile('Maximum', maxStr, AppColors.textPrimary),
       ],
     );
   }
@@ -356,7 +368,7 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
     );
   }
 
-  Widget _buildLogsList(BuildContext context, List<dynamic> logs, AppLocalizations l10n) {
+  Widget _buildLogsList(BuildContext context, List<dynamic> logs, AppLocalizations l10n, UnitSystem unitSystem) {
     if (logs.isEmpty) {
       return Center(
         child: Padding(
@@ -402,7 +414,10 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
               color: Colors.transparent,
               child: ListTile(
                 leading: const Icon(Icons.scale_rounded, color: AppColors.accent),
-                title: Text(l10n.weightKg(weight), style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                title: Text(
+                  UnitConverter.formatWeight(weight, unitSystem),
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
                 subtitle: Text(date, style: const TextStyle(color: AppColors.textSecondary)),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted),
@@ -459,6 +474,9 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
   }
 
   void _showLogWeightDialog(BuildContext context, AppLocalizations l10n) {
+    final unitSystem = context.read<UnitCubit>().state;
+    final unitSuffix = unitSystem == UnitSystem.imperial ? 'lbs' : 'kg';
+
     showDialog(
       context: context,
       builder: (ctx) {
@@ -468,7 +486,10 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
           content: TextFormField(
             controller: _weightInputController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(hintText: 'kg'),
+            decoration: InputDecoration(
+              hintText: 'e.g. ${unitSystem == UnitSystem.imperial ? "165" : "75"}',
+              suffixText: unitSuffix,
+            ),
             style: const TextStyle(color: AppColors.textPrimary),
           ),
           actions: [
@@ -481,9 +502,10 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final weight = double.tryParse(_weightInputController.text.trim());
-                if (weight != null && weight > 0) {
-                  context.read<WeightBloc>().add(LogWeightMeasurement(weight));
+                final input = double.tryParse(_weightInputController.text.trim());
+                if (input != null && input > 0) {
+                  final weightKg = unitSystem == UnitSystem.imperial ? UnitConverter.lbsToKg(input) : input;
+                  context.read<WeightBloc>().add(LogWeightMeasurement(weightKg));
                 }
                 _weightInputController.clear();
                 Navigator.pop(ctx);
