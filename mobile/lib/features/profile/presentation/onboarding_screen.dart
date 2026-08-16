@@ -15,6 +15,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/unit_converter.dart';
+import '../../../core/cubit/unit_cubit.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_event.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
@@ -217,9 +219,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final _ageController = TextEditingController(text: '');
   String _gender = 'male';
 
-  // ── Step 3: Body Stats ────────────────────────────────────
-  final _heightController     = TextEditingController(text: '');
-  final _weightController     = TextEditingController(text: '');
+  // ── Step 3: Body Stats & Units ───────────────────────────
+  UnitSystem _unitSystem = UnitSystem.metric;
+  final _heightController       = TextEditingController(text: '');
+  final _heightFtController     = TextEditingController(text: '');
+  final _heightInController     = TextEditingController(text: '');
+  final _weightController       = TextEditingController(text: '');
   final _targetWeightController = TextEditingController(text: '');
 
   // ── Step 4: Activity ──────────────────────────────────────
@@ -237,6 +242,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       duration: const Duration(milliseconds: 400),
     )..forward();
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final currentUnit = context.read<UnitCubit>().state;
+        setState(() => _unitSystem = currentUnit);
+      }
+    });
   }
 
   @override
@@ -244,10 +256,79 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pageController.dispose();
     _ageController.dispose();
     _heightController.dispose();
+    _heightFtController.dispose();
+    _heightInController.dispose();
     _weightController.dispose();
     _targetWeightController.dispose();
     _fadeCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Unit Switching & Values ───────────────────────────────
+  void _onUnitSystemChanged(UnitSystem newSystem) {
+    if (_unitSystem == newSystem) return;
+    HapticFeedback.selectionClick();
+
+    setState(() {
+      if (newSystem == UnitSystem.imperial) {
+        // Metric -> Imperial
+        final hCm = double.tryParse(_heightController.text.trim());
+        if (hCm != null && hCm > 0) {
+          final ftIn = UnitConverter.cmToFeetInches(hCm);
+          _heightFtController.text = ftIn.feet.toString();
+          _heightInController.text = ftIn.inches.toString();
+        }
+        final wKg = double.tryParse(_weightController.text.trim());
+        if (wKg != null && wKg > 0) {
+          _weightController.text = UnitConverter.kgToLbs(wKg).toStringAsFixed(1);
+        }
+        final twKg = double.tryParse(_targetWeightController.text.trim());
+        if (twKg != null && twKg > 0) {
+          _targetWeightController.text = UnitConverter.kgToLbs(twKg).toStringAsFixed(1);
+        }
+      } else {
+        // Imperial -> Metric
+        final ft = int.tryParse(_heightFtController.text.trim()) ?? 0;
+        final inch = int.tryParse(_heightInController.text.trim()) ?? 0;
+        if (ft > 0 || inch > 0) {
+          final cm = UnitConverter.feetInchesToCm(ft, inch);
+          _heightController.text = cm.toStringAsFixed(0);
+        }
+        final wLbs = double.tryParse(_weightController.text.trim());
+        if (wLbs != null && wLbs > 0) {
+          _weightController.text = UnitConverter.lbsToKg(wLbs).toStringAsFixed(1);
+        }
+        final twLbs = double.tryParse(_targetWeightController.text.trim());
+        if (twLbs != null && twLbs > 0) {
+          _targetWeightController.text = UnitConverter.lbsToKg(twLbs).toStringAsFixed(1);
+        }
+      }
+      _unitSystem = newSystem;
+    });
+
+    context.read<UnitCubit>().setUnitSystem(newSystem);
+  }
+
+  double _getWeightInKg() {
+    final val = double.tryParse(_weightController.text.trim());
+    if (val == null) return 70.0;
+    return _unitSystem == UnitSystem.imperial ? UnitConverter.lbsToKg(val) : val;
+  }
+
+  double _getHeightInCm() {
+    if (_unitSystem == UnitSystem.imperial) {
+      final ft = int.tryParse(_heightFtController.text.trim()) ?? 0;
+      final inch = int.tryParse(_heightInController.text.trim()) ?? 0;
+      final cm = UnitConverter.feetInchesToCm(ft, inch);
+      return cm > 0 ? cm : 170.0;
+    }
+    return double.tryParse(_heightController.text.trim()) ?? 170.0;
+  }
+
+  double? _getTargetWeightInKg() {
+    final val = double.tryParse(_targetWeightController.text.trim());
+    if (val == null) return null;
+    return _unitSystem == UnitSystem.imperial ? UnitConverter.lbsToKg(val) : val;
   }
 
   // ── Navigation ────────────────────────────────────────────
@@ -288,15 +369,29 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         }
         return true;
       case 2:
-        final h = double.tryParse(_heightController.text.trim());
-        final w = double.tryParse(_weightController.text.trim());
-        if (h == null || h < 100 || h > 250) {
-          _showError('Please enter a valid height (100–250 cm)');
-          return false;
-        }
-        if (w == null || w < 30 || w > 400) {
-          _showError('Please enter a valid weight (30–400 kg)');
-          return false;
+        if (_unitSystem == UnitSystem.imperial) {
+          final ft = int.tryParse(_heightFtController.text.trim());
+          final inch = int.tryParse(_heightInController.text.trim()) ?? 0;
+          if (ft == null || ft < 3 || ft > 8 || inch < 0 || inch > 11) {
+            _showError('Please enter a valid height (e.g. 5 ft 10 in)');
+            return false;
+          }
+          final w = double.tryParse(_weightController.text.trim());
+          if (w == null || w < 65 || w > 880) {
+            _showError('Please enter a valid weight (65–880 lbs)');
+            return false;
+          }
+        } else {
+          final h = double.tryParse(_heightController.text.trim());
+          final w = double.tryParse(_weightController.text.trim());
+          if (h == null || h < 100 || h > 250) {
+            _showError('Please enter a valid height (100–250 cm)');
+            return false;
+          }
+          if (w == null || w < 30 || w > 400) {
+            _showError('Please enter a valid weight (30–400 kg)');
+            return false;
+          }
         }
         return true;
       default:
@@ -322,9 +417,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final goal       = _goals[_selectedGoalIndex];
     final activity   = _activities[_selectedActivityIndex];
     final age        = int.tryParse(_ageController.text.trim()) ?? 25;
-    final height     = double.tryParse(_heightController.text.trim()) ?? 170.0;
-    final weight     = double.tryParse(_weightController.text.trim()) ?? 70.0;
-    final targetWeight = double.tryParse(_targetWeightController.text.trim()) ?? 70.0;
+    final height     = _getHeightInCm();
+    final weight     = _getWeightInKg();
+    final targetWeight = _getTargetWeightInKg() ?? weight;
     final isArabic   = Localizations.localeOf(context).languageCode == 'ar';
 
     String effectiveGoalId = goal.id;
@@ -609,7 +704,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   // ══════════════════════════════════════════════════════════
-  // STEP 3 — Body Stats
+  // STEP 3 — Body Stats & Unit Selector
   // ══════════════════════════════════════════════════════════
 
   Widget _buildStep3_BodyStats() {
@@ -624,53 +719,144 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             title: 'Your body stats',
             subtitle: 'Used to calculate your personalized daily calorie target.',
           ),
-          const SizedBox(height: 32),
-
-          // Height + Weight
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _FieldLabel('Height'),
-                    const SizedBox(height: 10),
-                    _NumberField(
-                      controller: _heightController,
-                      hint: '175',
-                      suffix: 'cm',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _FieldLabel('Current Weight'),
-                    const SizedBox(height: 10),
-                    _NumberField(
-                      controller: _weightController,
-                      hint: '75',
-                      suffix: 'kg',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 20),
 
-          // Target Weight (optional)
-          _FieldLabel('Target Weight (optional)'),
-          const SizedBox(height: 10),
-          _NumberField(
-            controller: _targetWeightController,
-            hint: 'e.g. 70',
-            suffix: 'kg',
+          // Unit Switcher Toggle
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF5EE),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _T.border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _UnitToggleTab(
+                    label: 'Metric (kg / cm)',
+                    isSelected: _unitSystem == UnitSystem.metric,
+                    onTap: () => _onUnitSystemChanged(UnitSystem.metric),
+                  ),
+                ),
+                Expanded(
+                  child: _UnitToggleTab(
+                    label: 'Imperial (lbs / ft)',
+                    isSelected: _unitSystem == UnitSystem.imperial,
+                    onTap: () => _onUnitSystemChanged(UnitSystem.imperial),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
+
+          if (_unitSystem == UnitSystem.metric) ...[
+            // Height + Weight (Metric)
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FieldLabel('Height'),
+                      const SizedBox(height: 10),
+                      _NumberField(
+                        controller: _heightController,
+                        hint: '175',
+                        suffix: 'cm',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FieldLabel('Current Weight'),
+                      const SizedBox(height: 10),
+                      _NumberField(
+                        controller: _weightController,
+                        hint: '75',
+                        suffix: 'kg',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Target Weight (optional)
+            _FieldLabel('Target Weight (optional)'),
+            const SizedBox(height: 10),
+            _NumberField(
+              controller: _targetWeightController,
+              hint: 'e.g. 70',
+              suffix: 'kg',
+            ),
+          ] else ...[
+            // Height (Feet + Inches)
+            _FieldLabel('Height'),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _NumberField(
+                    controller: _heightFtController,
+                    hint: '5',
+                    suffix: 'ft',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _NumberField(
+                    controller: _heightInController,
+                    hint: '10',
+                    suffix: 'in',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Weight & Target Weight (Imperial)
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FieldLabel('Current Weight'),
+                      const SizedBox(height: 10),
+                      _NumberField(
+                        controller: _weightController,
+                        hint: '165',
+                        suffix: 'lbs',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FieldLabel('Target Weight'),
+                      const SizedBox(height: 10),
+                      _NumberField(
+                        controller: _targetWeightController,
+                        hint: 'e.g. 155',
+                        suffix: 'lbs',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 12),
           Text(
             'Helps us estimate how long your journey will take.',
             style: GoogleFonts.inter(fontSize: 11, color: _T.textMut),
@@ -719,25 +905,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ══════════════════════════════════════════════════════════
 
   Widget _buildStep5_PlanPreview() {
-    final weight   = double.tryParse(_weightController.text.trim()) ?? 70.0;
-    final height   = double.tryParse(_heightController.text.trim()) ?? 170.0;
+    final weight   = _getWeightInKg();
+    final height   = _getHeightInCm();
     final age      = int.tryParse(_ageController.text.trim()) ?? 25;
     var goal       = _goals[_selectedGoalIndex];
     final activity = _activities[_selectedActivityIndex];
-    final targetW  = double.tryParse(_targetWeightController.text.trim());
+    final targetW  = _getTargetWeightInKg();
 
     bool isAutoAdjusted = false;
     String autoAdjustMessage = '';
+
+    final currentWeightFormatted = UnitConverter.formatWeight(weight, _unitSystem);
+    final targetWeightFormatted = targetW != null ? UnitConverter.formatWeight(targetW, _unitSystem) : '';
 
     if (targetW != null) {
       if (targetW > weight + 1 && goal.id == 'maintain') {
         goal = _goals[3]; // Gain Muscle Slowly (+200 kcal)
         isAutoAdjusted = true;
-        autoAdjustMessage = 'Since your target weight (${targetW.toStringAsFixed(0)} kg) is higher than current weight (${weight.toStringAsFixed(0)} kg), we automatically set your plan to Gain Muscle (+200 kcal surplus).';
+        autoAdjustMessage = 'Since your target weight ($targetWeightFormatted) is higher than current weight ($currentWeightFormatted), we automatically set your plan to Gain Muscle (+200 kcal surplus).';
       } else if (targetW < weight - 1 && goal.id == 'maintain') {
         goal = _goals[1]; // Lose Weight Slowly (-300 kcal)
         isAutoAdjusted = true;
-        autoAdjustMessage = 'Since your target weight (${targetW.toStringAsFixed(0)} kg) is lower than current weight (${weight.toStringAsFixed(0)} kg), we automatically set your plan to Lose Weight (-300 kcal deficit).';
+        autoAdjustMessage = 'Since your target weight ($targetWeightFormatted) is lower than current weight ($currentWeightFormatted), we automatically set your plan to Lose Weight (-300 kcal deficit).';
       }
     }
 
@@ -760,7 +949,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       final diff = (weight - targetW).abs();
       final weeklyLossKg = goal.calorieAdjust.abs() / 7700.0 * 7;
       final weeks = (diff / weeklyLossKg).round();
-      timelineText = 'Estimated $weeks weeks to reach ${targetW.toStringAsFixed(0)} kg';
+      timelineText = 'Estimated $weeks weeks to reach $targetWeightFormatted';
     }
 
     return SingleChildScrollView(
@@ -960,6 +1149,51 @@ class _NumberField extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _T.cyan, width: 1.5),
+        ),
+      ),
+    );
+  }
+}
+
+class _UnitToggleTab extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  const _UnitToggleTab({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? _T.cyan : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: _T.cyan.withOpacity(0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isSelected ? Colors.white : _T.textSec,
+            ),
+          ),
         ),
       ),
     );
