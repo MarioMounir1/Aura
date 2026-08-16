@@ -110,9 +110,17 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
     );
   }
 
+  UnitSystem _getUnitSystem(BuildContext context) {
+    try {
+      return context.watch<UnitCubit>().state;
+    } catch (_) {
+      return UnitSystem.metric;
+    }
+  }
+
   Widget _buildContent(BuildContext context, WeightLoaded state, AppLocalizations l10n) {
     final hasHistory = state.logs.isNotEmpty;
-    final unitSystem = context.watch<UnitCubit>().state;
+    final unitSystem = _getUnitSystem(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -474,7 +482,10 @@ class _WeightProgressScreenState extends State<WeightProgressScreen> {
   }
 
   void _showLogWeightDialog(BuildContext context, AppLocalizations l10n) {
-    final unitSystem = context.read<UnitCubit>().state;
+    UnitSystem unitSystem = UnitSystem.metric;
+    try {
+      unitSystem = context.read<UnitCubit>().state;
+    } catch (_) {}
     final unitSuffix = unitSystem == UnitSystem.imperial ? 'lbs' : 'kg';
 
     showDialog(
