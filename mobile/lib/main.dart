@@ -17,6 +17,8 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_colors.dart';
 import 'core/utils/constants.dart';
 import 'core/theme/theme_cubit.dart';
+import 'core/cubit/unit_cubit.dart';
+import 'core/utils/unit_converter.dart';
 import 'features/calorie_tracker/data/models/meal_log_model.dart';
 import 'features/calorie_tracker/data/repositories/meal_repository_impl.dart';
 import 'features/calorie_tracker/domain/repositories/meal_repository.dart';
@@ -128,9 +130,10 @@ Future<void> main() async {
     debugPrint('Hive storage init error: $e');
   }
 
-  // Fallback defaults for Language and Theme
+  // Fallback defaults for Language, Theme, and Unit System
   String savedLang = 'en';
   ThemeMode savedThemeMode = ThemeMode.light;
+  UnitSystem savedUnitSystem = UnitSystem.metric;
 
   try {
     savedLang = await LanguageCubit.getSavedLanguage();
@@ -144,7 +147,17 @@ Future<void> main() async {
     debugPrint('ThemeCubit load error: $e');
   }
 
-  runApp(TeneenApp(initialLang: savedLang, initialThemeMode: savedThemeMode));
+  try {
+    savedUnitSystem = await UnitCubit.getSavedUnitSystem();
+  } catch (e) {
+    debugPrint('UnitCubit load error: $e');
+  }
+
+  runApp(TeneenApp(
+    initialLang: savedLang,
+    initialThemeMode: savedThemeMode,
+    initialUnitSystem: savedUnitSystem,
+  ));
 
   // Non-blocking initialization of RevenueCat SDK in background
   try {
@@ -161,7 +174,13 @@ Future<void> main() async {
 class TeneenApp extends StatelessWidget {
   final String initialLang;
   final ThemeMode initialThemeMode;
-  const TeneenApp({super.key, required this.initialLang, required this.initialThemeMode});
+  final UnitSystem initialUnitSystem;
+  const TeneenApp({
+    super.key,
+    required this.initialLang,
+    required this.initialThemeMode,
+    required this.initialUnitSystem,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -189,6 +208,10 @@ class TeneenApp extends StatelessWidget {
           // Language switching
           BlocProvider<LanguageCubit>(
             create: (_) => LanguageCubit(initialLang),
+          ),
+          // Measurement unit switching
+          BlocProvider<UnitCubit>(
+            create: (_) => UnitCubit(initialUnitSystem),
           ),
           // Auth Session
           BlocProvider<AuthBloc>(
