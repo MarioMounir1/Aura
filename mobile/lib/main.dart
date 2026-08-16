@@ -179,7 +179,7 @@ class TeneenApp extends StatelessWidget {
     super.key,
     required this.initialLang,
     required this.initialThemeMode,
-    required this.initialUnitSystem,
+    this.initialUnitSystem = UnitSystem.metric,
   });
 
   @override
