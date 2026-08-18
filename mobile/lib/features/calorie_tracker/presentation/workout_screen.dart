@@ -31,6 +31,8 @@ import '../../../../core/theme/app_colors.dart';
 import 'bloc/workout_state.dart';
 import 'active_workout_view.dart';
 
+import 'workout_plan_wizard.dart';
+
 // ── State Machine ─────────────────────────────────────────────
 enum WorkoutHubState { unconfigured, loading, ready, activeWorkout }
 
@@ -481,19 +483,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           ),
           const SizedBox(height: 16),
 
-          // ── UNCONFIGURED: AI-chat onboarding ──────────
+          // ── UNCONFIGURED: Step-by-Step Wizard & AI Review ──────────
           if (_state == WorkoutHubState.unconfigured)
-            CoachChatCard(
-              coachNote: null,
-              isArabic: isArabic,
+            WorkoutPlanWizard(
               dio: _dio,
-              isFirstTime: true,
-              onSessionUpdated: (updatedSession) {
-                setState(() {
-                  _currentSession = updatedSession;
-                });
-              },
-              onRoutineUpdated: () => _loadRoutine(silent: false),
+              isArabic: isArabic,
+              onRoutineConfirmed: () => _loadRoutine(silent: false),
             ),
 
           // ── READY: Timeline Hub content ──────────────
