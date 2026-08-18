@@ -1498,7 +1498,9 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
       return;
     }
 
-    if (!user.isPremium) {
+    const isFirstTimeUser = !user.workoutSplitType;
+
+    if (!user.isPremium && !isFirstTimeUser) {
       res.status(403).json({
         success: false,
         error: "AI Workout Coach is a Premium feature. Upgrade to Premium for unlimited AI workout guidance!",
@@ -1508,7 +1510,6 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
     }
 
     const targetDateStr = new Date().toISOString().split("T")[0];
-    const isFirstTimeUser = !user.workoutSplitType;
 
     // ── First-time users: route to onboarding mode in interpretSessionRequest ──
     if (isFirstTimeUser) {
