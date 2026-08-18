@@ -223,14 +223,14 @@ class TeneenApp extends StatelessWidget {
           BlocProvider<ProfileBloc>(
             create: (ctx) => ProfileBloc(
               repository: ctx.read<ProfileRepository>(),
-            )..add(LoadProfile()),
+            ),
           ),
           // Dashboard
           BlocProvider<DashboardBloc>(
             create: (ctx) => DashboardBloc(
               repository: ctx.read<TrackerRepository>(),
               mealRepository: ctx.read<MealRepository>(),
-            )..add(const LoadDashboard()),
+            ),
           ),
           // Meal tracker
           BlocProvider<CalorieTrackerBloc>(
@@ -343,20 +343,10 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   ProfileLoaded? _lastProfileLoaded;
-  bool _isMinPreScreenTimeElapsed = false;
 
   @override
   void initState() {
     super.initState();
-    // Instagram-style splash screen duration (3 seconds)
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _isMinPreScreenTimeElapsed = true;
-        });
-      }
-    });
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authState = context.read<AuthBloc>().state;
@@ -367,12 +357,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   void _loadAllUserData(BuildContext context) {
-    final profileBloc = context.read<ProfileBloc>();
-    profileBloc.add(LoadProfile());
+    context.read<ProfileBloc>().add(LoadProfile());
     context.read<DashboardBloc>().add(const LoadDashboard());
-    context.read<CalorieTrackerBloc>().add(const FetchMealHistory(page: 1));
-    context.read<WaterBloc>().add(const LoadWaterToday());
-    context.read<WeightBloc>().add(const LoadWeightHistory(days: 30));
     context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
     context.read<FoodSearchBloc>().add(LoadFoodCategories());
   }
@@ -397,11 +383,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
       },
       child: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
-          // Instagram-style splash: ALWAYS display pre-screen emblem for 3 seconds on app launch
-          if (!_isMinPreScreenTimeElapsed) {
-            return const _PreScreenView();
-          }
-
           if (authState is Authenticated) {
             final profileState = context.watch<ProfileBloc>().state;
 
