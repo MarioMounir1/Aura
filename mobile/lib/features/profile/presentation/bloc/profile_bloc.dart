@@ -13,7 +13,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
   bool _isProfileInFlight = false;
 
   ProfileBloc({required this.repository}) : super(ProfileInitial()) {
-    on<LoadProfile>(_onLoadProfile, transformer: restartable());
+    on<LoadProfile>(_onLoadProfile, transformer: droppable());
     on<UpdateProfileEvent>(_onUpdateProfile);
     on<CheckOnboardingStatus>(_onCheckOnboardingStatus);
     on<CompleteOnboardingEvent>(_onCompleteOnboarding);
@@ -32,9 +32,6 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     LoadProfile event,
     Emitter<ProfileState> emit,
   ) async {
-    if (_isProfileInFlight) {
-      print('⚠️ WARNING [ProfileBloc]: LoadProfile dispatched while another LoadProfile is already in flight! Cancelling previous request via restartable().');
-    }
     _isProfileInFlight = true;
 
     try {
@@ -63,7 +60,6 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
 
       profileResult.fold(
         (failure) {
-          print("DEBUG [ProfileBloc]: Fetch user profile network call failed: ${failure.message}");
           if (state is! ProfileLoaded) {
             emit(ProfileFailure(failure.message));
           }
@@ -79,9 +75,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
           PurchaseService.instance.setMockPremiumStatus(isDbPremium);
 
           if (userId.isNotEmpty) {
-            PurchaseService.instance.logIn(userId);
+            unawaited(PurchaseService.instance.logIn(userId));
           } else {
-            PurchaseService.instance.syncCustomerInfoOnLaunch();
+            unawaited(PurchaseService.instance.syncCustomerInfoOnLaunch());
           }
 
           final bool actuallyCompleted =
