@@ -1,8 +1,10 @@
 // lib/features/auth/data/repositories/auth_repository_impl.dart
 // Aura — Auth Repository Implementation
 
+import 'dart:convert';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -13,6 +15,27 @@ class AuthRepositoryImpl implements AuthRepository {
   final ApiClient _apiClient;
 
   AuthRepositoryImpl(this._apiClient);
+
+  Future<void> _cacheUser(Map<String, dynamic>? userJson) async {
+    if (userJson == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = userJson['id'] as String? ?? '';
+      if (userId.isNotEmpty) {
+        await prefs.setString('cached_user_profile_$userId', jsonEncode(userJson));
+      }
+      await prefs.setString('cached_user_profile', jsonEncode(userJson));
+
+      final age = userJson['age'];
+      final weight = userJson['weightKg'];
+      final height = userJson['heightCm'];
+      final isCompleted = (age != null && weight != null && height != null);
+      if (userId.isNotEmpty) {
+        await prefs.setBool('onboarding_completed_$userId', isCompleted);
+      }
+      await prefs.setBool('onboarding_completed', isCompleted);
+    } catch (_) {}
+  }
 
   @override
   Future<Either<Failure, String>> register({
@@ -27,10 +50,12 @@ class AuthRepositoryImpl implements AuthRepository {
         data: authRequest.toJson(),
       );
 
-      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      final responseData = response.data['data'] as Map<String, dynamic>;
+      final authResponse = AuthResponse.fromJson(responseData);
       await _apiClient.saveToken(authResponse.token);
       await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
+      await _cacheUser(responseData['user'] as Map<String, dynamic>?);
 
       return Right(authResponse.token);
     } on DioException catch (e) {
@@ -52,10 +77,12 @@ class AuthRepositoryImpl implements AuthRepository {
         data: authRequest.toJson(),
       );
 
-      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      final responseData = response.data['data'] as Map<String, dynamic>;
+      final authResponse = AuthResponse.fromJson(responseData);
       await _apiClient.saveToken(authResponse.token);
       await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
+      await _cacheUser(responseData['user'] as Map<String, dynamic>?);
 
       return Right(authResponse.token);
     } on DioException catch (e) {
@@ -98,10 +125,12 @@ class AuthRepositoryImpl implements AuthRepository {
         },
       );
 
-      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      final responseData = response.data['data'] as Map<String, dynamic>;
+      final authResponse = AuthResponse.fromJson(responseData);
       await _apiClient.saveToken(authResponse.token);
       await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
+      await _cacheUser(responseData['user'] as Map<String, dynamic>?);
 
       return Right(authResponse.token);
     } on DioException catch (e) {
@@ -129,10 +158,12 @@ class AuthRepositoryImpl implements AuthRepository {
         },
       );
 
-      final authResponse = AuthResponse.fromJson(response.data['data'] as Map<String, dynamic>);
+      final responseData = response.data['data'] as Map<String, dynamic>;
+      final authResponse = AuthResponse.fromJson(responseData);
       await _apiClient.saveToken(authResponse.token);
       await _apiClient.saveUserId(authResponse.user.id);
       await _apiClient.saveIsPremium(authResponse.user.isPremium);
+      await _cacheUser(responseData['user'] as Map<String, dynamic>?);
 
       return Right(authResponse.token);
     } on DioException catch (e) {
