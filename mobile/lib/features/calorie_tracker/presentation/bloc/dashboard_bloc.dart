@@ -18,7 +18,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     required this.repository,
     this.mealRepository,
   }) : super(DashboardInitial()) {
-    on<LoadDashboard>(_onLoadDashboard, transformer: restartable());
+    on<LoadDashboard>(_onLoadDashboard, transformer: droppable());
     on<RefreshDashboard>(_onRefreshDashboard);
     on<ResetDashboardEvent>((event, emit) {
       _isFetchInFlight = false;
@@ -30,9 +30,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     LoadDashboard event,
     Emitter<DashboardState> emit,
   ) async {
-    if (_isFetchInFlight) {
-      print('⚠️ WARNING [DashboardBloc]: LoadDashboard dispatched while another LoadDashboard is already in flight! Cancelling previous request via restartable().');
-    }
     _isFetchInFlight = true;
     
     // Only emit Loading if we don't already have data to prevent UI wiping
