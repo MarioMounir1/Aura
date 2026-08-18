@@ -11,14 +11,16 @@ class ApiClient {
   static ApiClient? _instance;
   late final Dio _dio;
   final FlutterSecureStorage _secureStorage;
+  String? _cachedToken;
+  String? _cachedUserId;
 
   ApiClient._internal(this._secureStorage) {
     _dio = Dio(
       BaseOptions(
         baseUrl: AppConstants.apiV1,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 60),
-        sendTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 15),
         headers: {
           'Accept': 'application/json',
         },
@@ -29,15 +31,22 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await _secureStorage.read(key: AppConstants.tokenKey);
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
+          if (_cachedToken != null && _cachedToken!.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $_cachedToken';
+          } else {
+            final token = await _secureStorage.read(key: AppConstants.tokenKey);
+            _cachedToken = token;
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
           }
           return handler.next(options);
         },
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
-            // Token expired — clear storage
+            // Token expired — clear in-memory and secure storage
+            _cachedToken = null;
+            _cachedUserId = null;
             await _secureStorage.delete(key: AppConstants.tokenKey);
             await _secureStorage.delete(key: AppConstants.userIdKey);
           }
@@ -46,14 +55,14 @@ class ApiClient {
       ),
     );
 
-    // Request/response logger (debug builds only)
+    // Request/response logger (debug builds only - error and compact summaries)
     assert(() {
       _dio.interceptors.add(
         PrettyDioLogger(
           requestHeader: false,
-          requestBody: true,
+          requestBody: false,
           responseHeader: false,
-          responseBody: true,
+          responseBody: false,
           error: true,
           compact: true,
         ),
@@ -71,13 +80,16 @@ class ApiClient {
 
   Dio get dio => _dio;
 
-  /// Save auth token to secure storage
+  /// Save auth token to secure storage and in-memory cache
   Future<void> saveToken(String token) async {
+    _cachedToken = token;
     await _secureStorage.write(key: AppConstants.tokenKey, value: token);
   }
 
   /// Clear all auth data
   Future<void> clearAuth() async {
+    _cachedToken = null;
+    _cachedUserId = null;
     await _secureStorage.delete(key: AppConstants.tokenKey);
     await _secureStorage.delete(key: AppConstants.userIdKey);
     await _secureStorage.delete(key: 'is_premium');
@@ -90,7 +102,9 @@ class ApiClient {
 
   /// Check if user is authenticated
   Future<bool> isAuthenticated() async {
+    if (_cachedToken != null && _cachedToken!.isNotEmpty) return true;
     final token = await _secureStorage.read(key: AppConstants.tokenKey);
+    _cachedToken = token;
     return token != null && token.isNotEmpty;
   }
 
@@ -105,13 +119,16 @@ class ApiClient {
     return val == 'true';
   }
 
-  /// Save active userId to secure storage
+  /// Save active userId to secure storage and in-memory cache
   Future<void> saveUserId(String userId) async {
+    _cachedUserId = userId;
     await _secureStorage.write(key: AppConstants.userIdKey, value: userId);
   }
 
-  /// Get active userId from secure storage
+  /// Get active userId from in-memory cache or secure storage
   Future<String?> getUserId() async {
-    return await _secureStorage.read(key: AppConstants.userIdKey);
+    if (_cachedUserId != null && _cachedUserId!.isNotEmpty) return _cachedUserId;
+    _cachedUserId = await _secureStorage.read(key: AppConstants.userIdKey);
+    return _cachedUserId;
   }
 }
