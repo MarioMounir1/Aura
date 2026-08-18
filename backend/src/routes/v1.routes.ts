@@ -353,6 +353,7 @@ router.get("/workouts/exercises", requireAuth, getAvailableExercises);
  * @body    { daysPerWeek, splitType, splitName }
  */
 router.post("/workouts/setup", requireAuth, setupWorkoutRoutine);
+router.post("/workouts/routine/setup", requireAuth, setupWorkoutRoutine);
 
 /**
  * @route   GET /api/v1/workouts/routine
