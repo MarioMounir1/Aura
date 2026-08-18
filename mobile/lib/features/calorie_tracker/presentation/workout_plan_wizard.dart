@@ -156,7 +156,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
   Future<void> _confirmAndSaveRoutine() async {
     setState(() => _isSavingRoutine = true);
     try {
-      await widget.dio.post('/workouts/routine/setup', data: {
+      await widget.dio.post('/workouts/setup', data: {
         'daysPerWeek': _selectedDays,
         'splitType': _selectedRoutine.splitType,
         'splitName': _selectedRoutine.name,
