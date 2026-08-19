@@ -261,24 +261,24 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                       _buildPlanTileDark(
                         isAnnual: true,
                         isSelected: _isAnnualSelected,
-                        badgeText: 'BEST VALUE — SAVE 58%',
+                        badgeText: 'BEST VALUE — SAVE 67% (8 MOS FREE)',
                         title: 'Annual Pass',
-                        subtitle: '\$2.08/mo · Billed \$24.99/year',
-                        priceText: '\$24.99',
+                        subtitle: '\$1.66/mo · Billed \$19.99/year',
+                        priceText: '\$19.99',
                         periodText: '/yr',
-                        comparisonText: '🔥 69% cheaper than MyFitnessPal (\$79.99/yr)',
+                        comparisonText: '🏋️ 1 full year for less than 1 personal trainer session',
                         onTap: () => setState(() => _isAnnualSelected = true),
                       ),
                       const SizedBox(height: 12),
                       _buildPlanTileDark(
                         isAnnual: false,
                         isSelected: !_isAnnualSelected,
-                        badgeText: null,
+                        badgeText: '🔥 NEW USER SPECIAL',
                         title: 'Monthly Pass',
-                        subtitle: 'Flexible · Cancel anytime',
-                        priceText: '\$4.99',
-                        periodText: '/mo',
-                        comparisonText: null,
+                        subtitle: '\$1.00 for 1st month · then \$4.99/mo',
+                        priceText: '\$1.00',
+                        periodText: '/1st mo',
+                        comparisonText: 'Cancel anytime in Google Play',
                         onTap: () => setState(() => _isAnnualSelected = false),
                       ),
 
@@ -321,8 +321,8 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                                       )
                                     : Text(
                                         _isAnnualSelected
-                                            ? 'Unlock Annual — \$24.99/yr'
-                                            : 'Unlock Monthly — \$4.99/mo',
+                                            ? 'Unlock Annual — \$19.99/yr'
+                                            : 'Get 1st Month for \$1.00 — then \$4.99/mo',
                                         style: const TextStyle(
                                           fontSize: 17,
                                           fontWeight: FontWeight.bold,
