@@ -85,7 +85,7 @@
   "homeAddWater": "Add water",
 
   "foodSearchTitle": "Search foods",
-  "foodSearchHint": "Search in Arabic or English...",
+  "foodSearchHint": "Search foods, brands, or scan barcode...",
   "foodSearchNoResults": "No results for \"{query}\"",
   "@foodSearchNoResults": {
     "placeholders": {
