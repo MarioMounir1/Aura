@@ -156,21 +156,25 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
   Future<void> _confirmAndSaveRoutine() async {
     setState(() => _isSavingRoutine = true);
     try {
-      await widget.dio.post('/workouts/setup', data: {
+      final resp = await widget.dio.post('/workouts/setup', data: {
         'daysPerWeek': _selectedDays,
         'splitType': _selectedRoutine.splitType,
         'splitName': _selectedRoutine.name,
       });
 
-      if (mounted) {
+      if (mounted && (resp.statusCode == 200 || resp.statusCode == 201 || resp.data?['success'] == true)) {
         widget.onRoutineConfirmed();
       }
     } catch (e) {
       if (mounted) {
+        String errorMsg = widget.isArabic ? 'حدث خطأ أثناء حفظ الخطة' : 'Error saving workout plan';
+        if (e is DioException && e.response?.data is Map) {
+          errorMsg = e.response?.data['error'] as String? ?? errorMsg;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              widget.isArabic ? 'حدث خطأ أثناء حفظ الخطة' : 'Error saving workout plan',
+              errorMsg,
               style: const TextStyle(color: Colors.white),
             ),
             backgroundColor: const Color(0xFFE53935),
