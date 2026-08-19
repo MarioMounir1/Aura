@@ -246,24 +246,24 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     _buildPlanOptionTile(
                       isAnnual: true,
                       isSelected: _isAnnualSelected,
-                      badgeText: 'BEST VALUE — SAVE 58%',
+                      badgeText: 'BEST VALUE — SAVE 67% (8 MOS FREE)',
                       title: 'Annual Pass',
-                      subtitle: '\$2.08/mo · Billed \$24.99/year',
-                      priceText: '\$24.99',
+                      subtitle: '\$1.66/mo · Billed \$19.99/year',
+                      priceText: '\$19.99',
                       periodText: '/year',
-                      comparisonText: '🔥 69% cheaper than MyFitnessPal (\$79.99/yr)',
+                      comparisonText: '🔥 75% cheaper than MyFitnessPal (\$79.99/yr)',
                       onTap: () => setState(() => _isAnnualSelected = true),
                     ),
                     const SizedBox(height: 12),
                     _buildPlanOptionTile(
                       isAnnual: false,
                       isSelected: !_isAnnualSelected,
-                      badgeText: null,
+                      badgeText: '🔥 NEW USER SPECIAL',
                       title: 'Monthly Pass',
-                      subtitle: 'Flexible · Cancel anytime',
-                      priceText: '\$4.99',
-                      periodText: '/month',
-                      comparisonText: null,
+                      subtitle: '\$1.00 for 1st month · then \$4.99/mo',
+                      priceText: '\$1.00',
+                      periodText: '/1st mo',
+                      comparisonText: 'Cancel anytime in Google Play',
                       onTap: () => setState(() => _isAnnualSelected = false),
                     ),
                     const SizedBox(height: 24),
@@ -305,8 +305,8 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                                     )
                                   : Text(
                                       _isAnnualSelected
-                                          ? 'Unlock Annual Pass — \$24.99/yr (\$2.08/mo)'
-                                          : 'Unlock Monthly Pass — \$4.99/mo',
+                                          ? 'Unlock Annual Pass — \$19.99/yr (\$1.66/mo)'
+                                          : 'Get 1st Month for \$1.00 — then \$4.99/mo',
                                       style: GoogleFonts.inter(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w800,
@@ -318,8 +318,8 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     const SizedBox(height: 12),
                     Text(
                       _isAnnualSelected
-                          ? 'Billed \$24.99 annually. Cancel anytime.'
-                          : 'Billed \$4.99 monthly. Cancel anytime.',
+                          ? 'Billed \$19.99 annually. Cancel anytime.'
+                          : 'First month \$1.00, then \$4.99/month. Cancel anytime.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF7A8B7B),
                         fontSize: 12,
