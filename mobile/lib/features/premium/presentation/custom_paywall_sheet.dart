@@ -251,7 +251,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                       subtitle: '\$1.66/mo · Billed \$19.99/year',
                       priceText: '\$19.99',
                       periodText: '/year',
-                      comparisonText: '🔥 75% cheaper than MyFitnessPal (\$79.99/yr)',
+                      comparisonText: '🏋️ 1 full year for less than 1 personal trainer session',
                       onTap: () => setState(() => _isAnnualSelected = true),
                     ),
                     const SizedBox(height: 12),
