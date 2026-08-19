@@ -409,6 +409,19 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
+  bool get _isPremium {
+    final profileState = context.read<ProfileBloc>().state;
+    return profileState is ProfileLoaded && profileState.isPremium;
+  }
+
+  void _onExerciseTileTap(String title, String setsReps, bool isArabic) {
+    if (!_isPremium) {
+      PurchaseService.instance.presentPaywall(context);
+      return;
+    }
+    _showAIExerciseGuideModal(context, title, setsReps, isArabic);
+  }
+
   void _showRoutineDetailsModal(bool isArabic) {
     if (!_isPremium) {
       PurchaseService.instance.presentPaywall(context);
