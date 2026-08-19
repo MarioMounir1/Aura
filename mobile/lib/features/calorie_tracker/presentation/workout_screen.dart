@@ -410,6 +410,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _showRoutineDetailsModal(bool isArabic) {
+    if (!_isPremium) {
+      PurchaseService.instance.presentPaywall(context);
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -550,7 +554,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             prBadgeText: prText,
                             restTime: null,
                             isLast: idx == exercises.length - 1,
-                            onTap: () => _showAIExerciseGuideModal(context, ex.name, setsRepsStr, isArabic),
+                            onTap: () => _onExerciseTileTap(ex.name, setsRepsStr, isArabic),
                           );
                         })
                       : [
@@ -561,7 +565,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             prBadgeText: 'Last: 80 kg x 8',
                             restTime: '2:00',
                             isLast: false,
-                            onTap: () => _showAIExerciseGuideModal(context, 'Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
+                            onTap: () => _onExerciseTileTap('Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
                           ),
                           _ExerciseTimelineTile(
                             index: 1,
@@ -570,7 +574,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             prBadgeText: 'Last: 28 kg x 10',
                             restTime: '2:00',
                             isLast: false,
-                            onTap: () => _showAIExerciseGuideModal(context, 'Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
+                            onTap: () => _onExerciseTileTap('Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
                           ),
                           _ExerciseTimelineTile(
                             index: 2,
@@ -579,7 +583,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             prBadgeText: 'Last: 50 kg x 8',
                             restTime: '2:00',
                             isLast: false,
-                            onTap: () => _showAIExerciseGuideModal(context, 'Overhead Press', '3 Sets · Front Delts', isArabic),
+                            onTap: () => _onExerciseTileTap('Overhead Press', '3 Sets · Front Delts', isArabic),
                           ),
                           _ExerciseTimelineTile(
                             index: 3,
@@ -588,7 +592,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             prBadgeText: 'Last: 12 kg x 12',
                             restTime: '1:30',
                             isLast: false,
-                            onTap: () => _showAIExerciseGuideModal(context, 'Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
+                            onTap: () => _onExerciseTileTap('Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
                           ),
                           _ExerciseTimelineTile(
                             index: 4,
@@ -597,7 +601,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             prBadgeText: 'Last: 20 kg x 12',
                             restTime: '1:30',
                             isLast: true,
-                            onTap: () => _showAIExerciseGuideModal(context, 'Cable Chest Flyes', '3 Sets · Chest', isArabic),
+                            onTap: () => _onExerciseTileTap('Cable Chest Flyes', '3 Sets · Chest', isArabic),
                           ),
                         ];
 
@@ -710,7 +714,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     weekScheduleDetails: _weekScheduleDetails,
                     completedDaysThisWeek: _completedDaysThisWeek,
                     isArabic: isArabic,
-                    onDayTap: (detail) => _showDayDetailSheet(detail, isArabic),
+                    onDayTap: (detail) {
+                      if (!_isPremium) {
+                        PurchaseService.instance.presentPaywall(context);
+                        return;
+                      }
+                      _showDayDetailSheet(detail, isArabic);
+                    },
                   ),
                 ],
               ),
@@ -1793,6 +1803,27 @@ class _CoachChatCardState extends State<CoachChatCard> {
   Future<void> _submit([String? retryMsg]) async {
     final msg = retryMsg ?? _controller.text.trim();
     if (msg.isEmpty || _isInterpreting) return;
+
+    final profileState = context.read<ProfileBloc>().state;
+    final isPremium = profileState is ProfileLoaded && profileState.isPremium;
+
+    if (!isPremium) {
+      if (retryMsg == null) {
+        _controller.clear();
+      }
+      setState(() {
+        _messages.add(CoachChatMessage(text: msg, isUser: true));
+        _messages.add(CoachChatMessage(
+          text: widget.isArabic
+              ? 'المدرب الشخصي بالذكاء الاصطناعي متاح فقط لمشتركي باقة بريميوم. اشترك في Premium للوصول الكامل!'
+              : 'AI Workout Coach is a Premium feature. Upgrade to Premium for unlimited AI workout guidance!',
+          isUser: false,
+        ));
+      });
+      _scrollToBottom();
+      PurchaseService.instance.presentPaywall(context);
+      return;
+    }
 
     if (retryMsg == null) {
       _controller.clear();
