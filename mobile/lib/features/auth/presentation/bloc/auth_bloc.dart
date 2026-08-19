@@ -102,30 +102,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         GoogleSignInAccount? account;
 
         try {
-          final stdGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-          account = await stdGoogleSignIn.signIn();
-        } catch (stdErr) {
-          debugPrint('⚠️ Standard Google Sign-In error: $stdErr');
-        }
-
-        if (account == null) {
+          final googleSignIn = GoogleSignIn(
+            serverClientId: '301942207025-gfugojgkutn29gblogp9c96rp6ll98p0.apps.googleusercontent.com',
+            scopes: ['email', 'profile'],
+          );
+          account = await googleSignIn.signIn();
+        } catch (serverErr) {
+          debugPrint('⚠️ Google Sign-In with serverClientId error: $serverErr');
           try {
-            final serverGoogleSignIn = GoogleSignIn(
-              serverClientId: '1033397128754-5pem7d2oqj1h9e6ds8ifdmf91m6mt426.apps.googleusercontent.com',
-              scopes: ['email', 'profile'],
-            );
-            account = await serverGoogleSignIn.signIn();
-          } catch (serverErr) {
-            debugPrint('⚠️ Server Google Sign-In error: $serverErr');
+            final fallbackGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+            account = await fallbackGoogleSignIn.signIn();
+          } catch (stdErr) {
+            debugPrint('⚠️ Standard Google Sign-In fallback error: $stdErr');
           }
         }
 
+        String? idToken;
         if (account != null) {
           googleId = account.id;
           email = account.email;
           name = (account.displayName != null && account.displayName!.trim().isNotEmpty)
               ? account.displayName!.trim()
               : 'Google User';
+          try {
+            final auth = await account.authentication;
+            idToken = auth.idToken;
+          } catch (authErr) {
+            debugPrint('⚠️ Google Auth token extraction warning: $authErr');
+          }
         }
       }
 
@@ -141,7 +145,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         googleId: googleId,
         email: email.trim().toLowerCase(),
         name: name,
-        idToken: null,
+        idToken: idToken,
       );
 
       await result.fold(
