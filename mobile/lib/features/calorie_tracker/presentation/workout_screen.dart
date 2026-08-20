@@ -496,7 +496,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
           // 1. Top Header
           _WorkoutHeader(
-            onActionTap: _startWorkout,
+            showAction: !_isPremium,
+            onActionTap: () => PurchaseService.instance.presentPaywall(context),
           ),
           const SizedBox(height: 16),
 
@@ -2798,7 +2799,12 @@ class WeeklyCalendarRow extends StatelessWidget {
 
 class _WorkoutHeader extends StatelessWidget {
   final VoidCallback onActionTap;
-  const _WorkoutHeader({required this.onActionTap});
+  final bool showAction;
+
+  const _WorkoutHeader({
+    required this.onActionTap,
+    this.showAction = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2831,31 +2837,32 @@ class _WorkoutHeader extends StatelessWidget {
             ),
           ],
         ),
-        GestureDetector(
-          onTap: onActionTap,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: Color(0xFF235A42),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x20235A42),
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
+        if (showAction)
+          GestureDetector(
+            onTap: onActionTap,
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFF235A42),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x20235A42),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.bolt_rounded,
+                  color: Colors.white,
+                  size: 22,
                 ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.bolt_rounded,
-                color: Colors.white,
-                size: 22,
               ),
             ),
           ),
-        ),
       ],
     );
   }
