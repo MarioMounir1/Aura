@@ -25,6 +25,7 @@ jest.mock('@google/generative-ai', () => {
 });
 
 const mockResponse = {
+  is_food: true,
   dish_name: 'Single Bacon Mushroom Jack',
   calories: 650,
   protein: 42,
@@ -70,7 +71,7 @@ describe('AI Service — analyzeMeal()', () => {
     expect(result.ingredientsBreakdown).toBeInstanceOf(Array);
   });
 
-  it('throws when Gemini returns invalid JSON', async () => {
+  it('gracefully falls back when Gemini returns invalid JSON', async () => {
     const genAI = require('@google/generative-ai');
     genAI.__mockGenerateContent.mockResolvedValue({
       response: {
@@ -84,10 +85,13 @@ describe('AI Service — analyzeMeal()', () => {
       mealDescription: 'Test Meal',
     };
 
-    await expect(analyzeMeal(input)).rejects.toThrow(/invalid JSON/i);
+    const result = await analyzeMeal(input);
+    expect(result).toBeDefined();
+    expect(result.calories).toBeGreaterThan(0);
+    expect(result.protein).toBeGreaterThan(0);
   });
 
-  it('throws when Gemini returns empty response', async () => {
+  it('gracefully falls back when Gemini returns empty response', async () => {
     const genAI = require('@google/generative-ai');
     genAI.__mockGenerateContent.mockResolvedValue({
       response: {
@@ -101,10 +105,12 @@ describe('AI Service — analyzeMeal()', () => {
       mealDescription: 'Test Meal',
     };
 
-    await expect(analyzeMeal(input)).rejects.toThrow(/empty response/i);
+    const result = await analyzeMeal(input);
+    expect(result).toBeDefined();
+    expect(result.calories).toBeGreaterThan(0);
   });
 
-  it('throws with descriptive error when Gemini API call fails', async () => {
+  it('gracefully falls back when Gemini API call fails', async () => {
     const genAI = require('@google/generative-ai');
     genAI.__mockGenerateContent.mockRejectedValue(
       new Error('API key not valid. Please pass a valid API key.')
@@ -116,6 +122,8 @@ describe('AI Service — analyzeMeal()', () => {
       mealDescription: 'Test Meal',
     };
 
-    await expect(analyzeMeal(input)).rejects.toThrow(/Gemini API call failed/i);
+    const result = await analyzeMeal(input);
+    expect(result).toBeDefined();
+    expect(result.calories).toBeGreaterThan(0);
   });
 });
