@@ -855,7 +855,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isMetric = unitSystem == UnitSystem.metric;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -868,52 +869,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFEAF5EE),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.straighten_rounded, color: Color(0xFF235A42), size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isArabic ? 'وحدات القياس' : 'Measurement Units',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1C2B1E),
-                  ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF5EE),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  isMetric
-                      ? (isArabic ? 'المتري (كجم / سم / مل)' : 'Metric (kg, cm, ml)')
-                      : (isArabic ? 'الإمبراطوري (باوند / قدم / أونصة)' : 'Imperial (lbs, ft/in, fl oz)'),
-                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
+                child: const Icon(Icons.straighten_rounded, color: Color(0xFF235A42), size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isArabic ? 'وحدات القياس' : 'Measurement Units',
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C2B1E),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      isArabic
+                          ? 'اختر وحدات عرض الوزن والطول والماء'
+                          : 'Choose how weight, height & water are displayed',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        color: const Color(0xFF7A8B7B),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F6F2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildUnitSegment(
-                  label: isArabic ? 'متري' : 'Metric',
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _buildUnitCardOption(
+                  title: isArabic ? 'متري' : 'Metric',
+                  subtitle: isArabic ? 'كجم · سم · مل' : 'kg · cm · ml',
                   isSelected: isMetric,
                   onTap: () {
                     if (!isMetric) {
@@ -921,8 +924,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     }
                   },
                 ),
-                _buildUnitSegment(
-                  label: isArabic ? 'إمبراطوري' : 'Imperial',
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildUnitCardOption(
+                  title: isArabic ? 'إمبراطوري' : 'Imperial',
+                  subtitle: isArabic ? 'باوند · قدم · أونصة' : 'lbs · ft · fl oz',
                   isSelected: !isMetric,
                   onTap: () {
                     if (isMetric) {
@@ -930,45 +937,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     }
                   },
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildUnitSegment({
-    required String label,
+  Widget _buildUnitCardOption({
+    required String title,
+    required String subtitle,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
+      borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF235A42) : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
+          color: isSelected ? const Color(0xFFEAF5EE) : const Color(0xFFF8FAF7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF235A42) : const Color(0xFFE2EBE4),
+            width: isSelected ? 1.6 : 1.0,
+          ),
           boxShadow: isSelected
               ? const [
                   BoxShadow(
-                    color: Color(0x20235A42),
-                    blurRadius: 4,
+                    color: Color(0x12235A42),
+                    blurRadius: 6,
                     offset: Offset(0, 2),
                   ),
                 ]
               : null,
         ),
-        child: Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11.5,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? Colors.white : const Color(0xFF7A8B7B),
-          ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      color: isSelected ? const Color(0xFF235A42) : const Color(0xFF1C2B1E),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                      color: isSelected ? const Color(0xFF386B52) : const Color(0xFF7A8B7B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected ? const Color(0xFF235A42) : Colors.transparent,
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF235A42) : const Color(0xFFB0C2B3),
+                  width: 1.5,
+                ),
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check_rounded, color: Colors.white, size: 13)
+                  : null,
+            ),
+          ],
         ),
       ),
     );
