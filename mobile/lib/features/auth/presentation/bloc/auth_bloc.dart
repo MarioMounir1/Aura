@@ -95,6 +95,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       String? googleId;
+      String? idToken;
       String? email = event.overrideEmail;
       String? name = event.overrideName;
 
@@ -106,18 +107,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             serverClientId: '301942207025-gfugojgkutn29gblogp9c96rp6ll98p0.apps.googleusercontent.com',
             scopes: ['email', 'profile'],
           );
+
+          try {
+            await googleSignIn.signOut();
+          } catch (_) {}
+
           account = await googleSignIn.signIn();
         } catch (serverErr) {
           debugPrint('⚠️ Google Sign-In with serverClientId error: $serverErr');
           try {
             final fallbackGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+            try {
+              await fallbackGoogleSignIn.signOut();
+            } catch (_) {}
             account = await fallbackGoogleSignIn.signIn();
           } catch (stdErr) {
             debugPrint('⚠️ Standard Google Sign-In fallback error: $stdErr');
+            emit(AuthFailure('Google Sign-In failed: $stdErr'));
+            return;
           }
         }
 
-        String? idToken;
         if (account != null) {
           googleId = account.id;
           email = account.email;
@@ -127,6 +137,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           try {
             final auth = await account.authentication;
             idToken = auth.idToken;
+            debugPrint('✅ Google Sign-In success: $email (has idToken: ${idToken != null})');
           } catch (authErr) {
             debugPrint('⚠️ Google Auth token extraction warning: $authErr');
           }
@@ -134,6 +145,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       if (email == null || email.trim().isEmpty) {
+        debugPrint('⚠️ Google Sign-In was cancelled or no account selected.');
         emit(Unauthenticated());
         return;
       }
@@ -149,8 +161,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       await result.fold(
-        (failure) async => emit(AuthFailure(failure.message)),
+        (failure) async {
+          debugPrint('❌ Google login backend failed: ${failure.message}');
+          emit(AuthFailure(failure.message));
+        },
         (token) async {
+          debugPrint('🎉 Google login authenticated successfully!');
           final isPremium = await _authRepository.isUserPremium();
           emit(Authenticated(token: token, isPremium: isPremium));
         },
