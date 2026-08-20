@@ -36,27 +36,27 @@ class AppConstants {
   static const Duration animationDuration = Duration(milliseconds: 350);
   static const Duration shortAnimation = Duration(milliseconds: 200);
 
-  // Egyptian restaurants (for autocomplete hints)
+  // Popular Western restaurant chains (for autocomplete hints)
   static const List<String> popularRestaurants = [
-    'Buffalo Burger',
-    'Bazooka',
-    'KFC Egypt',
-    'McDonald\'s Egypt',
-    'Pizza Hut Egypt',
-    'Hardee\'s Egypt',
-    'Koshary El Tahrir',
-    'El Shabrawy',
-    'Semiramis',
-    'Hawawshi El Basha',
-    'Felfela',
-    'Abou El Sid',
-    'Fish Market',
-    'Kazouza',
-    'Mince',
-    'Cairo Kitchen',
-    'Koshary Goha',
-    'Nando\'s Egypt',
-    'Cilantro',
-    'Mandarine Koueider',
+    'Chipotle',
+    'Sweetgreen',
+    'Subway',
+    'Panera Bread',
+    'McDonald\'s',
+    'Starbucks',
+    'Chick-fil-A',
+    'Wendy\'s',
+    'Taco Bell',
+    'Panda Express',
+    'In-N-Out Burger',
+    'Shake Shack',
+    'Five Guys',
+    'CAVA',
+    'Jersey Mike\'s',
+    'Popeyes',
+    'KFC',
+    'Domino\'s',
+    'Dunkin\'',
+    'Nando\'s',
   ];
 }
