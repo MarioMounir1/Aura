@@ -102,30 +102,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (email == null || email.trim().isEmpty) {
         GoogleSignInAccount? account;
 
+        final googleSignIn = GoogleSignIn(
+          scopes: ['email', 'profile'],
+        );
+
         try {
-          final googleSignIn = GoogleSignIn(
-            serverClientId: '301942207025-gfugojgkutn29gblogp9c96rp6ll98p0.apps.googleusercontent.com',
-            scopes: ['email', 'profile'],
-          );
+          await googleSignIn.signOut();
+        } catch (_) {}
 
-          try {
-            await googleSignIn.signOut();
-          } catch (_) {}
-
+        try {
           account = await googleSignIn.signIn();
-        } catch (serverErr) {
-          debugPrint('⚠️ Google Sign-In with serverClientId error: $serverErr');
-          try {
-            final fallbackGoogleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-            try {
-              await fallbackGoogleSignIn.signOut();
-            } catch (_) {}
-            account = await fallbackGoogleSignIn.signIn();
-          } catch (stdErr) {
-            debugPrint('⚠️ Standard Google Sign-In fallback error: $stdErr');
-            emit(AuthFailure('Google Sign-In failed: $stdErr'));
-            return;
-          }
+        } catch (signInErr) {
+          debugPrint('⚠️ Google Sign-In error: $signInErr');
+          emit(AuthFailure('Google Sign-In error: ${signInErr.toString()}'));
+          return;
         }
 
         if (account != null) {
@@ -137,7 +127,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           try {
             final auth = await account.authentication;
             idToken = auth.idToken;
-            debugPrint('✅ Google Sign-In success: $email (has idToken: ${idToken != null})');
+            debugPrint('✅ Google Sign-In account: $email (has idToken: ${idToken != null})');
           } catch (authErr) {
             debugPrint('⚠️ Google Auth token extraction warning: $authErr');
           }
@@ -145,13 +135,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       if (email == null || email.trim().isEmpty) {
-        debugPrint('⚠️ Google Sign-In was cancelled or no account selected.');
+        debugPrint('⚠️ Google Sign-In was cancelled by user.');
         emit(Unauthenticated());
         return;
       }
 
       googleId ??= 'google_${email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
       name ??= 'Google User';
+
+      debugPrint('🚀 Sending Google login request to backend: $email');
 
       final result = await _authRepository.loginWithGoogle(
         googleId: googleId,
