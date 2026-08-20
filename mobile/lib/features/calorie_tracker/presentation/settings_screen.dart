@@ -898,8 +898,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 1),
                     Text(
                       isArabic
-                          ? 'اختر وحدات عرض الوزن والطول والماء'
-                          : 'Choose how weight, height & water are displayed',
+                          ? 'اختر وحدات عرض الوزن والطول'
+                          : 'Choose how weight & height are displayed',
                       style: GoogleFonts.inter(
                         fontSize: 11.5,
                         color: const Color(0xFF7A8B7B),
@@ -916,7 +916,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: _buildUnitCardOption(
                   title: isArabic ? 'متري' : 'Metric',
-                  subtitle: isArabic ? 'كجم · سم · مل' : 'kg · cm · ml',
+                  subtitle: isArabic ? 'كجم · سم' : 'kg · cm',
                   isSelected: isMetric,
                   onTap: () {
                     if (!isMetric) {
@@ -929,7 +929,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Expanded(
                 child: _buildUnitCardOption(
                   title: isArabic ? 'إمبراطوري' : 'Imperial',
-                  subtitle: isArabic ? 'باوند · قدم · أونصة' : 'lbs · ft · fl oz',
+                  subtitle: isArabic ? 'باوند · قدم/بوصة' : 'lbs · ft/in',
                   isSelected: !isMetric,
                   onTap: () {
                     if (isMetric) {
