@@ -9,22 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:aura/main.dart';
+import 'package:aura/core/utils/unit_converter.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const TeneenApp(initialLang: 'en', initialThemeMode: ThemeMode.light));
+  testWidgets('App smoke test — mounts cleanly', (WidgetTester tester) async {
+    await tester.pumpWidget(const TeneenApp(
+      initialLang: 'en',
+      initialThemeMode: ThemeMode.light,
+      initialUnitSystem: UnitSystem.metric,
+    ));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }
