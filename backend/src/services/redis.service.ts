@@ -5,52 +5,66 @@
 
 import Redis from "ioredis";
 
-const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
-const isTls = redisUrl.startsWith("rediss://") || process.env.RENDER === "true";
+const rawRedisUrl = process.env.REDIS_URL;
+const isRedisConfigured = !!rawRedisUrl && rawRedisUrl !== "none" && rawRedisUrl !== "disabled";
+const redisUrl = isRedisConfigured ? rawRedisUrl : "redis://localhost:6379";
+const isTls = isRedisConfigured && redisUrl.startsWith("rediss://");
 
-console.log(`🔌 Initializing Redis Client targeting: ${redisUrl} (TLS: ${isTls})`);
+let isReady = false;
 
-const redis = new Redis(redisUrl, {
-  // Connect lazily — don't attempt connection at module load time
-  lazyConnect: true,
-  // Limit retries so Redis being offline doesn't flood the console
-  maxRetriesPerRequest: 1,
-  connectTimeout: 10000,
-  tls: isTls ? { rejectUnauthorized: false } : undefined,
-  // Return null (no retry) so the process keeps running when Redis is down
-  retryStrategy(times) {
-    if (times > 5) {
-      console.warn("⚠️  [Redis] Max retries reached — Redis is offline. API continues without caching.");
-      return null; // stop retrying
+let redis: Redis;
+
+if (isRedisConfigured) {
+  console.log(`🔌 Initializing Redis Client (TLS: ${isTls})`);
+
+  redis = new Redis(redisUrl, {
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+    connectTimeout: 5000,
+    tls: isTls ? { rejectUnauthorized: false } : undefined,
+    retryStrategy(times) {
+      if (times > 2) {
+        console.warn("⚠️  [Redis] Max retries reached — Redis offline. API continues normally without caching.");
+        return null; // stop reconnect loop
+      }
+      return 1000;
+    },
+  });
+
+  redis.on("connect", () => console.log("🟢 Redis: Connecting to server..."));
+  redis.on("ready", () => {
+    isReady = true;
+    console.log("🟢 Redis: Connection ready.");
+  });
+  redis.on("error", (err: unknown) => {
+    isReady = false;
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("ECONNREFUSED") && !msg.includes("ETIMEDOUT")) {
+      console.error("🔴 Redis Error:", msg);
     }
-    return Math.min(times * 500, 2000);
-  },
-});
+  });
+  redis.on("close", () => {
+    isReady = false;
+  });
+  redis.on("end", () => {
+    isReady = false;
+  });
 
-// Event listeners for connection monitoring
-redis.on("connect",     () => console.log("🟢 Redis: Connecting to server..."));
-redis.on("ready",       () => console.log("🟢 Redis: Connection ready."));
-redis.on("error",       (err: unknown) => {
-  // Suppress repeated ECONNREFUSED noise — log once at warn level
-  const msg = err instanceof Error ? err.message : String(err);
-  if (!msg.includes("ECONNREFUSED")) {
-    console.error("🔴 Redis Error:", msg);
-  }
-});
-redis.on("close",       () => console.warn("🟡 Redis: Connection closed."));
-redis.on("reconnecting",() => console.warn("🟡 Redis: Reconnecting..."));
-redis.on("end",         () => console.warn("⚠️  Redis: Connection ended permanently. Caching disabled."));
-
-// Attempt connection in background — server starts regardless
-redis.connect().catch(() => {
-  console.warn("⚠️  [Redis] Could not connect. Redis caching is disabled; core API still works.");
-});
+  redis.connect().catch(() => {
+    isReady = false;
+    console.warn("⚠️  [Redis] Could not connect. Redis caching disabled; core API continues normally.");
+  });
+} else {
+  console.log("ℹ️  [Redis] No REDIS_URL configured — caching disabled; core API running normally.");
+  // Dummy instance with no-op lazy connection
+  redis = new Redis({ lazyConnect: true, enableOfflineQueue: false });
+}
 
 /**
  * Checks if Redis is currently connected and ready to process commands.
  */
 export function isRedisReady(): boolean {
-  return redis.status === "ready";
+  return isReady;
 }
 
 export default redis;
