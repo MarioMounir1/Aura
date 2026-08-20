@@ -397,9 +397,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  UnitSystem _getUnitSystem(BuildContext context) {
+    try {
+      return context.watch<UnitCubit>().state;
+    } catch (_) {
+      return UnitSystem.metric;
+    }
+  }
+
   // ── Key Metrics Horizontal Summary Row ────────────────────────────
   Widget _buildKeyMetricsSummaryRow(AppLocalizations l10n) {
-    final unitSystem = context.watch<UnitCubit>().state;
+    final unitSystem = _getUnitSystem(context);
     final wKg = double.tryParse(_weightController.text.trim());
     final hCm = double.tryParse(_heightController.text.trim());
 
@@ -843,10 +851,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Group 2: Preferences (Units) ─────────────────────────────────
   Widget _buildPreferencesGroup(BuildContext context, bool isArabic) {
-    final unitSystem = context.watch<UnitCubit>().state;
+    final unitSystem = _getUnitSystem(context);
     final isMetric = unitSystem == UnitSystem.metric;
 
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -859,180 +868,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
         border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showUnitSelectionSheet(context, isArabic),
-          borderRadius: BorderRadius.circular(20),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFEAF5EE),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.straighten_rounded, color: Color(0xFF235A42), size: 18),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF5EE),
+              shape: BoxShape.circle,
             ),
-            title: Text(
-              isArabic ? 'وحدات القياس' : 'Measurement Units',
-              style: GoogleFonts.outfit(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF1C2B1E),
-              ),
-            ),
-            subtitle: Text(
-              isMetric
-                  ? (isArabic ? 'المتري (كجم / سم / مل)' : 'Metric (kg, cm, ml)')
-                  : (isArabic ? 'الإمبراطوري (باوند / قدم / أونصة)' : 'Imperial (lbs, ft/in, fl oz)'),
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1C2B1E),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    isMetric ? 'Metric' : 'Imperial',
-                    style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF7A8B7B), size: 14),
-              ],
-            ),
+            child: const Icon(Icons.straighten_rounded, color: Color(0xFF235A42), size: 18),
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showUnitSelectionSheet(BuildContext context, bool isArabic) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final currentUnit = context.watch<UnitCubit>().state;
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 38,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE2EBE4),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
                 Text(
-                  isArabic ? 'اختر نظام وحدات القياس' : 'Measurement Units',
+                  isArabic ? 'وحدات القياس' : 'Measurement Units',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
                     color: const Color(0xFF1C2B1E),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 2),
                 Text(
-                  isArabic
-                      ? 'اختر الوحدات التي تناسبك لعرض الوزن والطول والماء'
-                      : 'Choose your preferred units for body weight, height, and water tracking.',
+                  isMetric
+                      ? (isArabic ? 'المتري (كجم / سم / مل)' : 'Metric (kg, cm, ml)')
+                      : (isArabic ? 'الإمبراطوري (باوند / قدم / أونصة)' : 'Imperial (lbs, ft/in, fl oz)'),
                   style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
                 ),
-                const SizedBox(height: 18),
-
-                // Metric Option
-                _buildUnitOptionTile(
-                  title: isArabic ? 'نظام متري (Metric)' : 'Metric System',
-                  subtitle: isArabic ? 'كيلوجرام (kg) · سنتيمتر (cm) · مليلتر (ml)' : 'Kilograms (kg) · Centimeters (cm) · Milliliters (ml)',
-                  isSelected: currentUnit == UnitSystem.metric,
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F6F2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildUnitSegment(
+                  label: isArabic ? 'متري' : 'Metric',
+                  isSelected: isMetric,
                   onTap: () {
-                    context.read<UnitCubit>().setUnitSystem(UnitSystem.metric);
-                    Navigator.pop(ctx);
+                    if (!isMetric) {
+                      context.read<UnitCubit>().setUnitSystem(UnitSystem.metric);
+                    }
                   },
                 ),
-                const SizedBox(height: 10),
-
-                // Imperial Option
-                _buildUnitOptionTile(
-                  title: isArabic ? 'نظام إمبراطوري (Imperial)' : 'Imperial System',
-                  subtitle: isArabic ? 'باوند (lbs) · قدم وبوصة (ft / in) · أونصة سائلة (fl oz)' : 'Pounds (lbs) · Feet & Inches (ft / in) · Fluid Ounces (fl oz)',
-                  isSelected: currentUnit == UnitSystem.imperial,
+                _buildUnitSegment(
+                  label: isArabic ? 'إمبراطوري' : 'Imperial',
+                  isSelected: !isMetric,
                   onTap: () {
-                    context.read<UnitCubit>().setUnitSystem(UnitSystem.imperial);
-                    Navigator.pop(ctx);
+                    if (isMetric) {
+                      context.read<UnitCubit>().setUnitSystem(UnitSystem.imperial);
+                    }
                   },
                 ),
               ],
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
-  Widget _buildUnitOptionTile({
-    required String title,
-    required String subtitle,
+  Widget _buildUnitSegment({
+    required String label,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFEAF5EE) : const Color(0xFFF8FAF7),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF235A42) : const Color(0xFFE2EBE4),
-            width: isSelected ? 1.8 : 1.0,
-          ),
+          color: isSelected ? const Color(0xFF235A42) : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: isSelected
+              ? const [
+                  BoxShadow(
+                    color: Color(0x20235A42),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: isSelected ? const Color(0xFF235A42) : const Color(0xFF1C2B1E),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
-                  ),
-                ],
-              ),
-            ),
-            if (isSelected)
-              const Icon(Icons.check_circle_rounded, color: Color(0xFF235A42), size: 22)
-            else
-              const Icon(Icons.radio_button_unchecked_rounded, color: Color(0xFFB0C2B3), size: 22),
-          ],
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF7A8B7B),
+          ),
         ),
       ),
     );
