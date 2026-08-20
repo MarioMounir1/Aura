@@ -2,8 +2,8 @@
 // Measurement units conversion and formatting utilities for Aura
 
 enum UnitSystem {
-  metric,   // kg, cm, ml
-  imperial, // lbs, ft/in, fl oz
+  metric,   // kg, cm
+  imperial, // lbs, ft/in
 }
 
 class UnitConverter {
@@ -11,7 +11,6 @@ class UnitConverter {
 
   static const double _kgToLbsRatio = 2.20462262;
   static const double _inchToCmRatio = 2.54;
-  static const double _flOzToMlRatio = 29.5735296;
 
   // ── Weight ───────────────────────────────────────────────────
 
@@ -75,23 +74,5 @@ class UnitConverter {
       return '${ftIn.feet}\' ${ftIn.inches}"';
     }
     return heightCm.toStringAsFixed(0);
-  }
-
-  // ── Water ────────────────────────────────────────────────────
-
-  /// Converts milliliters to fluid ounces
-  static double mlToFlOz(int ml) => ml / _flOzToMlRatio;
-
-  /// Converts fluid ounces to milliliters
-  static int flOzToMl(double flOz) => (flOz * _flOzToMlRatio).round();
-
-  /// Formats water amount according to the active unit system
-  static String formatWater(int? ml, UnitSystem system) {
-    if (ml == null) return '--';
-    if (system == UnitSystem.imperial) {
-      final flOz = mlToFlOz(ml);
-      return '${flOz.toStringAsFixed(0)} fl oz';
-    }
-    return '$ml ml';
   }
 }
