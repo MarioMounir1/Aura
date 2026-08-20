@@ -47,8 +47,6 @@ import 'features/calorie_tracker/presentation/home_shell_screen.dart';
 import 'features/calorie_tracker/presentation/settings_screen.dart';
 import 'features/calorie_tracker/presentation/food_search_screen.dart';
 import 'features/calorie_tracker/presentation/weight_progress_screen.dart';
-import 'features/calorie_tracker/presentation/bloc/water_bloc.dart';
-import 'features/calorie_tracker/presentation/water_tracking_screen.dart';
 import 'features/calorie_tracker/presentation/bloc/weight_bloc.dart';
 import 'features/calorie_tracker/presentation/bloc/meal_plan_bloc.dart';
 import 'features/calorie_tracker/domain/repositories/workout_repository.dart';
@@ -58,7 +56,6 @@ import 'features/calorie_tracker/presentation/bloc/dashboard_event.dart';
 import 'features/calorie_tracker/presentation/bloc/workout_event.dart';
 import 'features/calorie_tracker/presentation/bloc/calorie_tracker_event.dart';
 import 'features/calorie_tracker/presentation/bloc/food_search_event.dart';
-import 'features/calorie_tracker/presentation/bloc/water_event.dart';
 import 'features/calorie_tracker/presentation/bloc/weight_event.dart';
 import 'features/calorie_tracker/presentation/bloc/meal_plan_event.dart';
 import 'features/calorie_tracker/presentation/bloc/nutrition_progress_bloc.dart';
@@ -245,12 +242,6 @@ class TeneenApp extends StatelessWidget {
               repository: ctx.read<TrackerRepository>(),
             ),
           ),
-          // Water tracking
-          BlocProvider<WaterBloc>(
-            create: (ctx) => WaterBloc(
-              repository: ctx.read<TrackerRepository>(),
-            ),
-          ),
           // Weight tracking
           BlocProvider<WeightBloc>(
             create: (ctx) => WeightBloc(
@@ -320,7 +311,6 @@ class TeneenApp extends StatelessWidget {
                 '/settings': (_) => const SettingsScreen(),
                 '/foods/search': (_) => const FoodSearchScreen(),
                 '/weight/progress': (_) => const WeightProgressScreen(),
-                '/water/progress': (_) => const WaterTrackingScreen(),
                 '/meals/ai-suggestion': (_) => const AiSuggestionScreen(),
                 '/nutrition/progress': (_) => const ProgressSummaryScreen(),
               },
@@ -375,7 +365,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
           context.read<DashboardBloc>().add(const ResetDashboardEvent());
           context.read<CalorieTrackerBloc>().add(const ResetCalorieTracker());
           context.read<FoodSearchBloc>().add(const ResetFoodSearchEvent());
-          context.read<WaterBloc>().add(const ResetWaterEvent());
           context.read<WeightBloc>().add(const ResetWeightEvent());
           context.read<MealPlanBloc>().add(const ResetMealPlanEvent());
           context.read<WorkoutBloc>().add(const ResetWorkoutEvent());
@@ -402,7 +391,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
             return const HomeShellScreen();
           }
 
-          if (authState is AuthInitial || authState is AuthLoading) {
+          if (authState is AuthInitial) {
             return const _PreScreenView();
           }
 
