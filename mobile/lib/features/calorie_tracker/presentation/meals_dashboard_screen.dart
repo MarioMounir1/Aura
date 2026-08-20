@@ -70,6 +70,7 @@ class MealEntry {
   final bool isHighlyNutritious;
   final DateTime createdAt;
   final String source;
+  final String? imagePath;
   final List<IngredientBreakdown> ingredientsBreakdown;
 
   const MealEntry({
@@ -84,10 +85,11 @@ class MealEntry {
     required this.isHighlyNutritious,
     required this.createdAt,
     required this.source,
+    this.imagePath,
     required this.ingredientsBreakdown,
   });
 
-  factory MealEntry.fromLlamaResponse(LlamaMealResponse r) {
+  factory MealEntry.fromLlamaResponse(LlamaMealResponse r, {String? imagePath}) {
     final a = r.mealAnalysis;
     final List<MealWarning> warnings = [];
     if (a.carbs > 70 && a.protein < 30) {
@@ -111,6 +113,7 @@ class MealEntry {
       isHighlyNutritious: a.isNutritious,
       createdAt: DateTime.now(),
       source: 'image',
+      imagePath: imagePath,
       ingredientsBreakdown: const [],
     );
   }
@@ -208,6 +211,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
           isHighlyNutritious: isNutritious,
           createdAt: entity.createdAt,
           source: entity.source,
+          imagePath: entity.imageUrl,
           ingredientsBreakdown: entity.ingredientsBreakdown,
         );
       }).toList();
@@ -343,7 +347,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   void _logResultToFeed() {
     if (_llamaResult == null) return;
-    final entry = MealEntry.fromLlamaResponse(_llamaResult!);
+    final entry = MealEntry.fromLlamaResponse(_llamaResult!, imagePath: _selectedImage?.path);
     setState(() {
       logs.insert(0, entry);
       _recalcTotals();
@@ -4255,17 +4259,7 @@ class _MealTimelineTile extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            color: const Color(0xFFF1F6F2),
-                            child: const Center(
-                              child: Text('🥗', style: TextStyle(fontSize: 28)),
-                            ),
-                          ),
-                        ),
+                        _buildMealThumbnail(meal.imagePath),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -4343,6 +4337,52 @@ class _MealTimelineTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMealThumbnail(String? imagePath) {
+    if (imagePath != null && imagePath.trim().isNotEmpty) {
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.network(
+            imagePath,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => _buildPlaceholderEmoji(),
+          ),
+        );
+      } else {
+        final file = File(imagePath);
+        if (file.existsSync()) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.file(
+              file,
+              width: 60,
+              height: 60,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => _buildPlaceholderEmoji(),
+            ),
+          );
+        }
+      }
+    }
+    return _buildPlaceholderEmoji();
+  }
+
+  Widget _buildPlaceholderEmoji() {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F6F2),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Center(
+        child: Text('🥗', style: TextStyle(fontSize: 28)),
       ),
     );
   }
