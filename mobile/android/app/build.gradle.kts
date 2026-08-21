@@ -60,3 +60,11 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Firebase BoM — manages all Firebase library versions
+    implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
+
+    // Firebase Analytics (included by default, add more SDKs as needed)
+    implementation("com.google.firebase:firebase-analytics")
+}
