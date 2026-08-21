@@ -288,17 +288,11 @@ class TeneenApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
-              // ── Global Compact Scaling & LTR ───────────
+              // ── Global Standard Layout & LTR ───────────
               builder: (context, child) {
-                final mediaQuery = MediaQuery.of(context);
-                return MediaQuery(
-                  data: mediaQuery.copyWith(
-                    textScaler: const TextScaler.linear(0.82),
-                  ),
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: child!,
-                  ),
+                return Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: child!,
                 );
               },
 
