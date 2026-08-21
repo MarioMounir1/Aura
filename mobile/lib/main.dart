@@ -10,6 +10,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 
 import 'l10n/app_localizations.dart';
 import 'core/network/api_client.dart';
@@ -88,10 +91,18 @@ class LanguageCubit extends Cubit<Locale> {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Catch Flutter framework errors gracefully
-  FlutterError.onError = (details) {
-    FlutterError.dumpErrorToConsole(details);
-  };
+  // ── Firebase Initialization ───────────────────────────────────
+  await Firebase.initializeApp();
+
+  // Route all Flutter framework errors to Crashlytics
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+  // Route async errors outside Flutter framework to Crashlytics
+  // ignore: deprecated_member_use
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+
+  // Log app_open event to Analytics
+  await FirebaseAnalytics.instance.logAppOpen();
 
   // Force portrait orientation
   try {
