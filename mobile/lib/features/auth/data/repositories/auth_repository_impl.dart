@@ -1,20 +1,22 @@
-// lib/features/auth/data/repositories/auth_repository_impl.dart
-// Aura — Auth Repository Implementation
-
 import 'dart:convert';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/services/firebase_auth_service.dart';
 import '../../domain/repositories/auth_repository.dart';
-
 import '../models/auth_models.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final ApiClient _apiClient;
+  final FirebaseAuthService _firebaseAuthService;
 
-  AuthRepositoryImpl(this._apiClient);
+  AuthRepositoryImpl(
+    this._apiClient, {
+    FirebaseAuthService? firebaseAuthService,
+  }) : _firebaseAuthService =
+           firebaseAuthService ?? FirebaseAuthService.instance;
 
   Future<void> _cacheUser(Map<String, dynamic>? userJson) async {
     if (userJson == null) return;
@@ -94,6 +96,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
+    await _firebaseAuthService.signOut();
     await _apiClient.clearAuth();
   }
 
@@ -115,13 +118,21 @@ class AuthRepositoryImpl implements AuthRepository {
     String? idToken,
   }) async {
     try {
+      // Step 1: Sign in through Firebase to get a verified ID token
+      final result = await _firebaseAuthService.signInWithGoogle();
+      if (result == null) {
+        return const Left(ServerFailure(message: 'Google Sign-In was cancelled.'));
+      }
+
+      // Step 2: Send Firebase-verified token + user info to our backend
       final response = await _apiClient.dio.post(
         '/auth/google',
         data: {
-          'googleId': googleId,
-          'email': email,
-          'name': name,
-          'idToken': idToken,
+          'googleId': result.googleId,
+          'email': result.email,
+          'name': result.name,
+          'idToken': result.idToken,
+          'firebaseUid': result.firebaseUid,
         },
       );
 
