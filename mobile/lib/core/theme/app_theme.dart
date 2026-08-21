@@ -1,5 +1,5 @@
 // lib/core/theme/app_theme.dart
-// Aura — Centralized App ThemeData Configuration
+// Aura — Google Material 3 Standard App ThemeData Configuration
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,9 +9,12 @@ class AppTheme {
   AppTheme._();
 
   static ThemeData get darkTheme {
-    final base = ThemeData.dark();
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+    );
     return base.copyWith(
-      visualDensity: const VisualDensity(horizontal: -0.5, vertical: -0.5),
+      visualDensity: VisualDensity.adaptivePlatformDensity,
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: const ColorScheme.dark(
         surface: AppColors.card,
@@ -34,9 +37,14 @@ class AppTheme {
         iconTheme: IconThemeData(color: AppColors.textPrimary),
         titleTextStyle: TextStyle(
           color: AppColors.textPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
         ),
+      ),
+      cardTheme: CardTheme(
+        color: AppColors.card,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       textTheme: GoogleFonts.interTextTheme(
         base.textTheme,
@@ -48,10 +56,13 @@ class AppTheme {
   }
 
   static ThemeData get lightTheme {
-    final base = ThemeData.light();
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+    );
     return base.copyWith(
-      visualDensity: const VisualDensity(horizontal: -0.5, vertical: -0.5),
-      scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      scaffoldBackgroundColor: const Color(0xFFF6F8F5),
       colorScheme: const ColorScheme.light(
         surface: Color(0xFFFFFFFF),
         primary: AppColors.primary,
@@ -67,21 +78,26 @@ class AppTheme {
         AuraThemeExtension.light,
       ],
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFFF8FAFC),
+        backgroundColor: Color(0xFFF6F8F5),
         elevation: 0,
         scrolledUnderElevation: 0,
-        iconTheme: IconThemeData(color: Color(0xFF0F172A)),
+        iconTheme: IconThemeData(color: Color(0xFF1C2B1E)),
         titleTextStyle: TextStyle(
-          color: Color(0xFF0F172A),
-          fontSize: 17,
-          fontWeight: FontWeight.w600,
+          color: Color(0xFF1C2B1E),
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
         ),
+      ),
+      cardTheme: CardTheme(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       textTheme: GoogleFonts.interTextTheme(
         base.textTheme,
       ).apply(
-        bodyColor: const Color(0xFF0F172A),
-        displayColor: const Color(0xFF0F172A),
+        bodyColor: const Color(0xFF1C2B1E),
+        displayColor: const Color(0xFF1C2B1E),
       ),
     );
   }
