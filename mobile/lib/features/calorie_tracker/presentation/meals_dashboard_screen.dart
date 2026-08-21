@@ -4300,10 +4300,11 @@ class _MealTimelineTile extends StatelessWidget {
                               const SizedBox(height: 3),
                               Text(
                                 meal.foodName,
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.inter(
-                                  fontSize: 12,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF6B7C6E),
                                 ),
                               ),
