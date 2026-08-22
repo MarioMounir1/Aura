@@ -70,8 +70,12 @@ app.use(errorHandler);
 if (process.env.NODE_ENV !== "test") {
   try {
     console.log("🔄 Synchronizing Prisma database tables...");
-    const prismaPath = path.join(__dirname, "..", "node_modules", ".bin", "prisma");
-    execSync(`${prismaPath} db push --accept-data-loss`, { stdio: "inherit" });
+    const rootDir = process.cwd();
+    execSync(`npx prisma db push --accept-data-loss`, {
+      cwd: rootDir,
+      env: { ...process.env },
+      stdio: "inherit",
+    });
     console.log("✅ Database tables synchronized successfully!");
   } catch (dbErr: any) {
     console.error("⚠️ Prisma db push failed:", dbErr?.message || dbErr);
