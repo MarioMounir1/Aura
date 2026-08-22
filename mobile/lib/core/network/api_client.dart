@@ -13,6 +13,7 @@ class ApiClient {
   final FlutterSecureStorage _secureStorage;
   String? _cachedToken;
   String? _cachedUserId;
+  static void Function()? onUnauthorized;
 
   ApiClient._internal(this._secureStorage) {
     _dio = Dio(
@@ -49,6 +50,7 @@ class ApiClient {
             _cachedUserId = null;
             await _secureStorage.delete(key: AppConstants.tokenKey);
             await _secureStorage.delete(key: AppConstants.userIdKey);
+            onUnauthorized?.call();
           }
           return handler.next(error);
         },
