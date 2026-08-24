@@ -10,7 +10,10 @@ class FirebaseAuthService {
   static final FirebaseAuthService instance = FirebaseAuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '183282015983-a85d4fdna5esice6mrjgvasj5kk7pp1t.apps.googleusercontent.com',
+    scopes: ['email', 'profile'],
+  );
 
   // ── Current user ──────────────────────────────────────────────
 
@@ -25,6 +28,10 @@ class FirebaseAuthService {
   /// to pass to the backend.
   Future<GoogleSignInResult?> signInWithGoogle() async {
     try {
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
+
       // Trigger the Google account picker
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null; // user cancelled
