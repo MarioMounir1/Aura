@@ -101,66 +101,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      String? googleId;
-      String? idToken;
-      String? email = event.overrideEmail;
-      String? name = event.overrideName;
-
-      if (email == null || email.trim().isEmpty) {
-        GoogleSignInAccount? account;
-
-        final googleSignIn = GoogleSignIn(
-          scopes: ['email', 'profile'],
-        );
-
-        try {
-          await googleSignIn.signOut();
-        } catch (_) {}
-
-        try {
-          account = await googleSignIn.signIn();
-        } catch (signInErr) {
-          debugPrint('⚠️ Google Sign-In error: $signInErr');
-          emit(AuthFailure('Google Sign-In error: ${signInErr.toString()}'));
-          return;
-        }
-
-        if (account != null) {
-          googleId = account.id;
-          email = account.email;
-          name = (account.displayName != null && account.displayName!.trim().isNotEmpty)
-              ? account.displayName!.trim()
-              : 'Google User';
-          try {
-            final auth = await account.authentication;
-            idToken = auth.idToken;
-            debugPrint('✅ Google Sign-In account: $email (has idToken: ${idToken != null})');
-          } catch (authErr) {
-            debugPrint('⚠️ Google Auth token extraction warning: $authErr');
-          }
-        }
-      }
-
-      if (email == null || email.trim().isEmpty) {
-        debugPrint('⚠️ Google Sign-In was cancelled by user.');
-        emit(Unauthenticated());
-        return;
-      }
-
-      googleId ??= 'google_${email.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
-      name ??= 'Google User';
-
-      debugPrint('🚀 Sending Google login request to backend: $email');
-
       final result = await _authRepository.loginWithGoogle(
-        googleId: googleId,
-        email: email.trim().toLowerCase(),
-        name: name,
-        idToken: idToken,
+        googleId: '',
+        email: event.overrideEmail ?? '',
+        name: event.overrideName ?? '',
       );
 
       await result.fold(
         (failure) async {
+          if (failure.message == 'Google Sign-In was cancelled.') {
+            emit(Unauthenticated());
+            return;
+          }
           debugPrint('❌ Google login backend failed: ${failure.message}');
           emit(AuthFailure(failure.message));
         },
