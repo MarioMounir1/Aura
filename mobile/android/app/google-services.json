@@ -12,7 +12,60 @@
           "package_name": "com.mario.Aura"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "183282015983-11m32uaps5v83enfr962ds6m3qlk1kc9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mario.Aura",
+            "certificate_hash": "ebaa157e9487857104b5737139d817a1e8e9bf8b"
+          }
+        },
+        {
+          "client_id": "183282015983-11m32uaps5v83enfr962ds6m3qlk1kc9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mario.Aura",
+            "certificate_hash": "904ef1971ac3a04f469aed83c8a2b553809e5384"
+          }
+        },
+        {
+          "client_id": "183282015983-11m32uaps5v83enfr962ds6m3qlk1kc9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mario.Aura",
+            "certificate_hash": "9c5d365978436ea52809cc8ca05bfc3cba303e28"
+          }
+        },
+        {
+          "client_id": "183282015983-5isvr538u3lfgn8cubrecs0529s10cgq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mario.Aura",
+            "certificate_hash": "ecca5f23f8c4520c089c6851324c7124ddafaf4c"
+          }
+        },
+        {
+          "client_id": "183282015983-8nmksi1tpc57k07k367o6du0eplqih20.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mario.Aura",
+            "certificate_hash": "ff0e6c749617b953206ee5c73cc55dce2139f7ba"
+          }
+        },
+        {
+          "client_id": "183282015983-orssvi4el2u2d8v6ekb8sc35efvba2nh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mario.Aura",
+            "certificate_hash": "745067b64ce2da220bed82debc5694e5c7b449da"
+          }
+        },
+        {
+          "client_id": "183282015983-a85d4fdna5esice6mrjgvasj5kk7pp1t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCW0eDUiTNTfel3Z3B5Or9zHGja329xI0M"
@@ -20,7 +73,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "183282015983-a85d4fdna5esice6mrjgvasj5kk7pp1t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
