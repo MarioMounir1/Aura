@@ -1,32 +1,35 @@
 // lib/features/auth/presentation/widgets/auth_components.dart
-// Aura — Design Tokens & Shared Authentication UI Components
+// Aura — Google Material Standard Design Tokens & Shared Authentication UI Components
 
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Design tokens specifically tailored for the luxury wellness Aura authentication experience.
+/// Google Material Standard design tokens tailored for Aura's luxury wellness experience.
 abstract class AuraAuthTokens {
-  static const Color brandDark       = Color(0xFF1B3D2F); // Deep Forest Green
-  static const Color brandDeep       = Color(0xFF142F24); // Darker Forest for Headings
-  static const Color brandButton     = Color(0xFF1E513D); // Primary CTA Button
+  static const Color brandDark           = Color(0xFF1B3D2F); // Deep Forest Green
+  static const Color brandDeep           = Color(0xFF142F24); // Darker Forest for Headings
+  static const Color brandButton         = Color(0xFF1E513D); // Primary CTA Button
   static const Color brandButtonDisabled = Color(0xFF98B8A6); // Disabled CTA Button
-  static const Color terracotta      = Color(0xFFBA6942); // Warm Earth Eyebrow / Links
-  static const Color amberBadge      = Color(0xFFD97736); // Small badge dot
-  static const Color sageBgLight     = Color(0xFFE6F0E8); // Top ambient glow
-  static const Color sageSurface     = Color(0xFFF1F6F2); // Input field background
-  static const Color sageBorder      = Color(0xFFDEECE2); // Input and card borders
-  static const Color cardBg          = Color(0xFFFFFFFF); // Card background
-  static const Color textPrimary     = Color(0xFF182A22); // Primary heading/input text
-  static const Color textSecondary   = Color(0xFF5A7065); // Subtitles & field labels
-  static const Color textMuted       = Color(0xFF889D91); // Placeholders & dividers
-  static const Color checkPillBg     = Color(0xFFDCEEE2); // Reassurance icon pill background
-  static const Color checkPillIcon   = Color(0xFF1E513D); // Reassurance icon color
-  static const Color dividerLine     = Color(0xFFE4ECE6); // Horizontal divider
-  static const Color cardShadow      = Color(0x0C1B3D2F); // Soft ambient card shadow
+  static const Color terracotta          = Color(0xFFBA6942); // Warm Earth Eyebrow / Links
+  static const Color amberBadge          = Color(0xFFD97736); // Small badge dot
+  static const Color sageBgLight         = Color(0xFFE6F0E8); // Top ambient glow
+  static const Color sageSurface         = Color(0xFFF1F6F2); // Input field background
+  static const Color sageBorder          = Color(0xFFDEECE2); // Input and card borders
+  static const Color cardBg              = Color(0xFFFFFFFF); // Card background
+  static const Color textPrimary         = Color(0xFF182A22); // Primary heading/input text
+  static const Color textSecondary       = Color(0xFF5A7065); // Subtitles & field labels
+  static const Color textMuted           = Color(0xFF889D91); // Placeholders & dividers
+  static const Color checkPillBg         = Color(0xFFDCEEE2); // Reassurance icon pill background
+  static const Color checkPillIcon       = Color(0xFF1E513D); // Reassurance icon color
+  static const Color dividerLine         = Color(0xFFE4ECE6); // Horizontal divider
+  static const Color cardShadow          = Color(0x0C1B3D2F); // Soft ambient card shadow
+
+  // Max width for Google standard responsive aspect ratios on phones/tablets
+  static const double maxContentWidth    = 460.0;
 }
 
-/// Serene ambient background with sage/mint glow at the top fading into porcelain white.
+/// Serene ambient background with Google standard gradient transitioning from sage glow to ivory.
 class AuraAuthBackground extends StatelessWidget {
   final Widget child;
 
@@ -43,7 +46,7 @@ class AuraAuthBackground extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFFE2EFE5), // Soft sage glow
+            Color(0xFFE2EFE5), // Soft sage ambient aura glow
             Color(0xFFEDF5EF),
             Color(0xFFF7FAF7),
             Color(0xFFFAFBF9), // Porcelain bottom
@@ -56,7 +59,7 @@ class AuraAuthBackground extends StatelessWidget {
   }
 }
 
-/// The official Aura Squircle Brand Logo & Editorial Wordmark.
+/// The official Aura Brand Header featuring the app logo and Google Material typography.
 class AuraBrandHeader extends StatelessWidget {
   final bool showWordmark;
   final double iconSize;
@@ -64,33 +67,43 @@ class AuraBrandHeader extends StatelessWidget {
   const AuraBrandHeader({
     super.key,
     this.showWordmark = true,
-    this.iconSize = 38,
+    this.iconSize = 40,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Squircle Icon container
+        // Squircle Icon container loading the official app logo asset
         Container(
           width: iconSize,
           height: iconSize,
           decoration: BoxDecoration(
             color: AuraAuthTokens.brandDark,
-            borderRadius: BorderRadius.circular(iconSize * 0.32),
+            borderRadius: BorderRadius.circular(iconSize * 0.28),
             boxShadow: [
               BoxShadow(
-                color: AuraAuthTokens.brandDark.withValues(alpha: 0.20),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
+                color: AuraAuthTokens.brandDark.withValues(alpha: 0.16),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          padding: EdgeInsets.all(iconSize * 0.20),
-          child: const CustomPaint(
-            painter: AuraEmblemPainter(),
+          clipBehavior: Clip.antiAlias,
+          child: Image.asset(
+            'assets/images/aura_logo.png',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              color: AuraAuthTokens.brandDark,
+              padding: EdgeInsets.all(iconSize * 0.20),
+              child: const CustomPaint(
+                painter: AuraEmblemPainter(),
+              ),
+            ),
           ),
         ),
         if (showWordmark) ...[
@@ -98,9 +111,14 @@ class AuraBrandHeader extends StatelessWidget {
           Text(
             'AURA',
             style: GoogleFonts.fraunces(
-              fontSize: 19,
+              textStyle: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2.0,
+                color: AuraAuthTokens.brandDeep,
+              ),
+              fontSize: 18,
               fontWeight: FontWeight.w800,
-              letterSpacing: 1.8,
+              letterSpacing: 2.0,
               color: AuraAuthTokens.brandDeep,
             ),
           ),
@@ -110,7 +128,7 @@ class AuraBrandHeader extends StatelessWidget {
   }
 }
 
-/// Custom painter for the continuous elegant looped ribbon/butterfly wellness emblem.
+/// Custom painter for the continuous elegant looped ribbon/butterfly emblem.
 class AuraEmblemPainter extends CustomPainter {
   const AuraEmblemPainter();
 
@@ -127,9 +145,7 @@ class AuraEmblemPainter extends CustomPainter {
     final h = size.height;
 
     final path = Path();
-    // Elegant interlocking organic loop (two petals intersecting gracefully)
     path.moveTo(w * 0.5, h * 0.88);
-    // Left loop
     path.cubicTo(
       w * 0.10, h * 0.70,
       w * 0.10, h * 0.15,
@@ -140,7 +156,6 @@ class AuraEmblemPainter extends CustomPainter {
       w * 0.52, h * 0.55,
       w * 0.50, h * 0.88,
     );
-    // Right loop
     path.cubicTo(
       w * 0.48, h * 0.55,
       w * 0.35, h * 0.15,
@@ -152,7 +167,6 @@ class AuraEmblemPainter extends CustomPainter {
       w * 0.50, h * 0.88,
     );
 
-    // Diagonal crossing stem line
     final linePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
@@ -171,7 +185,7 @@ class AuraEmblemPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Circular back navigation button.
+/// Circular back navigation button meeting Google 48dp touch target standards.
 class AuraCircularBackButton extends StatelessWidget {
   final VoidCallback? onTap;
 
@@ -183,10 +197,10 @@ class AuraCircularBackButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap ?? () => Navigator.of(context).maybePop(),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         child: Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white,
@@ -202,7 +216,7 @@ class AuraCircularBackButton extends StatelessWidget {
           child: const Center(
             child: Icon(
               Icons.arrow_back,
-              size: 19,
+              size: 20,
               color: AuraAuthTokens.brandDeep,
             ),
           ),
@@ -212,7 +226,7 @@ class AuraCircularBackButton extends StatelessWidget {
   }
 }
 
-/// Styled input field with soft sage fill and border.
+/// Google Material Standard Input Field with scalable typography and adaptive padding.
 class AuraInputField extends StatelessWidget {
   final String label;
   final String hintText;
@@ -243,20 +257,26 @@ class AuraInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label Row
+        // Label Row with dynamic scalable typography
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               label,
               style: GoogleFonts.inter(
+                textStyle: textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AuraAuthTokens.textPrimary,
+                  letterSpacing: -0.1,
+                ),
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AuraAuthTokens.textPrimary,
-                letterSpacing: -0.1,
               ),
             ),
             if (trailingLabelWidget != null) trailingLabelWidget!,
@@ -271,28 +291,34 @@ class AuraInputField extends StatelessWidget {
           onFieldSubmitted: onFieldSubmitted,
           validator: validator,
           style: GoogleFonts.inter(
+            textStyle: textTheme.bodyMedium?.copyWith(
+              color: AuraAuthTokens.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
             color: AuraAuthTokens.textPrimary,
             fontWeight: FontWeight.w500,
             fontSize: 14.5,
           ),
           decoration: InputDecoration(
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             hintText: hintText,
             hintStyle: GoogleFonts.inter(
+              textStyle: textTheme.bodyMedium?.copyWith(
+                color: AuraAuthTokens.textMuted,
+              ),
               color: AuraAuthTokens.textMuted,
               fontSize: 14,
-              fontWeight: FontWeight.w400,
             ),
             prefixIcon: Padding(
               padding: const EdgeInsets.only(left: 14, right: 10),
               child: Icon(
                 prefixIcon,
                 color: AuraAuthTokens.textSecondary,
-                size: 19,
+                size: 20,
               ),
             ),
-            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 48),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: AuraAuthTokens.sageSurface,
@@ -302,7 +328,7 @@ class AuraInputField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AuraAuthTokens.brandDark, width: 1.5),
+              borderSide: const BorderSide(color: AuraAuthTokens.brandDark, width: 1.6),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -310,7 +336,7 @@ class AuraInputField extends StatelessWidget {
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFFD9534F), width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFFD9534F), width: 1.6),
             ),
           ),
         ),
@@ -319,7 +345,7 @@ class AuraInputField extends StatelessWidget {
   }
 }
 
-/// Primary Forest Green CTA Button with arrow symbol and loading state.
+/// Primary Forest Green CTA Button conforming to Google Material 3 action standards.
 class AuraPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -336,6 +362,7 @@ class AuraPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     final bool active = isEnabled && !isLoading;
 
     return SizedBox(
@@ -370,6 +397,12 @@ class AuraPrimaryButton extends StatelessWidget {
                     Text(
                       label,
                       style: GoogleFonts.inter(
+                        textStyle: textTheme.labelLarge?.copyWith(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                          color: Colors.white,
+                        ),
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.2,
@@ -390,7 +423,7 @@ class AuraPrimaryButton extends StatelessWidget {
   }
 }
 
-/// "OR CONTINUE WITH" divider with lines.
+/// "OR CONTINUE WITH" divider with standard Material proportions.
 class AuraDividerWithText extends StatelessWidget {
   final String text;
 
@@ -401,6 +434,8 @@ class AuraDividerWithText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
       children: [
         const Expanded(
@@ -410,14 +445,19 @@ class AuraDividerWithText extends StatelessWidget {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
             text,
             style: GoogleFonts.inter(
+              textStyle: textTheme.labelSmall?.copyWith(
+                color: AuraAuthTokens.textMuted,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.3,
+              ),
               color: AuraAuthTokens.textMuted,
-              fontSize: 10.5,
+              fontSize: 11,
               fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
+              letterSpacing: 1.3,
             ),
           ),
         ),
@@ -432,7 +472,7 @@ class AuraDividerWithText extends StatelessWidget {
   }
 }
 
-/// Google Sign-In button matching the clean bordered style.
+/// Google Sign-In button adhering to Google Brand & Material design specifications.
 class AuraGoogleButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
@@ -445,6 +485,8 @@ class AuraGoogleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return SizedBox(
       width: double.infinity,
       height: 50,
@@ -462,12 +504,15 @@ class AuraGoogleButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Google 'G' icon or stylized letter
             _buildGoogleIcon(),
             const SizedBox(width: 10),
             Text(
               'Continue with Google',
               style: GoogleFonts.inter(
+                textStyle: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AuraAuthTokens.textPrimary,
+                ),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AuraAuthTokens.textPrimary,
@@ -511,6 +556,8 @@ class AuraAppleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!Platform.isIOS) return const SizedBox.shrink();
 
+    final textTheme = Theme.of(context).textTheme;
+
     return SizedBox(
       width: double.infinity,
       height: 50,
@@ -532,6 +579,10 @@ class AuraAppleButton extends StatelessWidget {
             Text(
               'Continue with Apple',
               style: GoogleFonts.inter(
+                textStyle: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
