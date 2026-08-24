@@ -3,6 +3,7 @@
 // Wraps FirebaseAuth + GoogleSignIn to provide a verified ID token.
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseAuthService {
@@ -64,6 +65,19 @@ class FirebaseAuthService {
         photoUrl: user.photoURL,
       );
     } catch (e) {
+      String? runtimeSha1;
+      try {
+        const channel = MethodChannel('com.mario.aura/app_info');
+        runtimeSha1 = await channel.invokeMethod<String>('getSigningSha1');
+      } catch (_) {}
+
+      if (runtimeSha1 != null && runtimeSha1.isNotEmpty) {
+        throw Exception(
+          'Google Sign-In failed.\n'
+          '📱 Installed App SHA-1:\n$runtimeSha1\n'
+          'Original Error: $e',
+        );
+      }
       rethrow;
     }
   }
