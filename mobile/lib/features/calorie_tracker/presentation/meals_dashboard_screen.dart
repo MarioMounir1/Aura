@@ -230,10 +230,10 @@ class _MealsDashboardState extends State<MealsDashboard> {
   void _recalcTotals() {
     final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ?? {};
 
-    double? fallbackCal;
-    double? fallbackProtein;
-    double? fallbackCarbs;
-    double? fallbackFats;
+    double? userCalGoal;
+    double? userProteinGoal;
+    double? userCarbsGoal;
+    double? userFatsGoal;
 
     try {
       final profileState = context.read<ProfileBloc>().state;
@@ -241,31 +241,63 @@ class _MealsDashboardState extends State<MealsDashboard> {
         final user = profileState.user;
         final rawCal = user['dailyCalorieGoal'] ?? user['targetCalories'] ?? user['calories'];
         if (rawCal != null && (rawCal as num) > 0) {
-          fallbackCal = (rawCal as num).toDouble();
+          userCalGoal = (rawCal as num).toDouble();
         }
 
         final rawP = user['dailyProteinGoal'] ?? user['proteinGoal'] ?? user['protein'];
-        if (rawP != null && (rawP as num) > 0) fallbackProtein = (rawP as num).toDouble();
+        if (rawP != null && (rawP as num) > 0) userProteinGoal = (rawP as num).toDouble();
 
         final rawC = user['dailyCarbsGoal'] ?? user['carbsGoal'] ?? user['carbs'];
-        if (rawC != null && (rawC as num) > 0) fallbackCarbs = (rawC as num).toDouble();
+        if (rawC != null && (rawC as num) > 0) userCarbsGoal = (rawC as num).toDouble();
 
         final rawF = user['dailyFatsGoal'] ?? user['fatsGoal'] ?? user['fats'];
-        if (rawF != null && (rawF as num) > 0) fallbackFats = (rawF as num).toDouble();
+        if (rawF != null && (rawF as num) > 0) userFatsGoal = (rawF as num).toDouble();
+
+        // Calculate Mifflin-St Jeor TDEE directly from user physical profile if not explicitly set
+        final w = (user['weightKg'] as num?)?.toDouble();
+        final h = (user['heightCm'] as num?)?.toDouble();
+        final a = (user['age'] as num?)?.toInt();
+        final g = (user['gender'] as String?)?.toLowerCase();
+        final act = (user['activityLevel'] as String?) ?? 'moderate';
+        final targetW = (user['targetWeightKg'] as num?)?.toDouble();
+        final userGoal = (user['goal'] as String?) ?? 'maintain';
+
+        if (w != null && h != null && a != null && g != null) {
+          final genderFactor = (g == 'male') ? 5 : -161;
+          final bmr = (10 * w) + (6.25 * h) - (5 * a) + genderFactor;
+          double mult = 1.55;
+          if (act == 'sedentary') mult = 1.2;
+          else if (act == 'lightly_active') mult = 1.375;
+          else if (act == 'moderate') mult = 1.55;
+          else if (act == 'very_active') mult = 1.725;
+
+          final tdeeVal = bmr * mult;
+          double adj = 0;
+          if (targetW != null && targetW > w + 1) adj = 200;
+          else if (targetW != null && targetW < w - 1) adj = -300;
+          else if (userGoal == 'gain') adj = 300;
+          else if (userGoal == 'lose') adj = -500;
+
+          final computedTdee = (tdeeVal + adj).roundToDouble().clamp(1200.0, 5000.0);
+          userCalGoal ??= computedTdee;
+          userProteinGoal ??= (w * 2.0).roundToDouble().clamp(80.0, 250.0);
+          userFatsGoal ??= ((computedTdee * 0.25) / 9.0).roundToDouble();
+          userCarbsGoal ??= ((computedTdee - (userProteinGoal! * 4.0 + userFatsGoal! * 9.0)) / 4.0).roundToDouble().clamp(50.0, 600.0);
+        }
       }
     } catch (_) {}
 
     final summaryCal = (goals['calories'] as num?)?.toDouble();
-    caloriesTarget = (summaryCal != null && summaryCal > 0) ? summaryCal : (fallbackCal ?? 2000.0);
+    caloriesTarget = userCalGoal ?? ((summaryCal != null && summaryCal > 0) ? summaryCal : 2000.0);
 
     final summaryProtein = (goals['protein'] as num?)?.toDouble();
-    proteinTarget  = (summaryProtein != null && summaryProtein > 0) ? summaryProtein : (fallbackProtein ?? 150.0);
+    proteinTarget  = userProteinGoal ?? ((summaryProtein != null && summaryProtein > 0) ? summaryProtein : 150.0);
 
     final summaryCarbs = (goals['carbs'] as num?)?.toDouble();
-    carbsTarget    = (summaryCarbs != null && summaryCarbs > 0) ? summaryCarbs : (fallbackCarbs ?? 200.0);
+    carbsTarget    = userCarbsGoal ?? ((summaryCarbs != null && summaryCarbs > 0) ? summaryCarbs : 200.0);
 
     final summaryFats = (goals['fats'] as num?)?.toDouble();
-    fatsTarget     = (summaryFats != null && summaryFats > 0) ? summaryFats : (fallbackFats ?? 65.0);
+    fatsTarget     = userFatsGoal ?? ((summaryFats != null && summaryFats > 0) ? summaryFats : 65.0);
 
     caloriesConsumed = logs.fold(0.0, (s, m) => s + m.calories);
     proteinConsumed  = logs.fold(0.0, (s, m) => s + m.protein);
