@@ -221,12 +221,51 @@ class _MealsDashboardState extends State<MealsDashboard> {
     _recalcTotals();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _recalcTotals();
+  }
+
   void _recalcTotals() {
     final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ?? {};
-    caloriesTarget = (goals['calories'] as num?)?.toDouble() ?? 2400.0;
-    proteinTarget  = (goals['protein']  as num?)?.toDouble() ?? 170.0;
-    carbsTarget    = (goals['carbs']    as num?)?.toDouble() ?? 250.0;
-    fatsTarget     = (goals['fats']     as num?)?.toDouble() ?? 80.0;
+
+    double? fallbackCal;
+    double? fallbackProtein;
+    double? fallbackCarbs;
+    double? fallbackFats;
+
+    try {
+      final profileState = context.read<ProfileBloc>().state;
+      if (profileState is ProfileLoaded) {
+        final user = profileState.user;
+        final rawCal = user['dailyCalorieGoal'] ?? user['targetCalories'] ?? user['calories'];
+        if (rawCal != null && (rawCal as num) > 0) {
+          fallbackCal = (rawCal as num).toDouble();
+        }
+
+        final rawP = user['dailyProteinGoal'] ?? user['proteinGoal'] ?? user['protein'];
+        if (rawP != null && (rawP as num) > 0) fallbackProtein = (rawP as num).toDouble();
+
+        final rawC = user['dailyCarbsGoal'] ?? user['carbsGoal'] ?? user['carbs'];
+        if (rawC != null && (rawC as num) > 0) fallbackCarbs = (rawC as num).toDouble();
+
+        final rawF = user['dailyFatsGoal'] ?? user['fatsGoal'] ?? user['fats'];
+        if (rawF != null && (rawF as num) > 0) fallbackFats = (rawF as num).toDouble();
+      }
+    } catch (_) {}
+
+    final summaryCal = (goals['calories'] as num?)?.toDouble();
+    caloriesTarget = (summaryCal != null && summaryCal > 0) ? summaryCal : (fallbackCal ?? 2000.0);
+
+    final summaryProtein = (goals['protein'] as num?)?.toDouble();
+    proteinTarget  = (summaryProtein != null && summaryProtein > 0) ? summaryProtein : (fallbackProtein ?? 150.0);
+
+    final summaryCarbs = (goals['carbs'] as num?)?.toDouble();
+    carbsTarget    = (summaryCarbs != null && summaryCarbs > 0) ? summaryCarbs : (fallbackCarbs ?? 200.0);
+
+    final summaryFats = (goals['fats'] as num?)?.toDouble();
+    fatsTarget     = (summaryFats != null && summaryFats > 0) ? summaryFats : (fallbackFats ?? 65.0);
 
     caloriesConsumed = logs.fold(0.0, (s, m) => s + m.calories);
     proteinConsumed  = logs.fold(0.0, (s, m) => s + m.protein);
@@ -591,9 +630,10 @@ class _MealsDashboardState extends State<MealsDashboard> {
   @override
   Widget build(BuildContext context) {
     bool isPremium = false;
-    final profileState = context.read<ProfileBloc>().state;
+    final profileState = context.watch<ProfileBloc>().state;
     if (profileState is ProfileLoaded) {
       isPremium = profileState.isPremium;
+      _recalcTotals();
     }
 
     if (_layoutState != LayoutState.idle) {
