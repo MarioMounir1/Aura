@@ -239,50 +239,73 @@ class _MealsDashboardState extends State<MealsDashboard> {
       final profileState = context.read<ProfileBloc>().state;
       if (profileState is ProfileLoaded) {
         final user = profileState.user;
-        final rawCal = user['dailyCalorieGoal'] ?? user['targetCalories'] ?? user['calories'];
-        if (rawCal != null && (rawCal as num) > 0) {
-          userCalGoal = (rawCal as num).toDouble();
+
+        // 1. Direct or nested dailyCalorieGoal from user profile (e.g. 3484)
+        final directCal = user['dailyCalorieGoal'] ?? user['targetCalories'] ?? user['calories'];
+        if (directCal != null) {
+          final parsed = (directCal is num) ? directCal.toDouble() : double.tryParse(directCal.toString());
+          if (parsed != null && parsed > 0) userCalGoal = parsed;
+        }
+
+        if (userCalGoal == null) {
+          final goalsMap = user['goals'];
+          if (goalsMap is Map) {
+            final gCal = goalsMap['dailyCalories'] ?? goalsMap['calories'] ?? goalsMap['dailyCalorieGoal'];
+            if (gCal != null) {
+              final parsed = (gCal is num) ? gCal.toDouble() : double.tryParse(gCal.toString());
+              if (parsed != null && parsed > 0) userCalGoal = parsed;
+            }
+          }
         }
 
         final rawP = user['dailyProteinGoal'] ?? user['proteinGoal'] ?? user['protein'];
-        if (rawP != null && (rawP as num) > 0) userProteinGoal = (rawP as num).toDouble();
+        if (rawP != null) {
+          final parsed = (rawP is num) ? rawP.toDouble() : double.tryParse(rawP.toString());
+          if (parsed != null && parsed > 0) userProteinGoal = parsed;
+        }
 
         final rawC = user['dailyCarbsGoal'] ?? user['carbsGoal'] ?? user['carbs'];
-        if (rawC != null && (rawC as num) > 0) userCarbsGoal = (rawC as num).toDouble();
+        if (rawC != null) {
+          final parsed = (rawC is num) ? rawC.toDouble() : double.tryParse(rawC.toString());
+          if (parsed != null && parsed > 0) userCarbsGoal = parsed;
+        }
 
         final rawF = user['dailyFatsGoal'] ?? user['fatsGoal'] ?? user['fats'];
-        if (rawF != null && (rawF as num) > 0) userFatsGoal = (rawF as num).toDouble();
+        if (rawF != null) {
+          final parsed = (rawF is num) ? rawF.toDouble() : double.tryParse(rawF.toString());
+          if (parsed != null && parsed > 0) userFatsGoal = parsed;
+        }
 
-        // Calculate Mifflin-St Jeor TDEE directly from user physical profile if not explicitly set
-        final w = (user['weightKg'] as num?)?.toDouble();
-        final h = (user['heightCm'] as num?)?.toDouble();
-        final a = (user['age'] as num?)?.toInt();
-        final g = (user['gender'] as String?)?.toLowerCase();
-        final act = (user['activityLevel'] as String?) ?? 'moderate';
-        final targetW = (user['targetWeightKg'] as num?)?.toDouble();
-        final userGoal = (user['goal'] as String?) ?? 'maintain';
+        // 2. If dailyCalorieGoal was not set in profile, compute from user stats
+        if (userCalGoal == null) {
+          final w = double.tryParse((user['weightKg'] ?? '').toString());
+          final h = double.tryParse((user['heightCm'] ?? '').toString());
+          final a = int.tryParse((user['age'] ?? '').toString());
+          final g = (user['gender'] ?? 'male').toString().toLowerCase();
+          final act = (user['activityLevel'] ?? 'moderate').toString();
+          final goalType = (user['goal'] ?? 'maintain').toString();
 
-        if (w != null && h != null && a != null && g != null) {
-          final genderFactor = (g == 'male') ? 5 : -161;
-          final bmr = (10 * w) + (6.25 * h) - (5 * a) + genderFactor;
-          double mult = 1.55;
-          if (act == 'sedentary') mult = 1.2;
-          else if (act == 'lightly_active') mult = 1.375;
-          else if (act == 'moderate') mult = 1.55;
-          else if (act == 'very_active') mult = 1.725;
+          if (w != null && h != null && a != null) {
+            final double bmr = (10 * w) + (6.25 * h) - (5 * a) + (g == 'male' ? 5 : -161);
+            final double mult = act == 'sedentary'
+                ? 1.2
+                : act == 'lightly_active'
+                    ? 1.375
+                    : act == 'very_active'
+                        ? 1.725
+                        : 1.55;
+            final double adj = goalType == 'lose'
+                ? -500
+                : goalType == 'gain'
+                    ? 500
+                    : 0;
 
-          final tdeeVal = bmr * mult;
-          double adj = 0;
-          if (targetW != null && targetW > w + 1) adj = 200;
-          else if (targetW != null && targetW < w - 1) adj = -300;
-          else if (userGoal == 'gain') adj = 300;
-          else if (userGoal == 'lose') adj = -500;
-
-          final computedTdee = (tdeeVal + adj).roundToDouble().clamp(1200.0, 5000.0);
-          userCalGoal ??= computedTdee;
-          userProteinGoal ??= (w * 2.0).roundToDouble().clamp(80.0, 250.0);
-          userFatsGoal ??= ((computedTdee * 0.25) / 9.0).roundToDouble();
-          userCarbsGoal ??= ((computedTdee - (userProteinGoal! * 4.0 + userFatsGoal! * 9.0)) / 4.0).roundToDouble().clamp(50.0, 600.0);
+            final computedTdee = (bmr * mult + adj).roundToDouble().clamp(1200.0, 5000.0);
+            userCalGoal = computedTdee;
+            userProteinGoal ??= (w * 2.0).roundToDouble().clamp(80.0, 250.0);
+            userFatsGoal ??= ((computedTdee * 0.25) / 9.0).roundToDouble();
+            userCarbsGoal ??= ((computedTdee - (userProteinGoal! * 4.0 + userFatsGoal! * 9.0)) / 4.0).roundToDouble().clamp(50.0, 600.0);
+          }
         }
       }
     } catch (_) {}
