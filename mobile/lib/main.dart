@@ -31,6 +31,7 @@ import 'features/calorie_tracker/presentation/history_screen.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/repositories/auth_repository.dart';
 import 'features/auth/presentation/login_screen.dart';
+import 'features/auth/presentation/pre_screen.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/bloc/auth_event.dart';
 import 'features/auth/presentation/bloc/auth_state.dart';
@@ -338,6 +339,7 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   ProfileLoaded? _lastProfileLoaded;
+  bool _splashCompleted = false;
 
   @override
   void initState() {
@@ -360,6 +362,17 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_splashCompleted) {
+      return PreSplashScreen(
+        duration: const Duration(milliseconds: 2600),
+        onCompleted: () {
+          if (mounted) {
+            setState(() => _splashCompleted = true);
+          }
+        },
+      );
+    }
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
         if (authState is Authenticated) {
@@ -397,7 +410,14 @@ class _AuthWrapperState extends State<AuthWrapper> {
           }
 
           if (authState is AuthInitial) {
-            return const _PreScreenView();
+            return PreSplashScreen(
+              duration: const Duration(milliseconds: 2600),
+              onCompleted: () {
+                if (mounted) {
+                  setState(() => _splashCompleted = true);
+                }
+              },
+            );
           }
 
           return const LoginScreen();
@@ -407,128 +427,3 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 }
 
-// ── Pre-Screen Loading View ───────────────────────────────────────────────────
-
-class _PreScreenView extends StatefulWidget {
-  const _PreScreenView();
-
-  @override
-  State<_PreScreenView> createState() => _PreScreenViewState();
-}
-
-class _PreScreenViewState extends State<_PreScreenView>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ringCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ringCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ringCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8F5),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Circular Logo with Rotating Accent Ring (Option 2)
-            SizedBox(
-              width: 126,
-              height: 126,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Smooth Rotating Accent Ring
-                  RotationTransition(
-                    turns: _ringCtrl,
-                    child: Container(
-                      width: 124,
-                      height: 124,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: SweepGradient(
-                          colors: [
-                            Color(0xFF2E7D5E),
-                            Color(0xFF81C784),
-                            Colors.transparent,
-                          ],
-                          stops: [0.0, 0.45, 1.0],
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Inner cutout / logo container
-                  Container(
-                    width: 116,
-                    height: 116,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFFF6F8F5),
-                    ),
-                    child: Center(
-                      child: Container(
-                        width: 108,
-                        height: 108,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFF6F8F5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF2E7D5E).withOpacity(0.12),
-                              blurRadius: 30,
-                              spreadRadius: 6,
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/images/aura_logo.png',
-                            width: 108,
-                            height: 108,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'AURA',
-              style: GoogleFonts.inter(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF1C2B1E),
-                letterSpacing: 12,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Track · Perform · Evolve',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF5A6E5D),
-                letterSpacing: 2.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
