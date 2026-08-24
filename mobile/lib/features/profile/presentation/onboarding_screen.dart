@@ -423,11 +423,25 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final isArabic   = Localizations.localeOf(context).languageCode == 'ar';
 
     String effectiveGoalId = goal.id;
+    int effectiveCalorieAdjust = goal.calorieAdjust;
     if (targetWeight > weight + 1 && goal.id == 'maintain') {
       effectiveGoalId = 'gain';
+      effectiveCalorieAdjust = _goals[3].calorieAdjust;
     } else if (targetWeight < weight - 1 && goal.id == 'maintain') {
       effectiveGoalId = 'lose';
+      effectiveCalorieAdjust = _goals[1].calorieAdjust;
     }
+
+    final tdee = _calcTdee(
+      weight: weight,
+      height: height,
+      age: age,
+      gender: _gender,
+      multiplier: activity.multiplier,
+      calorieAdjust: effectiveCalorieAdjust,
+    );
+
+    final calculatedCalories = tdee['calories'] ?? 2000;
 
     // Update profile on the backend first, then trigger onboarding complete on success
     context.read<ProfileBloc>().add(UpdateProfileEvent(
@@ -438,6 +452,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       gender: _gender,
       activityLevel: activity.id,
       goal: effectiveGoalId,
+      dailyCalorieGoal: calculatedCalories,
       language: isArabic ? 'ar' : 'en',
     ));
   }
