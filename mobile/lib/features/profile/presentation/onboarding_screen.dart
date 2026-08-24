@@ -1215,32 +1215,6 @@ class _UnitToggleTab extends StatelessWidget {
   }
 }
 
-class _ChoiceCard extends StatelessWidget {
-  final bool isSelected;
-  final VoidCallback onTap;
-  final Widget child;
-  const _ChoiceCard({required this.isSelected, required this.onTap, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: isSelected ? _T.cyan.withOpacity(0.08) : _T.card,
-          border: Border.all(
-            color: isSelected ? _T.cyan : _T.border,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: child,
-      ),
-    );
-  }
-}
 
 class _GenderCard extends StatelessWidget {
   final String label;
