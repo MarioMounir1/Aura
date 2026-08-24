@@ -82,15 +82,15 @@ class AuraBrandHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(iconSize * 0.32),
             boxShadow: [
               BoxShadow(
-                color: AuraAuthTokens.brandDark.withOpacity(0.20),
+                color: AuraAuthTokens.brandDark.withValues(alpha: 0.20),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
             ],
           ),
           padding: EdgeInsets.all(iconSize * 0.20),
-          child: CustomPaint(
-            painter: const AuraEmblemPainter(),
+          child: const CustomPaint(
+            painter: AuraEmblemPainter(),
           ),
         ),
         if (showWordmark) ...[
@@ -347,7 +347,7 @@ class AuraPrimaryButton extends StatelessWidget {
           backgroundColor: active ? AuraAuthTokens.brandButton : AuraAuthTokens.brandButtonDisabled,
           foregroundColor: Colors.white,
           disabledBackgroundColor: AuraAuthTokens.brandButtonDisabled,
-          disabledForegroundColor: Colors.white.withOpacity(0.85),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.85),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
