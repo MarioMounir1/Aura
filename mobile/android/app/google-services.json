@@ -18,6 +18,14 @@
           "client_type": 1,
           "android_info": {
             "package_name": "com.mario.Aura",
+            "certificate_hash": "f8119d24f8027c63aa6b52334a20287bda5bc9af"
+          }
+        },
+        {
+          "client_id": "183282015983-11m32uaps5v83enfr962ds6m3qlk1kc9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mario.Aura",
             "certificate_hash": "ebaa157e9487857104b5737139d817a1e8e9bf8b"
           }
         },
