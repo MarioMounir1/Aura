@@ -111,8 +111,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             emit(Unauthenticated());
             return;
           }
-          debugPrint('❌ Google login backend failed: ${failure.message}');
-          emit(AuthFailure(failure.message));
+          debugPrint('❌ Google login failed: [${failure.code}] ${failure.message}');
+          emit(AuthFailure(
+            failure.message,
+            code: failure.code ?? 'GOOGLE_SIGN_IN_ERROR',
+          ));
         },
         (token) async {
           debugPrint('🎉 Google login authenticated successfully!');
@@ -120,9 +123,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           emit(Authenticated(token: token, isPremium: isPremium));
         },
       );
-    } catch (e) {
-      debugPrint('❌ Google sign in error: $e');
-      emit(AuthFailure('Google sign in error: ${e.toString()}'));
+    } catch (e, stackTrace) {
+      debugPrint('❌ Google sign in error: $e\n$stackTrace');
+      emit(AuthFailure(
+        e.toString(),
+        code: 'GOOGLE_SIGN_IN_EXCEPTION',
+        details: stackTrace.toString(),
+      ));
     }
   }
 
