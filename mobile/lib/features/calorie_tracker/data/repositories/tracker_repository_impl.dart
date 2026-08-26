@@ -1,16 +1,22 @@
 // lib/features/calorie_tracker/data/repositories/tracker_repository_impl.dart
-// The Teneen — Unified Nutrition & Tracker Repository Implementation
+// Aura — Unified Nutrition & Tracker Repository Implementation
 
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/services/firebase_storage_service.dart';
 import '../../domain/repositories/tracker_repository.dart';
 
 class TrackerRepositoryImpl implements TrackerRepository {
   final ApiClient apiClient;
+  final FirebaseStorageService _storageService;
 
-  TrackerRepositoryImpl(this.apiClient);
+  TrackerRepositoryImpl(
+    this.apiClient, {
+    FirebaseStorageService? storageService,
+  }) : _storageService =
+           storageService ?? FirebaseStorageService.instance;
 
   // Helper for consistent error handling
   Failure _handleError(dynamic e, String defaultMsg) {
@@ -120,8 +126,19 @@ class TrackerRepositoryImpl implements TrackerRepository {
     String? mealType,
     String? source,
     Map<String, dynamic>? rawAiResponse,
+    String? userId,
+    String? localImagePath,
   }) async {
     try {
+      // Upload photo to Firebase Storage first if provided
+      String? imageUrl;
+      if (localImagePath != null && userId != null && userId.isNotEmpty) {
+        imageUrl = await _storageService.uploadMealPhoto(
+          userId: userId,
+          localFilePath: localImagePath,
+        );
+      }
+
       final data = {
         'mealName': mealName ?? 'Custom meal',
         'calories': calories,
@@ -131,6 +148,7 @@ class TrackerRepositoryImpl implements TrackerRepository {
         if (mealType != null) 'mealType': mealType,
         if (source != null) 'source': source,
         if (rawAiResponse != null) 'rawAiResponse': rawAiResponse,
+        if (imageUrl != null) 'imageUrl': imageUrl,
       };
       final response = await apiClient.dio.post('/meals/manual', data: data);
       return Right(response.data as Map<String, dynamic>);

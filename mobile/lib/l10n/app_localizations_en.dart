@@ -229,7 +229,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get foodSearchTitle => 'Search foods';
 
   @override
-  String get foodSearchHint => 'Search in Arabic or English...';
+  String get foodSearchHint => 'Search foods, brands, or scan barcode...';
 
   @override
   String foodSearchNoResults(String query) {

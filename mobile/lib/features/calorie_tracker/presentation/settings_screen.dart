@@ -6,8 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../main.dart';
-import '../../../core/theme/theme_cubit.dart';
 import '../../../core/cubit/unit_cubit.dart';
 import '../../../core/utils/unit_converter.dart';
 import '../../../l10n/app_localizations.dart';
@@ -226,44 +224,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Form(
       key: _formKey,
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── 1. Top Header (Date + Title + Action Avatar) ─────────────
-            _buildProfileHeader(context),
-            const SizedBox(height: 16),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── 1. Top Header (Date + Title) ─────────────────────────
+                _buildProfileHeader(context),
+                const SizedBox(height: 16),
 
-            // ── 2. User Profile Card ──────────────────────────────────────
-            _buildUserAvatarHeader(name, email, isPremium),
-            const SizedBox(height: 14),
+                // ── 2. User Profile Card ──────────────────────────────────
+                _buildUserAvatarHeader(context, name, email, isPremium),
+                const SizedBox(height: 14),
 
-            // ── 3. Metrics Quick Summary Grid ──────────────────────────────
-            _buildKeyMetricsSummaryRow(l10n),
-            const SizedBox(height: 18),
+                // ── 3. Metrics Quick Summary Grid ──────────────────────────
+                _buildKeyMetricsSummaryRow(context, l10n),
+                const SizedBox(height: 18),
 
-            // ── 4. Membership Banner ──────────────────────────────────────
-            _buildMembershipBanner(context, isPremium, isArabic),
-            const SizedBox(height: 22),
+                // ── 4. Membership Banner ──────────────────────────────────
+                _buildMembershipBanner(context, isPremium, isArabic),
+                const SizedBox(height: 22),
 
-            // ── 5. Personal Info (Collapsible) ────────────────────────────
-            _buildCollapsiblePersonalInfo(l10n),
-            const SizedBox(height: 22),
+                // ── 5. Personal Info (Collapsible) ────────────────────────
+                _buildCollapsiblePersonalInfo(context, l10n),
+                const SizedBox(height: 22),
 
-            // ── 6. Preferences Section ────────────────────────────────────
-            _buildSectionTitle(isArabic ? 'التفضيلات' : 'PREFERENCES'),
-            const SizedBox(height: 10),
-            _buildPreferencesGroup(context, isArabic),
-            const SizedBox(height: 22),
+                // ── 6. Preferences Section ────────────────────────────────
+                _buildSectionTitle(context, isArabic ? 'التفضيلات' : 'PREFERENCES'),
+                const SizedBox(height: 10),
+                _buildPreferencesGroup(context, isArabic),
+                const SizedBox(height: 22),
 
-            // ── 7. Account Actions Section ────────────────────────────────
-            _buildSectionTitle(isArabic ? 'الحساب' : 'ACCOUNT ACTIONS'),
-            const SizedBox(height: 10),
-            _buildAccountActionsGroup(context, l10n),
-            const SizedBox(height: 24),
-          ],
+                // ── 7. Account Actions Section ────────────────────────────
+                _buildSectionTitle(context, isArabic ? 'الحساب' : 'ACCOUNT ACTIONS'),
+                const SizedBox(height: 10),
+                _buildAccountActionsGroup(context, l10n),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -271,6 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Top App Bar / Header ───────────────────────────────────────────
   Widget _buildProfileHeader(BuildContext context) {
+    final theme = Theme.of(context);
     final dateStr = DateFormat('EEEE, d MMM').format(DateTime.now()).toUpperCase();
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -282,20 +286,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               dateStr,
               style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF7A8B7B),
-                letterSpacing: 0.8,
+                textStyle: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF7A8B7B),
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
             const SizedBox(height: 2),
             Text(
               'Profile',
-              style: GoogleFonts.outfit(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF1C2B1E),
-                letterSpacing: -0.5,
+              style: GoogleFonts.fraunces(
+                textStyle: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1C2B1E),
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
           ],
@@ -305,7 +311,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── User Avatar Card ──────────────────────────────────────────────
-  Widget _buildUserAvatarHeader(String name, String email, bool isPremium) {
+  Widget _buildUserAvatarHeader(BuildContext context, String name, String email, bool isPremium) {
+    final theme = Theme.of(context);
     final String initials = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'A';
 
     return Container(
@@ -336,7 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: const Color(0xFF235A42),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF235A42).withOpacity(0.25),
+                      color: const Color(0xFF235A42).withValues(alpha: 0.25),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -346,9 +353,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Text(
                     initials,
                     style: GoogleFonts.outfit(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      textStyle: theme.textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -376,9 +384,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(
             name,
             style: GoogleFonts.outfit(
-              fontSize: 19,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF1C2B1E),
+              textStyle: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1C2B1E),
+              ),
             ),
           ),
           if (email.isNotEmpty) ...[
@@ -386,9 +395,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               email,
               style: GoogleFonts.inter(
-                fontSize: 13,
-                color: const Color(0xFF7A8B7B),
-                fontWeight: FontWeight.w500,
+                textStyle: theme.textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF7A8B7B),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -406,7 +416,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Key Metrics Horizontal Summary Row ────────────────────────────
-  Widget _buildKeyMetricsSummaryRow(AppLocalizations l10n) {
+  Widget _buildKeyMetricsSummaryRow(BuildContext context, AppLocalizations l10n) {
     final unitSystem = _getUnitSystem(context);
     final wKg = double.tryParse(_weightController.text.trim());
     final hCm = double.tryParse(_heightController.text.trim());
@@ -421,16 +431,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Row(
       children: [
-        Expanded(child: _buildMetricTile(l10n.profileWeight, weightStr, Icons.scale_rounded)),
+        Expanded(child: _buildMetricTile(context, l10n.profileWeight, weightStr, Icons.scale_rounded)),
         const SizedBox(width: 10),
-        Expanded(child: _buildMetricTile(l10n.profileHeight, heightStr, Icons.height_rounded)),
+        Expanded(child: _buildMetricTile(context, l10n.profileHeight, heightStr, Icons.height_rounded)),
         const SizedBox(width: 10),
-        Expanded(child: _buildMetricTile(l10n.profileGoal, goalStr, Icons.track_changes_rounded)),
+        Expanded(child: _buildMetricTile(context, l10n.profileGoal, goalStr, Icons.track_changes_rounded)),
       ],
     );
   }
 
-  Widget _buildMetricTile(String label, String value, IconData icon) {
+  Widget _buildMetricTile(BuildContext context, String label, String value, IconData icon) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
@@ -459,9 +470,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(
             value,
             style: GoogleFonts.outfit(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF1C2B1E),
+              textStyle: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1C2B1E),
+              ),
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -471,9 +483,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF7A8B7B),
+              textStyle: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF7A8B7B),
+              ),
             ),
             textAlign: TextAlign.center,
             maxLines: 1,
@@ -486,6 +499,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Membership Banner Widget ──────────────────────────────────────
   Widget _buildMembershipBanner(BuildContext context, bool isPremium, bool isArabic) {
+    final theme = Theme.of(context);
     if (isPremium) {
       return Container(
         width: double.infinity,
@@ -513,15 +527,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     isArabic ? 'عضو مميز في أورا' : 'Aura Premium Member',
                     style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF1C2B1E),
+                      textStyle: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1C2B1E),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     isArabic ? 'أنت تستمتع بجميع الميزات المميزة.' : 'You are enjoying full unlimited premium access.',
-                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D)),
+                    style: GoogleFonts.inter(
+                      textStyle: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF5A6E5D),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -552,59 +571,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.stars_rounded, color: Color(0xFFFBBF24), size: 24),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isArabic ? 'ترقية إلى أورا بريميوم' : 'Upgrade to Aura Premium',
-                      style: GoogleFonts.outfit(
-                        fontSize: 17,
+              child: const Icon(Icons.stars_rounded, color: Color(0xFFFBBF24), size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isArabic ? 'ترقية إلى أورا بريميوم' : 'Upgrade to Aura Premium',
+                    style: GoogleFonts.outfit(
+                      textStyle: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isArabic ? 'تحليل ذكاء اصطناعي بلا حدود وبدون إعلانات.' : 'Get unlimited AI scans & 100% ad-free experience.',
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withOpacity(0.85)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isArabic ? 'تحليل ذكاء اصطناعي بلا حدود وبدون إعلانات.' : 'Get unlimited AI scans & 100% ad-free experience.',
+                    style: GoogleFonts.inter(
+                      textStyle: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
-            ],
-          ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+          ],
         ),
-      );
+      ),
+    );
     }
   }
 
   // ── Section Title Helper ─────────────────────────────────────────
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    final theme = Theme.of(context);
     return Text(
       title.toUpperCase(),
       style: GoogleFonts.inter(
-        fontSize: 11,
-        fontWeight: FontWeight.w800,
-        color: const Color(0xFF5A6E5D),
-        letterSpacing: 0.8,
+        textStyle: theme.textTheme.labelMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF5A6E5D),
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
 
   // ── Collapsible Personal Info Section ───────────────────────────
-  Widget _buildCollapsiblePersonalInfo(AppLocalizations l10n) {
+  Widget _buildCollapsiblePersonalInfo(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     final name = _nameController.text.trim();
     final age = _ageController.text.trim();
     final weight = _weightController.text.trim();
@@ -658,9 +685,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Text(
                           l10n.profilePersonalInfo,
                           style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C2B1E),
+                            textStyle: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C2B1E),
+                            ),
                           ),
                         ),
                         if (!_isPersonalInfoExpanded && summary.isNotEmpty) ...[
@@ -668,8 +696,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Text(
                             summary,
                             style: GoogleFonts.inter(
-                              fontSize: 11.5,
-                              color: const Color(0xFF7A8B7B),
+                              textStyle: theme.textTheme.bodySmall?.copyWith(
+                                color: const Color(0xFF7A8B7B),
+                              ),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -695,7 +724,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const Divider(height: 1, color: Color(0xFFE2EBE4)),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: _buildFitnessMetricsGroup(l10n),
+                  child: _buildFitnessMetricsGroup(context, l10n),
                 ),
               ],
             ),
@@ -711,11 +740,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Group 1: Fitness & Health Metrics ─────────────────────────────
-  Widget _buildFitnessMetricsGroup(AppLocalizations l10n) {
+  Widget _buildFitnessMetricsGroup(BuildContext context, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFieldLabel(l10n.profileName),
+        _buildFieldLabel(context, l10n.profileName),
         TextFormField(
           controller: _nameController,
           decoration: _buildInputDecoration(hint: 'Full Name', icon: Icons.person_rounded),
@@ -729,7 +758,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFieldLabel(l10n.profileAge),
+                  _buildFieldLabel(context, l10n.profileAge),
                   TextFormField(
                     controller: _ageController,
                     keyboardType: TextInputType.number,
@@ -745,7 +774,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFieldLabel(l10n.profileGender),
+                  _buildFieldLabel(context, l10n.profileGender),
                   DropdownButtonFormField<String>(
                     value: _gender,
                     dropdownColor: Colors.white,
@@ -772,7 +801,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFieldLabel(l10n.profileWeight),
+                  _buildFieldLabel(context, l10n.profileWeight),
                   TextFormField(
                     controller: _weightController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -788,7 +817,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFieldLabel(l10n.profileHeight),
+                  _buildFieldLabel(context, l10n.profileHeight),
                   TextFormField(
                     controller: _heightController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -802,7 +831,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        _buildFieldLabel(l10n.profileGoal),
+        _buildFieldLabel(context, l10n.profileGoal),
         DropdownButtonFormField<String>(
           value: _goal,
           dropdownColor: Colors.white,
@@ -819,12 +848,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         ),
         const SizedBox(height: 16),
-        _buildFieldLabel(l10n.profileActivity),
+        _buildFieldLabel(context, l10n.profileActivity),
         DropdownButtonFormField<String>(
           value: _activityLevel,
           dropdownColor: Colors.white,
           decoration: _buildInputDecoration(hint: '', icon: Icons.directions_run_rounded),
-          style: GoogleFonts.inter(color: const Color(0xFF1C2B1E), fontSize: 13),
+          style: GoogleFonts.inter(color: const Color(0xFF1C2B1E)),
           items: [
             DropdownMenuItem(value: 'sedentary', child: Text(l10n.onboardingActivitySedentary)),
             DropdownMenuItem(value: 'lightly_active', child: Text(l10n.onboardingActivityLight)),
@@ -837,7 +866,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         ),
         const SizedBox(height: 16),
-        _buildFieldLabel(l10n.profileCalorieGoal),
+        _buildFieldLabel(context, l10n.profileCalorieGoal),
         TextFormField(
           controller: _calorieGoalController,
           keyboardType: TextInputType.number,
@@ -851,6 +880,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Group 2: Preferences (Units) ─────────────────────────────────
   Widget _buildPreferencesGroup(BuildContext context, bool isArabic) {
+    final theme = Theme.of(context);
     final unitSystem = _getUnitSystem(context);
     final isMetric = unitSystem == UnitSystem.metric;
 
@@ -890,9 +920,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       isArabic ? 'وحدات القياس' : 'Measurement Units',
                       style: GoogleFonts.outfit(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1C2B1E),
+                        textStyle: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1C2B1E),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 1),
@@ -901,8 +932,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ? 'اختر وحدات عرض الوزن والطول'
                           : 'Choose how weight & height are displayed',
                       style: GoogleFonts.inter(
-                        fontSize: 11.5,
-                        color: const Color(0xFF7A8B7B),
+                        textStyle: theme.textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF7A8B7B),
+                        ),
                       ),
                     ),
                   ],
@@ -915,6 +947,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Expanded(
                 child: _buildUnitCardOption(
+                  context: context,
                   title: isArabic ? 'متري' : 'Metric',
                   subtitle: isArabic ? 'كجم · سم' : 'kg · cm',
                   isSelected: isMetric,
@@ -928,6 +961,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: _buildUnitCardOption(
+                  context: context,
                   title: isArabic ? 'إمبراطوري' : 'Imperial',
                   subtitle: isArabic ? 'باوند · قدم/بوصة' : 'lbs · ft/in',
                   isSelected: !isMetric,
@@ -946,11 +980,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildUnitCardOption({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -984,18 +1020,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Text(
                     title,
                     style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                      color: isSelected ? const Color(0xFF235A42) : const Color(0xFF1C2B1E),
+                      textStyle: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        color: isSelected ? const Color(0xFF235A42) : const Color(0xFF1C2B1E),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                      color: isSelected ? const Color(0xFF386B52) : const Color(0xFF7A8B7B),
+                      textStyle: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        color: isSelected ? const Color(0xFF386B52) : const Color(0xFF7A8B7B),
+                      ),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1027,6 +1065,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Group 3: Account Actions (Logout) ────────────────────────────
   Widget _buildAccountActionsGroup(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFFFF5F5),
@@ -1049,14 +1088,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: Text(
             l10n.profileLogout,
             style: GoogleFonts.outfit(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFFE53935),
+              textStyle: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFE53935),
+              ),
             ),
           ),
           subtitle: Text(
             l10n.profileLogoutConfirm,
-            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF9E9E9E)),
+            style: GoogleFonts.inter(
+              textStyle: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF9E9E9E),
+              ),
+            ),
           ),
           trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFE53935), size: 14),
         ),
@@ -1066,6 +1110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Floating Action Bar for Unsaved Changes ──────────────────────
   Widget _buildFloatingSaveBar(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -1087,9 +1132,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(
               'You have unsaved changes',
               style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+                textStyle: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -1137,21 +1183,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildFieldLabel(String text) {
+  Widget _buildFieldLabel(BuildContext context, String text) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 6, left: 2),
       child: Text(
         text,
         style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: const Color(0xFF5A6E5D),
+          textStyle: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF5A6E5D),
+          ),
         ),
       ),
     );
   }
 
   void _showLogoutConfirmDialog(BuildContext context, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (ctx) {
@@ -1160,16 +1209,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             l10n.profileLogout,
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
+            style: GoogleFonts.outfit(
+              textStyle: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1C2B1E),
+              ),
+            ),
           ),
           content: Text(
             l10n.profileLogoutConfirm,
-            style: GoogleFonts.inter(color: const Color(0xFF5A6E5D)),
+            style: GoogleFonts.inter(
+              textStyle: theme.textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF5A6E5D),
+              ),
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.cancelButton, style: GoogleFonts.inter(color: const Color(0xFF7A8B7B))),
+              child: Text(
+                l10n.cancelButton,
+                style: GoogleFonts.inter(
+                  textStyle: theme.textTheme.labelLarge?.copyWith(
+                    color: const Color(0xFF7A8B7B),
+                  ),
+                ),
+              ),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1184,7 +1249,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: Text(
                 l10n.profileLogout,
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
+                style: GoogleFonts.inter(
+                  textStyle: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ),
           ],

@@ -527,7 +527,7 @@ abstract class AppLocalizations {
   /// No description provided for @foodSearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search in Arabic or English...'**
+  /// **'Search foods, brands, or scan barcode...'**
   String get foodSearchHint;
 
   /// No description provided for @foodSearchNoResults.
