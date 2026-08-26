@@ -145,9 +145,25 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right(authResponse.token);
     } on DioException catch (e) {
-      return Left(_handleDioError(e));
+      final statusCode = e.response?.statusCode;
+      final responseData = e.response?.data;
+      String? serverMessage;
+      if (responseData is Map) {
+        serverMessage = (responseData['error'] ?? responseData['message'])?.toString();
+      }
+      final errorMsg = 'Backend API Error [Status ${statusCode ?? 'Unknown'}]:\n${serverMessage ?? e.message ?? e.toString()}';
+      return Left(ServerFailure(
+        message: errorMsg,
+        code: statusCode != null ? 'HTTP_$statusCode' : 'NETWORK_ERROR',
+      ));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      final cleanMessage = e.toString().startsWith('Exception: ')
+          ? e.toString().substring('Exception: '.length)
+          : e.toString();
+      return Left(ServerFailure(
+        message: cleanMessage,
+        code: 'GOOGLE_SIGN_IN_ERROR',
+      ));
     }
   }
 
