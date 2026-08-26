@@ -3,6 +3,7 @@
 
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Google Material Standard design tokens tailored for Aura's luxury wellness experience.
@@ -594,3 +595,218 @@ class AuraAppleButton extends StatelessWidget {
     );
   }
 }
+
+/// Displays an error dialog with full error details, error codes, and a copy button.
+Future<void> showAuraAuthErrorDialog(
+  BuildContext context, {
+  String title = 'Sign-In Error',
+  required String message,
+  String? code,
+  String? details,
+}) {
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    builder: (ctx) => AuraAuthErrorDialog(
+      title: title,
+      message: message,
+      code: code,
+      details: details,
+    ),
+  );
+}
+
+class AuraAuthErrorDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final String? code;
+  final String? details;
+
+  const AuraAuthErrorDialog({
+    super.key,
+    required this.title,
+    required this.message,
+    this.code,
+    this.details,
+  });
+
+  String _buildFullErrorText() {
+    final buffer = StringBuffer();
+    if (code != null && code!.isNotEmpty) {
+      buffer.writeln('Code: $code');
+    }
+    buffer.writeln(message);
+    if (details != null && details!.isNotEmpty) {
+      buffer.writeln('\nDetails:\n$details');
+    }
+    return buffer.toString().trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fullText = _buildFullErrorText();
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header with Icon and Title
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFDE8E8),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.error_outline_rounded,
+                      color: Color(0xFFD9534F),
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.fraunces(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: AuraAuthTokens.brandDeep,
+                          ),
+                        ),
+                        if (code != null && code!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Text(
+                              code!,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF475569),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Full error details:',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AuraAuthTokens.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Scrollable selectable code container
+              Flexible(
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF1E293B)),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      fullText,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFFE2E8F0),
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: fullText));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Error copied to clipboard',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            ),
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: AuraAuthTokens.brandDark,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: Text(
+                        'Copy Error',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AuraAuthTokens.brandDeep,
+                        side: const BorderSide(color: AuraAuthTokens.sageBorder),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AuraAuthTokens.brandButton,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'Dismiss',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
