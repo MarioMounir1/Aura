@@ -64,21 +64,46 @@ class FirebaseAuthService {
         idToken: firebaseIdToken,
         photoUrl: user.photoURL,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       String? runtimeSha1;
       try {
         const channel = MethodChannel('com.mario.aura/app_info');
         runtimeSha1 = await channel.invokeMethod<String>('getSigningSha1');
       } catch (_) {}
 
-      if (runtimeSha1 != null && runtimeSha1.isNotEmpty) {
-        throw Exception(
-          'Google Sign-In failed.\n'
-          '📱 Installed App SHA-1:\n$runtimeSha1\n'
-          'Original Error: $e',
-        );
+      final buffer = StringBuffer();
+      buffer.writeln('Google Sign-In failed.');
+
+      if (e is PlatformException) {
+        buffer.writeln('Error Code: ${e.code}');
+        if (e.message != null && e.message!.isNotEmpty) {
+          buffer.writeln('Message: ${e.message}');
+        }
+        if (e.details != null) {
+          buffer.writeln('Details: ${e.details}');
+        }
+        if (e.message?.contains(': 10') == true || e.code == '10') {
+          buffer.writeln('💡 Hint: ApiException 10 (DEVELOPER_ERROR) indicates a SHA-1 fingerprint or package name mismatch in Firebase Console.');
+        } else if (e.message?.contains(': 12500') == true || e.code == '12500') {
+          buffer.writeln('💡 Hint: ApiException 12500 (SIGN_IN_FAILED) indicates Google Play Services configuration issue or missing SHA-1 in Firebase.');
+        } else if (e.message?.contains(': 7') == true || e.code == '7') {
+          buffer.writeln('💡 Hint: ApiException 7 (NETWORK_ERROR) indicates network error connecting to Google servers.');
+        }
+      } else if (e is FirebaseAuthException) {
+        buffer.writeln('Firebase Auth Code: ${e.code}');
+        buffer.writeln('Message: ${e.message ?? 'Unknown Firebase auth error'}');
+        if (e.email != null) buffer.writeln('Email: ${e.email}');
+      } else {
+        buffer.writeln('Raw Error: $e');
       }
-      rethrow;
+
+      if (runtimeSha1 != null && runtimeSha1.isNotEmpty) {
+        buffer.writeln('\n📱 Installed App SHA-1:\n$runtimeSha1');
+      }
+
+      buffer.writeln('\nStack Trace:\n$stackTrace');
+
+      throw Exception(buffer.toString());
     }
   }
 
