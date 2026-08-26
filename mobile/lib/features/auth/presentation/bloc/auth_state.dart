@@ -28,9 +28,12 @@ class Unauthenticated extends AuthState {}
 
 class AuthFailure extends AuthState {
   final String message;
+  final String? code;
+  final String? details;
 
-  const AuthFailure(this.message);
+  const AuthFailure(this.message, {this.code, this.details});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, code, details];
 }
+
