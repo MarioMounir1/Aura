@@ -72,24 +72,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
             listenWhen: (_, cur) => cur is AuthFailure || cur is Authenticated,
             listener: (context, state) {
               if (state is AuthFailure) {
-                ScaffoldMessenger.of(context)
-                  ..clearSnackBars()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        state.message,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                if (state.message.contains('\n') ||
+                    state.code != null ||
+                    state.details != null ||
+                    state.message.contains('Google')) {
+                  showAuraAuthErrorDialog(
+                    context,
+                    title: state.message.contains('Google')
+                        ? 'Google Sign-In Error'
+                        : 'Registration Error',
+                    message: state.message,
+                    code: state.code,
+                    details: state.details,
+                  );
+                } else {
+                  ScaffoldMessenger.of(context)
+                    ..clearSnackBars()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          state.message,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        backgroundColor: const Color(0xFFD9534F),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      backgroundColor: const Color(0xFFD9534F),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  );
+                    );
+                }
               } else if (state is Authenticated) {
                 Navigator.of(context).popUntil((route) => route.isFirst);
               }
