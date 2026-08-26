@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.mario.aura"
+    namespace = "com.mario.Aura"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -46,6 +46,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             signingConfig = signingConfigs.getByName("release")
         }

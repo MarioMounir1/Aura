@@ -14,15 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "183282015983-u74pbppg1c2h3vqbjbtiacofukm3tqpq.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.mario.Aura",
-            "certificate_hash": "f8119d24f8027c63aa6b52334a20287bda5bc9af"
-          }
-        },
-        {
-          "client_id": "183282015983-11m32uaps5v83enfr962ds6m3qlk1kc9.apps.googleusercontent.com",
+          "client_id": "183282015983-j7nprkvvao5na3jllm7bbosbo70pedjr.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.mario.Aura",
@@ -30,43 +22,19 @@
           }
         },
         {
-          "client_id": "183282015983-11m32uaps5v83enfr962ds6m3qlk1kc9.apps.googleusercontent.com",
+          "client_id": "183282015983-q5mgvjdvjiui79k1kmp87cegss9g8gvh.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.mario.Aura",
-            "certificate_hash": "904ef1971ac3a04f469aed83c8a2b553809e5384"
+            "certificate_hash": "73a3cbf7ecad01f63570f85be34b7a23633f86ee"
           }
         },
         {
-          "client_id": "183282015983-11m32uaps5v83enfr962ds6m3qlk1kc9.apps.googleusercontent.com",
+          "client_id": "183282015983-u74pbppg1c2h3vqbjbtiacofukm3tqpq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.mario.Aura",
-            "certificate_hash": "9c5d365978436ea52809cc8ca05bfc3cba303e28"
-          }
-        },
-        {
-          "client_id": "183282015983-5isvr538u3lfgn8cubrecs0529s10cgq.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.mario.Aura",
-            "certificate_hash": "ecca5f23f8c4520c089c6851324c7124ddafaf4c"
-          }
-        },
-        {
-          "client_id": "183282015983-8nmksi1tpc57k07k367o6du0eplqih20.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.mario.Aura",
-            "certificate_hash": "ff0e6c749617b953206ee5c73cc55dce2139f7ba"
-          }
-        },
-        {
-          "client_id": "183282015983-orssvi4el2u2d8v6ekb8sc35efvba2nh.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.mario.Aura",
-            "certificate_hash": "745067b64ce2da220bed82debc5694e5c7b449da"
+            "certificate_hash": "f8119d24f8027c63aa6b52334a20287bda5bc9af"
           }
         },
         {
