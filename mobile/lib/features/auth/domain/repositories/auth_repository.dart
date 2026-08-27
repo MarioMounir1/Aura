@@ -42,4 +42,14 @@ abstract class AuthRepository {
     required String name,
     String? identityToken,
   });
+
+  /// Request a 6-digit OTP code for password reset
+  Future<Either<Failure, String>> requestPasswordResetOtp(String email);
+
+  /// Reset password using OTP code and new password
+  Future<Either<Failure, String>> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  });
 }
