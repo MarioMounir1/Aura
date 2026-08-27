@@ -522,7 +522,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
             // 3. Exercise Timeline Section Header (Collapsible)
             GestureDetector(
-              onTap: () => setState(() => _showAllExercises = !_showAllExercises),
+              onTap: () {
+                if (!_isPremium) {
+                  PurchaseService.instance.presentPaywall(context);
+                  return;
+                }
+                setState(() => _showAllExercises = !_showAllExercises);
+              },
               behavior: HitTestBehavior.opaque,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -628,7 +634,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       const SizedBox(height: 6),
                       Center(
                         child: InkWell(
-                          onTap: () => setState(() => _showAllExercises = !_showAllExercises),
+                          onTap: () {
+                            if (!_isPremium) {
+                              PurchaseService.instance.presentPaywall(context);
+                              return;
+                            }
+                            setState(() => _showAllExercises = !_showAllExercises);
+                          },
                           borderRadius: BorderRadius.circular(20),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -690,53 +702,61 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             const SizedBox(height: 20),
 
             // 7. Weekly Progress Card
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x0A000000),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isArabic ? 'تقدمك' : 'Your Progress',
-                        style: GoogleFonts.outfit(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1C2B1E),
+            GestureDetector(
+              onTap: () {
+                if (!_isPremium) {
+                  PurchaseService.instance.presentPaywall(context);
+                }
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isArabic ? 'تقدمك' : 'Your Progress',
+                          style: GoogleFonts.outfit(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1C2B1E),
+                          ),
                         ),
-                      ),
-                      Text(
-                        isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/wk',
-                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6B7C6E)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  WeeklyCalendarRow(
-                    weekScheduleDetails: _weekScheduleDetails,
-                    completedDaysThisWeek: _completedDaysThisWeek,
-                    isArabic: isArabic,
-                    onDayTap: (detail) {
-                      if (!_isPremium) {
-                        PurchaseService.instance.presentPaywall(context);
-                        return;
-                      }
-                      _showDayDetailSheet(detail, isArabic);
-                    },
-                  ),
-                ],
+                        Text(
+                          isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/wk',
+                          style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6B7C6E)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    WeeklyCalendarRow(
+                      weekScheduleDetails: _weekScheduleDetails,
+                      completedDaysThisWeek: _completedDaysThisWeek,
+                      isArabic: isArabic,
+                      onDayTap: (detail) {
+                        if (!_isPremium) {
+                          PurchaseService.instance.presentPaywall(context);
+                          return;
+                        }
+                        _showDayDetailSheet(detail, isArabic);
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 32),
@@ -1916,147 +1936,155 @@ class _CoachChatCardState extends State<CoachChatCard> {
     final coachNote = widget.coachNote;
     final hasNote = coachNote != null && coachNote.trim().isNotEmpty;
     final isArabic = widget.isArabic;
+    final profileState = context.watch<ProfileBloc>().state;
+    final isPremium = profileState is ProfileLoaded && profileState.isPremium;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Icon Badge + "Your Coach" Label & Note ─────────────
-          if (hasNote) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFDCEEE3),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 18),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isArabic ? 'مدربك الشخصي' : 'Your Coach',
-                        style: GoogleFonts.outfit(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF235A42),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        coachNote,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: const Color(0xFF1C2B1E),
-                          height: 1.45,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: !isPremium ? () => PurchaseService.instance.presentPaywall(context) : null,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-            const SizedBox(height: 14),
           ],
-
-          // ── Chat Bubbles (if active conversation) ──────────────
-          if (_messages.isNotEmpty) ...[
-            Container(
-              constraints: const BoxConstraints(maxHeight: 220),
-              child: ListView.builder(
-                controller: _scrollController,
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  return _buildBubble(message, isArabic);
-                },
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-
-          // ── Pill-Shaped Input Bar ──────────────────────────────
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F6F2),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF6B7C6E), size: 16),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    enabled: !_isInterpreting,
-                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1C2B1E)),
-                    decoration: InputDecoration(
-                      hintText: isArabic
-                          ? 'اسأل مدربك أي شيء...'
-                          : 'Ask your coach anything',
-                      hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6B7C6E)),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                    ),
-                    onSubmitted: (_) => _submit(),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                _AnimatedPressable(
-                  onTap: _isInterpreting ? null : _submit,
-                  child: Container(
-                    width: 32,
-                    height: 32,
+          border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Icon Badge + "Your Coach" Label & Note ─────────────
+            if (hasNote) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF235A42),
+                      color: Color(0xFFDCEEE3),
                       shape: BoxShape.circle,
                     ),
-                    child: Center(
-                      child: _isInterpreting
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 18),
+                    child: const Center(
+                      child: Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 18),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isArabic ? 'مدربك الشخصي' : 'Your Coach',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF235A42),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          coachNote,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: const Color(0xFF1C2B1E),
+                            height: 1.45,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
+
+            // ── Chat Bubbles (if active conversation) ──────────────
+            if (_messages.isNotEmpty) ...[
+              Container(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final message = _messages[index];
+                    return _buildBubble(message, isArabic);
+                  },
                 ),
-              ],
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // ── Pill-Shaped Input Bar ──────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F6F2),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF6B7C6E), size: 16),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      readOnly: !isPremium,
+                      onTap: !isPremium ? () => PurchaseService.instance.presentPaywall(context) : null,
+                      enabled: !_isInterpreting,
+                      style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1C2B1E)),
+                      decoration: InputDecoration(
+                        hintText: isArabic
+                            ? 'اسأل مدربك أي شيء...'
+                            : 'Ask your coach anything',
+                        hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF6B7C6E)),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onSubmitted: (_) => _submit(),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  _AnimatedPressable(
+                    onTap: _isInterpreting ? null : _submit,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF235A42),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: _isInterpreting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 18),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
