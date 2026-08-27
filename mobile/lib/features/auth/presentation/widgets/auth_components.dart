@@ -240,6 +240,7 @@ class AuraInputField extends StatelessWidget {
   final TextInputAction textInputAction;
   final String? Function(String?)? validator;
   final void Function(String)? onFieldSubmitted;
+  final List<TextInputFormatter>? inputFormatters;
 
   const AuraInputField({
     super.key,
@@ -254,6 +255,7 @@ class AuraInputField extends StatelessWidget {
     this.textInputAction = TextInputAction.next,
     this.validator,
     this.onFieldSubmitted,
+    this.inputFormatters,
   });
 
   @override
@@ -289,6 +291,7 @@ class AuraInputField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
+          inputFormatters: inputFormatters,
           onFieldSubmitted: onFieldSubmitted,
           validator: validator,
           style: GoogleFonts.inter(
