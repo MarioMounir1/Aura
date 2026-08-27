@@ -5,7 +5,7 @@
 // ============================================================
 
 import { Router } from "express";
-import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook } from "../controllers/user.controller";
+import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook, forgotPassword, resetPassword } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler, updateMealLog } from "../controllers/meal.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { scanBarcodeHandler, logBarcodeHandler, estimateBarcodeHandler } from "../controllers/barcode.controller";
@@ -43,6 +43,22 @@ router.post("/auth/signup", authLimiter, register);
 router.post("/auth/login", authLimiter, login);
 router.post("/auth/google", authLimiter, googleLogin);
 router.post("/auth/apple", authLimiter, appleLogin);
+
+/**
+ * @route   POST /api/v1/auth/forgot-password
+ * @desc    Request a 6-digit OTP code to reset password
+ * @access  Public
+ * @body    { email }
+ */
+router.post("/auth/forgot-password", authLimiter, forgotPassword);
+
+/**
+ * @route   POST /api/v1/auth/reset-password
+ * @desc    Verify OTP and set a new password
+ * @access  Public
+ * @body    { email, otp, newPassword }
+ */
+router.post("/auth/reset-password", authLimiter, resetPassword);
 
 // ── User Routes ────────────────────────────────────────────
 
