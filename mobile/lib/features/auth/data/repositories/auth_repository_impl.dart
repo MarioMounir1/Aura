@@ -200,6 +200,48 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, String>> requestPasswordResetOtp(String email) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/auth/forgot-password',
+        data: {'email': email.trim().toLowerCase()},
+      );
+      final message = (response.data is Map ? response.data['message'] : null) as String? ??
+          'A verification code has been sent to your email.';
+      return Right(message);
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _apiClient.dio.post(
+        '/auth/reset-password',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'otp': otp.trim(),
+          'newPassword': newPassword,
+        },
+      );
+      final message = (response.data is Map ? response.data['message'] : null) as String? ??
+          'Password has been successfully reset.';
+      return Right(message);
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
   Failure _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
     final responseData = e.response?.data;
