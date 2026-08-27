@@ -372,3 +372,16 @@ model SessionOverride {
   @@unique([userId, date])
   @@index([userId, date])
 }
+
+// ── Password Reset OTP ──────────────────────────────────────
+
+model PasswordResetOtp {
+  id        String   @id @default(uuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
