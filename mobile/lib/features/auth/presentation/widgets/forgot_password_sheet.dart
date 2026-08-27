@@ -229,9 +229,9 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
             ),
             const SizedBox(height: 18),
 
-            if (_currentStep == 0) _buildStep0_Email(textTheme),
-            if (_currentStep == 1) _buildStep1_OtpAndNewPass(textTheme),
-            if (_currentStep == 2) _buildStep2_Success(textTheme),
+            if (_currentStep == 0) _buildStep0Email(textTheme),
+            if (_currentStep == 1) _buildStep1OtpAndNewPass(textTheme),
+            if (_currentStep == 2) _buildStep2Success(textTheme),
           ],
         ),
       ),
@@ -239,7 +239,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
   }
 
   // ── Step 0: Enter Email ──────────────────────────────────────────
-  Widget _buildStep0_Email(TextTheme textTheme) {
+  Widget _buildStep0Email(TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -288,7 +288,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
   }
 
   // ── Step 1: OTP & New Password ────────────────────────────────────
-  Widget _buildStep1_OtpAndNewPass(TextTheme textTheme) {
+  Widget _buildStep1OtpAndNewPass(TextTheme textTheme) {
     final email = _emailController.text.trim();
 
     return Column(
@@ -427,7 +427,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
   }
 
   // ── Step 2: Success Confirmation ─────────────────────────────────
-  Widget _buildStep2_Success(TextTheme textTheme) {
+  Widget _buildStep2Success(TextTheme textTheme) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
