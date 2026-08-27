@@ -10,6 +10,7 @@ import 'bloc/auth_event.dart';
 import 'bloc/auth_state.dart';
 import 'register_screen.dart';
 import 'widgets/auth_components.dart';
+import 'widgets/forgot_password_sheet.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -57,92 +58,25 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showForgotPasswordSheet() {
-    final resetEmailController = TextEditingController(text: _emailController.text.trim());
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final textTheme = Theme.of(ctx).textTheme;
-        return Container(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AuraAuthTokens.sageBorder,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                'Reset Password',
-                style: GoogleFonts.fraunces(
-                  textStyle: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AuraAuthTokens.brandDeep,
-                  ),
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AuraAuthTokens.brandDeep,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter the email associated with your Aura account and we will send you a reset link.',
-                style: GoogleFonts.inter(
-                  textStyle: textTheme.bodyMedium?.copyWith(
-                    color: AuraAuthTokens.textSecondary,
-                    height: 1.4,
-                  ),
-                  fontSize: 13.5,
-                  color: AuraAuthTokens.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 18),
-              AuraInputField(
-                label: 'Email address',
-                hintText: 'you@example.com',
-                prefixIcon: Icons.mail_outline_rounded,
-                controller: resetEmailController,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.done,
-              ),
-              const SizedBox(height: 20),
-              AuraPrimaryButton(
-                label: 'Send Reset Link',
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'If an account exists for that email, a reset link has been sent.',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                      ),
-                      backgroundColor: AuraAuthTokens.brandDark,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  );
-                },
-              ),
-            ],
+    ForgotPasswordSheet.show(
+      context,
+      initialEmail: _emailController.text.trim(),
+      onResetSuccess: (email) {
+        if (!mounted) return;
+        setState(() {
+          _emailController.text = email;
+          _passwordController.clear();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Password reset successfully! Please sign in with your new password.',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+            ),
+            backgroundColor: AuraAuthTokens.brandDark,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       },
