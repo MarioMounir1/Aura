@@ -13,6 +13,7 @@ import { z } from "zod";
 import jwt from "jsonwebtoken";
 import prisma from "../services/prisma.service";
 import { generateToken } from "../middleware/auth.middleware";
+import { sendPasswordResetEmail } from "../services/email.service";
 
 // ── User Controller ──────────────────────────────────────────
 
@@ -127,6 +128,16 @@ const UpdateGoalsSchema = z.object({
   proteinGoal: z.number().int().min(0).max(1000).optional(),
   carbsGoal: z.number().int().min(0).max(2000).optional(),
   fatsGoal: z.number().int().min(0).max(500).optional(),
+});
+
+const ForgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address").toLowerCase(),
+});
+
+const ResetPasswordSchema = z.object({
+  email: z.string().email("Invalid email address").toLowerCase(),
+  otp: z.string().length(6, "OTP must be 6 digits"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters").max(128),
 });
 
 // ── Helper ─────────────────────────────────────────────────
@@ -327,6 +338,144 @@ export async function login(req: Request, res: Response): Promise<void> {
       success: false,
       error: "Login service temporarily unavailable.",
       code: "LOGIN_ERROR",
+    });
+  }
+}
+
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  const parsed = ForgotPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Validation failed",
+      details: parsed.error.flatten().fieldErrors,
+    });
+    return;
+  }
+
+  const { email } = parsed.data;
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Return success to avoid email enumeration
+      res.json({
+        success: true,
+        message: "If an account with that email exists, a verification code has been sent.",
+      });
+      return;
+    }
+
+    // Invalidate old active OTPs for this email
+    await prisma.passwordResetOtp.updateMany({
+      where: { email, used: false },
+      data: { used: true },
+    });
+
+    // Generate random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await prisma.passwordResetOtp.create({
+      data: {
+        email,
+        otp,
+        expiresAt,
+      },
+    });
+
+    // Send email via email service
+    await sendPasswordResetEmail(email, otp);
+
+    console.log(`🔑 [Auth] Generated password reset OTP for ${email}: ${otp}`);
+
+    res.json({
+      success: true,
+      message: "If an account with that email exists, a verification code has been sent.",
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ [Auth] forgotPassword error:", msg);
+    res.status(500).json({
+      success: false,
+      error: "Failed to process password reset request.",
+      code: "FORGOT_PASSWORD_ERROR",
+    });
+  }
+}
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  const parsed = ResetPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Validation failed",
+      details: parsed.error.flatten().fieldErrors,
+    });
+    return;
+  }
+
+  const { email, otp, newPassword } = parsed.data;
+
+  try {
+    const validOtp = await prisma.passwordResetOtp.findFirst({
+      where: {
+        email,
+        otp,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!validOtp) {
+      res.status(400).json({
+        success: false,
+        error: "Invalid or expired verification code.",
+        code: "INVALID_OTP",
+      });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: "User account not found.",
+        code: "USER_NOT_FOUND",
+      });
+      return;
+    }
+
+    // Hash new password
+    const SALT_ROUNDS = 10;
+    const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    // Mark OTP as used
+    await prisma.passwordResetOtp.update({
+      where: { id: validOtp.id },
+      data: { used: true },
+    });
+
+    console.log(`✅ [Auth] Successfully reset password for user: ${email}`);
+
+    res.json({
+      success: true,
+      message: "Password has been successfully reset. You can now log in.",
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ [Auth] resetPassword error:", msg);
+    res.status(500).json({
+      success: false,
+      error: "Failed to reset password.",
+      code: "RESET_PASSWORD_ERROR",
     });
   }
 }
