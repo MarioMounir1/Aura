@@ -614,8 +614,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -624,6 +625,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Drag handle
             Center(
               child: Container(
                 width: 40,
@@ -639,44 +641,139 @@ class _MealsDashboardState extends State<MealsDashboard> {
               'Log a Meal',
               style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
             ),
+            const SizedBox(height: 4),
+            Text(
+              'Choose how to log your nutrition',
+              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
+            ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.camera_alt_rounded, color: Color(0xFF1E3A2B))),
-              title: Text('Snap Meal Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Scan food with AI camera', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndAnalyze(ImageSource.camera);
-              },
+
+            // ── Featured: AI Camera ───────────────────────────────
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.camera); },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF235A42),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 22),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Snap Meal Photo',
+                              style: GoogleFonts.outfit(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1E3A2B),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'AI-powered instant macro scan',
+                              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A7060)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF235A42), size: 14),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.photo_library_outlined, color: Color(0xFF1E3A2B))),
-              title: Text('Upload Screenshot', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Pick photo from gallery', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndAnalyze(ImageSource.gallery);
-              },
-            ),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF1E3A2B))),
-              title: Text('Scan Barcode', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Instant nutrition lookup', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _scanBarcode();
-              },
-            ),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.search_rounded, color: Color(0xFF1E3A2B))),
-              title: Text('Search Foods', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Global database lookup', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.of(context).pushNamed('/foods/search');
-              },
+            const SizedBox(height: 12),
+
+            // ── 3 Secondary Pills ─────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSheetPill(
+                    ctx: ctx,
+                    icon: Icons.photo_library_outlined,
+                    label: 'Gallery',
+                    onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.gallery); },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSheetPill(
+                    ctx: ctx,
+                    icon: Icons.qr_code_scanner_rounded,
+                    label: 'Barcode',
+                    onTap: () { Navigator.pop(ctx); _scanBarcode(); },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSheetPill(
+                    ctx: ctx,
+                    icon: Icons.search_rounded,
+                    label: 'Search',
+                    onTap: () { Navigator.pop(ctx); Navigator.of(context).pushNamed('/foods/search'); },
+                  ),
+                ),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSheetPill({
+    required BuildContext ctx,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF6F8F5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: const Color(0xFF235A42), size: 20),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1E3A2B),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -4499,27 +4596,32 @@ class _QuickLogCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F6F2),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: const Color(0xFFD3E4D7),
-              width: 1.2,
-            ),
+            border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x07000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
+              // Brand green camera icon — visible & on-theme
               Container(
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 decoration: const BoxDecoration(
-                  color: Colors.white,
+                  color: Color(0xFF235A42),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
                   child: Icon(
-                    Icons.add_rounded,
-                    color: Color(0xFF1E3A2B),
-                    size: 22,
+                    Icons.camera_alt_rounded,
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
               ),
@@ -4546,6 +4648,11 @@ class _QuickLogCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Color(0xFF235A42),
+                size: 20,
               ),
             ],
           ),
