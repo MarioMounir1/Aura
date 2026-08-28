@@ -614,11 +614,19 @@ class _MealsDashboardState extends State<MealsDashboard> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: Color(0xFFF6F8F5),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x18000000),
+              blurRadius: 20,
+              offset: Offset(0, -4),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -626,7 +634,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
           children: [
             Center(
               child: Container(
-                width: 40,
+                width: 42,
                 height: 4,
                 decoration: BoxDecoration(
                   color: const Color(0xFFD3E4D7),
@@ -634,49 +642,241 @@ class _MealsDashboardState extends State<MealsDashboard> {
                 ),
               ),
             ),
-            const SizedBox(height: 18),
-            Text(
-              'Log a Meal',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
-            ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.camera_alt_rounded, color: Color(0xFF1E3A2B))),
-              title: Text('Snap Meal Photo', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Scan food with AI camera', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndAnalyze(ImageSource.camera);
-              },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Log a Meal',
+                      style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1E3A2B),
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Choose how you want to track your nutrition',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF6B7C6E),
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF6B7C6E), size: 22),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
             ),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.photo_library_outlined, color: Color(0xFF1E3A2B))),
-              title: Text('Upload Screenshot', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Pick photo from gallery', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pickAndAnalyze(ImageSource.gallery);
-              },
+            const SizedBox(height: 18),
+
+            // 1. Featured AI Hero Card
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndAnalyze(ImageSource.camera);
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1E3A2B), Color(0xFF2E5E44)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x251E3A2B),
+                        blurRadius: 16,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 24),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'AI Food Scanner',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFF10B981), width: 0.8),
+                                  ),
+                                  child: Text(
+                                    '⚡ INSTANT',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF6EE7B7),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Snap a photo to calculate macros in seconds',
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                color: Colors.white.withValues(alpha: 0.82),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
+                    ],
+                  ),
+                ),
+              ),
             ),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF1E3A2B))),
-              title: Text('Scan Barcode', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Instant nutrition lookup', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                _scanBarcode();
-              },
-            ),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFDCEEE3), child: Icon(Icons.search_rounded, color: Color(0xFF1E3A2B))),
-              title: Text('Search Foods', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
-              subtitle: Text('Global database lookup', style: GoogleFonts.inter(fontSize: 12)),
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.of(context).pushNamed('/foods/search');
-              },
+            const SizedBox(height: 14),
+
+            // 2. Three Quick Action Cards
+            Row(
+              children: [
+                Expanded(
+                  child: _buildModalActionTile(
+                    icon: Icons.photo_library_outlined,
+                    title: 'Gallery',
+                    subtitle: 'Upload pic',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickAndAnalyze(ImageSource.gallery);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildModalActionTile(
+                    icon: Icons.qr_code_scanner_rounded,
+                    title: 'Barcode',
+                    subtitle: 'Packaged',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _scanBarcode();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildModalActionTile(
+                    icon: Icons.search_rounded,
+                    title: 'Search',
+                    subtitle: 'Database',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      Navigator.of(context).pushNamed('/foods/search');
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModalActionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF5EE),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(icon, color: const Color(0xFF235A42), size: 19),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1E3A2B),
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                subtitle,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  color: const Color(0xFF7A8B7B),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -782,11 +982,14 @@ class _MealsDashboardState extends State<MealsDashboard> {
                   },
                 ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
 
-              // 5. Quick Log Card
-              _QuickLogCard(
-                onTap: _showQuickLogChoiceSheet,
+              // 5. Prominent Meal Action Hub
+              _MealActionHub(
+                onCameraTap: () => _pickAndAnalyze(ImageSource.camera),
+                onGalleryTap: () => _pickAndAnalyze(ImageSource.gallery),
+                onBarcodeTap: _scanBarcode,
+                onSearchTap: () => Navigator.of(context).pushNamed('/foods/search'),
               ),
 
               const SizedBox(height: 20),
@@ -4484,67 +4687,182 @@ class _MealTimelineTile extends StatelessWidget {
   }
 }
 
-class _QuickLogCard extends StatelessWidget {
-  final VoidCallback onTap;
-  const _QuickLogCard({required this.onTap});
+class _MealActionHub extends StatelessWidget {
+  final VoidCallback onCameraTap;
+  final VoidCallback onGalleryTap;
+  final VoidCallback onBarcodeTap;
+  final VoidCallback onSearchTap;
+
+  const _MealActionHub({
+    required this.onCameraTap,
+    required this.onGalleryTap,
+    required this.onBarcodeTap,
+    required this.onSearchTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Featured Hero AI Card
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onCameraTap,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1E3A2B), Color(0xFF2E5E44)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x221E3A2B),
+                    blurRadius: 14,
+                    offset: Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 22),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Snap & Track Meal',
+                              style: GoogleFonts.outfit(
+                                fontSize: 15.5,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFF10B981), width: 0.8),
+                              ),
+                              child: Text(
+                                '⚡ AI',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF6EE7B7),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Point camera to calculate calories & macros',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: Colors.white.withValues(alpha: 0.82),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 13),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // 2. Three Quick Action Pills
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionPill(
+                icon: Icons.photo_library_outlined,
+                label: 'Gallery',
+                onTap: onGalleryTap,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildActionPill(
+                icon: Icons.qr_code_scanner_rounded,
+                label: 'Barcode',
+                onTap: onBarcodeTap,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildActionPill(
+                icon: Icons.search_rounded,
+                label: 'Search',
+                onTap: onSearchTap,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionPill({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F6F2),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: const Color(0xFFD3E4D7),
-              width: 1.2,
-            ),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.add_rounded,
-                    color: Color(0xFF1E3A2B),
-                    size: 22,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Log your next meal',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1E3A2B),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Snap a photo or search foods',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: const Color(0xFF6B7C6E),
-                      ),
-                    ),
-                  ],
+              Icon(icon, color: const Color(0xFF235A42), size: 16),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1E3A2B),
                 ),
               ),
             ],
