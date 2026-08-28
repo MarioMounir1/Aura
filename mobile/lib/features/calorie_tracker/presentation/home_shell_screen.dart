@@ -89,6 +89,9 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = context.auraTheme;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final navBottom = bottomInset > 0 ? bottomInset + 8 : 16.0;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.opaque,
@@ -101,7 +104,7 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
               children: _screens,
             ),
             Positioned(
-              bottom: 16,
+              bottom: navBottom,
               left: 24,
               right: 24,
               child: _buildCustomNavBar(context),
