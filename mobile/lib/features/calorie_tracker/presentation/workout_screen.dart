@@ -3249,80 +3249,6 @@ class _ExerciseTimelineTile extends StatelessWidget {
     required this.onTap,
   });
 
-  Widget _buildExerciseThumbnail(String title) {
-    final lower = title.toLowerCase();
-    IconData icon = Icons.fitness_center_rounded;
-    String badge = 'CHEST';
-
-    if (lower.contains('incline')) {
-      icon = Icons.unfold_more_rounded;
-      badge = 'UPPER';
-    } else if (lower.contains('bench') || lower.contains('barbell bench')) {
-      icon = Icons.fitness_center_rounded;
-      badge = 'CHEST';
-    } else if (lower.contains('fly') || lower.contains('crossover')) {
-      icon = Icons.compare_arrows_rounded;
-      badge = 'FLYES';
-    } else if (lower.contains('overhead') || lower.contains('military')) {
-      icon = Icons.arrow_upward_rounded;
-      badge = 'DELTS';
-    } else if (lower.contains('lateral') || lower.contains('delt') || lower.contains('raise')) {
-      icon = Icons.open_in_full_rounded;
-      badge = 'SIDE';
-    } else if (lower.contains('deadlift') || lower.contains('rdl')) {
-      icon = Icons.download_rounded;
-      badge = 'BACK';
-    } else if (lower.contains('split squat') || lower.contains('lunge')) {
-      icon = Icons.nordic_walking_rounded;
-      badge = 'LEGS';
-    } else if (lower.contains('squat') || lower.contains('leg press')) {
-      icon = Icons.directions_walk_rounded;
-      badge = 'QUADS';
-    } else if (lower.contains('warmup') || lower.contains('stretch')) {
-      icon = Icons.self_improvement_rounded;
-      badge = 'WARM';
-    }
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: const Color(0xFFEAF5EE),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: Color(0xFF235A42),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Icon(icon, color: Colors.white, size: 17),
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              badge,
-              style: GoogleFonts.inter(
-                fontSize: 8.5,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFF235A42),
-                letterSpacing: 0.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return IntrinsicHeight(
@@ -3383,7 +3309,7 @@ class _ExerciseTimelineTile extends StatelessWidget {
                   onTap: onTap,
                   borderRadius: BorderRadius.circular(18),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18),
@@ -3397,8 +3323,6 @@ class _ExerciseTimelineTile extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        _buildExerciseThumbnail(title),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
