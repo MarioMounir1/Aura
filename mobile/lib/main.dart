@@ -298,11 +298,22 @@ class TeneenApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
-              // ── Global Standard Layout & LTR ───────────
+              // ── Global Standard Layout, Dynamic Scaling & LTR ──
               builder: (context, child) {
-                return Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: child!,
+                final mediaQueryData = MediaQuery.of(context);
+                // Clamp text scaler to standard bounds so UI doesn't blow up or overflow on devices with large system fonts
+                final clampedTextScaler = mediaQueryData.textScaler.clamp(
+                  minScaleFactor: 0.85,
+                  maxScaleFactor: 1.05,
+                );
+                return MediaQuery(
+                  data: mediaQueryData.copyWith(
+                    textScaler: clampedTextScaler,
+                  ),
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 );
               },
 
