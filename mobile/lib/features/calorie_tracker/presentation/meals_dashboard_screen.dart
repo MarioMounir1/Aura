@@ -1010,6 +1010,126 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   // (macro rings extracted to _MacroRingsSection below)
 
+  Widget _buildMealSlotTile(String title, String emoji, String subtitle) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _showQuickLogChoiceSheet,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE2EBE4), width: 1.1),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x06000000),
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF1F6F2),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(emoji, style: const TextStyle(fontSize: 20)),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.outfit(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E3A2B),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: const Color(0xFF7A8B7B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF5EE),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_rounded, color: Color(0xFF235A42), size: 16),
+                    const SizedBox(width: 3),
+                    Text(
+                      'Log',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF235A42),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddMealButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _showQuickLogChoiceSheet,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEAF5EE),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add_rounded, color: Color(0xFF235A42), size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'Log Another Meal',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF235A42),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ——— AI CANVAS (STATE SWITCH) ——————————————————————————————————
 
   Widget _buildAiCanvas() {
