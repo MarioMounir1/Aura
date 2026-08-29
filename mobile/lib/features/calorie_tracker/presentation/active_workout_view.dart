@@ -11,7 +11,38 @@ import 'bloc/workout_bloc.dart';
 import 'bloc/workout_event.dart';
 import 'bloc/workout_state.dart';
 
-typedef _C = AppColors;
+// ── Light-theme palette for ActiveWorkoutView ─────────────────
+abstract class _C {
+  // Backgrounds & Surfaces
+  static const Color background    = Color(0xFFF6F8F5);
+  static const Color card          = Color(0xFFFFFFFF);
+  static const Color cardElev      = Color(0xFFF1F6F2);
+  static const Color surface       = Color(0xFFF1F6F2);
+  static const Color cardBackground = Color(0xFFFFFFFF);
+
+  // Borders
+  static const Color border        = Color(0xFFE2EBE4);
+  static const Color borderMid     = Color(0xFFD3E4D7);
+
+  // Text
+  static const Color textPrimary   = Color(0xFF1C2B1E);
+  static const Color textSecondary = Color(0xFF5A6E5D);
+  static const Color textMuted     = Color(0xFF7A8B7B);
+  static const Color textPri       = Color(0xFF1C2B1E);
+  static const Color textSec       = Color(0xFF5A6E5D);
+  static const Color textMut       = Color(0xFF7A8B7B);
+
+  // Brand
+  static const Color primary       = Color(0xFF235A42);
+  static const Color cyan          = Color(0xFF235A42);
+  static const Color accent        = Color(0xFF235A42);
+
+  // Semantic
+  static const Color success       = Color(0xFF235A42);
+  static const Color error         = Color(0xFFEF4444);
+  static const Color amber         = Color(0xFFF59E0B);
+  static const Color warning       = Color(0xFFF59E0B);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Active Workout View (Dynamic)
@@ -252,17 +283,17 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
                   Expanded(
                     child: Text(
                       widget.isArabic ? 'جلسة التمرين النشطة' : 'Active Workout Session',
-                      style: GoogleFonts.inter(
-                          fontSize: 15, fontWeight: FontWeight.w700, color: _C.textPri),
+                      style: GoogleFonts.outfit(
+                          fontSize: 16, fontWeight: FontWeight.w700, color: _C.textPri),
                     ),
                   ),
                   // Logged set counter
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _C.cyan.withOpacity(0.12),
+                      color: _C.cyan.withOpacity(0.10),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _C.cyan.withOpacity(0.3)),
+                      border: Border.all(color: _C.cyan.withOpacity(0.25)),
                     ),
                     child: Text(
                       '$loggedSets/$totalSets sets',
@@ -291,6 +322,7 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _C.cardElev,
                               padding: const EdgeInsets.symmetric(vertical: 16),
+                              minimumSize: const Size(double.infinity, 50),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                                 side: const BorderSide(color: _C.border, width: 1.2),
@@ -317,15 +349,11 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
                             width: double.infinity,
                             height: 52,
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [_C.cyan, Color(0xFF0097A7)],
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                              ),
+                              color: _C.cyan,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _C.cyan.withValues(alpha: 0.3),
+                                  color: _C.cyan.withOpacity(0.25),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -343,14 +371,14 @@ class _ActiveWorkoutViewState extends State<ActiveWorkoutView> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.check_circle_rounded, color: Colors.black, size: 20),
+                                  const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                                   const SizedBox(width: 8),
                                   Text(
                                     widget.isArabic ? 'إنهاء التمرين' : 'Finish Workout',
-                                    style: GoogleFonts.inter(
-                                      color: Colors.black,
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white,
                                       fontSize: 16,
-                                      fontWeight: FontWeight.w900,
+                                      fontWeight: FontWeight.w700,
                                       letterSpacing: 0.3,
                                     ),
                                   ),
