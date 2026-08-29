@@ -50,16 +50,16 @@ export function getAiScanLimit(isPremium: boolean): number {
 
 
 export function resolveGeminiModelName(modelSetting?: string): string {
-  const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.5-flash").trim();
+  const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite").trim();
   if (!raw || raw.startsWith("models/")) {
-    return "gemini-2.5-flash";
+    return "gemini-2.5-flash-lite";
   }
   return raw;
 }
 
 export const GEMINI_CONFIG = {
   get model(): string {
-    return resolveGeminiModelName(process.env.GEMINI_MODEL ?? "gemini-2.5-flash");
+    return resolveGeminiModelName(process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite");
   },
   temperature: 0.1,
   topP: 0.95,
