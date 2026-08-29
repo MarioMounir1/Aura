@@ -661,7 +661,7 @@ Respond ONLY with valid JSON:
     console.warn(`⏱️ [Coach AI Direct Fallback] generating direct Gemini AI chat response...`);
     
     try {
-      const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash-lite" });
       const promptText = `You are Aura AI, a warm and intelligent AI personal trainer. Answer this user message naturally: "${message}"`;
       const res = await model.generateContent(promptText);
       const text = res.response.text().trim();
