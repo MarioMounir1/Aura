@@ -175,14 +175,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   // ── Launch Active Workout ──────────────────────────────────
   void _startWorkout() {
-    final profileState = context.read<ProfileBloc>().state;
-    final isPremium = profileState is ProfileLoaded && profileState.isPremium;
-
-    if (!isPremium) {
-      PurchaseService.instance.presentPaywall(context);
-      return;
-    }
-
     final workoutState = context.read<WorkoutBloc>().state;
     if (workoutState is! WorkoutSessionActive) {
       context.read<WorkoutBloc>().add(StartWorkoutSession(
@@ -415,18 +407,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _onExerciseTileTap(String title, String setsReps, bool isArabic) {
-    if (!_isPremium) {
-      PurchaseService.instance.presentPaywall(context);
-      return;
-    }
     _showAIExerciseGuideModal(context, title, setsReps, isArabic);
   }
 
   void _showRoutineDetailsModal(bool isArabic) {
-    if (!_isPremium) {
-      PurchaseService.instance.presentPaywall(context);
-      return;
-    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -496,8 +480,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
           // 1. Top Header
           _WorkoutHeader(
-            showAction: !_isPremium,
-            onActionTap: () => PurchaseService.instance.presentPaywall(context),
+            showAction: false,
+            onActionTap: () {},
           ),
           const SizedBox(height: 16),
 
@@ -523,10 +507,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             // 3. Exercise Timeline Section Header (Collapsible)
             GestureDetector(
               onTap: () {
-                if (!_isPremium) {
-                  PurchaseService.instance.presentPaywall(context);
-                  return;
-                }
                 setState(() => _showAllExercises = !_showAllExercises);
               },
               behavior: HitTestBehavior.opaque,
@@ -635,10 +615,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       Center(
                         child: InkWell(
                           onTap: () {
-                            if (!_isPremium) {
-                              PurchaseService.instance.presentPaywall(context);
-                              return;
-                            }
                             setState(() => _showAllExercises = !_showAllExercises);
                           },
                           borderRadius: BorderRadius.circular(20),
@@ -702,14 +678,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             const SizedBox(height: 20),
 
             // 7. Weekly Progress Card
-            GestureDetector(
-              onTap: () {
-                if (!_isPremium) {
-                  PurchaseService.instance.presentPaywall(context);
-                }
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Container(
+            Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(18),
@@ -748,16 +717,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       completedDaysThisWeek: _completedDaysThisWeek,
                       isArabic: isArabic,
                       onDayTap: (detail) {
-                        if (!_isPremium) {
-                          PurchaseService.instance.presentPaywall(context);
-                          return;
-                        }
                         _showDayDetailSheet(detail, isArabic);
                       },
                     ),
                   ],
                 ),
-              ),
             ),
             const SizedBox(height: 32),
           ],
@@ -1939,10 +1903,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
     final profileState = context.watch<ProfileBloc>().state;
     final isPremium = profileState is ProfileLoaded && profileState.isPremium;
 
-    return GestureDetector(
-      onTap: !isPremium ? () => PurchaseService.instance.presentPaywall(context) : null,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
+    return Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -2041,7 +2002,9 @@ class _CoachChatCardState extends State<CoachChatCard> {
                     child: TextField(
                       controller: _controller,
                       readOnly: !isPremium,
-                      onTap: !isPremium ? () => PurchaseService.instance.presentPaywall(context) : null,
+                      onTap: !isPremium
+                          ? () => PurchaseService.instance.presentPaywall(context)
+                          : null,
                       enabled: !_isInterpreting,
                       style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1C2B1E)),
                       decoration: InputDecoration(
@@ -2085,7 +2048,6 @@ class _CoachChatCardState extends State<CoachChatCard> {
             ),
           ],
         ),
-      ),
     );
   }
 
