@@ -411,56 +411,224 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _showRoutineDetailsModal(bool isArabic) {
+    final weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    // Map breakdown items to theme-aligned colors
+    final splitColors = {
+      'Push': const Color(0xFF235A42),   // primary green
+      'Pull': const Color(0xFF3B7A5E),   // medium green
+      'Legs': const Color(0xFF5A9E80),   // light green
+      'Rest': const Color(0xFFB0C4B8),   // muted sage
+      'Upper': const Color(0xFF235A42),
+      'Lower': const Color(0xFF5A9E80),
+      'Full': const Color(0xFF3B7A5E),
+      'Cardio': const Color(0xFF059669),
+    };
+
+    Color _colorForLabel(String label) {
+      for (final entry in splitColors.entries) {
+        if (label.toLowerCase().contains(entry.key.toLowerCase())) {
+          return entry.value;
+        }
+      }
+      return const Color(0xFFB0C4B8);
+    }
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Handle bar
             Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD3E4D7),
-                  borderRadius: BorderRadius.circular(2),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD3E4D7),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            // Title
             Text(
               _activeRoutine?.name ?? 'Upper / Lower Split',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
+              style: GoogleFonts.outfit(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1E3A2B),
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDCF4E8),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Today: ${_currentSession?.todayDayName ?? "Training Day"}',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF235A42),
+                ),
+              ),
+            ),
+            const SizedBox(height: 22),
+
+            // Weekly split grid
             Text(
-              'Today: ${_currentSession?.todayDayName ?? "Training Day"}',
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF235A42)),
+              'WEEKLY SPLIT',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF8A9E8E),
+                letterSpacing: 1.2,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
+            if (_activeRoutine != null && _activeRoutine!.breakdown.isNotEmpty)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(
+                  _activeRoutine!.breakdown.length.clamp(0, 7),
+                  (i) {
+                    final label = _activeRoutine!.breakdown[i];
+                    final shortLabel = label.length > 4 ? label.substring(0, 4) : label;
+                    final isToday = label == (_currentSession?.todayDayName ?? '');
+                    final color = _colorForLabel(label);
+                    return Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: Column(
+                          children: [
+                            Text(
+                              weekDays[i],
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF8A9E8E),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isToday ? color : color.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(10),
+                                border: isToday
+                                    ? Border.all(color: color, width: 2)
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  shortLabel,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: isToday ? Colors.white : color,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 24),
+
+            // Breakdown list
+            Text(
+              'SPLIT BREAKDOWN',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF8A9E8E),
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 10),
             if (_activeRoutine != null)
-              ..._activeRoutine!.breakdown.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+              ..._activeRoutine!.breakdown.asMap().entries.map((entry) {
+                final i = entry.key;
+                final item = entry.value;
+                final color = _colorForLabel(item);
+                final isToday = item == (_currentSession?.todayDayName ?? '');
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isToday ? color.withOpacity(0.08) : const Color(0xFFF7FAF8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: isToday
+                          ? Border.all(color: color.withOpacity(0.4), width: 1.5)
+                          : null,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF235A42)),
-                        const SizedBox(width: 8),
-                        Text(item, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF1C2B1E))),
+                        Container(
+                          width: 4,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          '${weekDays[i.clamp(0, 6)]}  ·  $item',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                            color: const Color(0xFF1C2B1E),
+                          ),
+                        ),
+                        if (isToday) ...[
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'TODAY',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                color: color,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  )),
+                  ),
+                );
+              }),
           ],
         ),
       ),
     );
   }
+
 
   // ══════════════════════════════════════════════════════════════
   // HUB VIEW  (unconfigured + ready)
@@ -482,6 +650,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           _WorkoutHeader(
             showAction: false,
             onActionTap: () {},
+            streakDays: _streakDays,
           ),
           const SizedBox(height: 16),
 
@@ -500,6 +669,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               routineName: _activeRoutine?.name ?? 'Upper / Lower Split',
               focusArea: _currentSession?.todayDayName ?? 'Lower (Volume)',
               exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
+              completedDays: _completedDaysThisWeek,
               onTap: () => _showRoutineDetailsModal(isArabic),
             ),
             const SizedBox(height: 22),
@@ -2790,10 +2960,12 @@ class WeeklyCalendarRow extends StatelessWidget {
 class _WorkoutHeader extends StatelessWidget {
   final VoidCallback onActionTap;
   final bool showAction;
+  final int streakDays;
 
   const _WorkoutHeader({
     required this.onActionTap,
     this.showAction = true,
+    this.streakDays = 0,
   });
 
   @override
@@ -2827,7 +2999,31 @@ class _WorkoutHeader extends StatelessWidget {
             ),
           ],
         ),
-        if (showAction)
+        if (streakDays > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3DC),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFFD166).withOpacity(0.6), width: 1.2),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🔥', style: TextStyle(fontSize: 13)),
+                const SizedBox(width: 5),
+                Text(
+                  '$streakDays Day Streak',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFB07200),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (showAction)
           GestureDetector(
             onTap: onActionTap,
             child: Container(
@@ -2862,17 +3058,23 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   final String routineName;
   final String focusArea;
   final int exerciseCount;
+  final List<bool> completedDays;
   final VoidCallback onTap;
 
   const _WorkoutActiveSummaryBanner({
     required this.routineName,
     required this.focusArea,
     required this.exerciseCount,
+    required this.completedDays,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final doneCount = completedDays.where((d) => d).length;
+    final totalCount = completedDays.isEmpty ? 7 : completedDays.length;
+    final progress = totalCount > 0 ? doneCount / totalCount : 0.0;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -2883,68 +3085,117 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
         ),
         child: Stack(
           children: [
+            // Subtle decorative ring
             Positioned(
-              right: -20,
-              top: -20,
+              right: -18,
+              top: -18,
               child: Container(
-                width: 140,
-                height: 140,
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.35),
-                    width: 18,
+                    color: Colors.white.withOpacity(0.5),
+                    width: 16,
                   ),
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'ACTIVE SUMMARY',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF4A6B56),
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.bolt_rounded, color: Color(0xFF235A42), size: 22),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          routineName,
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ACTIVE SUMMARY',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF1E3A2B),
+                            color: const Color(0xFF4A6B56),
+                            letterSpacing: 1.0,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Today: $focusArea',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF235A42),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.bolt_rounded, color: Color(0xFF235A42), size: 22),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                routineName,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1E3A2B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Today: $focusArea',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF235A42),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$exerciseCount Exercises · 60 mins · Est. 450 kcal',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF3B5745),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$exerciseCount Exercises · 60 mins · Est. 450 kcal',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF3B5745),
+                  const SizedBox(width: 16),
+                  // Weekly progress arc
+                  SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 60,
+                          height: 60,
+                          child: CircularProgressIndicator(
+                            value: progress,
+                            strokeWidth: 5.5,
+                            backgroundColor: Colors.white.withOpacity(0.5),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$doneCount/$totalCount',
+                              style: GoogleFonts.outfit(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1E3A2B),
+                              ),
+                            ),
+                            Text(
+                              'days',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF4A6B56),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -3379,29 +3630,32 @@ class _WorkoutQuickActionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F6F2),
+            color: const Color(0xFF235A42),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: const Color(0xFFD3E4D7),
-              width: 1.2,
-            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x28235A42),
+                blurRadius: 14,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
                   child: Icon(
                     Icons.play_arrow_rounded,
-                    color: Color(0xFF235A42),
-                    size: 22,
+                    color: Colors.white,
+                    size: 24,
                   ),
                 ),
               ),
@@ -3413,9 +3667,9 @@ class _WorkoutQuickActionCard extends StatelessWidget {
                     Text(
                       'Start Workout Session',
                       style: GoogleFonts.outfit(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1E3A2B),
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -3423,11 +3677,16 @@ class _WorkoutQuickActionCard extends StatelessWidget {
                       'Tap to begin live tracking & set logging',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: const Color(0xFF6B7C6E),
+                        color: Colors.white.withOpacity(0.65),
                       ),
                     ),
                   ],
                 ),
+              ),
+              const Icon(
+                Icons.arrow_forward_ios_rounded,
+                color: Colors.white,
+                size: 14,
               ),
             ],
           ),
