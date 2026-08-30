@@ -197,6 +197,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _showPostWorkoutSummarySheet(String summaryNote) {
+    // Light palette matching the workout hub
+    const Color sheetBg      = Color(0xFFFFFFFF);
+    const Color sheetSurface = Color(0xFFF1F6F2);
+    const Color sheetBorder  = Color(0xFFD3E4D7);
+    const Color sheetPrimary = Color(0xFF235A42);
+    const Color sheetTextPri = Color(0xFF1C2B1E);
+    const Color sheetTextMut = Color(0xFF7A8B7B);
+    const Color sheetAmber   = Color(0xFFF59E0B);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -204,51 +213,74 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       builder: (ctx) {
         return Container(
           decoration: const BoxDecoration(
-            color: _C.bg,
+            color: sheetBg,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, -4)),
+            ],
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Handle bar
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: sheetBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Title row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _C.cyan.withValues(alpha: 0.15),
+                          color: sheetAmber.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.emoji_events_rounded, color: _C.amber, size: 22),
+                        child: const Icon(Icons.emoji_events_rounded, color: sheetAmber, size: 22),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       Text(
                         'Workout Complete! 🎉',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.outfit(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
-                          color: _C.textPri,
+                          color: sheetTextPri,
                         ),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: _C.textMut),
+                    icon: const Icon(Icons.close_rounded, color: sheetTextMut, size: 20),
                     onPressed: () => Navigator.pop(ctx),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
+
+              // Coach summary card
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _C.cyan.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1.2),
+                  color: sheetPrimary.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: sheetPrimary.withValues(alpha: 0.20), width: 1.2),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,10 +288,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _C.cyan.withValues(alpha: 0.15),
+                        color: sheetPrimary.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.psychology_rounded, color: _C.cyan, size: 20),
+                      child: const Icon(Icons.psychology_rounded, color: sheetPrimary, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -269,10 +301,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           Text(
                             'COACH SUMMARY',
                             style: GoogleFonts.inter(
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.w800,
-                              color: _C.cyan,
-                              letterSpacing: 0.8,
+                              color: sheetPrimary,
+                              letterSpacing: 1.0,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -280,8 +312,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             summaryNote,
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              height: 1.4,
-                              color: _C.textPri,
+                              height: 1.5,
+                              color: sheetTextPri,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -291,20 +323,27 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+
+              // Done button
               SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _C.cyan,
-                    foregroundColor: Colors.black,
+                    backgroundColor: sheetPrimary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(
                     'Done',
-                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
