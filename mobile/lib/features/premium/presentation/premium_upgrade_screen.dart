@@ -263,21 +263,21 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                         isSelected: _isAnnualSelected,
                         badgeText: 'BEST VALUE — SAVE 67% (8 MOS FREE)',
                         title: 'Annual Pass',
-                        subtitle: '\$1.66/mo · Billed \$19.99/year',
+                        subtitle: '4 Days Free · then \$19.99/year (\$1.66/mo)',
                         priceText: '\$19.99',
                         periodText: '/yr',
-                        comparisonText: '🏋️ 1 full year for less than 1 personal trainer session',
+                        comparisonText: '🏆 4 days free trial · billed \$19.99/yr after',
                         onTap: () => setState(() => _isAnnualSelected = true),
                       ),
                       const SizedBox(height: 12),
                       _buildPlanTileDark(
                         isAnnual: false,
                         isSelected: !_isAnnualSelected,
-                        badgeText: '🔥 NEW USER SPECIAL',
+                        badgeText: 'FLEXIBLE',
                         title: 'Monthly Pass',
-                        subtitle: '\$1.00 for 1st month · then \$4.99/mo',
-                        priceText: '\$1.00',
-                        periodText: '/1st mo',
+                        subtitle: '4 Days Free · then \$4.99/month',
+                        priceText: '\$4.99',
+                        periodText: '/mo',
                         comparisonText: 'Cancel anytime in Google Play',
                         onTap: () => setState(() => _isAnnualSelected = false),
                       ),
@@ -321,8 +321,8 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                                       )
                                     : Text(
                                         _isAnnualSelected
-                                            ? 'Unlock Annual — \$19.99/yr'
-                                            : 'Get 1st Month for \$1.00 — then \$4.99/mo',
+                                            ? 'Start 4-Day Free Trial — Then \$19.99/yr'
+                                            : 'Start 4-Day Free Trial — Then \$4.99/mo',
                                         style: const TextStyle(
                                           fontSize: 17,
                                           fontWeight: FontWeight.bold,
@@ -334,8 +334,8 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
 
                       Text(
                         _isAnnualSelected
-                            ? 'Billed \$24.99 annually. Cancel anytime.'
-                            : 'Billed \$4.99 monthly. Cancel anytime.',
+                            ? '4 days free, then \$19.99 billed annually (\$1.66/mo). Cancel anytime.'
+                            : '4 days free, then \$4.99 billed monthly. Cancel anytime.',
                         style: const TextStyle(
                           color: Color(0xFF5D616B),
                           fontSize: 12,
