@@ -257,8 +257,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       Text(
                         'Workout Complete! 🎉',
                         style: GoogleFonts.outfit(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
                           color: sheetTextPri,
                         ),
                       ),
@@ -301,20 +302,20 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           Text(
                             'COACH SUMMARY',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
                               color: sheetPrimary,
-                              letterSpacing: 1.0,
+                              letterSpacing: 0.8,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             summaryNote,
                             style: GoogleFonts.inter(
-                              fontSize: 13,
-                              height: 1.5,
+                              fontSize: 13.5,
+                              height: 1.45,
                               color: sheetTextPri,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ],
@@ -341,7 +342,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     'Done',
                     style: GoogleFonts.inter(
                       fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
                       color: Colors.white,
                     ),
                   ),
