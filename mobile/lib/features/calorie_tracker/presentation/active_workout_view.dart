@@ -502,12 +502,8 @@ class _ExerciseCardState extends State<_ExerciseCard> {
   }
 
   void _disposeControllers() {
-    for (final c in _weightCtrl) {
-      c.dispose();
-    }
-    for (final c in _repsCtrl) {
-      c.dispose();
-    }
+    for (final c in _weightCtrl) c.dispose();
+    for (final c in _repsCtrl) c.dispose();
   }
 
   @override
@@ -554,8 +550,40 @@ class _ExerciseCardState extends State<_ExerciseCard> {
       );
       widget.onSetCompleted();
     }
-    
     HapticFeedback.lightImpact();
+  }
+
+  /// Opens the bottom-sheet numpad for weight or reps entry.
+  Future<void> _openNumpad({
+    required int index,
+    required bool isWeight,
+  }) async {
+    if (widget.log.sets[index].isLogged) return;
+    final s = widget.log.sets[index];
+    final ctrl = isWeight ? _weightCtrl[index] : _repsCtrl[index];
+    final lastVal = isWeight
+        ? (s.loggedWeightKg ?? s.targetWeightKg)
+        : (s.loggedReps ?? s.targetReps)?.toDouble();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _ValueNumpad(
+        initialValue: ctrl.text.isNotEmpty ? ctrl.text : '',
+        hintValue: lastVal,
+        isWeight: isWeight,
+        label: isWeight ? 'Weight (kg)' : 'Reps',
+        quickAdds: isWeight
+            ? const [2.5, 5.0, 10.0]
+            : const [1.0, 2.0, 5.0],
+        onConfirm: (value) {
+          setState(() {
+            ctrl.text = value;
+          });
+        },
+      ),
+    );
   }
 
   Future<void> _showSwapAlternativesSheet(BuildContext context, WorkoutLog log) async {
@@ -649,34 +677,11 @@ class _ExerciseCardState extends State<_ExerciseCard> {
               style: GoogleFonts.inter(fontSize: 11, color: _C.textMut, fontWeight: FontWeight.w500),
             ),
           ],
-          const SizedBox(height: 22),
-
-          // Table header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(children: [
-              Expanded(flex: 3,
-                  child: Text('SET',
-                      style: GoogleFonts.inter(
-                          fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-              Expanded(flex: 4,
-                  child: Text('WEIGHT (kg)',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                          fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-              Expanded(flex: 4,
-                  child: Text('REPS',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                          fontSize: 10, fontWeight: FontWeight.w700, color: _C.textMut))),
-              const SizedBox(width: 40),
-            ]),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
 
           // Dynamic set rows
           ...List.generate(log.sets.length, (i) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 10),
             child: _buildSetRow(i, log.sets[i]),
           )),
         ],
@@ -688,148 +693,555 @@ class _ExerciseCardState extends State<_ExerciseCard> {
     final locked = s.isLogged;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
       decoration: BoxDecoration(
-        color: locked ? _C.cyan.withValues(alpha: 0.12) : _C.card,
-        borderRadius: BorderRadius.circular(16),
+        color: locked ? _C.cyan.withValues(alpha: 0.10) : _C.card,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: locked ? _C.cyan : _C.borderMid.withValues(alpha: 0.7),
-          width: locked ? 1.6 : 1.0,
+          color: locked ? _C.cyan.withValues(alpha: 0.55) : _C.borderMid.withValues(alpha: 0.7),
+          width: locked ? 1.8 : 1.0,
         ),
-      ),
-      child: Row(children: [
-        // Set label column
-        Expanded(flex: 3, child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              if (s.label == 'Top Set') ...[
-                const Icon(Icons.star_rounded, color: _C.amber, size: 14),
-                const SizedBox(width: 4),
-              ],
-              Text('Set ${s.setIndex}',
-                  style: GoogleFonts.inter(
-                      fontSize: 13, fontWeight: FontWeight.w700,
-                      color: s.label == 'Top Set' ? _C.amber : (locked ? _C.textPri : _C.textSec))),
-            ]),
-            const SizedBox(height: 2),
-            Text(s.targetDisplayLabel,
-                style: GoogleFonts.inter(fontSize: 10, color: _C.textMut)),
-          ],
-        )),
-
-        // Weight input with +/- stepper buttons
-        Expanded(flex: 4, child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: _buildStepperField(
-            controller: _weightCtrl[index],
-            locked: locked,
-            hintText: s.targetWeightKg?.toStringAsFixed(0) ?? '—',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            formatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
-            onMinus: () => _stepWeight(index, -2.5),
-            onPlus: () => _stepWeight(index, 2.5),
-          ),
-        )),
-
-        // Reps input with +/- stepper buttons
-        Expanded(flex: 4, child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: _buildStepperField(
-            controller: _repsCtrl[index],
-            locked: locked,
-            hintText: s.targetReps?.toString() ?? '—',
-            keyboardType: TextInputType.number,
-            formatters: [FilteringTextInputFormatter.digitsOnly],
-            onMinus: () => _stepReps(index, -1),
-            onPlus: () => _stepReps(index, 1),
-          ),
-        )),
-
-        // Checkmark lock button
-        SizedBox(width: 40, child: IconButton(
-          icon: Icon(
-            locked ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
-            color: locked ? _C.success : _C.textMut,
-            size: 26,
-          ),
-          onPressed: () => _logSet(index),
-          padding: EdgeInsets.zero,
-        )),
-      ]),
-    );
-  }
-
-  Widget _buildStepperField({
-    required TextEditingController controller,
-    required bool locked,
-    required String hintText,
-    required TextInputType keyboardType,
-    required List<TextInputFormatter> formatters,
-    required VoidCallback onMinus,
-    required VoidCallback onPlus,
-  }) {
-    return Container(
-      height: 38,
-      decoration: BoxDecoration(
-        color: locked ? _C.cardElev.withValues(alpha: 0.5) : _C.cardElev,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: locked ? _C.cyan.withValues(alpha: 0.4) : _C.borderMid,
-          width: locked ? 1.2 : 1.0,
-        ),
+        boxShadow: locked
+            ? [BoxShadow(color: _C.cyan.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))]
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 1))],
       ),
       child: Row(
         children: [
-          if (!locked)
-            GestureDetector(
-              onTap: onMinus,
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
-                width: 24,
-                height: 38,
-                child: Center(
-                  child: Icon(Icons.remove_rounded, size: 14, color: _C.cyan),
-                ),
-              ),
+          // ── Set label ──────────────────────────
+          SizedBox(
+            width: 64,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  if (s.label == 'Top Set') ...[
+                    const Icon(Icons.star_rounded, color: _C.amber, size: 13),
+                    const SizedBox(width: 3),
+                  ],
+                  Text('Set ${s.setIndex}',
+                      style: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.w800,
+                          color: s.label == 'Top Set' ? _C.amber : (locked ? _C.cyan : _C.textSec))),
+                ]),
+                const SizedBox(height: 2),
+                Text(s.targetDisplayLabel,
+                    style: GoogleFonts.inter(fontSize: 9.5, color: _C.textMut)),
+              ],
             ),
+          ),
+
+          // ── Weight chip ────────────────────────
           Expanded(
-            child: TextFormField(
-              controller: controller,
-              enabled: !locked,
-              keyboardType: keyboardType,
-              textAlign: TextAlign.center,
-              inputFormatters: formatters,
-              onChanged: (_) => setState(() {}),
-              style: GoogleFonts.inter(
-                fontSize: 13.5,
-                fontWeight: FontWeight.w700,
-                color: locked ? _C.textMut : _C.textPri,
+            child: _SwipeValueChip(
+              controller: _weightCtrl[index],
+              locked: locked,
+              hint: s.targetWeightKg != null
+                  ? '${s.targetWeightKg!.toStringAsFixed(s.targetWeightKg! % 1 == 0 ? 0 : 1)} kg'
+                  : '— kg',
+              unit: 'kg',
+              stepSmall: 2.5,
+              stepLarge: 5.0,
+              isDecimal: true,
+              onTap: () => _openNumpad(index: index, isWeight: true),
+              onStep: (delta) => _stepWeight(index, delta),
+            ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // ── Reps chip ──────────────────────────
+          Expanded(
+            child: _SwipeValueChip(
+              controller: _repsCtrl[index],
+              locked: locked,
+              hint: s.targetReps?.toString() ?? '—',
+              unit: 'reps',
+              stepSmall: 1.0,
+              stepLarge: 2.0,
+              isDecimal: false,
+              onTap: () => _openNumpad(index: index, isWeight: false),
+              onStep: (delta) => _stepReps(index, delta.toInt()),
+            ),
+          ),
+
+          const SizedBox(width: 6),
+
+          // ── Complete button ───────────────────
+          GestureDetector(
+            onTap: () => _logSet(index),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: locked ? _C.cyan : _C.cardElev,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: locked ? _C.cyan : _C.borderMid,
+                  width: 1.5,
+                ),
+                boxShadow: locked
+                    ? [BoxShadow(color: _C.cyan.withValues(alpha: 0.30), blurRadius: 10, offset: const Offset(0, 3))]
+                    : [],
               ),
-              decoration: InputDecoration(
-                hintText: hintText,
-                hintStyle: GoogleFonts.inter(color: _C.textMut.withValues(alpha: 0.5), fontSize: 12),
-                contentPadding: EdgeInsets.zero,
-                isDense: true,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
+              child: Icon(
+                locked ? Icons.check_rounded : Icons.check_rounded,
+                color: locked ? Colors.white : _C.textMut,
+                size: 20,
               ),
             ),
           ),
-          if (!locked)
-            GestureDetector(
-              onTap: onPlus,
-              behavior: HitTestBehavior.opaque,
-              child: const SizedBox(
-                width: 24,
-                height: 38,
-                child: Center(
-                  child: Icon(Icons.add_rounded, size: 14, color: _C.cyan),
+        ],
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// _SwipeValueChip — tappable big chip with swipe-to-adjust
+// ═══════════════════════════════════════════════════════════════
+
+class _SwipeValueChip extends StatefulWidget {
+  final TextEditingController controller;
+  final bool locked;
+  final String hint;
+  final String unit;
+  final double stepSmall;
+  final double stepLarge;
+  final bool isDecimal;
+  final VoidCallback onTap;
+  final void Function(double delta) onStep;
+
+  const _SwipeValueChip({
+    required this.controller,
+    required this.locked,
+    required this.hint,
+    required this.unit,
+    required this.stepSmall,
+    required this.stepLarge,
+    required this.isDecimal,
+    required this.onTap,
+    required this.onStep,
+  });
+
+  @override
+  State<_SwipeValueChip> createState() => _SwipeValueChipState();
+}
+
+class _SwipeValueChipState extends State<_SwipeValueChip> {
+  double _swipeStartX = 0;
+  double _accumulated = 0;
+  static const double _pixelsPerStep = 14.0;
+
+  String get _displayText {
+    final t = widget.controller.text.trim();
+    if (t.isEmpty) return widget.hint;
+    return widget.isDecimal
+        ? (double.tryParse(t) != null
+            ? (double.parse(t) % 1 == 0
+                ? '${double.parse(t).toInt()} ${widget.unit}'
+                : '${double.parse(t).toStringAsFixed(1)} ${widget.unit}')
+            : t)
+        : '$t ${widget.unit}';
+  }
+
+  bool get _hasValue => widget.controller.text.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    final locked = widget.locked;
+    return GestureDetector(
+      onTap: widget.onTap,
+      onHorizontalDragStart: locked
+          ? null
+          : (d) {
+              _swipeStartX = d.globalPosition.dx;
+              _accumulated = 0;
+            },
+      onHorizontalDragUpdate: locked
+          ? null
+          : (d) {
+              final diff = d.globalPosition.dx - _swipeStartX;
+              _accumulated += diff;
+              _swipeStartX = d.globalPosition.dx;
+              while (_accumulated >= _pixelsPerStep) {
+                widget.onStep(widget.stepSmall);
+                _accumulated -= _pixelsPerStep;
+              }
+              while (_accumulated <= -_pixelsPerStep) {
+                widget.onStep(-widget.stepSmall);
+                _accumulated += _pixelsPerStep;
+              }
+            },
+      onHorizontalDragEnd: locked ? null : (_) => _accumulated = 0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 52,
+        decoration: BoxDecoration(
+          color: locked
+              ? _C.cyan.withValues(alpha: 0.08)
+              : (_hasValue ? _C.cardElev : _C.surface),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: locked
+                ? _C.cyan.withValues(alpha: 0.35)
+                : (_hasValue ? _C.borderMid : _C.border),
+            width: 1.2,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _hasValue ? _displayText : widget.hint,
+              style: GoogleFonts.inter(
+                fontSize: _hasValue ? 15 : 13,
+                fontWeight: _hasValue ? FontWeight.w800 : FontWeight.w500,
+                color: _hasValue
+                    ? (locked ? _C.cyan : _C.textPri)
+                    : _C.textMut.withValues(alpha: 0.6),
+              ),
+            ),
+            if (!locked) ...[
+              const SizedBox(height: 2),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.chevron_left_rounded, size: 12, color: _C.textMut.withValues(alpha: 0.5)),
+                  Text(
+                    'swipe',
+                    style: GoogleFonts.inter(
+                      fontSize: 8,
+                      color: _C.textMut.withValues(alpha: 0.45),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, size: 12, color: _C.textMut.withValues(alpha: 0.5)),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// _ValueNumpad — Full bottom-sheet numpad for weight / reps entry
+// ═══════════════════════════════════════════════════════════════
+
+class _ValueNumpad extends StatefulWidget {
+  final String initialValue;
+  final double? hintValue;
+  final bool isWeight;
+  final String label;
+  final List<double> quickAdds;
+  final void Function(String value) onConfirm;
+
+  const _ValueNumpad({
+    required this.initialValue,
+    required this.hintValue,
+    required this.isWeight,
+    required this.label,
+    required this.quickAdds,
+    required this.onConfirm,
+  });
+
+  @override
+  State<_ValueNumpad> createState() => _ValueNumpadState();
+}
+
+class _ValueNumpadState extends State<_ValueNumpad> {
+  late String _input;
+  bool _hasDecimal = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _input = widget.initialValue;
+    _hasDecimal = _input.contains('.');
+  }
+
+  String get _displayInput {
+    if (_input.isEmpty) {
+      if (widget.hintValue != null) {
+        final v = widget.hintValue!;
+        return v % 1 == 0 ? v.toInt().toString() : v.toStringAsFixed(1);
+      }
+      return '0';
+    }
+    return _input;
+  }
+
+  void _append(String digit) {
+    setState(() {
+      if (digit == '.' && _hasDecimal) return;
+      if (digit == '.') _hasDecimal = true;
+      if (_input.length >= 6) return;
+      _input += digit;
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  void _delete() {
+    setState(() {
+      if (_input.isEmpty) return;
+      if (_input[_input.length - 1] == '.') _hasDecimal = false;
+      _input = _input.substring(0, _input.length - 1);
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  void _clear() {
+    setState(() {
+      _input = '';
+      _hasDecimal = false;
+    });
+    HapticFeedback.mediumImpact();
+  }
+
+  void _quickAdd(double amount) {
+    final currentStr = _input.isEmpty ? (_displayInput) : _input;
+    double current = double.tryParse(currentStr) ?? 0;
+    double next = (current + amount).clamp(0, widget.isWeight ? 500 : 100);
+    setState(() {
+      if (widget.isWeight) {
+        _hasDecimal = next % 1 != 0;
+        _input = next % 1 == 0 ? next.toInt().toString() : next.toStringAsFixed(1);
+      } else {
+        _input = next.toInt().toString();
+        _hasDecimal = false;
+      }
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  void _useLast() {
+    if (widget.hintValue == null) return;
+    final v = widget.hintValue!;
+    setState(() {
+      _hasDecimal = v % 1 != 0;
+      _input = v % 1 == 0 ? v.toInt().toString() : v.toStringAsFixed(1);
+    });
+    HapticFeedback.mediumImpact();
+  }
+
+  void _confirm() {
+    final val = _input.isNotEmpty ? _input : _displayInput;
+    widget.onConfirm(val);
+    Navigator.pop(context);
+    HapticFeedback.lightImpact();
+  }
+
+  Widget _numKey(String label, {Color? labelColor, FontWeight? weight}) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => label == '⌫' ? _delete() : (label == 'C' ? _clear() : _append(label)),
+        child: Container(
+          margin: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: label == 'C'
+                ? _C.error.withValues(alpha: 0.08)
+                : _C.cardElev,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: label == 'C' ? _C.error.withValues(alpha: 0.25) : _C.border,
+              width: 1.0,
+            ),
+          ),
+          child: Center(
+            child: label == '⌫'
+                ? const Icon(Icons.backspace_rounded, size: 20, color: _C.textSec)
+                : Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: weight ?? FontWeight.w600,
+                      color: labelColor ?? _C.textPri,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: _C.card,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomPadding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          const SizedBox(height: 12),
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _C.borderMid,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Label
+          Text(
+            widget.label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _C.textMut,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Big value display
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              color: _C.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: _C.borderMid, width: 1.2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _displayInput,
+                  style: GoogleFonts.inter(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w900,
+                    color: _input.isNotEmpty ? _C.textPri : _C.textMut.withValues(alpha: 0.4),
+                  ),
+                ),
+                // Use last button
+                if (widget.hintValue != null)
+                  GestureDetector(
+                    onTap: _useLast,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _C.cyan.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _C.cyan.withValues(alpha: 0.30), width: 1.0),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.history_rounded, size: 13, color: _C.cyan),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Use last',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: _C.cyan,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Quick-add chips
+          Row(
+            children: widget.quickAdds.map((amount) {
+              final label = amount % 1 == 0
+                  ? '+${amount.toInt()}'
+                  : '+$amount';
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: GestureDetector(
+                    onTap: () => _quickAdd(amount),
+                    child: Container(
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: _C.cyan.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1.0),
+                      ),
+                      child: Center(
+                        child: Text(
+                          label,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: _C.cyan,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 14),
+
+          // Numpad grid
+          SizedBox(
+            height: 52 * 4,
+            child: Column(
+              children: [
+                Expanded(child: Row(children: [
+                  _numKey('1'), _numKey('2'), _numKey('3'),
+                ])),
+                Expanded(child: Row(children: [
+                  _numKey('4'), _numKey('5'), _numKey('6'),
+                ])),
+                Expanded(child: Row(children: [
+                  _numKey('7'), _numKey('8'), _numKey('9'),
+                ])),
+                Expanded(child: Row(children: [
+                  if (widget.isWeight) _numKey('.') else _numKey('C', labelColor: _C.error),
+                  _numKey('0'),
+                  _numKey('⌫'),
+                ])),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Confirm button
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _confirm,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _C.cyan,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Text(
+                'Confirm',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
