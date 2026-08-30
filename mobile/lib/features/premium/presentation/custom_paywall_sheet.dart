@@ -122,7 +122,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
   Widget build(BuildContext context) {
     final package = _offerings?.current?.monthly;
     final mediaQuery = MediaQuery.of(context);
-    final displayPrice = package?.storeProduct.priceString ?? '\$1.00';
+    final displayPrice = package?.storeProduct.priceString ?? '\$4.99';
 
     return Container(
       constraints: BoxConstraints(
@@ -182,9 +182,9 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                           color: const Color(0xFF235A42),
                           width: 2,
                         ),
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
-                            color: const Color(0x15235A42),
+                            color: Color(0x15235A42),
                             blurRadius: 18,
                             spreadRadius: 2,
                           ),
@@ -248,21 +248,21 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                       isSelected: _isAnnualSelected,
                       badgeText: 'BEST VALUE — SAVE 67% (8 MOS FREE)',
                       title: 'Annual Pass',
-                      subtitle: '\$1.66/mo · Billed \$19.99/year',
+                      subtitle: '4 Days Free · then \$19.99/year (\$1.66/mo)',
                       priceText: '\$19.99',
                       periodText: '/year',
-                      comparisonText: '🏋️ 1 full year for less than 1 personal trainer session',
+                      comparisonText: '🏆 4 days free trial · billed \$19.99/yr after',
                       onTap: () => setState(() => _isAnnualSelected = true),
                     ),
                     const SizedBox(height: 12),
                     _buildPlanOptionTile(
                       isAnnual: false,
                       isSelected: !_isAnnualSelected,
-                      badgeText: '🔥 NEW USER SPECIAL',
+                      badgeText: 'FLEXIBLE',
                       title: 'Monthly Pass',
-                      subtitle: '\$1.00 for 1st month · then \$4.99/mo',
-                      priceText: '\$1.00',
-                      periodText: '/1st mo',
+                      subtitle: '4 Days Free · then \$4.99/month',
+                      priceText: '\$4.99',
+                      periodText: '/mo',
                       comparisonText: 'Cancel anytime in Google Play',
                       onTap: () => setState(() => _isAnnualSelected = false),
                     ),
@@ -280,7 +280,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                             )
                           : ElevatedButton(
                               onPressed: _isUpgrading
-                                  ? null
+                                   ? null
                                   : () => _handleSubscribe(
                                         _isAnnualSelected
                                             ? (_offerings?.current?.annual ?? package)
@@ -305,8 +305,8 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                                     )
                                   : Text(
                                       _isAnnualSelected
-                                          ? 'Unlock Annual Pass — \$19.99/yr (\$1.66/mo)'
-                                          : 'Get 1st Month for \$1.00 — then \$4.99/mo',
+                                          ? 'Start 4-Day Free Trial — Then \$19.99/yr'
+                                          : 'Start 4-Day Free Trial — Then \$4.99/mo',
                                       style: GoogleFonts.inter(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w800,
@@ -318,8 +318,8 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     const SizedBox(height: 12),
                     Text(
                       _isAnnualSelected
-                          ? 'Billed \$19.99 annually. Cancel anytime.'
-                          : 'First month \$1.00, then \$4.99/month. Cancel anytime.',
+                          ? '4 days free, then \$19.99 billed annually (\$1.66/mo). Cancel anytime.'
+                          : '4 days free, then \$4.99 billed monthly. Cancel anytime.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF7A8B7B),
                         fontSize: 12,
