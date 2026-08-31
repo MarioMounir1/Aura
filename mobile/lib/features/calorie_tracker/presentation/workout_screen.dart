@@ -682,8 +682,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       color: const Color(0xFFF6F8F5),
       child: ListView(
         key: const ValueKey('hub'),
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
         children: [
           const SizedBox(height: 4),
 
