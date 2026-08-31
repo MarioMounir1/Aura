@@ -27,6 +27,7 @@ import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
 import '../data/services/barcode_service.dart';
 import 'barcode_confirmation_sheet.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../../core/widgets/app_metric_ring.dart';
@@ -387,11 +388,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
       }
     } catch (e) {
       if (!mounted) return;
+      final cleanMsg = AppErrorHandler.getUserMessage(e, 'Could not analyze image. Please try another photo.');
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = cleanMsg;
         _layoutState  = LayoutState.idle;
       });
-      _showErrorSnackbar('Scan failed: $e');
+      _showErrorSnackbar(cleanMsg);
     } finally {
       _isPickingImage = false;
     }
@@ -561,7 +563,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             logs.insert(insertAt, meal);
             _recalcTotals();
           });
-          _showErrorSnackbar('Delete failed: $e');
+          _showErrorSnackbar(AppErrorHandler.getUserMessage(e, 'Unable to delete meal log.'));
         }
       }
     });
@@ -570,19 +572,28 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   void _showErrorSnackbar(String msg) {
     if (!mounted) return;
+    final cleanMsg = AppErrorHandler.getUserMessage(msg);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF1F1F1F),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: const Color(0xFF1E2620),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF35453A), width: 1),
+        ),
         content: Row(
           children: [
-            const Icon(Icons.error_outline, color: DashboardThemeColors.accentRed, size: 18),
+            const Icon(Icons.info_outline_rounded, color: DashboardThemeColors.accentRed, size: 18),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(msg,
-                  style: GoogleFonts.inter(
-                      fontSize: 12, color: DashboardThemeColors.textPrimary)),
+              child: Text(
+                cleanMsg,
+                style: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                  color: DashboardThemeColors.textPrimary,
+                ),
+              ),
             ),
           ],
         ),
@@ -704,7 +715,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             ),
             const SizedBox(height: 12),
 
-            // ── 3 Secondary Pills ─────────────────────────────────
+            // ── 2 Secondary Pills ─────────────────────────────────
             Row(
               children: [
                 Expanded(
@@ -715,22 +726,13 @@ class _MealsDashboardState extends State<MealsDashboard> {
                     onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.gallery); },
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
                     icon: Icons.qr_code_scanner_rounded,
                     label: 'Barcode',
                     onTap: () { Navigator.pop(ctx); _scanBarcode(); },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildSheetPill(
-                    ctx: ctx,
-                    icon: Icons.search_rounded,
-                    label: 'Search',
-                    onTap: () { Navigator.pop(ctx); Navigator.of(context).pushNamed('/foods/search'); },
                   ),
                 ),
               ],
@@ -2674,70 +2676,7 @@ class _SmartScannerSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
 
-        // 2. Search Food Flat Row
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onSearch,
-            borderRadius: BorderRadius.circular(18),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.surfaceVariant,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: theme.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.search_rounded, color: AppColors.success, size: 17),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Search food',
-                          style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: theme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Global search across millions of foods',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: theme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // 3. Scan Barcode Gradient Row
+        // 2. Scan Barcode Gradient Row
         Material(
           color: Colors.transparent,
           child: InkWell(
@@ -2777,7 +2716,7 @@ class _SmartScannerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Instant nutrition Â· Unlimited',
+                          'Instant nutrition · Unlimited',
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -2880,18 +2819,6 @@ class _FeedSection extends StatelessWidget {
                 ],
               ),
             ),
-            TextButton.icon(
-              onPressed: () => Navigator.of(context).pushNamed('/foods/search'),
-              icon: const Icon(Icons.search_rounded, size: 16, color: AppColors.cyan),
-              label: Text(
-                'Search',
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.cyan,
-                ),
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -2930,7 +2857,7 @@ class _FeedSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Snap a photo or search to log your breakfast, lunch, or dinner.',
+                  'Snap a photo or scan barcode to log your breakfast, lunch, or dinner.',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 12,
@@ -3103,7 +3030,7 @@ class _MealCategorySlotCard extends StatelessWidget {
 
           // Quick + Add Food Button
           InkWell(
-            onTap: () => Navigator.of(context).pushNamed('/foods/search'),
+            onTap: onSnap,
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(20),
               bottomRight: Radius.circular(20),
@@ -4640,7 +4567,7 @@ class _QuickLogCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Snap a photo or search foods',
+                      'Snap a photo or scan barcode',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         color: const Color(0xFF6B7C6E),
