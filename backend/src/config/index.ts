@@ -32,17 +32,25 @@ export const BATCH_LIMITS = {
   timeoutMs: 300000,
 };
 
-export const OLLAMA_CONFIG = {
-  baseUrl: process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
-  model: process.env.OLLAMA_MODEL ?? "llama3",
-  visionModel: process.env.OLLAMA_VISION_MODEL ?? "llava",
-  temperature: 0.1,
-};
-
 export const AI_SCAN_QUOTA = {
   freeLimit: 2,
   premiumLimit: 10,
+  free: {
+    camera: 2,
+    gallery: 2,
+    barcode: 2,
+  },
+  premium: {
+    camera: 10,
+    gallery: 10,
+    barcode: 10,
+  },
 };
+
+export function getScanLimit(scanType: "camera" | "gallery" | "barcode" | string, isPremium: boolean): number {
+  const tier = isPremium ? AI_SCAN_QUOTA.premium : AI_SCAN_QUOTA.free;
+  return (tier as Record<string, number>)[scanType] ?? (isPremium ? 10 : 2);
+}
 
 export function getAiScanLimit(isPremium: boolean): number {
   return isPremium ? AI_SCAN_QUOTA.premiumLimit : AI_SCAN_QUOTA.freeLimit;
