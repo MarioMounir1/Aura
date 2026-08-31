@@ -7,7 +7,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/network/api_client.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
-import '../../calorie_tracker/presentation/bloc/workout_bloc.dart';
+import '../../profile/presentation/bloc/profile_event.dart';
 import '../../../../core/error/error_handler.dart';
 import '../data/services/purchase_service.dart';
 
