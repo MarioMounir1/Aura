@@ -256,7 +256,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       const SizedBox(width: 12),
                       Text(
                         'Workout Complete! 🎉',
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.inter(
                           fontSize: 19,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.2,
@@ -505,7 +505,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             // Title
             Text(
               _activeRoutine?.name ?? 'Upper / Lower Split',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF1E3A2B),
@@ -910,7 +910,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       children: [
                         Text(
                           isArabic ? 'تقدمك' : 'Your Progress',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF1C2B1E),
@@ -2155,7 +2155,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
                       children: [
                         Text(
                           isArabic ? 'مدربك الشخصي' : 'Your Coach',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF235A42),
@@ -3031,7 +3031,7 @@ class _WorkoutHeader extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               'Workout Hub',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF1C2B1E),
@@ -3167,7 +3167,7 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 routineName,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF1E3A2B),
@@ -3220,7 +3220,7 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
                           children: [
                             Text(
                               '$doneCount/$totalCount',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.inter(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF1E3A2B),
@@ -3330,12 +3330,14 @@ void _showAIExerciseGuideModal(BuildContext context, String title, String target
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
                         color: const Color(0xFF1C2B1E),
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       targetSetsReps,
                       style: GoogleFonts.inter(
@@ -3352,7 +3354,7 @@ void _showAIExerciseGuideModal(BuildContext context, String title, String target
           const SizedBox(height: 18),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: const Color(0xFFEAF5EE),
               borderRadius: BorderRadius.circular(16),
@@ -3367,7 +3369,7 @@ void _showAIExerciseGuideModal(BuildContext context, String title, String target
                     isArabic ? 'العضلة المستهدفة: $muscleGroup' : 'Primary Target: $muscleGroup',
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: const Color(0xFF1C2B1E),
                     ),
                   ),
@@ -3378,15 +3380,15 @@ void _showAIExerciseGuideModal(BuildContext context, String title, String target
           const SizedBox(height: 16),
           Text(
             isArabic ? '💡 دليل الأداء الفني' : '💡 Execution & Technique Guide',
-            style: GoogleFonts.outfit(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
+            style: GoogleFonts.inter(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
               color: const Color(0xFF1C2B1E),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildGuideStep('1', isArabic ? 'الإعداد والوضعية' : 'Setup & Position', setupGuide),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _buildGuideStep('2', isArabic ? 'طريقة الحركة' : 'Movement Drive', executionGuide),
           const SizedBox(height: 14),
           Container(
@@ -3406,9 +3408,9 @@ void _showAIExerciseGuideModal(BuildContext context, String title, String target
                     proTip,
                     style: GoogleFonts.inter(
                       fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF3B5745),
-                      height: 1.35,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF2C4A36),
+                      height: 1.45,
                     ),
                   ),
                 ),
@@ -3418,20 +3420,21 @@ void _showAIExerciseGuideModal(BuildContext context, String title, String target
           const SizedBox(height: 22),
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 50,
             child: ElevatedButton(
               onPressed: () => Navigator.pop(ctx),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF235A42),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 0,
               ),
               child: Text(
                 isArabic ? 'تم، شكراً كوتش!' : 'Got it, Coach!',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFFDCEEE3),
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -3456,7 +3459,7 @@ Widget _buildGuideStep(String step, String title, String body) {
         child: Center(
           child: Text(
             step,
-            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
           ),
         ),
       ),
@@ -3467,12 +3470,12 @@ Widget _buildGuideStep(String step, String title, String body) {
           children: [
             Text(
               title,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1C2B1E)),
+              style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFF1C2B1E)),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 3),
             Text(
               body,
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D), height: 1.35),
+              style: GoogleFonts.inter(fontSize: 12.5, color: const Color(0xFF5A6E5D), height: 1.4),
             ),
           ],
         ),
@@ -3589,7 +3592,7 @@ class _ExerciseTimelineTile extends StatelessWidget {
                                       title,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.outfit(
+                                      style: GoogleFonts.inter(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                         color: const Color(0xFF1C2B1E),
@@ -3664,33 +3667,50 @@ class _WorkoutQuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color brandPrimary = Color(0xFF235A42);
+    const Color titleColor = Color(0xFF1E3A2B);
+    const Color subtitleColor = Color(0xFF5A6E5D);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
+        splashColor: brandPrimary.withOpacity(0.08),
+        highlightColor: brandPrimary.withOpacity(0.04),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFF235A42),
+            color: const Color(0xFFEAF5EE).withOpacity(0.65),
             borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
+            border: Border.all(
+              color: brandPrimary.withOpacity(0.18),
+              width: 1.2,
+            ),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x28235A42),
-                blurRadius: 14,
-                offset: Offset(0, 6),
+                color: brandPrimary.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: brandPrimary,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: brandPrimary.withOpacity(0.24),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Center(
                   child: Icon(
@@ -3707,27 +3727,39 @@ class _WorkoutQuickActionCard extends StatelessWidget {
                   children: [
                     Text(
                       'Start Workout Session',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: titleColor,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Tap to begin live tracking & set logging',
                       style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Colors.white.withOpacity(0.65),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: subtitleColor,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Colors.white,
-                size: 14,
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: brandPrimary.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.arrow_forward_rounded,
+                    color: brandPrimary,
+                    size: 15,
+                  ),
+                ),
               ),
             ],
           ),
