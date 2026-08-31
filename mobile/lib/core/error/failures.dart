@@ -15,27 +15,42 @@ abstract class Failure extends Equatable {
 
 /// Network or API errors
 class ServerFailure extends Failure {
-  const ServerFailure({required super.message, super.code});
+  const ServerFailure({
+    super.message = 'Unable to connect to server. Please try again.',
+    super.code = 'SERVER_ERROR',
+  });
 }
 
 /// No internet / connection issues
 class NetworkFailure extends Failure {
-  const NetworkFailure({super.message = 'No internet connection. Please check your network.', super.code = 'NETWORK_ERROR'});
+  const NetworkFailure({
+    super.message = 'No internet connection. Please check your network.',
+    super.code = 'NETWORK_ERROR',
+  });
 }
 
 /// Local cache / Hive errors
 class CacheFailure extends Failure {
-  const CacheFailure({required super.message, super.code = 'CACHE_ERROR'});
+  const CacheFailure({
+    super.message = 'Unable to access offline data. Please try again.',
+    super.code = 'CACHE_ERROR',
+  });
 }
 
 /// Auth token missing/expired
 class AuthFailure extends Failure {
-  const AuthFailure({super.message = 'Authentication required. Please log in.', super.code = 'AUTH_ERROR'});
+  const AuthFailure({
+    super.message = 'Authentication required. Please log in.',
+    super.code = 'AUTH_ERROR',
+  });
 }
 
 /// Validation failure (client-side)
 class ValidationFailure extends Failure {
-  const ValidationFailure({required super.message, super.code = 'VALIDATION_ERROR'});
+  const ValidationFailure({
+    super.message = 'Please check your inputs and try again.',
+    super.code = 'VALIDATION_ERROR',
+  });
 }
 
 /// Rate limit exceeded
