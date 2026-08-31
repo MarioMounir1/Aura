@@ -680,265 +680,268 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     return Container(
       color: const Color(0xFFF6F8F5),
-      child: ListView(
+      child: SingleChildScrollView(
         key: const ValueKey('hub'),
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 120),
-        children: [
-          const SizedBox(height: 4),
-
-          // 1. Top Header
-          _WorkoutHeader(
-            showAction: false,
-            onActionTap: () {},
-            streakDays: _streakDays,
-          ),
-          const SizedBox(height: 16),
-
-          // ── UNCONFIGURED: Step-by-Step Wizard & AI Review ──────────
-          if (_state == WorkoutHubState.unconfigured)
-            WorkoutPlanWizard(
-              dio: _dio,
-              isArabic: isArabic,
-              onRoutineConfirmed: () => _loadRoutine(silent: false),
-            ),
-
-          // ── READY: Timeline Hub content ──────────────
-          if (_state == WorkoutHubState.ready) ...[
-            // 2. Active Routine Banner
-            _WorkoutActiveSummaryBanner(
-              routineName: _activeRoutine?.name ?? 'Upper / Lower Split',
-              focusArea: _currentSession?.todayDayName ?? 'Lower (Volume)',
-              exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
-              completedDays: _completedDaysThisWeek,
-              onTap: () => _showRoutineDetailsModal(isArabic),
-            ),
-            const SizedBox(height: 22),
-
-            // 3. Exercise Timeline Section Header (Collapsible)
-            GestureDetector(
-              onTap: () {
-                setState(() => _showAllExercises = !_showAllExercises);
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'EXERCISE TIMELINE',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF5A6E5D),
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                    size: 18,
-                    color: const Color(0xFF235A42),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // 4. Exercise Timeline Items (Foldable)
-            AnimatedSize(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              child: Builder(
-                builder: (context) {
-                  final List<Widget> tiles = exercises.isNotEmpty
-                      ? List.generate(exercises.length, (idx) {
-                          final ex = exercises[idx];
-                          final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
-                              ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
-                              : null;
-                          final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
-                          return _ExerciseTimelineTile(
-                            key: ValueKey('${ex.name}_$idx'),
-                            index: idx,
-                            title: ex.name,
-                            targetSetsReps: setsRepsStr,
-                            prBadgeText: prText,
-                            restTime: null,
-                            isLast: idx == exercises.length - 1,
-                            onTap: () => _onExerciseTileTap(ex.name, setsRepsStr, isArabic),
-                          );
-                        })
-                      : [
-                          _ExerciseTimelineTile(
-                            index: 0,
-                            title: 'Barbell Bench Press',
-                            targetSetsReps: '3 Sets · Chest · Triceps',
-                            prBadgeText: 'Last: 80 kg x 8',
-                            restTime: '2:00',
-                            isLast: false,
-                            onTap: () => _onExerciseTileTap('Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
-                          ),
-                          _ExerciseTimelineTile(
-                            index: 1,
-                            title: 'Incline Dumbbell Press',
-                            targetSetsReps: '3 Sets · Upper Chest',
-                            prBadgeText: 'Last: 28 kg x 10',
-                            restTime: '2:00',
-                            isLast: false,
-                            onTap: () => _onExerciseTileTap('Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
-                          ),
-                          _ExerciseTimelineTile(
-                            index: 2,
-                            title: 'Overhead Press',
-                            targetSetsReps: '3 Sets · Front Delts',
-                            prBadgeText: 'Last: 50 kg x 8',
-                            restTime: '2:00',
-                            isLast: false,
-                            onTap: () => _onExerciseTileTap('Overhead Press', '3 Sets · Front Delts', isArabic),
-                          ),
-                          _ExerciseTimelineTile(
-                            index: 3,
-                            title: 'Cable Lateral Raises',
-                            targetSetsReps: '3 Sets · Side Delts',
-                            prBadgeText: 'Last: 12 kg x 12',
-                            restTime: '1:30',
-                            isLast: false,
-                            onTap: () => _onExerciseTileTap('Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
-                          ),
-                          _ExerciseTimelineTile(
-                            index: 4,
-                            title: 'Cable Chest Flyes',
-                            targetSetsReps: '3 Sets · Chest',
-                            prBadgeText: 'Last: 20 kg x 12',
-                            restTime: '1:30',
-                            isLast: true,
-                            onTap: () => _onExerciseTileTap('Cable Chest Flyes', '3 Sets · Chest', isArabic),
-                          ),
-                        ];
-
-                  final visibleTiles = _showAllExercises ? tiles : tiles.take(2).toList();
-                  final remainingCount = tiles.length - visibleTiles.length;
-
-                  return Column(
-                    children: [
-                      ...visibleTiles,
-                      const SizedBox(height: 6),
-                      Center(
-                        child: InkWell(
-                          onTap: () {
-                            setState(() => _showAllExercises = !_showAllExercises);
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEAF5EE),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _showAllExercises
-                                      ? (isArabic ? 'طّي الجدول' : 'Fold timeline')
-                                      : (isArabic ? 'عرض كل التمارين (+$remainingCount)' : 'Show all exercises (+$remainingCount)'),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF235A42),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                                  size: 16,
-                                  color: const Color(0xFF235A42),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-
+        padding: const EdgeInsets.fromLTRB(18, 8, 18, 130),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             const SizedBox(height: 4),
 
-            // 5. Quick Action Card
-            _WorkoutQuickActionCard(
-              onTap: _startWorkout,
+            // 1. Top Header
+            _WorkoutHeader(
+              showAction: false,
+              onActionTap: () {},
+              streakDays: _streakDays,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // 6. AI Coach Assistant Card
-            CoachChatCard(
-              coachNote: _currentSession?.coachNote,
-              isArabic: isArabic,
-              dio: _dio,
-              onSessionUpdated: (updatedSession) {
-                setState(() {
-                  _currentSession = updatedSession;
-                });
-              },
-              onRoutineUpdated: () => _loadRoutine(silent: true),
-            ),
-            const SizedBox(height: 20),
+            // ── UNCONFIGURED: Step-by-Step Wizard & AI Review ──────────
+            if (_state == WorkoutHubState.unconfigured)
+              WorkoutPlanWizard(
+                dio: _dio,
+                isArabic: isArabic,
+                onRoutineConfirmed: () => _loadRoutine(silent: false),
+              ),
 
-            // 7. Weekly Progress Card
-            Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0A000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
+            // ── READY: Timeline Hub content ──────────────
+            if (_state == WorkoutHubState.ready) ...[
+              // 2. Active Routine Banner
+              _WorkoutActiveSummaryBanner(
+                routineName: _activeRoutine?.name ?? 'Upper / Lower Split',
+                focusArea: _currentSession?.todayDayName ?? 'Lower (Volume)',
+                exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
+                completedDays: _completedDaysThisWeek,
+                onTap: () => _showRoutineDetailsModal(isArabic),
+              ),
+              const SizedBox(height: 22),
+
+              // 3. Exercise Timeline Section Header (Collapsible)
+              GestureDetector(
+                onTap: () {
+                  setState(() => _showAllExercises = !_showAllExercises);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'EXERCISE TIMELINE',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF5A6E5D),
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: const Color(0xFF235A42),
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ),
+              const SizedBox(height: 14),
+
+              // 4. Exercise Timeline Items (Foldable)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: Builder(
+                  builder: (context) {
+                    final List<Widget> tiles = exercises.isNotEmpty
+                        ? List.generate(exercises.length, (idx) {
+                            final ex = exercises[idx];
+                            final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
+                                ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
+                                : null;
+                            final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
+                            return _ExerciseTimelineTile(
+                              key: ValueKey('${ex.name}_$idx'),
+                              index: idx,
+                              title: ex.name,
+                              targetSetsReps: setsRepsStr,
+                              prBadgeText: prText,
+                              restTime: null,
+                              isLast: idx == exercises.length - 1,
+                              onTap: () => _onExerciseTileTap(ex.name, setsRepsStr, isArabic),
+                            );
+                          })
+                        : [
+                            _ExerciseTimelineTile(
+                              index: 0,
+                              title: 'Barbell Bench Press',
+                              targetSetsReps: '3 Sets · Chest · Triceps',
+                              prBadgeText: 'Last: 80 kg x 8',
+                              restTime: '2:00',
+                              isLast: false,
+                              onTap: () => _onExerciseTileTap('Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
+                            ),
+                            _ExerciseTimelineTile(
+                              index: 1,
+                              title: 'Incline Dumbbell Press',
+                              targetSetsReps: '3 Sets · Upper Chest',
+                              prBadgeText: 'Last: 28 kg x 10',
+                              restTime: '2:00',
+                              isLast: false,
+                              onTap: () => _onExerciseTileTap('Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
+                            ),
+                            _ExerciseTimelineTile(
+                              index: 2,
+                              title: 'Overhead Press',
+                              targetSetsReps: '3 Sets · Front Delts',
+                              prBadgeText: 'Last: 50 kg x 8',
+                              restTime: '2:00',
+                              isLast: false,
+                              onTap: () => _onExerciseTileTap('Overhead Press', '3 Sets · Front Delts', isArabic),
+                            ),
+                            _ExerciseTimelineTile(
+                              index: 3,
+                              title: 'Cable Lateral Raises',
+                              targetSetsReps: '3 Sets · Side Delts',
+                              prBadgeText: 'Last: 12 kg x 12',
+                              restTime: '1:30',
+                              isLast: false,
+                              onTap: () => _onExerciseTileTap('Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
+                            ),
+                            _ExerciseTimelineTile(
+                              index: 4,
+                              title: 'Cable Chest Flyes',
+                              targetSetsReps: '3 Sets · Chest',
+                              prBadgeText: 'Last: 20 kg x 12',
+                              restTime: '1:30',
+                              isLast: true,
+                              onTap: () => _onExerciseTileTap('Cable Chest Flyes', '3 Sets · Chest', isArabic),
+                            ),
+                          ];
+
+                    final visibleTiles = _showAllExercises ? tiles : tiles.take(2).toList();
+                    final remainingCount = tiles.length - visibleTiles.length;
+
+                    return Column(
                       children: [
-                        Text(
-                          isArabic ? 'تقدمك' : 'Your Progress',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1C2B1E),
+                        ...visibleTiles,
+                        const SizedBox(height: 6),
+                        Center(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() => _showAllExercises = !_showAllExercises);
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEAF5EE),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _showAllExercises
+                                        ? (isArabic ? 'طّي الجدول' : 'Fold timeline')
+                                        : (isArabic ? 'عرض كل التمارين (+$remainingCount)' : 'Show all exercises (+$remainingCount)'),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF235A42),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                    size: 16,
+                                    color: const Color(0xFF235A42),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                        Text(
-                          isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/wk',
-                          style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6B7C6E)),
-                        ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    WeeklyCalendarRow(
-                      weekScheduleDetails: _weekScheduleDetails,
-                      completedDaysThisWeek: _completedDaysThisWeek,
-                      isArabic: isArabic,
-                      onDayTap: (detail) {
-                        _showDayDetailSheet(detail, isArabic);
-                      },
-                    ),
-                  ],
+                    );
+                  },
                 ),
-            ),
-            const SizedBox(height: 32),
+              ),
+
+              const SizedBox(height: 4),
+
+              // 5. Quick Action Card
+              _WorkoutQuickActionCard(
+                onTap: _startWorkout,
+              ),
+              const SizedBox(height: 20),
+
+              // 6. AI Coach Assistant Card
+              CoachChatCard(
+                coachNote: _currentSession?.coachNote,
+                isArabic: isArabic,
+                dio: _dio,
+                onSessionUpdated: (updatedSession) {
+                  setState(() {
+                    _currentSession = updatedSession;
+                  });
+                },
+                onRoutineUpdated: () => _loadRoutine(silent: true),
+              ),
+              const SizedBox(height: 20),
+
+              // 7. Weekly Progress Card
+              Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isArabic ? 'تقدمك' : 'Your Progress',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C2B1E),
+                            ),
+                          ),
+                          Text(
+                            isArabic ? '$_activeDays أيام/أسبوع' : '$_activeDays days/wk',
+                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF6B7C6E)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      WeeklyCalendarRow(
+                        weekScheduleDetails: _weekScheduleDetails,
+                        completedDaysThisWeek: _completedDaysThisWeek,
+                        isArabic: isArabic,
+                        onDayTap: (detail) {
+                          _showDayDetailSheet(detail, isArabic);
+                        },
+                      ),
+                    ],
+                  ),
+              ),
+              const SizedBox(height: 32),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
