@@ -8,6 +8,7 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/network/api_client.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_event.dart';
+import '../../../../core/error/error_handler.dart';
 import '../data/services/purchase_service.dart';
 
 class PremiumUpgradeScreen extends StatefulWidget {
@@ -126,9 +127,10 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
     } catch (e) {
       // IF the payment fails or backend fails, DO NOT change isPremium or state. Show error message.
       if (mounted) {
+        final cleanMsg = AppErrorHandler.getUserMessage(e, 'Purchase could not be completed. Please try again.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Subscription failed: ${e.toString()}'),
+            content: Text(cleanMsg),
             backgroundColor: const Color(0xFFF44336),
           ),
         );
