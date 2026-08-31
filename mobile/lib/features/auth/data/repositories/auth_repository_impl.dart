@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/firebase_auth_service.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -63,7 +64,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to create account. Please try again.')));
     }
   }
 
@@ -90,7 +91,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to sign in. Please try again.')));
     }
   }
 
@@ -145,23 +146,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return Right(authResponse.token);
     } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
-      final responseData = e.response?.data;
-      String? serverMessage;
-      if (responseData is Map) {
-        serverMessage = (responseData['error'] ?? responseData['message'])?.toString();
-      }
-      final errorMsg = 'Backend API Error [Status ${statusCode ?? 'Unknown'}]:\n${serverMessage ?? e.message ?? e.toString()}';
-      return Left(ServerFailure(
-        message: errorMsg,
-        code: statusCode != null ? 'HTTP_$statusCode' : 'NETWORK_ERROR',
-      ));
+      return Left(_handleDioError(e));
     } catch (e) {
-      final cleanMessage = e.toString().startsWith('Exception: ')
-          ? e.toString().substring('Exception: '.length)
-          : e.toString();
       return Left(ServerFailure(
-        message: cleanMessage,
+        message: AppErrorHandler.getUserMessage(e, 'Google sign in could not be completed.'),
         code: 'GOOGLE_SIGN_IN_ERROR',
       ));
     }
@@ -196,7 +184,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Apple sign in could not be completed.')));
     }
   }
 
@@ -213,7 +201,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to request password reset code.')));
     }
   }
 
@@ -238,17 +226,13 @@ class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to reset password.')));
     }
   }
 
   Failure _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
-    final responseData = e.response?.data;
-    String? serverMessage;
-    if (responseData is Map) {
-      serverMessage = (responseData['error'] ?? responseData['message']) as String?;
-    }
+    final cleanMessage = AppErrorHandler.getUserMessage(e);
 
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout) {
@@ -256,15 +240,15 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     if (statusCode == 409) {
-      return ValidationFailure(message: serverMessage ?? 'An account with this email already exists.');
+      return ValidationFailure(message: cleanMessage.contains('conflict') ? 'An account with this email already exists.' : cleanMessage);
     }
 
     if (statusCode == 401) {
-      return ValidationFailure(message: serverMessage ?? 'Invalid email or password.');
+      return ValidationFailure(message: cleanMessage.contains('expired') ? 'Invalid email or password.' : cleanMessage);
     }
 
     return ServerFailure(
-      message: serverMessage ?? 'Authentication error occurred.',
+      message: cleanMessage,
       code: statusCode?.toString(),
     );
   }
