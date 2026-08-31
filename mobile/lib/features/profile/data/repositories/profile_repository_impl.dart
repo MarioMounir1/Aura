@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/profile_repository.dart';
 
@@ -49,15 +50,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
         await cacheUserProfile(body);
         return Right(body);
       }
-      return const Left(ServerFailure(message: 'Failed to update profile'));
+      return const Left(ServerFailure(message: 'Unable to update profile. Please try again.'));
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
         return const Left(NetworkFailure());
       }
-      final msg = e.response?.data?['error'] ?? 'Server error occurred during profile update';
-      return Left(ServerFailure(message: msg.toString()));
+      final msg = AppErrorHandler.getUserMessage(e, 'Unable to update profile.');
+      return Left(ServerFailure(message: msg));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to update profile.')));
     }
   }
 
@@ -73,15 +74,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
           return Right(userMap);
         }
       }
-      return const Left(ServerFailure(message: 'Failed to fetch user profile'));
+      return const Left(ServerFailure(message: 'Unable to load profile data.'));
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
         return const Left(NetworkFailure());
       }
-      final msg = e.response?.data?['error'] ?? 'Server error occurred during fetch';
-      return Left(ServerFailure(message: msg.toString()));
+      final msg = AppErrorHandler.getUserMessage(e, 'Unable to load profile.');
+      return Left(ServerFailure(message: msg));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to load profile.')));
     }
   }
 
@@ -92,15 +93,15 @@ class ProfileRepositoryImpl implements ProfileRepository {
       if (response.statusCode == 200) {
         return Right(response.data as Map<String, dynamic>);
       }
-      return const Left(ServerFailure(message: 'Failed to fetch TDEE'));
+      return const Left(ServerFailure(message: 'Unable to calculate nutrition goals.'));
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
         return const Left(NetworkFailure());
       }
-      final msg = e.response?.data?['error'] ?? 'Server error occurred during TDEE calculation';
-      return Left(ServerFailure(message: msg.toString()));
+      final msg = AppErrorHandler.getUserMessage(e, 'Unable to calculate goals.');
+      return Left(ServerFailure(message: msg));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to calculate goals.')));
     }
   }
 
