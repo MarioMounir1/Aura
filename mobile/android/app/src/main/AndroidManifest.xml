@@ -16,6 +16,10 @@
         <meta-data
             android:name="android.notch_support"
             android:value="true" />
+        <!-- Google AdMob Application ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
         <activity
             android:name="com.mario.aura.MainActivity"
             android:exported="true"
