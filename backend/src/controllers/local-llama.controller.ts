@@ -14,7 +14,7 @@
 
 import { Request, Response } from "express";
 import { processUpload } from "../middleware/upload.middleware";
-import { OLLAMA_CONFIG, getAiScanLimit } from "../config";
+import { getScanLimit } from "../config";
 import prisma from "../services/prisma.service";
 import { analyzeMeal } from "../services/ai.service";
 
@@ -104,53 +104,6 @@ function generateRecommendation(
   };
 }
 
-// ── Parse Ollama Text Response (handles dirty JSON & sanitizes diet drinks) ──
-
-function parseOllamaResponse(raw: string): LlamaMealAnalysis {
-  let text = raw.trim();
-
-  // Strip markdown fences if present
-  text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-
-  // Extract first JSON object block
-  const jsonMatch = text.match(/\{[\s\S]*?\}/);
-  if (!jsonMatch) {
-    throw new Error(`No JSON object found in Ollama response: ${text.slice(0, 200)}`);
-  }
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch {
-    throw new Error(`Failed to parse Ollama JSON: ${jsonMatch[0].slice(0, 200)}`);
-  }
-
-  let detectedFood = String(parsed.detectedFood ?? parsed.dish_name ?? parsed.food ?? "Unknown Meal");
-  let calories     = Math.round(Number(parsed.calories ?? 0));
-  let protein      = Math.round(Number(parsed.protein ?? 0));
-  let carbs        = Math.round(Number(parsed.carbs ?? parsed.carbohydrates ?? 0));
-  let fats         = Math.round(Number(parsed.fats ?? parsed.fat ?? 0));
-
-  // ── Smart Diet / Zero Sugar Calorie Sanitizer ─────────────
-  const lowerName = (detectedFood + " " + text).toLowerCase();
-  const isDietDrink = /(diet|zero|max|light|no sugar|sugar free|zero sugar)/i.test(lowerName) && 
-                      /(coke|coca|pepsi|soda|cola|sprite|7up|seven up|dr pepper|fanta|drink|can|beverage)/i.test(lowerName);
-
-  if (isDietDrink) {
-    console.log(`🥤 [LocalLlama] Detected Diet/Zero beverage: "${detectedFood}". Overriding calories from ${calories} -> 1 kcal`);
-    calories = 1;
-    carbs = 0;
-    fats = 0;
-    protein = 0;
-  }
-
-  if (calories === 0 && protein === 0 && carbs === 0 && fats === 0 && !isDietDrink) {
-    throw new Error("Ollama returned all-zero macros — likely failed to identify the food.");
-  }
-
-  return { detectedFood, calories, protein, carbs, fats };
-}
-
 // ── Main Handler ─────────────────────────────────────────────
 
 /**
@@ -204,13 +157,13 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
       },
     });
 
-    const limit = getAiScanLimit(isPremium);
+    const limit = getScanLimit(scanType, isPremium);
     if (usageCount >= limit) {
       res.status(isPremium ? 429 : 402).json({
         success: false,
         error: isPremium 
           ? `Premium limit reached. You can only use ${scanType} ${limit} times per day.`
-          : `Free limit reached. Upgrade to Premium for more ${scanType} uses!`,
+          : `Free limit reached. Upgrade to Premium for 10 ${scanType} scans!`,
         code: "QUOTA_EXCEEDED",
       });
       return;
@@ -324,23 +277,25 @@ export async function getAiUsageHandler(req: Request, res: Response): Promise<vo
     const usage = {
       camera: 0,
       gallery: 0,
+      barcode: 0,
     };
 
     logs.forEach(log => {
       if (log.scanType === 'camera') usage.camera = log._count.id;
       if (log.scanType === 'gallery') usage.gallery = log._count.id;
+      if (log.scanType === 'barcode') usage.barcode = log._count.id;
     });
 
     const isPremium = req.user?.isPremium ?? false;
-    const limit = getAiScanLimit(isPremium);
 
     res.status(200).json({
       success: true,
       data: {
         usage,
         limits: {
-          camera: limit,
-          gallery: limit,
+          camera: getScanLimit("camera", isPremium),
+          gallery: getScanLimit("gallery", isPremium),
+          barcode: getScanLimit("barcode", isPremium),
         },
         isPremium
       }
