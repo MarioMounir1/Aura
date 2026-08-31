@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/utils/constants.dart';
 import '../../domain/entities/meal_log_entity.dart';
@@ -44,7 +45,7 @@ class MealRepositoryImpl implements MealRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to analyze meal description.')));
     }
   }
 
@@ -83,7 +84,7 @@ class MealRepositoryImpl implements MealRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to analyze meal image.')));
     }
   }
 
@@ -127,7 +128,7 @@ class MealRepositoryImpl implements MealRepository {
       }
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to load meal history.')));
     }
   }
 
@@ -152,7 +153,7 @@ class MealRepositoryImpl implements MealRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to delete meal log.')));
     }
   }
 
@@ -166,7 +167,7 @@ class MealRepositoryImpl implements MealRepository {
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return Right(models.map((m) => m.toEntity()).toList());
     } catch (e) {
-      return Left(CacheFailure(message: 'Failed to read local cache: ${e.toString()}'));
+      return const Left(CacheFailure(message: 'Unable to access offline cache.'));
     }
   }
 
@@ -176,7 +177,7 @@ class MealRepositoryImpl implements MealRepository {
       await _saveToHive(MealLogModel.fromEntity(mealLog));
       return const Right(null);
     } catch (e) {
-      return Left(CacheFailure(message: 'Failed to save to local cache: ${e.toString()}'));
+      return const Left(CacheFailure(message: 'Unable to save to offline cache.'));
     }
   }
 
@@ -254,7 +255,7 @@ class MealRepositoryImpl implements MealRepository {
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {
-      return Left(ServerFailure(message: e.toString()));
+      return Left(ServerFailure(message: AppErrorHandler.getUserMessage(e, 'Unable to load meal suggestions.')));
     }
   }
 }
