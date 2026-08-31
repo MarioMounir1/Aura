@@ -147,7 +147,7 @@ class LocalLlamaService {
     } on LlamaApiException {
       rethrow; // Already typed — pass through
     } catch (e) {
-      throw LlamaApiException('Failed to parse Llama response: $e');
+      throw const LlamaApiException('Could not parse meal analysis response.');
     }
   }
 
@@ -162,7 +162,7 @@ class LocalLlamaService {
         );
       case DioExceptionType.receiveTimeout:
         return const LlamaNetworkException(
-          'Local Llama model is taking too long. Try a simpler image or check Ollama.',
+          'AI meal analysis is taking too long. Please try again.',
           isTimeout: true,
         );
       case DioExceptionType.sendTimeout:
@@ -195,7 +195,7 @@ class LocalLlamaService {
         }
         if (statusCode == 502 || statusCode == 504) {
           return LlamaNetworkException(
-            errMsg ?? 'Local Llama model failed to respond. Is Ollama running?',
+            errMsg ?? 'AI meal analysis service temporarily unavailable. Please try again.',
             isTimeout: statusCode == 504,
           );
         }
