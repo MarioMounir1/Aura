@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { OLLAMA_CONFIG, resolveGeminiModelName } from "../config";
+import { resolveGeminiModelName } from "../config";
 
 function getGenAI(): GoogleGenerativeAI {
   const apiKey = process.env.GEMINI_API_KEY || "";
@@ -48,20 +48,7 @@ export interface OllamaCallOptions {
   numPredict?: number;
 }
 
-// ── Helper: Ollama Circuit Breaker State ────────────────────
-let isOllamaOffline = false;
-let lastOllamaCheck = 0;
-const OLLAMA_OFFLINE_COOLDOWN_MS = 60000; // 1 min cooldown before retrying Ollama connection
-
-function isOllamaCurrentlyOffline(): boolean {
-  if (isOllamaOffline && (Date.now() - lastOllamaCheck < OLLAMA_OFFLINE_COOLDOWN_MS)) {
-    return true;
-  }
-  return false;
-}
-
-
-// ── Helper: Ollama Chat Call with Timeout, Logging & Source Metadata ──────
+// ── Helper: AI Chat Call with Gemini ──────────────────────────────────────
 
 async function callOllamaChatDetailed(
   systemPrompt: string,
@@ -69,90 +56,24 @@ async function callOllamaChatDetailed(
   fallback: string,
   options?: OllamaCallOptions
 ): Promise<OllamaResult<string>> {
-  const provider = process.env.AI_PROVIDER ?? "gemini";
-  const callerName = options?.callerName ?? "callOllamaChat";
-  const timeoutMs = options?.timeoutMs ?? 8000;
-  const numPredict = options?.numPredict ?? 80;
+  const callerName = options?.callerName ?? "callCoachChat";
   const startTime = Date.now();
 
-  if (provider === "gemini" || provider === "google") {
-    try {
-      const modelName = resolveGeminiModelName();
-      const model = getGenAI().getGenerativeModel({ model: modelName });
-      const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-      return {
-        value: cleaned || fallback,
-        source: "model",
-        elapsedMs: Date.now() - startTime,
-      };
-    } catch (err: any) {
-      console.warn(`⚠️ [Gemini Coach Error] '${callerName}' failed: ${err.message}`);
-      return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
-    }
-  }
-
-  if (provider === "none" || isOllamaCurrentlyOffline()) {
-    return { value: fallback, source: "error", elapsedMs: 0 };
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
-    const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: OLLAMA_CONFIG.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: false,
-        options: {
-          temperature: OLLAMA_CONFIG.temperature ?? 0.7,
-          num_predict: numPredict,
-        },
-      }),
-    });
-
-    clearTimeout(timeoutId);
-    const elapsedMs = Date.now() - startTime;
-
-    if (!response.ok) {
-      isOllamaOffline = true;
-      lastOllamaCheck = Date.now();
-      console.warn(`⚠️ [Ollama Error] '${callerName}' failed with HTTP ${response.status} after ${elapsedMs}ms.`);
-      return { value: fallback, source: "error", elapsedMs };
-    }
-
-    const data = (await response.json()) as any;
-    const content = data.message?.content?.trim();
-    const evalCount = data.eval_count;
-
-    if (!content) {
-      console.warn(`⚠️ [Ollama Error] '${callerName}' returned empty content after ${elapsedMs}ms.`);
-      return { value: fallback, source: "error", elapsedMs, evalCount };
-    }
-
-    isOllamaOffline = false;
-    const cleaned = content.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-    return { value: cleaned || fallback, source: "model", elapsedMs, evalCount };
+    const modelName = resolveGeminiModelName();
+    const model = getGenAI().getGenerativeModel({ model: modelName });
+    const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
+    return {
+      value: cleaned || fallback,
+      source: "model",
+      elapsedMs: Date.now() - startTime,
+    };
   } catch (err: any) {
-    clearTimeout(timeoutId);
-    isOllamaOffline = true;
-    lastOllamaCheck = Date.now();
-    const elapsedMs = Date.now() - startTime;
-    if (err?.name === "AbortError") {
-      console.warn(`⚠️ [Ollama Timeout] '${callerName}' timed out after ${elapsedMs}ms (limit: ${timeoutMs}ms).`);
-      return { value: fallback, source: "timeout", elapsedMs };
-    }
-    console.warn(`⚠️ [Ollama Error] '${callerName}' failed with error: ${err?.message ?? err} after ${elapsedMs}ms.`);
-    return { value: fallback, source: "error", elapsedMs };
+    console.warn(`⚠️ [Gemini Coach Error] '${callerName}' failed: ${err.message}`);
+    return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
   }
 }
 
@@ -174,115 +95,53 @@ async function callOllamaJsonChatDetailed<T>(
   fallback: T,
   options?: OllamaCallOptions
 ): Promise<OllamaResult<T>> {
-  const provider = process.env.AI_PROVIDER ?? "gemini";
-  const callerName = options?.callerName ?? "callOllamaJsonChat";
-  const timeoutMs = options?.timeoutMs ?? 8000;
-  const numPredict = options?.numPredict ?? 140;
+  const callerName = options?.callerName ?? "callCoachJsonChat";
   const startTime = Date.now();
 
-  if (provider === "gemini" || provider === "google") {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey.trim() === "") {
+      console.warn(`⚠️ [Gemini Coach] GEMINI_API_KEY is not set in environment variables!`);
+    }
+    let modelName = resolveGeminiModelName();
+    let model = getGenAI().getGenerativeModel({
+      model: modelName,
+      systemInstruction: systemPrompt,
+    });
+    const generationConfig = {
+      responseMimeType: "application/json",
+      temperature: 0.7,
+    };
+    let text = "";
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey || apiKey.trim() === "") {
-        console.warn(`⚠️ [Gemini Coach] GEMINI_API_KEY is not set in environment variables!`);
-      }
-      let modelName = resolveGeminiModelName();
-      let model = getGenAI().getGenerativeModel({
-        model: modelName,
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        generationConfig,
+      });
+      text = result.response.text().trim();
+    } catch (geminiErr: any) {
+      console.warn(`⚠️ [Gemini Model Retry] ${modelName} failed (${geminiErr.message}), retrying with gemini-1.5-flash...`);
+      model = getGenAI().getGenerativeModel({
+        model: "gemini-1.5-flash",
         systemInstruction: systemPrompt,
       });
-      const generationConfig = {
-        responseMimeType: "application/json",
-        temperature: 0.7,
-      };
-      let text = "";
-      try {
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig,
-        });
-        text = result.response.text().trim();
-      } catch (geminiErr: any) {
-        console.warn(`⚠️ [Gemini Model Retry] ${modelName} failed (${geminiErr.message}), retrying with gemini-1.5-flash...`);
-        model = getGenAI().getGenerativeModel({
-          model: "gemini-1.5-flash",
-          systemInstruction: systemPrompt,
-        });
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig,
-        });
-        text = result.response.text().trim();
-      }
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const cleaned = jsonMatch ? jsonMatch[0] : text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").trim();
-      const parsed = JSON.parse(cleaned) as T;
-      return {
-        value: parsed || fallback,
-        source: "model",
-        elapsedMs: Date.now() - startTime,
-      };
-    } catch (err: any) {
-      console.warn(`⚠️ [Gemini Coach JSON Error] '${callerName}' failed: ${err.message}`);
-      return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        generationConfig,
+      });
+      text = result.response.text().trim();
     }
-  }
-
-  if (provider === "none" || isOllamaCurrentlyOffline()) {
-    return { value: fallback, source: "error", elapsedMs: 0 };
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: OLLAMA_CONFIG.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: false,
-        format: "json",
-        options: {
-          temperature: 0.2,
-          num_predict: numPredict,
-        },
-      }),
-    });
-
-    clearTimeout(timeoutId);
-    const elapsedMs = Date.now() - startTime;
-
-    if (!response.ok) {
-      console.warn(`⚠️ [Ollama Error] '${callerName}' failed with HTTP ${response.status} after ${elapsedMs}ms.`);
-      return { value: fallback, source: "error", elapsedMs };
-    }
-
-    const data = (await response.json()) as any;
-    const content = data.message?.content?.trim();
-    const evalCount = data.eval_count;
-
-    if (!content) {
-      console.warn(`⚠️ [Ollama Error] '${callerName}' returned empty content after ${elapsedMs}ms.`);
-      return { value: fallback, source: "error", elapsedMs, evalCount };
-    }
-
-    const parsed = JSON.parse(content) as T;
-    return { value: parsed || fallback, source: "model", elapsedMs, evalCount };
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const cleaned = jsonMatch ? jsonMatch[0] : text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").trim();
+    const parsed = JSON.parse(cleaned) as T;
+    return {
+      value: parsed || fallback,
+      source: "model",
+      elapsedMs: Date.now() - startTime,
+    };
   } catch (err: any) {
-    clearTimeout(timeoutId);
-    const elapsedMs = Date.now() - startTime;
-    if (err?.name === "AbortError") {
-      console.warn(`⚠️ [Ollama Timeout] '${callerName}' timed out after ${elapsedMs}ms (limit: ${timeoutMs}ms).`);
-      return { value: fallback, source: "timeout", elapsedMs };
-    }
-    console.warn(`⚠️ [Ollama Error] '${callerName}' failed with error: ${err?.message ?? err} after ${elapsedMs}ms.`);
-    return { value: fallback, source: "error", elapsedMs };
+    console.warn(`⚠️ [Gemini Coach JSON Error] '${callerName}' failed: ${err.message}`);
+    return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
   }
 }
 
