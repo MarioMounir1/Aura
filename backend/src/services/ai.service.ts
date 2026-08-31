@@ -10,7 +10,7 @@ import {
   Part,
   InlineDataPart,
 } from "@google/generative-ai";
-import { OLLAMA_CONFIG, resolveGeminiModelName } from "../config";
+import { resolveGeminiModelName } from "../config";
 
 const apiKey = process.env.GEMINI_API_KEY ?? "";
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -101,104 +101,8 @@ You MUST respond ONLY with a single JSON object conforming strictly to the schem
 // ── Core AI Analysis Function ──────────────────────────────
 
 export async function analyzeMeal(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const provider = process.env.AI_PROVIDER ?? "google";
-  if (provider === "ollama") {
-    try {
-      return await analyzeWithOllama(input);
-    } catch (e) {
-      console.warn("⚠️ Ollama failed, falling back to Gemini:", e);
-      return analyzeWithGemini(input);
-    }
-  }
-
-  try {
-    return await analyzeWithGemini(input);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn("⚠️ Gemini API call failed, trying local Ollama fallback:", msg);
-    try {
-      return await analyzeWithOllama(input);
-    } catch (ollamaErr) {
-      console.warn("⚠️ Ollama fallback also failed or unavailable:", ollamaErr);
-    }
-
-    throw new Error(msg.includes("NO_FOOD_DETECTED") ? msg : `AI meal analysis failed: ${msg}`);
-  }
+  return analyzeWithGemini(input);
 }
-
-// ── Local Ollama Implementation ────────────────────────────
-
-async function analyzeWithOllama(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const isImage = input.type === "image";
-  const modelName = isImage ? OLLAMA_CONFIG.visionModel : OLLAMA_CONFIG.model;
-  
-  console.log(`🔮 Calling local Ollama (${modelName}): ${isImage ? "Image buffer" : `${input.restaurantName} — ${input.mealDescription}`}`);
-  
-  let userPrompt: string;
-  const imagesArray: string[] = [];
-
-  if (input.type === "text") {
-    userPrompt = `Restaurant: ${input.restaurantName}
-Meal Description: ${input.mealDescription}
-
-Analyze the nutritional content of this meal and return accurate macros. Use global food databases (USDA and equivalent) for reference.`;
-  } else {
-    const base64Image = input.imageBuffer.toString("base64");
-    imagesArray.push(base64Image);
-
-    userPrompt = input.restaurantName
-      ? `Analyze the food in this image. If it is from the restaurant: ${input.restaurantName}, analyze it accordingly. Otherwise, if it is a home-cooked, generic, or unidentified meal, analyze it and set restaurantName to "Homemade". Return the complete nutritional breakdown.`
-      : `Analyze the food/meal shown in this image. If it is from a restaurant, identify the restaurant if possible from logos or packaging. If it is a home-cooked, generic, or unidentified meal, analyze it and set restaurantName to "Homemade". Return the complete nutritional breakdown.`;
-  }
-
-  const userMessage: any = {
-    role: "user",
-    content: userPrompt,
-  };
-
-  if (imagesArray.length > 0) {
-    userMessage.images = imagesArray;
-  }
-
-  const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: modelName,
-      messages: [
-        { role: "system", content: SYSTEM_INSTRUCTION },
-        userMessage,
-      ],
-      stream: false,
-      options: {
-        temperature: OLLAMA_CONFIG.temperature,
-      },
-      format: "json",
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`Ollama API error: ${response.status} ${response.statusText} - ${errorText}`);
-  }
-
-  const responseData = await response.json() as any;
-  const responseText = responseData.message?.content?.trim();
-
-  if (!responseText) {
-    throw new Error("Empty response from Ollama API");
-  }
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(responseText);
-  } catch (err) {
-    throw new Error(`Ollama returned invalid JSON response: ${responseText.slice(0, 200)}`);
-  }
-
-  return parseAndValidateResponse(parsed);
-}
-
 
 // ── Google Gemini Implementation ───────────────────────────
 
@@ -306,53 +210,28 @@ export interface TextNutritionEstimate {
  * Prompts Ollama (JSON mode) or Gemini fallback.
  */
 export async function estimateNutritionFromName(foodName: string): Promise<TextNutritionEstimate> {
-  const provider = process.env.AI_PROVIDER ?? "google";
-  const userPrompt = `Estimate the nutritional content per 100g serving for the food or dish named: "${foodName}".
-Return a JSON object strictly matching this schema:
-{
-  "dish_name": "${foodName}",
-  "calories": number,
-  "protein": number,
-  "carbs": number,
-  "fats": number,
-  "confidence_score": number (0.0 to 1.0)
-}`;
+  try {
+    const rawModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+    const modelName = resolveGeminiModelName(rawModel);
+    const model = genAI.getGenerativeModel({ model: modelName });
+    const prompt = `Estimate the nutritional content per 100g serving for the food or dish named: "${foodName}".
+Respond strictly with a JSON object: {"dish_name": "${foodName}", "calories": number, "protein": number, "carbs": number, "fats": number, "confidence_score": number}`;
 
-  if (provider === "ollama") {
-    try {
-      const response = await fetch(`${OLLAMA_CONFIG.baseUrl}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: OLLAMA_CONFIG.model,
-          messages: [
-            { role: "system", content: SYSTEM_INSTRUCTION },
-            { role: "user", content: userPrompt },
-          ],
-          stream: false,
-          options: { temperature: 0.2 },
-          format: "json",
-        }),
-      });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    const cleanText = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleanText);
 
-      if (response.ok) {
-        const responseData = (await response.json()) as any;
-        const text = responseData.message?.content;
-        if (text) {
-          const parsed = JSON.parse(text);
-          return {
-            dishName: String(parsed.dish_name || foodName),
-            calories: Math.max(0, Math.round(Number(parsed.calories || 0))),
-            protein: Math.max(0, Math.round(Number(parsed.protein || 0))),
-            carbs: Math.max(0, Math.round(Number(parsed.carbs || 0))),
-            fats: Math.max(0, Math.round(Number(parsed.fats || 0))),
-            confidenceScore: Math.min(1.0, Math.max(0.0, Number(parsed.confidence_score || 0.7))),
-          };
-        }
-      }
-    } catch (err) {
-      console.error("❌ [AI] Ollama text estimation failed:", err);
-    }
+    return {
+      dishName: String(parsed.dish_name || foodName),
+      calories: Math.max(0, Math.round(Number(parsed.calories || 0))),
+      protein: Math.max(0, Math.round(Number(parsed.protein || 0))),
+      carbs: Math.max(0, Math.round(Number(parsed.carbs || 0))),
+      fats: Math.max(0, Math.round(Number(parsed.fats || 0))),
+      confidenceScore: Math.min(1.0, Math.max(0.0, Number(parsed.confidence_score || 0.8))),
+    };
+  } catch (err) {
+    console.warn("⚠️ [AI] Gemini text estimation fallback to default:", err);
   }
 
   // Fallback default estimate if AI provider fails or is unreachable
