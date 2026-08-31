@@ -16,6 +16,7 @@
 import { Request, Response } from "express";
 import { z } from "zod";
 import prisma from "../services/prisma.service";
+import { getScanLimit } from "../config";
 import { estimateNutritionFromName } from "../services/ai.service";
 
 // ── In-Memory Barcode Cache ────────────────────────────────────
@@ -129,8 +130,42 @@ export async function scanBarcodeHandler(
   }
 
   const { barcode } = parsed.data;
+  const userId = req.user?.id;
+  const isPremium = req.user?.isPremium ?? false;
 
-  // ── Step 0: Check Local Database for mapped barcode ──────────
+  // ── Step 0: Check Barcode Quota ──────────────────────────────
+  if (userId) {
+    try {
+      const todayStart = new Date();
+      todayStart.setUTCHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setUTCHours(23, 59, 59, 999);
+
+      const usageCount = await prisma.aiUsageLog.count({
+        where: {
+          userId,
+          scanType: "barcode",
+          date: { gte: todayStart, lte: todayEnd },
+        },
+      });
+
+      const limit = getScanLimit("barcode", isPremium);
+      if (usageCount >= limit) {
+        res.status(isPremium ? 429 : 402).json({
+          success: false,
+          error: isPremium
+            ? `Daily barcode scan limit reached (${limit}/day).`
+            : "Free barcode scan limit reached (2/day). Upgrade to Premium for 10 daily scans!",
+          code: "QUOTA_EXCEEDED",
+        });
+        return;
+      }
+    } catch (quotaErr) {
+      console.warn("⚠️ [Barcode] Quota check error:", quotaErr);
+    }
+  }
+
+  // ── Step 1: Check Local Database for mapped barcode ──────────
   try {
     const dbItem = await prisma.foodItem.findUnique({
       where: { barcode },
@@ -149,6 +184,11 @@ export async function scanBarcodeHandler(
       };
       setCache(barcode, dbNutrition);
       console.log(`✅ [Barcode] Database HIT: ${barcode} — ${dbItem.nameEn} (${dbItem.dataSource})`);
+      if (userId) {
+        await prisma.aiUsageLog.create({
+          data: { userId, scanType: "barcode", date: new Date() },
+        }).catch(() => {});
+      }
       res.status(200).json({
         success: true,
         source: "local_db",
@@ -164,6 +204,11 @@ export async function scanBarcodeHandler(
   const cached = getCached(barcode);
   if (cached) {
     console.log(`✅ [Barcode] Cache HIT: ${barcode} — ${cached.productName}`);
+    if (userId) {
+      await prisma.aiUsageLog.create({
+        data: { userId, scanType: "barcode", date: new Date() },
+      }).catch(() => {});
+    }
     res.status(200).json({
       success: true,
       source: "cache",
@@ -262,6 +307,12 @@ export async function scanBarcodeHandler(
 
   // ── Cache and respond ────────────────────────────────────────
   setCache(barcode, nutrition);
+
+  if (userId) {
+    await prisma.aiUsageLog.create({
+      data: { userId, scanType: "barcode", date: new Date() },
+    }).catch(() => {});
+  }
 
   console.log(
     `✅ [Barcode] Found: "${productName}" (${barcode}) — ` +
