@@ -7,7 +7,8 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/network/api_client.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
-import '../../profile/presentation/bloc/profile_event.dart';
+import '../../calorie_tracker/presentation/bloc/workout_bloc.dart';
+import '../../../../core/error/error_handler.dart';
 import '../data/services/purchase_service.dart';
 
 class CustomPaywallSheet extends StatefulWidget {
@@ -53,9 +54,9 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
     if (package == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('No active RevenueCat offering package loaded. Please verify your RevenueCat Public API Key & Offerings in RevenueCat dashboard.'),
+          content: Text('Subscription plans are currently unavailable. Please try again shortly.'),
           backgroundColor: AppColors.error,
-          duration: Duration(seconds: 4),
+          duration: Duration(seconds: 3),
         ),
       );
       return;
@@ -69,7 +70,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Purchase was cancelled or payment failed. Account remains free tier.'),
+              content: Text('Purchase was not completed.'),
               backgroundColor: AppColors.warning,
               duration: Duration(seconds: 3),
             ),
@@ -104,9 +105,10 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final cleanMsg = AppErrorHandler.getUserMessage(e, 'Purchase could not be completed. Please try again.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Subscription failed: ${e.toString()}'),
+            content: Text(cleanMsg),
             backgroundColor: AppColors.error,
           ),
         );
