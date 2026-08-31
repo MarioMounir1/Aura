@@ -2,7 +2,7 @@ name: aura
 description: Aura — AI-powered nutrition & fitness ecosystem
 
 publish_to: "none"
-version: 1.0.0+64
+version: 1.0.0+65
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -66,6 +66,9 @@ dependencies:
   url_launcher: ^6.3.0
   purchases_flutter: ^10.4.2
   purchases_ui_flutter: ^10.4.2
+
+  # Ads & Monetization (Free Tier)
+  google_mobile_ads: ^5.2.0
 
 dev_dependencies:
   flutter_test:
