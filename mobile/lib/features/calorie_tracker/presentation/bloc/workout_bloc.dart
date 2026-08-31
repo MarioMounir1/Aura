@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../../data/models/workout_models.dart';
 import 'workout_event.dart';
@@ -82,7 +83,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         currentLogs: initialLogs,
       ));
     } catch (e) {
-      emit(WorkoutError(e.toString()));
+      emit(WorkoutError(AppErrorHandler.getUserMessage(e, 'Unable to start workout session.')));
     }
   }
 
@@ -98,7 +99,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       final parsed = exercises.map((e) => Exercise.fromJson(e)).toList();
       emit(currentState.copyWith(availableExercises: parsed));
     } catch (e) {
-      emit(currentState.copyWith(error: e.toString()));
+      emit(currentState.copyWith(error: AppErrorHandler.getUserMessage(e, 'Unable to load exercises.')));
     }
   }
 
@@ -147,7 +148,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         isSubmitting: false,
       ));
     } catch (e) {
-      emit(currentState.copyWith(isSubmitting: false, error: e.toString()));
+      emit(currentState.copyWith(isSubmitting: false, error: AppErrorHandler.getUserMessage(e, 'Unable to add exercise.')));
     }
   }
 
@@ -193,7 +194,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     } catch (e) {
       emit(currentState.copyWith(
         isSubmitting: false,
-        error: e.toString(),
+        error: AppErrorHandler.getUserMessage(e, 'Unable to log set.'),
       ));
     }
   }
@@ -236,7 +237,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     } catch (e) {
       emit(currentState.copyWith(
         isSubmitting: false,
-        error: e.toString(),
+        error: AppErrorHandler.getUserMessage(e, 'Unable to complete workout session.'),
       ));
     }
   }
@@ -287,7 +288,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     } catch (e) {
       emit(currentState.copyWith(
         isSubmitting: false,
-        error: e.toString(),
+        error: AppErrorHandler.getUserMessage(e, 'Unable to swap exercise.'),
       ));
     }
   }
