@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_client.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_event.dart';
@@ -126,9 +127,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e, stackTrace) {
       debugPrint('❌ Google sign in error: $e\n$stackTrace');
       emit(AuthFailure(
-        e.toString(),
+        AppErrorHandler.getUserMessage(e, 'Google sign in could not be completed.'),
         code: 'GOOGLE_SIGN_IN_EXCEPTION',
-        details: stackTrace.toString(),
       ));
     }
   }
@@ -166,7 +166,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         },
       );
     } catch (e) {
-      emit(AuthFailure('Apple sign in error: ${e.toString()}'));
+      emit(AuthFailure(AppErrorHandler.getUserMessage(e, 'Apple sign in could not be completed.')));
     }
   }
 }
