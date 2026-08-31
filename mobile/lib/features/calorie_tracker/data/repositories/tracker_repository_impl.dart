@@ -4,6 +4,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/services/firebase_storage_service.dart';
 import '../../domain/repositories/tracker_repository.dart';
@@ -18,16 +19,15 @@ class TrackerRepositoryImpl implements TrackerRepository {
   }) : _storageService =
            storageService ?? FirebaseStorageService.instance;
 
-  // Helper for consistent error handling
+  // Helper for consistent user-friendly error handling
   Failure _handleError(dynamic e, String defaultMsg) {
     if (e is DioException) {
       if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
         return const NetworkFailure();
       }
-      final msg = e.response?.data?['error'] ?? defaultMsg;
-      return ServerFailure(message: msg.toString());
     }
-    return ServerFailure(message: e.toString());
+    final msg = AppErrorHandler.getUserMessage(e, defaultMsg);
+    return ServerFailure(message: msg);
   }
 
   // ── Food Log ──
