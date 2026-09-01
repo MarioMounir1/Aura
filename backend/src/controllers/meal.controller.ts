@@ -374,3 +374,90 @@ export async function manualLogMealHandler(req: Request, res: Response): Promise
   });
 }
 
+// ── Voice Meal Logging Handler ─────────────────────────────
+
+const VoiceLogSchema = z.object({
+  transcript: z
+    .string()
+    .min(2, "Spoken meal description is required")
+    .max(1000)
+    .trim(),
+  mealType: z.string().optional(),
+});
+
+/**
+ * POST /api/v1/meals/voice-log
+ * Accepts a spoken natural language transcript, analyzes it with Google Gemini,
+ * and automatically persists the parsed multi-item meal to MealLog.
+ */
+export async function voiceLogMealHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const userId = req.user!.id;
+
+  const parsed = VoiceLogSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Spoken transcript is required",
+      details: parsed.error.flatten(),
+    });
+    return;
+  }
+
+  const { transcript, mealType } = parsed.data;
+
+  try {
+    console.log(`🎙️ [VoiceLog] Analyzing spoken meal: "${transcript}"`);
+    const aiResult = await analyzeMeal({
+      type: "text",
+      restaurantName: "Voice Log",
+      mealDescription: transcript,
+    });
+
+    const mealLog = await prisma.mealLog.create({
+      data: {
+        userId,
+        mealName: aiResult.mealName,
+        restaurantName: "Voice Log",
+        calories: aiResult.calories,
+        protein: aiResult.protein,
+        carbs: aiResult.carbs,
+        fats: aiResult.fats,
+        mealType: mealType || undefined,
+        ingredientsBreakdown: aiResult.ingredientsBreakdown as any,
+        rawAiResponse: { ...aiResult, transcript } as any,
+        source: "voice",
+      },
+      select: { id: true, createdAt: true },
+    });
+
+    console.log(`✅ [VoiceLog] Logged: "${aiResult.mealName}" (${aiResult.calories} kcal)`);
+
+    res.status(201).json({
+      success: true,
+      source: "voice",
+      data: {
+        logId: mealLog.id,
+        mealName: aiResult.mealName,
+        calories: aiResult.calories,
+        protein: aiResult.protein,
+        carbs: aiResult.carbs,
+        fats: aiResult.fats,
+        mealType,
+        ingredientsBreakdown: aiResult.ingredientsBreakdown,
+        loggedAt: mealLog.createdAt.toISOString(),
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Voice meal analysis failed";
+    console.error("❌ [VoiceLog] Error:", msg);
+    res.status(500).json({
+      success: false,
+      error: `Could not analyze spoken meal: ${msg}`,
+      code: "VOICE_ANALYSIS_ERROR",
+    });
+  }
+}
+
