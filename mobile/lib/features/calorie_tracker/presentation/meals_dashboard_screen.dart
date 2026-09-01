@@ -27,6 +27,8 @@ import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
 import '../data/services/barcode_service.dart';
 import 'barcode_confirmation_sheet.dart';
+import 'voice_meal_logging_sheet.dart';
+import 'widgets/ai_coach_briefing_card.dart';
 import '../../../../core/error/error_handler.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/constants.dart';
@@ -333,6 +335,16 @@ class _MealsDashboardState extends State<MealsDashboard> {
   bool _isPickingImage = false;
 
   Future<void> _pickAndAnalyze(ImageSource source) async {
+    final scanType = source == ImageSource.camera ? 'camera' : 'gallery';
+
+    if (_quota != null) {
+      final isExceeded = scanType == 'camera' ? _quota!.isCameraExceeded : _quota!.isGalleryExceeded;
+      if (isExceeded) {
+        _showUpgradeDialog(scanType, _quota!);
+        return;
+      }
+    }
+
     if (_isPickingImage) return;
     _isPickingImage = true;
 
@@ -346,8 +358,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
         _isPickingImage = false;
         return;
       }
-
-      final scanType = source == ImageSource.camera ? 'camera' : 'gallery';
 
       setState(() {
         _selectedImage = File(picked.path);
@@ -401,13 +411,21 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   void _showUpgradeDialog(String scanType, AiUsageQuota quota) {
     final isPremium = quota.isPremium;
-    final limit = scanType == 'camera' ? quota.cameraLimit : quota.galleryLimit;
-    final typeLabel = scanType == 'camera' ? 'camera' : 'screenshot';
+    final limit = scanType == 'camera'
+        ? quota.cameraLimit
+        : scanType == 'gallery'
+            ? quota.galleryLimit
+            : quota.barcodeLimit;
+    final typeLabel = scanType == 'camera'
+        ? 'camera'
+        : scanType == 'gallery'
+            ? 'gallery'
+            : 'barcode';
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: DashboardThemeColors.cardBackground,
+        backgroundColor: const Color(0xFF1E2620),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
           isPremium ? 'Daily Limit Reached' : 'Upgrade to Premium',
@@ -416,25 +434,25 @@ class _MealsDashboardState extends State<MealsDashboard> {
         content: Text(
           isPremium 
             ? 'You have reached your daily limit of $limit $typeLabel scans. Your scans will reset tomorrow at midnight UTC.' 
-            : 'You have used all $limit of your free $typeLabel scans for today. Upgrade to Premium to get up to 7 daily scans for each type!',
-          style: GoogleFonts.inter(color: DashboardThemeColors.textSecondary, fontSize: 13, height: 1.4),
+            : 'You have used all $limit of your free $typeLabel scans for today. Upgrade to Premium for 10 daily scans of every type!',
+          style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(isPremium ? 'Got it' : 'Maybe Later', style: GoogleFonts.inter(color: DashboardThemeColors.textMuted)),
+            child: Text(isPremium ? 'Got it' : 'Maybe Later', style: GoogleFonts.inter(color: Colors.white60)),
           ),
           if (!isPremium)
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: DashboardThemeColors.accentEmerald,
+                backgroundColor: const Color(0xFF235A42),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () {
                 Navigator.pop(context);
                 PurchaseService.instance.presentPaywall(context);
               },
-              child: Text('Upgrade Now', style: GoogleFonts.outfit(color: Colors.black, fontWeight: FontWeight.bold)),
+              child: Text('Upgrade Now', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
@@ -715,7 +733,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             ),
             const SizedBox(height: 12),
 
-            // ── 2 Secondary Pills ─────────────────────────────────
+            // ── 3 Secondary Pills ─────────────────────────────────
             Row(
               children: [
                 Expanded(
@@ -726,13 +744,22 @@ class _MealsDashboardState extends State<MealsDashboard> {
                     onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.gallery); },
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
                     icon: Icons.qr_code_scanner_rounded,
                     label: 'Barcode',
                     onTap: () { Navigator.pop(ctx); _scanBarcode(); },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildSheetPill(
+                    ctx: ctx,
+                    icon: Icons.mic_rounded,
+                    label: 'Voice',
+                    onTap: () { Navigator.pop(ctx); _startVoiceLog(); },
                   ),
                 ),
               ],
@@ -817,9 +844,13 @@ class _MealsDashboardState extends State<MealsDashboard> {
               _TimelineDashboardHeader(
                 onCameraTap: () => _pickAndAnalyze(ImageSource.camera),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-              // 2. Daily Summary Banner
+              // 2. AI Coach Daily Briefing Card
+              const AiCoachBriefingCard(),
+              const SizedBox(height: 14),
+
+              // 3. Daily Summary Banner
               _DailySummaryBanner(
                 caloriesConsumed: caloriesConsumed,
                 caloriesTarget: caloriesTarget,
@@ -938,6 +969,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
   // ——— Barcode Scanner Flow ——————————————————————————————————————
 
   Future<void> _scanBarcode() async {
+    if (_quota != null && _quota!.isBarcodeExceeded) {
+      _showUpgradeDialog('barcode', _quota!);
+      return;
+    }
+
     // Step 1: Open camera-based barcode scanner overlay
     String? detectedBarcode;
     await showModalBottomSheet<void>(
@@ -1039,6 +1075,24 @@ class _MealsDashboardState extends State<MealsDashboard> {
       logs.insert(0, entry);
       _recalcTotals();
     });
+    _fetchQuota();
+  }
+
+  Future<void> _startVoiceLog() async {
+    final result = await showModalBottomSheet<MealEntry>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => const VoiceMealLoggingSheet(),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        logs.insert(0, result);
+        _recalcTotals();
+      });
+      _fetchQuota();
+    }
   }
 
   Future<BarcodeProduct?> _promptForBarcodeEstimation(
