@@ -316,7 +316,7 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                           ),
                           const SizedBox(width: 10),
                           Text(
-                            'Weekly AI Insights',
+                            'Weekly Insights',
                             style: GoogleFonts.outfit(
                               fontSize: 19,
                               fontWeight: FontWeight.w800,
