@@ -159,14 +159,24 @@ class _VoiceMealLoggingSheetState extends State<VoiceMealLoggingSheet>
 
       if (response.statusCode == 201 && response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
+        final p = (data['protein'] as num?)?.toDouble() ?? 0.0;
+        final c = (data['carbs'] as num?)?.toDouble() ?? 0.0;
+        final f = (data['fats'] as num?)?.toDouble() ?? 0.0;
+        final cal = (data['calories'] as num?)?.toDouble() ?? 0.0;
+
         final entry = MealEntry(
           id: (data['logId'] as String?) ?? DateTime.now().millisecondsSinceEpoch.toString(),
           foodName: (data['mealName'] as String?) ?? text,
           restaurantName: 'Voice Log',
-          protein: (data['protein'] as num?)?.toDouble() ?? 0.0,
-          carbs: (data['carbs'] as num?)?.toDouble() ?? 0.0,
-          fat: (data['fats'] as num?)?.toDouble() ?? 0.0,
-          calories: (data['calories'] as num?)?.toInt() ?? 0,
+          protein: p,
+          carbs: c,
+          fat: f,
+          calories: cal,
+          warnings: const [],
+          isHighlyNutritious: p >= 20 && cal < 600,
+          createdAt: DateTime.now(),
+          source: 'voice',
+          ingredientsBreakdown: const [],
         );
 
         Navigator.of(context).pop(entry);
