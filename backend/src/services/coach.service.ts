@@ -756,39 +756,37 @@ export interface DailyBriefingResult {
 export async function generateDailyEcosystemBriefing(
   input: DailyBriefingInput
 ): Promise<DailyBriefingResult> {
-  const systemPrompt = `You are Aura Coach, an elite, motivational, and scientifically grounded AI health companion.
-Generate a concise, personalized daily health & fitness briefing.
-Respond ONLY with a JSON object matching this schema:
-{
-  "headline": "A short, punchy 3-5 word headline with an emoji (e.g. 'Push Day Power 🔥' or 'Crush Your Protein Goal 💪')",
-  "message": "Exactly 2 inspiring, actionable sentences (maximum 35 words total) connecting today's workout and nutrition focus.",
-  "focusArea": "A short 2-3 word tag (e.g. 'High Protein', 'Compound Power', 'Active Recovery')"
-}`;
-
   const remainingCals = Math.max(0, input.calorieTarget - input.caloriesConsumedToday);
-  const userPrompt = `User: ${input.userName || "Athlete"}.
-Calorie Target: ${input.calorieTarget} kcal (${input.caloriesConsumedToday} logged, ${remainingCals} remaining).
-Protein Target: ${input.proteinTarget}g (${input.proteinConsumedToday}g logged).
-Today's Scheduled Session: ${input.todaysWorkoutSplit || "Rest / Recovery"}.
-Current Active Streak: ${input.streakDays} days.
-Weight Trend: ${input.weightTrend || "Maintaining"}.`;
 
-  const fallback: DailyBriefingResult = {
-    headline: input.todaysWorkoutSplit ? "Ready to Crush It 🔥" : "Recovery & Fuel 🧘",
-    message: input.todaysWorkoutSplit
-      ? `Today is ${input.todaysWorkoutSplit}. Fuel up with clean carbs before your session and prioritize hitting your ${input.proteinTarget}g protein target!`
-      : `Focus on hydration and nutrient-dense meals today to repair muscles and keep your ${input.streakDays}-day streak strong!`,
-    focusArea: input.todaysWorkoutSplit ? "Strength & Power" : "Active Recovery",
+  if (input.todaysWorkoutSplit && input.todaysWorkoutSplit !== "Rest Day") {
+    return {
+      headline: `${input.todaysWorkoutSplit} Day 🔥`,
+      message: `Today's session is ${input.todaysWorkoutSplit}. Fuel up with clean energy and prioritize hitting your ${input.proteinTarget}g protein target!`,
+      focusArea: "Strength & Power",
+    };
+  }
+
+  if (input.streakDays >= 3) {
+    return {
+      headline: `${input.streakDays}-Day Streak Strong ⚡`,
+      message: `Impressive consistency with ${input.streakDays} active days! Focus on nutrient-dense meals and clean hydration today.`,
+      focusArea: "Active Recovery",
+    };
+  }
+
+  if (input.caloriesConsumedToday > 0) {
+    return {
+      headline: `${remainingCals} kcal Remaining 🎯`,
+      message: `You've logged ${input.caloriesConsumedToday} of ${input.calorieTarget} kcal today. Keep meals balanced to hit your daily target.`,
+      focusArea: "Nutrition Balance",
+    };
+  }
+
+  return {
+    headline: "Daily Nutrition Focus 🎯",
+    message: `Your daily target is ${input.calorieTarget} kcal and ${input.proteinTarget}g protein. Log your meals to track progress.`,
+    focusArea: "Consistency",
   };
-
-  const res = await callOllamaJsonChat<DailyBriefingResult>(
-    systemPrompt,
-    userPrompt,
-    fallback,
-    { callerName: "generateDailyEcosystemBriefing", timeoutMs: 8000 }
-  );
-
-  return res ?? fallback;
 }
 
 // ── 16. Weekly Insights Report ─────────────────────────────────
@@ -815,40 +813,31 @@ export async function generateWeeklyInsightsReport(
 ): Promise<WeeklyInsightsResult> {
   const consistencyScore = Math.min(100, Math.round((input.daysLoggedCount / 7) * 100));
 
-  const systemPrompt = `You are Aura AI Coach. Analyze the user's 7-day health metrics and produce a weekly progress review.
-Respond ONLY with a JSON object matching this schema:
-{
-  "headline": "A short celebration headline with emoji (e.g. 'Strong Weekly Momentum ⚡')",
-  "summary": "2 sentences summarizing their consistency, nutrition adherence, and workout dedication.",
-  "keyWin": "1 specific achievement to celebrate from this week.",
-  "nextWeekFocus": "1 concrete actionable goal for next week."
-}`;
+  if (input.daysLoggedCount === 0 && input.totalWorkouts === 0) {
+    return {
+      consistencyScore: 0,
+      headline: "Start Your Weekly Journey 🚀",
+      summary: "Log your daily meals and workout sessions to track consistency and hit your goals.",
+      keyWin: "Dashboard ready to record your progress",
+      nextWeekFocus: "Log your first meal and workout today",
+    };
+  }
 
-  const userPrompt = `Logged ${input.daysLoggedCount}/7 days (${consistencyScore}% consistency).
-Avg Daily Calories: ${input.avgDailyCalories} kcal vs Target ${input.calorieTarget} kcal.
-Workouts Completed: ${input.totalWorkouts} sessions.
-Weight Change: ${input.weightDeltaKg != null ? `${input.weightDeltaKg > 0 ? "+" : ""}${input.weightDeltaKg.toFixed(1)} kg` : "Stable"}.`;
-
-  const fallback: WeeklyInsightsResult = {
-    consistencyScore,
-    headline: consistencyScore >= 70 ? "Phenomenal Consistency! 🚀" : "Building Momentum 📈",
-    summary: `You logged ${input.daysLoggedCount} out of 7 days and crushed ${input.totalWorkouts} workouts this week. Solid effort across your nutrition and training!`,
-    keyWin: `${input.totalWorkouts} intense workout sessions completed`,
-    nextWeekFocus: `Aim for ${Math.min(7, input.daysLoggedCount + 1)} logged days to increase consistency`,
-  };
-
-  const res = await callOllamaJsonChat<WeeklyInsightsResult>(
-    systemPrompt,
-    userPrompt,
-    fallback,
-    { callerName: "generateWeeklyInsightsReport", timeoutMs: 9000 }
-  );
+  if (consistencyScore >= 70) {
+    return {
+      consistencyScore,
+      headline: "Phenomenal Consistency! 🏆",
+      summary: `You logged ${input.daysLoggedCount} of 7 days and crushed ${input.totalWorkouts} workouts with ${input.avgDailyCalories} kcal daily average.`,
+      keyWin: `${input.totalWorkouts} workout sessions completed`,
+      nextWeekFocus: "Maintain this top-tier training and nutrition rhythm",
+    };
+  }
 
   return {
     consistencyScore,
-    headline: res?.headline ?? fallback.headline,
-    summary: res?.summary ?? fallback.summary,
-    keyWin: res?.keyWin ?? fallback.keyWin,
-    nextWeekFocus: res?.nextWeekFocus ?? fallback.nextWeekFocus,
+    headline: "Building Weekly Momentum 📈",
+    summary: `You logged ${input.daysLoggedCount} days this week with ${input.totalWorkouts} workouts completed.`,
+    keyWin: `${input.daysLoggedCount} active tracking days`,
+    nextWeekFocus: `Aim for ${Math.min(7, input.daysLoggedCount + 2)} logged days next week`,
   };
 }
