@@ -1,14 +1,19 @@
-// ============================================================
-//  src/controllers/coach.controller.ts
-//  Aura — AI Coach Daily Briefing & Weekly Insights Controller
-// ============================================================
-
 import { Request, Response } from "express";
 import prisma from "../services/prisma.service";
 import {
   generateDailyEcosystemBriefing,
   generateWeeklyInsightsReport,
 } from "../services/coach.service";
+
+// ── In-Memory Cache (15 min TTL) for Instant Responses ─────
+interface CacheItem<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const briefingCache = new Map<string, CacheItem<any>>();
+const weeklyCache = new Map<string, CacheItem<any>>();
 
 /**
  * GET /api/v1/coach/daily-briefing
@@ -21,6 +26,13 @@ export async function getDailyBriefingHandler(
 ): Promise<void> {
   try {
     const userId = req.user!.id;
+
+    // Check fast cache
+    const cached = briefingCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.status(200).json({ success: true, data: cached.data });
+      return;
+    }
 
     // 1. Fetch User Profile
     const user = await prisma.user.findUnique({
@@ -127,19 +139,23 @@ export async function getDailyBriefingHandler(
       weightTrend: user?.goal ? `${user.goal} Phase` : "Healthy Lifestyle",
     });
 
+    const resultData = {
+      ...briefing,
+      metrics: {
+        calorieTarget,
+        caloriesConsumedToday: Math.round(caloriesConsumedToday),
+        proteinTarget,
+        proteinConsumedToday: Math.round(proteinConsumedToday),
+        streakDays,
+        todaysWorkoutSplit: todaysWorkoutSplit ?? "Rest Day",
+      },
+    };
+
+    briefingCache.set(userId, { data: resultData, expiresAt: Date.now() + CACHE_TTL_MS });
+
     res.status(200).json({
       success: true,
-      data: {
-        ...briefing,
-        metrics: {
-          calorieTarget,
-          caloriesConsumedToday: Math.round(caloriesConsumedToday),
-          proteinTarget,
-          proteinConsumedToday: Math.round(proteinConsumedToday),
-          streakDays,
-          todaysWorkoutSplit: todaysWorkoutSplit ?? "Rest Day",
-        },
-      },
+      data: resultData,
     });
   } catch (error: unknown) {
     console.error("❌ [Coach] Daily briefing error:", error);
@@ -160,6 +176,14 @@ export async function getWeeklyInsightsHandler(
 ): Promise<void> {
   try {
     const userId = req.user!.id;
+
+    // Check fast cache
+    const cached = weeklyCache.get(userId);
+    if (cached && cached.expiresAt > Date.now()) {
+      res.status(200).json({ success: true, data: cached.data });
+      return;
+    }
+
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     sevenDaysAgo.setUTCHours(0, 0, 0, 0);
 
@@ -221,19 +245,23 @@ export async function getWeeklyInsightsHandler(
       daysLoggedCount: activeDaysSet.size,
     });
 
+    const resultData = {
+      ...report,
+      stats: {
+        totalCaloriesLogged: Math.round(totalCaloriesLogged),
+        avgDailyCalories,
+        calorieTarget,
+        totalWorkouts: completedWorkouts.length,
+        daysLoggedCount: activeDaysSet.size,
+        weightDeltaKg,
+      },
+    };
+
+    weeklyCache.set(userId, { data: resultData, expiresAt: Date.now() + CACHE_TTL_MS });
+
     res.status(200).json({
       success: true,
-      data: {
-        ...report,
-        stats: {
-          totalCaloriesLogged: Math.round(totalCaloriesLogged),
-          avgDailyCalories,
-          calorieTarget,
-          totalWorkouts: completedWorkouts.length,
-          daysLoggedCount: activeDaysSet.size,
-          weightDeltaKg,
-        },
-      },
+      data: resultData,
     });
   } catch (error: unknown) {
     console.error("❌ [Coach] Weekly insights error:", error);
