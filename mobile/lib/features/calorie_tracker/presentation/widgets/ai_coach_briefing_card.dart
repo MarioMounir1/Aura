@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/widgets/ai_coach_briefing_card.dart
-// Aura — Daily AI Coach Briefing Card with Personalized Insights
+// Aura — Daily AI Coach Briefing Card (Light Sage & Forest Green Aura Theme)
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -19,9 +19,9 @@ class AiCoachBriefingCard extends StatefulWidget {
 
 class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
   bool _isLoading = true;
-  String _headline = 'Powering Your Day ⚡';
-  String _message = 'Analyzing your nutrition and workouts for personalized insights...';
-  String _focusArea = 'Daily Focus';
+  String _headline = '';
+  String _message = '';
+  String _focusArea = '';
 
   @override
   void initState() {
@@ -57,12 +57,21 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
             _isLoading = false;
           });
         }
+      } else {
+        if (mounted) {
+          setState(() {
+            _headline = 'Daily Coaching Insight ✨';
+            _message = 'Keep tracking your meals and workouts to stay aligned with your daily calorie goal.';
+            _focusArea = 'Consistency';
+            _isLoading = false;
+          });
+        }
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _headline = 'Welcome to Aura ✨';
-          _message = 'Log your meals and workouts consistently to unlock tailored AI coach recommendations.';
+          _headline = 'Daily Coaching Insight ✨';
+          _message = 'Keep tracking your meals and workouts to stay aligned with your daily calorie goal.';
           _focusArea = 'Consistency';
           _isLoading = false;
         });
@@ -81,158 +90,184 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E2D23), Color(0xFF141F18)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    if (_isLoading) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2EFE5), width: 1.2),
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF2E4334), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF235A42).withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header: Badge + Focus Tag + Weekly Insights link
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF235A42).withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF388E68), width: 0.8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.auto_awesome, color: Color(0xFF55D6A0), size: 12),
-                        const SizedBox(width: 5),
-                        Text(
-                          'AURA COACH',
-                          style: GoogleFonts.outfit(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                            color: const Color(0xFF55D6A0),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _focusArea,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              InkWell(
-                onTap: _openWeeklyInsights,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Weekly',
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF55D6A0),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      const Icon(Icons.chevron_right_rounded, color: Color(0xFF55D6A0), size: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Headline
-          if (_isLoading)
-            Container(
-              width: 140,
-              height: 16,
-              decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            )
-          else
-            Text(
-              _headline,
-              style: GoogleFonts.outfit(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: -0.2,
-              ),
-            ),
-          const SizedBox(height: 6),
-
-          // Actionable message
-          if (_isLoading)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                const SizedBox(height: 4),
                 Container(
-                  width: double.infinity,
-                  height: 12,
+                  width: 90,
+                  height: 22,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(4),
+                    color: const Color(0xFFF0F6F2),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(width: 8),
                 Container(
-                  width: 200,
-                  height: 12,
+                  width: 70,
+                  height: 22,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(4),
+                    color: const Color(0xFFF0F6F2),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ],
-            )
-          else
-            Text(
-              _message,
-              style: GoogleFonts.inter(
-                fontSize: 12.5,
-                color: const Color(0xFFCAD8CE),
-                height: 1.45,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: 180,
+              height: 16,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F6F2),
+                borderRadius: BorderRadius.circular(6),
               ),
             ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              height: 12,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F6F2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFDCEEE3), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x081E3A2B),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _openWeeklyInsights,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Aura Coach badge + Focus Tag + Weekly Insights Arrow
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F4EC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFCBE3D1), width: 0.8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.auto_awesome, color: Color(0xFF235A42), size: 12),
+                              const SizedBox(width: 5),
+                              Text(
+                                'AURA COACH',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: const Color(0xFF235A42),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_focusArea.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F7F5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _focusArea,
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF5A7060),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          'Weekly',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF235A42),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Color(0xFF235A42),
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                // Headline
+                Text(
+                  _headline,
+                  style: GoogleFonts.outfit(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1E3A2B),
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+
+                // Actionable 2-sentence guidance
+                Text(
+                  _message,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF5A7060),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
