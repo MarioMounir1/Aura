@@ -44,6 +44,9 @@ dependencies:
   # Barcode Scanner
   mobile_scanner: ^5.2.3
 
+  # Voice & Speech Recognition
+  speech_to_text: ^7.0.0
+
   # Navigation
   go_router: ^14.6.1
 
