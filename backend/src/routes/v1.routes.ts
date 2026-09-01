@@ -5,8 +5,8 @@
 // ============================================================
 
 import { Router } from "express";
-import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook, forgotPassword, resetPassword } from "../controllers/user.controller";
-import { analyzeMealHandler, manualLogMealHandler, updateMealLog } from "../controllers/meal.controller";
+import { analyzeMealHandler, manualLogMealHandler, updateMealLog, voiceLogMealHandler } from "../controllers/meal.controller";
+import { getDailyBriefingHandler, getWeeklyInsightsHandler } from "../controllers/coach.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { scanBarcodeHandler, logBarcodeHandler, estimateBarcodeHandler } from "../controllers/barcode.controller";
 import { getMealHistory, deleteMealLog, getNutritionHistory } from "../controllers/history.controller";
@@ -279,13 +279,31 @@ router.get("/meals/usage", requireAuth, getAiUsageHandler);
  */
 router.post("/meals/scan-local", requireAuth, analyzeMealLimiter, scanLocalHandler);
 
-/**
- * @route   POST /api/v1/meals/manual
- * @desc    Manually log a meal with known macros (no AI)
- * @access  Private
- * @body    { mealName?, calories, protein, carbs, fats, mealType? }
- */
 router.post("/meals/manual", requireAuth, manualLogMealHandler);
+
+/**
+ * @route   POST /api/v1/meals/voice-log
+ * @desc    Log spoken meal description with instant Gemini NLP macro extraction
+ * @access  Private (JWT required)
+ * @body    { transcript, mealType? }
+ */
+router.post("/meals/voice-log", requireAuth, analyzeMealLimiter, voiceLogMealHandler);
+
+// ── AI Coach Ecosystem Briefing & Insights ─────────────────
+
+/**
+ * @route   GET /api/v1/coach/daily-briefing
+ * @desc    Personalized holistic daily health & fitness briefing
+ * @access  Private (JWT required)
+ */
+router.get("/coach/daily-briefing", requireAuth, getDailyBriefingHandler);
+
+/**
+ * @route   GET /api/v1/coach/weekly-insights
+ * @desc    7-day progress review with consistency score & milestone insights
+ * @access  Private (JWT required)
+ */
+router.get("/coach/weekly-insights", requireAuth, getWeeklyInsightsHandler);
 
 /**
  * @route   POST /api/v1/meals/scan-barcode
