@@ -1,5 +1,5 @@
 // lib/features/calorie_tracker/presentation/widgets/weekly_insights_sheet.dart
-// Aura — Weekly AI Health & Fitness Insights Sheet with Shareable Story Card
+// Aura — Weekly AI Health & Fitness Insights Sheet (Aura Light Theme)
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -16,15 +16,15 @@ class WeeklyInsightsSheet extends StatefulWidget {
 
 class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
   bool _isLoading = true;
-  int _consistencyScore = 85;
-  String _headline = 'Strong Weekly Progress ⚡';
-  String _summary = 'You remained consistent with nutrition and workout adherence this week.';
-  String _keyWin = 'Completed all scheduled workout sessions';
-  String _nextWeekFocus = 'Maintain protein targets on rest days';
-  int _totalWorkouts = 4;
-  int _avgDailyCalories = 2100;
-  int _calorieTarget = 2200;
-  int _daysLogged = 6;
+  int _consistencyScore = 0;
+  String _headline = 'Weekly Progress Overview';
+  String _summary = '';
+  String _keyWin = '';
+  String _nextWeekFocus = '';
+  int _totalWorkouts = 0;
+  int _avgDailyCalories = 0;
+  int _calorieTarget = 2000;
+  int _daysLogged = 0;
   double? _weightDelta;
 
   @override
@@ -57,19 +57,21 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
 
         if (mounted) {
           setState(() {
-            _consistencyScore = (data['consistencyScore'] as num?)?.toInt() ?? 80;
-            _headline = data['headline'] ?? 'Strong Weekly Progress ⚡';
+            _consistencyScore = (data['consistencyScore'] as num?)?.toInt() ?? 0;
+            _headline = data['headline'] ?? 'Weekly Progress Overview';
             _summary = data['summary'] ?? '';
             _keyWin = data['keyWin'] ?? '';
             _nextWeekFocus = data['nextWeekFocus'] ?? '';
             _totalWorkouts = (stats['totalWorkouts'] as num?)?.toInt() ?? 0;
-            _avgDailyCalories = (stats['avgDailyCalories'] as num?)?.toInt() ?? 2000;
+            _avgDailyCalories = (stats['avgDailyCalories'] as num?)?.toInt() ?? 0;
             _calorieTarget = (stats['calorieTarget'] as num?)?.toInt() ?? 2000;
             _daysLogged = (stats['daysLoggedCount'] as num?)?.toInt() ?? 0;
             _weightDelta = (stats['weightDeltaKg'] as num?)?.toDouble();
             _isLoading = false;
           });
         }
+      } else {
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (_) {
       if (mounted) {
@@ -88,18 +90,14 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1E3A2B), Color(0xFF0D1812)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+            color: const Color(0xFFF6F8F5),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: const Color(0xFF388E68), width: 1.5),
-            boxShadow: [
+            border: Border.all(color: const Color(0xFFD4E5D8), width: 1.5),
+            boxShadow: const [
               BoxShadow(
-                color: const Color(0xFF55D6A0).withValues(alpha: 0.2),
+                color: Color(0x151E3A2B),
                 blurRadius: 30,
-                spreadRadius: 2,
+                offset: Offset(0, 10),
               ),
             ],
           ),
@@ -113,10 +111,10 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF55D6A0).withValues(alpha: 0.15),
+                      color: const Color(0xFF235A42).withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.bolt_rounded, color: Color(0xFF55D6A0), size: 24),
+                    child: const Icon(Icons.bolt_rounded, color: Color(0xFF235A42), size: 22),
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -125,12 +123,12 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 2,
-                      color: Colors.white,
+                      color: const Color(0xFF1E3A2B),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               Text(
                 'WEEKLY HIGHLIGHTS',
@@ -138,7 +136,7 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.2,
-                  color: const Color(0xFF55D6A0),
+                  color: const Color(0xFF4A6B56),
                 ),
               ),
               const SizedBox(height: 6),
@@ -146,12 +144,12 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                 _headline,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1E3A2B),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // Stat Grid
               Row(
@@ -193,7 +191,7 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
               // Close / Done
               SizedBox(
@@ -201,8 +199,9 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF55D6A0),
+                    backgroundColor: const Color(0xFF235A42),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
                   onPressed: () => Navigator.of(ctx).pop(),
                   child: Text(
@@ -210,7 +209,7 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0D1812),
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -230,20 +229,23 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: const Color(0xFFDCEEE3)),
+        boxShadow: const [
+          BoxShadow(color: Color(0x061E3A2B), blurRadius: 6, offset: Offset(0, 2)),
+        ],
       ),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFF55D6A0), size: 18),
+          Icon(icon, color: const Color(0xFF235A42), size: 18),
           const SizedBox(height: 6),
           Text(
             value,
             style: GoogleFonts.outfit(
               fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1E3A2B),
             ),
           ),
           const SizedBox(height: 2),
@@ -251,7 +253,8 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
             label,
             style: GoogleFonts.inter(
               fontSize: 11,
-              color: Colors.white60,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF5A7060),
             ),
           ),
         ],
@@ -267,16 +270,16 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: const BoxDecoration(
-        color: Color(0xFF131A15),
+        color: Color(0xFFF6F8F5),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: Color(0xFF283A2E), width: 1.5)),
+        border: Border(top: BorderSide(color: Color(0xFFD4E5D8), width: 1.5)),
       ),
       child: _isLoading
           ? const Center(
               child: SizedBox(
                 width: 32,
                 height: 32,
-                child: CircularProgressIndicator(color: Color(0xFF55D6A0)),
+                child: CircularProgressIndicator(color: Color(0xFF235A42)),
               ),
             )
           : SingleChildScrollView(
@@ -290,7 +293,7 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: const Color(0xFFC8DACD),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -306,40 +309,38 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF235A42).withValues(alpha: 0.3),
+                              color: const Color(0xFF235A42).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.auto_graph_rounded, color: Color(0xFF55D6A0), size: 20),
+                            child: const Icon(Icons.auto_graph_rounded, color: Color(0xFF235A42), size: 20),
                           ),
                           const SizedBox(width: 10),
                           Text(
                             'Weekly AI Insights',
                             style: GoogleFonts.outfit(
                               fontSize: 19,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1E3A2B),
                             ),
                           ),
                         ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 22),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFF5A7060), size: 22),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
                   // Headline Banner
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1E2E23), Color(0xFF16211A)],
-                      ),
+                      color: const Color(0xFFDCEEE3),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFF2C4535)),
+                      border: Border.all(color: const Color(0xFFCBE3D1)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,18 +348,20 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              _headline,
-                              style: GoogleFonts.outfit(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                            Expanded(
+                              child: Text(
+                                _headline,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1E3A2B),
+                                ),
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF55D6A0).withValues(alpha: 0.15),
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -366,21 +369,23 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                                 style: GoogleFonts.outfit(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF55D6A0),
+                                  color: const Color(0xFF235A42),
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _summary,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: const Color(0xFFCAD8CE),
-                            height: 1.45,
+                        if (_summary.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            _summary,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: const Color(0xFF3B5745),
+                              height: 1.45,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -441,13 +446,13 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1B241E),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF2B3A2F)),
+                        border: Border.all(color: const Color(0xFFDDECE1)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFD166), size: 20),
+                          const Icon(Icons.emoji_events_rounded, color: Color(0xFFD4A017), size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -459,13 +464,17 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.6,
-                                    color: const Color(0xFFFFD166),
+                                    color: const Color(0xFF9A7410),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   _keyWin,
-                                  style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1E3A2B),
+                                  ),
                                 ),
                               ],
                             ),
@@ -482,13 +491,13 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1B241E),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF2B3A2F)),
+                        border: Border.all(color: const Color(0xFFDDECE1)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.track_changes_rounded, color: Color(0xFF55D6A0), size: 20),
+                          const Icon(Icons.track_changes_rounded, color: Color(0xFF235A42), size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
@@ -500,13 +509,17 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.6,
-                                    color: const Color(0xFF55D6A0),
+                                    color: const Color(0xFF235A42),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   _nextWeekFocus,
-                                  style: GoogleFonts.inter(fontSize: 12.5, color: Colors.white),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF1E3A2B),
+                                  ),
                                 ),
                               ],
                             ),
@@ -555,31 +568,38 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF18221B),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF26362A)),
+        border: Border.all(color: const Color(0xFFDDECE1)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x061E3A2B),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF55D6A0), size: 18),
+          Icon(icon, color: const Color(0xFF235A42), size: 18),
           const SizedBox(height: 8),
           Text(
             value,
             style: GoogleFonts.outfit(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1E3A2B),
             ),
           ),
           const SizedBox(height: 2),
           Text(
             title,
-            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: Colors.white70),
+            style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
           ),
           Text(
             subtitle,
-            style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white38),
+            style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF5A7060)),
           ),
         ],
       ),
