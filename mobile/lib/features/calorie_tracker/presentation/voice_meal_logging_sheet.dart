@@ -207,26 +207,28 @@ class _VoiceMealLoggingSheetState extends State<VoiceMealLoggingSheet>
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
-        top: 20,
+        top: 16,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFF161E18),
+        color: Color(0xFFF6F8F5),
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
-          top: BorderSide(color: Color(0xFF2E3D31), width: 1.5),
+          top: BorderSide(color: Color(0xFFD4E5D8), width: 1.5),
         ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag handle
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFFC8DACD),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -240,31 +242,31 @@ class _VoiceMealLoggingSheetState extends State<VoiceMealLoggingSheet>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF235A42).withValues(alpha: 0.3),
+                      color: const Color(0xFF235A42).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.mic_rounded, color: Color(0xFF55D6A0), size: 20),
+                    child: const Icon(Icons.mic_rounded, color: Color(0xFF235A42), size: 20),
                   ),
                   const SizedBox(width: 10),
                   Text(
                     'Talk to Log',
                     style: GoogleFonts.outfit(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1E3A2B),
                     ),
                   ),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 22),
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF5A7060), size: 22),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // Glowing animated mic button
+          // Animated mic button
           GestureDetector(
             onTap: _isAnalyzing
                 ? null
@@ -278,51 +280,57 @@ class _VoiceMealLoggingSheetState extends State<VoiceMealLoggingSheet>
             child: ScaleTransition(
               scale: _isListening ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
               child: Container(
-                width: 80,
-                height: 80,
+                width: 76,
+                height: 76,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
                     colors: _isListening
                         ? [const Color(0xFF235A42), const Color(0xFF388E68)]
-                        : [const Color(0xFF263329), const Color(0xFF1E2821)],
+                        : [Colors.white, const Color(0xFFF0F6F2)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: _isListening
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF55D6A0).withValues(alpha: 0.4),
-                            blurRadius: 24,
-                            spreadRadius: 4,
+                            color: const Color(0xFF235A42).withValues(alpha: 0.35),
+                            blurRadius: 20,
+                            spreadRadius: 3,
                           )
                         ]
-                      : [],
+                      : const [
+                          BoxShadow(
+                            color: Color(0x101E3A2B),
+                            blurRadius: 10,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
                   border: Border.all(
-                    color: _isListening ? const Color(0xFF55D6A0) : const Color(0xFF384A3B),
+                    color: _isListening ? const Color(0xFF235A42) : const Color(0xFFD3E4D7),
                     width: 2,
                   ),
                 ),
                 child: _isAnalyzing
                     ? const Center(
                         child: SizedBox(
-                          width: 28,
-                          height: 28,
+                          width: 26,
+                          height: 26,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            color: Color(0xFF55D6A0),
+                            color: Color(0xFF235A42),
                           ),
                         ),
                       )
                     : Icon(
                         _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                        color: _isListening ? const Color(0xFF55D6A0) : Colors.white70,
-                        size: 36,
+                        color: _isListening ? Colors.white : const Color(0xFF235A42),
+                        size: 34,
                       ),
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           Text(
             _isAnalyzing
@@ -332,37 +340,44 @@ class _VoiceMealLoggingSheetState extends State<VoiceMealLoggingSheet>
                     : 'Tap mic to start or edit below',
             style: GoogleFonts.inter(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: _isListening ? const Color(0xFF55D6A0) : Colors.white60,
+              fontWeight: FontWeight.w600,
+              color: _isListening ? const Color(0xFF235A42) : const Color(0xFF5A7060),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
           // Editable transcript text field
           Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF0F1511),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF263529)),
+              border: Border.all(color: const Color(0xFFDCEEE3)),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x061E3A2B),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
             child: TextField(
               controller: _textController,
               maxLines: 3,
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 14, height: 1.4),
+              style: GoogleFonts.inter(color: const Color(0xFF1E3A2B), fontSize: 14, height: 1.4),
               decoration: InputDecoration(
                 hintText: 'e.g. "I had 2 fried eggs, a buttered croissant, and an iced latte"',
-                hintStyle: GoogleFonts.inter(color: Colors.white30, fontSize: 13),
+                hintStyle: GoogleFonts.inter(color: const Color(0xFF9EABA1), fontSize: 13),
                 contentPadding: const EdgeInsets.all(14),
                 border: InputBorder.none,
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
           // Action Button
           SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 50,
             child: ElevatedButton(
               onPressed: _isAnalyzing ? null : _analyzeAndLog,
               style: ElevatedButton.styleFrom(
@@ -379,12 +394,12 @@ class _VoiceMealLoggingSheetState extends State<VoiceMealLoggingSheet>
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.auto_awesome, color: Color(0xFF55D6A0), size: 18),
+                        const Icon(Icons.auto_awesome, color: Color(0xFFFFD166), size: 18),
                         const SizedBox(width: 8),
                         Text(
                           'Analyze & Log Meal',
                           style: GoogleFonts.outfit(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
