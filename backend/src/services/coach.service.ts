@@ -733,3 +733,122 @@ Respond ONLY with a valid JSON object matching this schema:
 
   return res ?? fallback;
 }
+
+// ── 15. Daily Ecosystem Holistic Briefing ────────────────────────
+
+export interface DailyBriefingInput {
+  userName?: string;
+  calorieTarget: number;
+  caloriesConsumedToday: number;
+  proteinTarget: number;
+  proteinConsumedToday: number;
+  todaysWorkoutSplit?: string;
+  streakDays: number;
+  weightTrend?: string;
+}
+
+export interface DailyBriefingResult {
+  headline: string;
+  message: string;
+  focusArea: string;
+}
+
+export async function generateDailyEcosystemBriefing(
+  input: DailyBriefingInput
+): Promise<DailyBriefingResult> {
+  const systemPrompt = `You are Aura Coach, an elite, motivational, and scientifically grounded AI health companion.
+Generate a concise, personalized daily health & fitness briefing.
+Respond ONLY with a JSON object matching this schema:
+{
+  "headline": "A short, punchy 3-5 word headline with an emoji (e.g. 'Push Day Power 🔥' or 'Crush Your Protein Goal 💪')",
+  "message": "Exactly 2 inspiring, actionable sentences (maximum 35 words total) connecting today's workout and nutrition focus.",
+  "focusArea": "A short 2-3 word tag (e.g. 'High Protein', 'Compound Power', 'Active Recovery')"
+}`;
+
+  const remainingCals = Math.max(0, input.calorieTarget - input.caloriesConsumedToday);
+  const userPrompt = `User: ${input.userName || "Athlete"}.
+Calorie Target: ${input.calorieTarget} kcal (${input.caloriesConsumedToday} logged, ${remainingCals} remaining).
+Protein Target: ${input.proteinTarget}g (${input.proteinConsumedToday}g logged).
+Today's Scheduled Session: ${input.todaysWorkoutSplit || "Rest / Recovery"}.
+Current Active Streak: ${input.streakDays} days.
+Weight Trend: ${input.weightTrend || "Maintaining"}.`;
+
+  const fallback: DailyBriefingResult = {
+    headline: input.todaysWorkoutSplit ? "Ready to Crush It 🔥" : "Recovery & Fuel 🧘",
+    message: input.todaysWorkoutSplit
+      ? `Today is ${input.todaysWorkoutSplit}. Fuel up with clean carbs before your session and prioritize hitting your ${input.proteinTarget}g protein target!`
+      : `Focus on hydration and nutrient-dense meals today to repair muscles and keep your ${input.streakDays}-day streak strong!`,
+    focusArea: input.todaysWorkoutSplit ? "Strength & Power" : "Active Recovery",
+  };
+
+  const res = await callOllamaJsonChat<DailyBriefingResult>(
+    systemPrompt,
+    userPrompt,
+    fallback,
+    { callerName: "generateDailyEcosystemBriefing", timeoutMs: 8000 }
+  );
+
+  return res ?? fallback;
+}
+
+// ── 16. Weekly Insights Report ─────────────────────────────────
+
+export interface WeeklyInsightsInput {
+  totalCaloriesLogged: number;
+  avgDailyCalories: number;
+  calorieTarget: number;
+  totalWorkouts: number;
+  weightDeltaKg?: number;
+  daysLoggedCount: number;
+}
+
+export interface WeeklyInsightsResult {
+  consistencyScore: number;
+  headline: string;
+  summary: string;
+  keyWin: string;
+  nextWeekFocus: string;
+}
+
+export async function generateWeeklyInsightsReport(
+  input: WeeklyInsightsInput
+): Promise<WeeklyInsightsResult> {
+  const consistencyScore = Math.min(100, Math.round((input.daysLoggedCount / 7) * 100));
+
+  const systemPrompt = `You are Aura AI Coach. Analyze the user's 7-day health metrics and produce a weekly progress review.
+Respond ONLY with a JSON object matching this schema:
+{
+  "headline": "A short celebration headline with emoji (e.g. 'Strong Weekly Momentum ⚡')",
+  "summary": "2 sentences summarizing their consistency, nutrition adherence, and workout dedication.",
+  "keyWin": "1 specific achievement to celebrate from this week.",
+  "nextWeekFocus": "1 concrete actionable goal for next week."
+}`;
+
+  const userPrompt = `Logged ${input.daysLoggedCount}/7 days (${consistencyScore}% consistency).
+Avg Daily Calories: ${input.avgDailyCalories} kcal vs Target ${input.calorieTarget} kcal.
+Workouts Completed: ${input.totalWorkouts} sessions.
+Weight Change: ${input.weightDeltaKg != null ? `${input.weightDeltaKg > 0 ? "+" : ""}${input.weightDeltaKg.toFixed(1)} kg` : "Stable"}.`;
+
+  const fallback: WeeklyInsightsResult = {
+    consistencyScore,
+    headline: consistencyScore >= 70 ? "Phenomenal Consistency! 🚀" : "Building Momentum 📈",
+    summary: `You logged ${input.daysLoggedCount} out of 7 days and crushed ${input.totalWorkouts} workouts this week. Solid effort across your nutrition and training!`,
+    keyWin: `${input.totalWorkouts} intense workout sessions completed`,
+    nextWeekFocus: `Aim for ${Math.min(7, input.daysLoggedCount + 1)} logged days to increase consistency`,
+  };
+
+  const res = await callOllamaJsonChat<WeeklyInsightsResult>(
+    systemPrompt,
+    userPrompt,
+    fallback,
+    { callerName: "generateWeeklyInsightsReport", timeoutMs: 9000 }
+  );
+
+  return {
+    consistencyScore,
+    headline: res?.headline ?? fallback.headline,
+    summary: res?.summary ?? fallback.summary,
+    keyWin: res?.keyWin ?? fallback.keyWin,
+    nextWeekFocus: res?.nextWeekFocus ?? fallback.nextWeekFocus,
+  };
+}
