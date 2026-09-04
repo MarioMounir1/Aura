@@ -71,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             content: Text(
               'Password reset successfully! Please sign in with your new password.',
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.white),
+              style: GoogleFonts.roboto(fontWeight: FontWeight.w600, color: Colors.white),
             ),
             backgroundColor: AuraAuthTokens.brandDark,
             behavior: SnackBarBehavior.floating,
@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       SnackBar(
                         content: Text(
                           state.message,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.roboto(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
                           ),
@@ -185,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   children: [
                                     Text(
                                       'New here? ',
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.roboto(
                                         textStyle: textTheme.bodySmall?.copyWith(
                                           fontWeight: FontWeight.w500,
                                           color: AuraAuthTokens.textSecondary,
@@ -205,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                           children: [
                                             Text(
                                               'Create account',
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.roboto(
                                                 textStyle: textTheme.labelMedium?.copyWith(
                                                   fontWeight: FontWeight.w700,
                                                   color: AuraAuthTokens.brandDark,
@@ -281,7 +281,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(width: 12),
                                 Text(
                                   'YOUR DAILY RITUAL',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.roboto(
                                     textStyle: textTheme.labelSmall?.copyWith(
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 1.4,
@@ -300,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             // ── Main Editorial Serif Headline ────────────────
                             Text(
                               'Good to have you\nback.',
-                              style: GoogleFonts.fraunces(
+                              style: GoogleFonts.roboto(
                                 textStyle: textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: -0.8,
@@ -319,7 +319,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             // ── Subtitle ─────────────────────────────────────
                             Text(
                               'Pick up where you left off. A calmer way to care for your nutrition and wellness.',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.roboto(
                                 textStyle: textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w400,
                                   color: AuraAuthTokens.textSecondary,
@@ -389,7 +389,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       child: Text(
                                         'Forgot\npassword?',
                                         textAlign: TextAlign.right,
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.roboto(
                                           textStyle: textTheme.labelSmall?.copyWith(
                                             fontWeight: FontWeight.w700,
                                             color: AuraAuthTokens.terracotta,
@@ -469,7 +469,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Your data stays private and yours',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.roboto(
                                       textStyle: textTheme.bodySmall?.copyWith(
                                         color: AuraAuthTokens.textMuted,
                                         fontWeight: FontWeight.w500,
