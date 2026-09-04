@@ -46,7 +46,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.robotoTextTheme(
         base.textTheme,
       ).apply(
         bodyColor: AppColors.textPrimary,
@@ -93,7 +93,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      textTheme: GoogleFonts.interTextTheme(
+      textTheme: GoogleFonts.robotoTextTheme(
         base.textTheme,
       ).apply(
         bodyColor: const Color(0xFF1C2B1E),
