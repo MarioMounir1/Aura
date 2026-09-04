@@ -92,7 +92,7 @@ class AppActionTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.roboto(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                         color: isFilled || hasGradient ? iconAndTitleColor : theme.textPrimary,
@@ -102,7 +102,7 @@ class AppActionTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.roboto(
                           fontSize: 12,
                           color: subtitleColor,
                           fontWeight: FontWeight.w400,
