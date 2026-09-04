@@ -210,7 +210,7 @@ class AppErrorHandler {
             Expanded(
               child: Text(
                 message,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.roboto(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
