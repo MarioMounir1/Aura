@@ -101,7 +101,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                             const SizedBox(width: 6),
                             Text(
                               'QUIETLY GETTING READY',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.roboto(
                                 textStyle: textTheme.labelSmall?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 1.3,
@@ -129,7 +129,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                     Text(
                       'YOUR SPACE TO RETURN\nTO',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.roboto(
                         textStyle: textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.5,
@@ -149,7 +149,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                     Text(
                       'A little more you,\nevery day.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.fraunces(
+                      style: GoogleFonts.roboto(
                         textStyle: textTheme.headlineMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.8,
@@ -169,7 +169,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                     Text(
                       "We're shaping a rhythm around how you want\nto feel.",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.roboto(
                         textStyle: textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w400,
                           color: AuraAuthTokens.textSecondary,
@@ -290,7 +290,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                     children: [
                       Text(
                         'PREPARING YOUR EXPERIENCE',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.roboto(
                           textStyle: textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
@@ -305,7 +305,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                       const SizedBox(height: 3),
                       Text(
                         'Tuning the details to you',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.roboto(
                           textStyle: textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: AuraAuthTokens.textPrimary,
@@ -319,7 +319,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                   ),
                   Text(
                     '$percentInt%',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.roboto(
                       textStyle: textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AuraAuthTokens.brandDeep,
@@ -388,7 +388,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                       const SizedBox(width: 8),
                       Text(
                         'Finding your starting point',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.roboto(
                           textStyle: textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w500,
                             color: AuraAuthTokens.textSecondary,
@@ -402,7 +402,7 @@ class _PreSplashScreenState extends State<PreSplashScreen>
                   ),
                   Text(
                     'NEARLY THERE',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.roboto(
                       textStyle: textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.1,
