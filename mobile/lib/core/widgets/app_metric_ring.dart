@@ -58,7 +58,7 @@ class AppMetricRing extends StatelessWidget {
               Text(
                 value,
                 style: valueStyle ??
-                    GoogleFonts.outfit(
+                    GoogleFonts.roboto(
                       fontSize: size * 0.26,
                       fontWeight: FontWeight.bold,
                       color: theme.textPrimary,
@@ -69,7 +69,7 @@ class AppMetricRing extends StatelessWidget {
                 Text(
                   label!,
                   style: labelStyle ??
-                      GoogleFonts.inter(
+                      GoogleFonts.roboto(
                         fontSize: size * 0.13,
                         color: theme.textSecondary,
                         fontWeight: FontWeight.w500,
