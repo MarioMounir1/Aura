@@ -98,7 +98,7 @@ class AppButton extends StatelessWidget {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.roboto(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: textColor,
