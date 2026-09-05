@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/error/error_handler.dart';
+
 /// Google Material Standard design tokens tailored for Aura's luxury wellness experience.
 abstract class AuraAuthTokens {
   static const Color brandDark           = Color(0xFF1B3D2F); // Deep Forest Green
@@ -599,23 +601,19 @@ class AuraAppleButton extends StatelessWidget {
   }
 }
 
-/// Displays an error dialog with full error details, error codes, and a copy button.
+/// Displays a simple, clean floating error notification for the user.
 Future<void> showAuraAuthErrorDialog(
   BuildContext context, {
   String title = 'Sign-In Error',
   required String message,
   String? code,
   String? details,
-}) {
-  return showDialog<void>(
-    context: context,
-    barrierDismissible: true,
-    builder: (ctx) => AuraAuthErrorDialog(
-      title: title,
-      message: message,
-      code: code,
-      details: details,
-    ),
+}) async {
+  if (!context.mounted) return;
+  AppErrorHandler.showErrorSnackBar(
+    context,
+    message,
+    fallback: 'Unable to complete sign-in. Please try again.',
   );
 }
 
