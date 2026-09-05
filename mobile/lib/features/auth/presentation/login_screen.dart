@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/error/error_handler.dart';
 import 'bloc/auth_bloc.dart';
 import 'bloc/auth_event.dart';
 import 'bloc/auth_state.dart';
@@ -117,39 +118,11 @@ class _LoginScreenState extends State<LoginScreen> {
             listenWhen: (_, cur) => cur is AuthFailure || cur is Authenticated,
             listener: (context, state) {
               if (state is AuthFailure) {
-                if (state.message.contains('\n') ||
-                    state.code != null ||
-                    state.details != null ||
-                    state.message.contains('Google')) {
-                  showAuraAuthErrorDialog(
-                    context,
-                    title: state.message.contains('Google')
-                        ? 'Google Sign-In Error'
-                        : 'Sign-In Error',
-                    message: state.message,
-                    code: state.code,
-                    details: state.details,
-                  );
-                } else {
-                  ScaffoldMessenger.of(context)
-                    ..clearSnackBars()
-                    ..showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          state.message,
-                          style: GoogleFonts.roboto(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        backgroundColor: const Color(0xFFD9534F),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    );
-                }
+                AppErrorHandler.showErrorSnackBar(
+                  context,
+                  state.message,
+                  fallback: 'Sign-In Error',
+                );
               } else if (state is Authenticated) {
                 Navigator.of(context).popUntil((route) => route.isFirst);
               }
