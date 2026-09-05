@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/error/error_handler.dart';
 import 'bloc/auth_bloc.dart';
 import 'bloc/auth_event.dart';
 import 'bloc/auth_state.dart';
@@ -72,39 +73,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             listenWhen: (_, cur) => cur is AuthFailure || cur is Authenticated,
             listener: (context, state) {
               if (state is AuthFailure) {
-                if (state.message.contains('\n') ||
-                    state.code != null ||
-                    state.details != null ||
-                    state.message.contains('Google')) {
-                  showAuraAuthErrorDialog(
-                    context,
-                    title: state.message.contains('Google')
-                        ? 'Google Sign-In Error'
-                        : 'Registration Error',
-                    message: state.message,
-                    code: state.code,
-                    details: state.details,
-                  );
-                } else {
-                  ScaffoldMessenger.of(context)
-                    ..clearSnackBars()
-                    ..showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          state.message,
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        backgroundColor: const Color(0xFFD9534F),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    );
-                }
+                AppErrorHandler.showErrorSnackBar(
+                  context,
+                  state.message,
+                  fallback: 'Registration Error',
+                );
               } else if (state is Authenticated) {
                 Navigator.of(context).popUntil((route) => route.isFirst);
               }
@@ -139,7 +112,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   children: [
                                     Text(
                                       'ALREADY A MEMBER? ',
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.roboto(
                                         textStyle: textTheme.labelSmall?.copyWith(
                                           fontWeight: FontWeight.w700,
                                           letterSpacing: 0.8,
@@ -158,7 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
                                         child: Text(
                                           'SIGN IN',
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.roboto(
                                             textStyle: textTheme.labelSmall?.copyWith(
                                               fontWeight: FontWeight.w800,
                                               letterSpacing: 0.8,
@@ -191,7 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // ── Category Eyebrow Tag ─────────────────────────
                             Text(
                               'A GENTLER STARTING POINT',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.roboto(
                                 textStyle: textTheme.labelSmall?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: 1.4,
@@ -208,7 +181,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // ── Main Editorial Serif Headline ────────────────
                             Text(
                               'Make room for\nyour well-being.',
-                              style: GoogleFonts.fraunces(
+                              style: GoogleFonts.roboto(
                                 textStyle: textTheme.headlineMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: -0.8,
@@ -227,7 +200,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             // ── Subtitle ─────────────────────────────────────
                             Text(
                               'A little support for the meals, movement, and moments that make you feel good.',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.roboto(
                                 textStyle: textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w400,
                                   color: AuraAuthTokens.textSecondary,
@@ -294,7 +267,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         Expanded(
                                           child: Text(
                                             'Your first step takes less than a minute.',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.roboto(
                                               textStyle: textTheme.bodySmall?.copyWith(
                                                 fontWeight: FontWeight.w600,
                                                 color: AuraAuthTokens.brandDark,
