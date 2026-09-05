@@ -1,11 +1,10 @@
 // lib/features/calorie_tracker/presentation/widgets/ai_coach_briefing_card.dart
 // Aura — Daily AI Coach Briefing Card (Light Sage & Forest Green Aura Theme)
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/network/api_client.dart';
 import 'weekly_insights_sheet.dart';
 
 class AiCoachBriefingCard extends StatefulWidget {
@@ -18,64 +17,86 @@ class AiCoachBriefingCard extends StatefulWidget {
 }
 
 class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
-  bool _isLoading = true;
-  String _headline = '';
-  String _message = '';
-  String _focusArea = '';
+  static String _cachedHeadline = 'Daily Coaching Insight ✨';
+  static String _cachedMessage =
+      'Keep tracking your meals and workouts to stay aligned with your daily calorie goal.';
+  static String _cachedFocusArea = 'Consistency';
+
+  final bool _isLoading = false;
+  late String _headline;
+  late String _message;
+  late String _focusArea;
 
   @override
   void initState() {
     super.initState();
+    _headline = _cachedHeadline;
+    _message = _cachedMessage;
+    _focusArea = _cachedFocusArea;
+    _loadFromPreferences();
     _fetchBriefing();
+  }
+
+  Future<void> _loadFromPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final h = prefs.getString('cached_coach_headline');
+      final m = prefs.getString('cached_coach_message');
+      final f = prefs.getString('cached_coach_focus');
+      if (h != null && m != null && mounted) {
+        setState(() {
+          _headline = h;
+          _message = m;
+          if (f != null) _focusArea = f;
+          _cachedHeadline = h;
+          _cachedMessage = m;
+          if (f != null) _cachedFocusArea = f;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchBriefing() async {
     try {
-      const storage = FlutterSecureStorage();
-      final token = await storage.read(key: AppConstants.tokenKey);
-
-      final dio = Dio(
-        BaseOptions(
-          baseUrl: AppConstants.apiV1,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 12),
-          headers: {
-            'Accept': 'application/json',
-            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-          },
-        ),
-      );
-
-      final response = await dio.get('/coach/daily-briefing');
+      final response = await ApiClient().dio.get('/coach/daily-briefing');
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
-        if (mounted) {
-          setState(() {
-            _headline = data['headline'] ?? 'Ready to Crush It 🔥';
-            _message = data['message'] ?? 'Stay hydrated and hit your daily macros!';
-            _focusArea = data['focusArea'] ?? 'Daily Focus';
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _headline = 'Daily Coaching Insight ✨';
-            _message = 'Keep tracking your meals and workouts to stay aligned with your daily calorie goal.';
-            _focusArea = 'Consistency';
-            _isLoading = false;
-          });
+        final newHeadline = (data['headline'] as String?)?.trim();
+        final newMessage = (data['message'] as String?)?.trim();
+        final newFocus = (data['focusArea'] as String?)?.trim();
+
+        if (newHeadline != null &&
+            newHeadline.isNotEmpty &&
+            newMessage != null &&
+            newMessage.isNotEmpty) {
+          _cachedHeadline = newHeadline;
+          _cachedMessage = newMessage;
+          if (newFocus != null && newFocus.isNotEmpty) {
+            _cachedFocusArea = newFocus;
+          }
+
+          if (mounted) {
+            setState(() {
+              _headline = newHeadline;
+              _message = newMessage;
+              if (newFocus != null && newFocus.isNotEmpty) {
+                _focusArea = newFocus;
+              }
+            });
+          }
+
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('cached_coach_headline', newHeadline);
+            await prefs.setString('cached_coach_message', newMessage);
+            if (newFocus != null && newFocus.isNotEmpty) {
+              await prefs.setString('cached_coach_focus', newFocus);
+            }
+          } catch (_) {}
         }
       }
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _headline = 'Daily Coaching Insight ✨';
-          _message = 'Keep tracking your meals and workouts to stay aligned with your daily calorie goal.';
-          _focusArea = 'Consistency';
-          _isLoading = false;
-        });
-      }
+      // Retain instant cached data silently on network errors
     }
   }
 
