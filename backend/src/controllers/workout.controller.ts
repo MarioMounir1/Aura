@@ -69,157 +69,112 @@ const StartSessionSchema = z.object({
 const AddExerciseSchema = z.object({ sessionId: z.string(), exerciseId: z.string(), order: z.number().int(), notes: z.string().optional() });
 const LogSetSchema = z.object({ workoutExerciseId: z.string(), setNumber: z.number().int(), reps: z.number().int().optional(), weightKg: z.number().optional(), rpe: z.number().optional() });
 
-// ── Static exercise catalogue per day type (7-8 Exercises Per Session) ──
+// ── Static exercise catalogue per day type (Standard 5 Exercises Per Session) ──
 const DAY_EXERCISES: Record<string, SessionExercise[]> = {
   "Push": [
     { name: "Barbell Bench Press", targetSets: 3, muscleGroup: "Chest · Triceps", lastWeekWeight: 80, lastWeekReps: 8 },
     { name: "Incline Dumbbell Press", targetSets: 3, muscleGroup: "Upper Chest", lastWeekWeight: 32, lastWeekReps: 10 },
     { name: "Overhead Press", targetSets: 3, muscleGroup: "Front Delts", lastWeekWeight: 55, lastWeekReps: 8 },
     { name: "Cable Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 12, lastWeekReps: 15 },
-    { name: "Cable Chest Flyes", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 20, lastWeekReps: 12 },
-    { name: "Dips", targetSets: 3, muscleGroup: "Triceps · Chest", lastWeekWeight: 0, lastWeekReps: 10 },
     { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 12 },
-    { name: "Overhead Rope Tricep Extension", targetSets: 3, muscleGroup: "Long Head Triceps", lastWeekWeight: 25, lastWeekReps: 12 },
   ],
   "Push A": [
     { name: "Barbell Bench Press", targetSets: 3, muscleGroup: "Chest · Triceps", lastWeekWeight: 80, lastWeekReps: 5 },
     { name: "Overhead Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 55, lastWeekReps: 8 },
     { name: "Incline Dumbbell Press", targetSets: 3, muscleGroup: "Upper Chest", lastWeekWeight: 30, lastWeekReps: 10 },
     { name: "Dumbbell Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 14, lastWeekReps: 15 },
-    { name: "Pec Deck Flyes", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 45, lastWeekReps: 12 },
-    { name: "Dips", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 0, lastWeekReps: 12 },
-    { name: "Skull Crushers", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 30, lastWeekReps: 10 },
-    { name: "Cable Single-Arm Tricep Extension", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 12, lastWeekReps: 15 },
+    { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 12 },
   ],
   "Push B": [
     { name: "Dumbbell Bench Press", targetSets: 3, muscleGroup: "Chest · Triceps", lastWeekWeight: 36, lastWeekReps: 10 },
     { name: "Arnold Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 24, lastWeekReps: 10 },
     { name: "Incline Barbell Bench Press", targetSets: 3, muscleGroup: "Upper Chest", lastWeekWeight: 65, lastWeekReps: 8 },
     { name: "Standing Cable Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 12, lastWeekReps: 15 },
-    { name: "Cable Lower-Chest Crossovers", targetSets: 3, muscleGroup: "Lower Chest", lastWeekWeight: 18, lastWeekReps: 15 },
-    { name: "Close-Grip Bench Press", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 60, lastWeekReps: 10 },
-    { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 12 },
-    { name: "Seated Dumbbell Overhead Extension", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 28, lastWeekReps: 12 },
+    { name: "Overhead Rope Tricep Extension", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 25, lastWeekReps: 12 },
   ],
   "Pull": [
     { name: "Pull-Ups", targetSets: 3, muscleGroup: "Back · Biceps", lastWeekWeight: 0, lastWeekReps: 10 },
     { name: "Barbell Row", targetSets: 3, muscleGroup: "Mid Back", lastWeekWeight: 75, lastWeekReps: 8 },
     { name: "Lat Pulldown", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 70, lastWeekReps: 10 },
-    { name: "Seated Cable Row", targetSets: 3, muscleGroup: "Lower Back · Lats", lastWeekWeight: 65, lastWeekReps: 12 },
     { name: "Face Pulls", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 20, lastWeekReps: 15 },
     { name: "Barbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 40, lastWeekReps: 10 },
-    { name: "Dumbbell Hammer Curl", targetSets: 3, muscleGroup: "Brachialis", lastWeekWeight: 18, lastWeekReps: 12 },
-    { name: "Preacher Curl", targetSets: 3, muscleGroup: "Short Head Biceps", lastWeekWeight: 30, lastWeekReps: 12 },
   ],
   "Pull A": [
     { name: "Weighted Pull-Ups", targetSets: 3, muscleGroup: "Back · Biceps", lastWeekWeight: 20, lastWeekReps: 6 },
     { name: "Barbell Row", targetSets: 3, muscleGroup: "Mid Back", lastWeekWeight: 80, lastWeekReps: 8 },
     { name: "Wide-Grip Lat Pulldown", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 75, lastWeekReps: 10 },
-    { name: "Cable Row", targetSets: 3, muscleGroup: "Lower Back", lastWeekWeight: 65, lastWeekReps: 12 },
     { name: "Rear Delt Dumbbell Flyes", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 14, lastWeekReps: 15 },
     { name: "Incline Dumbbell Curl", targetSets: 3, muscleGroup: "Long Head Biceps", lastWeekWeight: 16, lastWeekReps: 12 },
-    { name: "Cable Rope Bicep Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 25, lastWeekReps: 12 },
-    { name: "Reverse Barbell Wrist Curl", targetSets: 3, muscleGroup: "Forearms", lastWeekWeight: 20, lastWeekReps: 15 },
   ],
   "Pull B": [
     { name: "Lat Pulldown", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 70, lastWeekReps: 10 },
     { name: "Single-Arm Dumbbell Row", targetSets: 3, muscleGroup: "Mid Back", lastWeekWeight: 32, lastWeekReps: 10 },
     { name: "Cable Row", targetSets: 3, muscleGroup: "Lower Back", lastWeekWeight: 65, lastWeekReps: 12 },
-    { name: "Straight-Arm Cable Pulldown", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 30, lastWeekReps: 15 },
     { name: "Face Pulls", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 22, lastWeekReps: 15 },
     { name: "Hammer Curl", targetSets: 3, muscleGroup: "Brachialis", lastWeekWeight: 20, lastWeekReps: 12 },
-    { name: "EZ-Bar Spider Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 28, lastWeekReps: 12 },
-    { name: "Barbell Shrugs", targetSets: 3, muscleGroup: "Traps", lastWeekWeight: 90, lastWeekReps: 12 },
   ],
   "Legs": [
     { name: "Hack Squats", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 180, lastWeekReps: 6 },
-    { name: "Smith Squats", targetSets: 3, muscleGroup: "Quads · Glutes", lastWeekWeight: 100, lastWeekReps: 10 },
-    { name: "Leg Press", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 200, lastWeekReps: 12 },
     { name: "Romanian Deadlifts", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 90, lastWeekReps: 10 },
+    { name: "Leg Press", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 200, lastWeekReps: 12 },
     { name: "Lying Leg Curl", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 50, lastWeekReps: 12 },
-    { name: "Leg Extension", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 65, lastWeekReps: 15 },
     { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 120, lastWeekReps: 15 },
-    { name: "Bulgarian Split Squat", targetSets: 3, muscleGroup: "Quads · Glutes", lastWeekWeight: 20, lastWeekReps: 10 },
   ],
   "Legs A": [
     { name: "Back Squat", targetSets: 3, muscleGroup: "Quads · Glutes", lastWeekWeight: 110, lastWeekReps: 5 },
     { name: "Romanian Deadlifts", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 90, lastWeekReps: 8 },
     { name: "Leg Press", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 200, lastWeekReps: 12 },
     { name: "Lying Leg Curl", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 50, lastWeekReps: 12 },
-    { name: "Leg Extension", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 70, lastWeekReps: 15 },
     { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 110, lastWeekReps: 15 },
-    { name: "Seated Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 55, lastWeekReps: 15 },
-    { name: "Dumbbell Walking Lunges", targetSets: 3, muscleGroup: "Glutes · Quads", lastWeekWeight: 18, lastWeekReps: 12 },
   ],
   "Legs B": [
     { name: "Front Squat", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 80, lastWeekReps: 8 },
-    { name: "Hack Squats", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 160, lastWeekReps: 8 },
     { name: "Stiff-Leg Deadlift", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 80, lastWeekReps: 10 },
     { name: "Bulgarian Split Squat", targetSets: 3, muscleGroup: "Quads · Glutes", lastWeekWeight: 24, lastWeekReps: 10 },
     { name: "Seated Leg Curl", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 55, lastWeekReps: 12 },
-    { name: "Leg Extension", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 65, lastWeekReps: 15 },
-    { name: "Seated Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 60, lastWeekReps: 15 },
-    { name: "Hanging Leg Raises", targetSets: 3, muscleGroup: "Core", lastWeekWeight: 0, lastWeekReps: 15 },
+    { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 60, lastWeekReps: 15 },
   ],
   "Upper": [
     { name: "Barbell Bench Press", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 80, lastWeekReps: 8 },
     { name: "Barbell Row", targetSets: 3, muscleGroup: "Back", lastWeekWeight: 75, lastWeekReps: 8 },
     { name: "Overhead Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 55, lastWeekReps: 8 },
-    { name: "Incline Dumbbell Press", targetSets: 3, muscleGroup: "Upper Chest", lastWeekWeight: 32, lastWeekReps: 10 },
     { name: "Lat Pulldown", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 70, lastWeekReps: 10 },
     { name: "Cable Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 12, lastWeekReps: 15 },
-    { name: "Barbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 42, lastWeekReps: 10 },
-    { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 38, lastWeekReps: 12 },
   ],
   "Upper (Heavy)": [
     { name: "Barbell Bench Press", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 85, lastWeekReps: 5 },
     { name: "Weighted Pull-Ups", targetSets: 3, muscleGroup: "Back", lastWeekWeight: 20, lastWeekReps: 6 },
     { name: "Overhead Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 60, lastWeekReps: 5 },
     { name: "Incline Barbell Bench Press", targetSets: 3, muscleGroup: "Upper Chest", lastWeekWeight: 70, lastWeekReps: 8 },
-    { name: "Seated Cable Row", targetSets: 3, muscleGroup: "Mid Back", lastWeekWeight: 75, lastWeekReps: 8 },
-    { name: "Dumbbell Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 14, lastWeekReps: 12 },
     { name: "Barbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 45, lastWeekReps: 8 },
-    { name: "Skull Crushers", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 8 },
   ],
   "Upper (Volume)": [
     { name: "Dumbbell Bench Press", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 36, lastWeekReps: 10 },
     { name: "Lat Pulldown", targetSets: 3, muscleGroup: "Back", lastWeekWeight: 70, lastWeekReps: 12 },
     { name: "Dumbbell Shoulder Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 28, lastWeekReps: 12 },
-    { name: "Cable Chest Flyes", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 18, lastWeekReps: 15 },
-    { name: "Single-Arm Cable Row", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 25, lastWeekReps: 12 },
     { name: "Cable Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 12, lastWeekReps: 15 },
-    { name: "Incline Dumbbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 16, lastWeekReps: 12 },
-    { name: "Tricep Overhead Rope Extension", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 22, lastWeekReps: 15 },
+    { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 12 },
   ],
   "Lower": [
     { name: "Back Squat", targetSets: 3, muscleGroup: "Quads · Glutes", lastWeekWeight: 100, lastWeekReps: 8 },
     { name: "Romanian Deadlifts", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 85, lastWeekReps: 8 },
     { name: "Leg Press", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 180, lastWeekReps: 12 },
     { name: "Lying Leg Curl", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 50, lastWeekReps: 12 },
-    { name: "Leg Extension", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 65, lastWeekReps: 15 },
     { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 100, lastWeekReps: 15 },
-    { name: "Bulgarian Split Squat", targetSets: 3, muscleGroup: "Quads · Glutes", lastWeekWeight: 20, lastWeekReps: 10 },
-    { name: "Hanging Leg Raises", targetSets: 3, muscleGroup: "Core", lastWeekWeight: 0, lastWeekReps: 15 },
   ],
   "Lower (Heavy)": [
     { name: "Back Squat", targetSets: 3, muscleGroup: "Quads · Glutes", lastWeekWeight: 110, lastWeekReps: 5 },
     { name: "Deadlift", targetSets: 3, muscleGroup: "Posterior Chain", lastWeekWeight: 140, lastWeekReps: 5 },
     { name: "Leg Press", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 200, lastWeekReps: 10 },
     { name: "Romanian Deadlifts", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 95, lastWeekReps: 8 },
-    { name: "Leg Curl", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 55, lastWeekReps: 10 },
-    { name: "Leg Extension", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 75, lastWeekReps: 12 },
     { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 120, lastWeekReps: 12 },
-    { name: "Weighted Ab Wheel Rollouts", targetSets: 3, muscleGroup: "Core", lastWeekWeight: 0, lastWeekReps: 12 },
   ],
   "Lower (Volume)": [
     { name: "Front Squat", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 75, lastWeekReps: 10 },
     { name: "Romanian Deadlifts", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 85, lastWeekReps: 10 },
     { name: "Hack Squats", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 140, lastWeekReps: 12 },
     { name: "Seated Leg Curl", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 50, lastWeekReps: 15 },
-    { name: "Leg Extension", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 60, lastWeekReps: 15 },
-    { name: "Seated Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 65, lastWeekReps: 15 },
-    { name: "Dumbbell Walking Lunges", targetSets: 3, muscleGroup: "Glutes", lastWeekWeight: 16, lastWeekReps: 12 },
-    { name: "Cable Crunch", targetSets: 3, muscleGroup: "Core", lastWeekWeight: 35, lastWeekReps: 15 },
+    { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 65, lastWeekReps: 15 },
   ],
   "Chest": [
     { name: "Barbell Bench Press", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 85, lastWeekReps: 5 },
@@ -227,39 +182,27 @@ const DAY_EXERCISES: Record<string, SessionExercise[]> = {
     { name: "Dumbbell Bench Press", targetSets: 3, muscleGroup: "Mid Chest", lastWeekWeight: 32, lastWeekReps: 10 },
     { name: "Cable Flyes", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 20, lastWeekReps: 15 },
     { name: "Pec Deck Machine", targetSets: 3, muscleGroup: "Inner Chest", lastWeekWeight: 45, lastWeekReps: 12 },
-    { name: "Dips", targetSets: 3, muscleGroup: "Lower Chest", lastWeekWeight: 0, lastWeekReps: 12 },
-    { name: "Incline Cable Crossovers", targetSets: 3, muscleGroup: "Upper Chest", lastWeekWeight: 16, lastWeekReps: 15 },
-    { name: "Push-Ups", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 0, lastWeekReps: 20 },
   ],
   "Back": [
     { name: "Deadlift", targetSets: 3, muscleGroup: "Posterior Chain", lastWeekWeight: 140, lastWeekReps: 5 },
     { name: "Barbell Row", targetSets: 3, muscleGroup: "Mid Back", lastWeekWeight: 80, lastWeekReps: 8 },
     { name: "Pull-Ups", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 0, lastWeekReps: 10 },
     { name: "Wide-Grip Lat Pulldown", targetSets: 3, muscleGroup: "Upper Back", lastWeekWeight: 70, lastWeekReps: 10 },
-    { name: "Seated Cable Row", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 65, lastWeekReps: 12 },
     { name: "Face Pulls", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 22, lastWeekReps: 15 },
-    { name: "Straight-Arm Cable Pulldown", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 28, lastWeekReps: 12 },
-    { name: "Barbell Shrugs", targetSets: 3, muscleGroup: "Traps", lastWeekWeight: 95, lastWeekReps: 12 },
   ],
   "Shoulders": [
     { name: "Overhead Press", targetSets: 3, muscleGroup: "Front Delts", lastWeekWeight: 60, lastWeekReps: 8 },
     { name: "Dumbbell Shoulder Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 28, lastWeekReps: 10 },
     { name: "Cable Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 14, lastWeekReps: 15 },
-    { name: "Dumbbell Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 12, lastWeekReps: 15 },
     { name: "Rear Delt Flyes", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 16, lastWeekReps: 15 },
-    { name: "Face Pulls", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 22, lastWeekReps: 15 },
     { name: "Upright Row", targetSets: 3, muscleGroup: "Traps · Side Delts", lastWeekWeight: 45, lastWeekReps: 12 },
-    { name: "Dumbbell Shrugs", targetSets: 3, muscleGroup: "Traps", lastWeekWeight: 32, lastWeekReps: 15 },
   ],
   "Arms + Abs": [
     { name: "Barbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 45, lastWeekReps: 8 },
     { name: "Skull Crushers", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 10 },
     { name: "Incline Dumbbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 18, lastWeekReps: 10 },
     { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 38, lastWeekReps: 12 },
-    { name: "Hammer Curl", targetSets: 3, muscleGroup: "Brachialis", lastWeekWeight: 22, lastWeekReps: 12 },
-    { name: "Overhead Rope Tricep Extension", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 25, lastWeekReps: 12 },
     { name: "Cable Crunch", targetSets: 3, muscleGroup: "Core", lastWeekWeight: 40, lastWeekReps: 15 },
-    { name: "Hanging Leg Raises", targetSets: 3, muscleGroup: "Lower Abs", lastWeekWeight: 0, lastWeekReps: 15 },
   ],
   "Legs + Arms": [
     { name: "Back Squat", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 100, lastWeekReps: 8 },
@@ -267,9 +210,6 @@ const DAY_EXERCISES: Record<string, SessionExercise[]> = {
     { name: "Leg Press", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 180, lastWeekReps: 12 },
     { name: "Barbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 42, lastWeekReps: 10 },
     { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 38, lastWeekReps: 12 },
-    { name: "Hammer Curl", targetSets: 3, muscleGroup: "Brachialis", lastWeekWeight: 20, lastWeekReps: 12 },
-    { name: "Skull Crushers", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 30, lastWeekReps: 10 },
-    { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 100, lastWeekReps: 15 },
   ],
   "Chest + Back": [
     { name: "Barbell Bench Press", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 85, lastWeekReps: 6 },
@@ -277,19 +217,13 @@ const DAY_EXERCISES: Record<string, SessionExercise[]> = {
     { name: "Incline Dumbbell Press", targetSets: 3, muscleGroup: "Upper Chest", lastWeekWeight: 70, lastWeekReps: 10 },
     { name: "Barbell Row", targetSets: 3, muscleGroup: "Mid Back", lastWeekWeight: 75, lastWeekReps: 8 },
     { name: "Cable Flyes", targetSets: 3, muscleGroup: "Chest", lastWeekWeight: 20, lastWeekReps: 15 },
-    { name: "Seated Cable Row", targetSets: 3, muscleGroup: "Lats", lastWeekWeight: 65, lastWeekReps: 12 },
-    { name: "Dips", targetSets: 3, muscleGroup: "Lower Chest", lastWeekWeight: 0, lastWeekReps: 12 },
-    { name: "Face Pulls", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 20, lastWeekReps: 15 },
   ],
   "Shoulders + Arms": [
     { name: "Overhead Press", targetSets: 3, muscleGroup: "Front Delts", lastWeekWeight: 60, lastWeekReps: 8 },
     { name: "Barbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 45, lastWeekReps: 8 },
     { name: "Close-Grip Bench Press", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 65, lastWeekReps: 10 },
     { name: "Cable Lateral Raises", targetSets: 3, muscleGroup: "Side Delts", lastWeekWeight: 14, lastWeekReps: 15 },
-    { name: "Incline Dumbbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 16, lastWeekReps: 10 },
     { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 38, lastWeekReps: 12 },
-    { name: "Rear Delt Flyes", targetSets: 3, muscleGroup: "Rear Delts", lastWeekWeight: 14, lastWeekReps: 15 },
-    { name: "Hammer Curl", targetSets: 3, muscleGroup: "Brachialis", lastWeekWeight: 20, lastWeekReps: 12 },
   ],
   "Full Body (Heavy)": [
     { name: "Back Squat", targetSets: 5, muscleGroup: "Quads", lastWeekWeight: 110, lastWeekReps: 5 },
@@ -297,9 +231,6 @@ const DAY_EXERCISES: Record<string, SessionExercise[]> = {
     { name: "Deadlift", targetSets: 3, muscleGroup: "Posterior Chain", lastWeekWeight: 140, lastWeekReps: 3 },
     { name: "Overhead Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 60, lastWeekReps: 5 },
     { name: "Barbell Row", targetSets: 3, muscleGroup: "Back", lastWeekWeight: 75, lastWeekReps: 6 },
-    { name: "Barbell Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 40, lastWeekReps: 8 },
-    { name: "Skull Crushers", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 8 },
-    { name: "Standing Calf Raises", targetSets: 3, muscleGroup: "Calves", lastWeekWeight: 100, lastWeekReps: 12 },
   ],
   "Full Body (Moderate)": [
     { name: "Front Squat", targetSets: 4, muscleGroup: "Quads", lastWeekWeight: 80, lastWeekReps: 8 },
@@ -307,9 +238,6 @@ const DAY_EXERCISES: Record<string, SessionExercise[]> = {
     { name: "Romanian Deadlifts", targetSets: 3, muscleGroup: "Hamstrings", lastWeekWeight: 90, lastWeekReps: 8 },
     { name: "Barbell Row", targetSets: 3, muscleGroup: "Back", lastWeekWeight: 75, lastWeekReps: 8 },
     { name: "Cable Lateral Raises", targetSets: 4, muscleGroup: "Side Delts", lastWeekWeight: 12, lastWeekReps: 15 },
-    { name: "Hammer Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 18, lastWeekReps: 12 },
-    { name: "Tricep Pushdown", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 35, lastWeekReps: 12 },
-    { name: "Hanging Leg Raises", targetSets: 3, muscleGroup: "Core", lastWeekWeight: 0, lastWeekReps: 15 },
   ],
   "Full Body (Light)": [
     { name: "Goblet Squat", targetSets: 3, muscleGroup: "Quads", lastWeekWeight: 32, lastWeekReps: 12 },
@@ -317,9 +245,6 @@ const DAY_EXERCISES: Record<string, SessionExercise[]> = {
     { name: "Dumbbell Row", targetSets: 3, muscleGroup: "Back", lastWeekWeight: 28, lastWeekReps: 12 },
     { name: "Lunges", targetSets: 3, muscleGroup: "Glutes", lastWeekWeight: 20, lastWeekReps: 12 },
     { name: "Dumbbell Shoulder Press", targetSets: 3, muscleGroup: "Shoulders", lastWeekWeight: 22, lastWeekReps: 12 },
-    { name: "Dumbbell Bicep Curl", targetSets: 3, muscleGroup: "Biceps", lastWeekWeight: 14, lastWeekReps: 15 },
-    { name: "Bench Dips", targetSets: 3, muscleGroup: "Triceps", lastWeekWeight: 0, lastWeekReps: 15 },
-    { name: "Plank", targetSets: 3, muscleGroup: "Core", lastWeekWeight: 0, lastWeekReps: 60 },
   ],
   "Rest": [],
 };
@@ -556,7 +481,7 @@ async function fetchSessionData(
       dbId: we.exercise.id,
     }));
   } else {
-    rawList = (DAY_EXERCISES[todayDayName] ?? []).map((e) => ({ ...e }));
+    rawList = (DAY_EXERCISES[todayDayName] ?? []).slice(0, 5).map((e) => ({ ...e }));
   }
 
   const exercises = await Promise.all(
@@ -1607,9 +1532,17 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
         create: { userId, date: targetDateStr, dayType: chosenType },
       });
       actionExecuted = true;
-    } else if (interpretation.intent === "add_exercise" && interpretation.exerciseName) {
-      const addName = interpretation.exerciseName.trim();
+    } else if (interpretation.intent === "add_exercise") {
+      let addName = (interpretation.exerciseName ?? "").trim();
       const targetSets = interpretation.targetSets && interpretation.targetSets > 0 ? interpretation.targetSets : 3;
+
+      // If exercise name is missing or generic (e.g. user just said "add more exercises", "add another"), pick a complementary exercise
+      if (!addName || addName.toLowerCase() === "exercise" || addName.toLowerCase() === "more" || addName.toLowerCase() === "another exercise" || addName.toLowerCase() === "more exercises") {
+        const existingNames = new Set(currentSession.exercises.map(e => e.name.toLowerCase()));
+        const allDayEx = Object.values(DAY_EXERCISES).flat();
+        const candidate = allDayEx.find(e => !existingNames.has(e.name.toLowerCase()));
+        addName = candidate ? candidate.name : "Dips";
+      }
 
       let dbEx = await prisma.exercise.findFirst({
         where: { name: { equals: addName, mode: "insensitive" } },
