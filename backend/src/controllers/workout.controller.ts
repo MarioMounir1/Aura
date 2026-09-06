@@ -571,9 +571,19 @@ async function attachSessionCoachNotes(
     return { ...session, coachNote: note };
   }
 
+  // Fast exercise coach notes: only query LLM if plateaued; otherwise use instant contextual performance tip
   const exercisesWithCoachNotes = await Promise.all(
     session.exercises.map(async (ex) => {
-      const coachNote = await generateExerciseCoachNote(ex);
+      if (ex.isPlateaued) {
+        const coachNote = await generateExerciseCoachNote(ex);
+        return {
+          ...ex,
+          coachNote,
+        };
+      }
+      const coachNote = (ex.lastWeekWeight && ex.lastWeekWeight > 0)
+        ? `Aim to match or beat ${ex.lastWeekWeight}kg × ${ex.lastWeekReps ?? 8} reps with clean form.`
+        : `Focus on controlled tempo and mind-muscle connection.`;
       return {
         ...ex,
         coachNote,
@@ -607,9 +617,22 @@ async function buildCurrentSession(
   splitName: string,
   dateStr?: string,
   configuredAt?: Date | null,
-  streakDays?: number
+  streakDays?: number,
+  skipAiCoachNotes: boolean = false
 ): Promise<CurrentSession> {
   const data = await fetchSessionData(userId, splitType, splitName, dateStr, configuredAt);
+  if (skipAiCoachNotes) {
+    return {
+      ...data,
+      coachNote: "Your workout routine is configured and today's session is ready! Let's get to work.",
+      exercises: data.exercises.map((ex) => ({
+        ...ex,
+        coachNote: (ex.lastWeekWeight && ex.lastWeekWeight > 0)
+          ? `Aim to match or beat ${ex.lastWeekWeight}kg × ${ex.lastWeekReps ?? 8} reps.`
+          : `Focus on controlled tempo and proper form.`,
+      })),
+    };
+  }
   return attachSessionCoachNotes(data, splitName, streakDays);
 }
 
@@ -651,7 +674,8 @@ export async function setupWorkoutRoutine(req: Request, res: Response): Promise<
 
     console.log(`✅ [Workout] Routine setup by user ${userId}: ${splitName} (${daysPerWeek}d/${splitType})`);
 
-    const currentSession = await buildCurrentSession(userId, splitType, splitName, undefined, configuredAt);
+    // Instant return without blocking on external LLM calls during setup
+    const currentSession = await buildCurrentSession(userId, splitType, splitName, undefined, configuredAt, 0, true);
 
     res.status(200).json({
       success: true,
