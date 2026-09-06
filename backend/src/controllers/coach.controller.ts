@@ -34,7 +34,7 @@ export async function getDailyBriefingHandler(
       return;
     }
 
-    // 1. Fetch User Profile
+    // 1. Fetch User Profile & Routine Info
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -43,6 +43,8 @@ export async function getDailyBriefingHandler(
         goal: true,
         weightKg: true,
         targetWeightKg: true,
+        workoutSplitName: true,
+        workoutSplitType: true,
       },
     });
 
@@ -89,34 +91,15 @@ export async function getDailyBriefingHandler(
       proteinConsumedToday += Math.round((f.foodItem?.protein ?? 0) * servings);
     });
 
-    // 3. Fetch active routine and today's day
-    const activeRoutine = await prisma.userRoutine.findFirst({
-      where: { userId, isActive: true },
-      include: {
-        days: {
-          include: { exercises: { select: { id: true } } },
-        },
-      },
-    });
-
-    let todaysWorkoutSplit: string | undefined;
-    if (activeRoutine && activeRoutine.days.length > 0) {
-      const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const currentDayName = daysOfWeek[new Date().getDay()];
-      const matchingDay = activeRoutine.days.find(
-        (d) => d.dayName.toLowerCase() === currentDayName.toLowerCase()
-      );
-      if (matchingDay && matchingDay.exercises.length > 0) {
-        todaysWorkoutSplit = matchingDay.name || matchingDay.dayName;
-      }
-    }
+    // 3. Active routine split
+    const todaysWorkoutSplit: string | undefined =
+      user?.workoutSplitName ?? user?.workoutSplitType ?? undefined;
 
     // 4. Calculate workout streak (consecutive active days)
     const recentSessions = await prisma.workoutSession.findMany({
       where: {
         userId,
-        status: "COMPLETED",
-        endedAt: { gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
+        endedAt: { not: null, gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
       },
       orderBy: { endedAt: "desc" },
       select: { endedAt: true },
@@ -204,7 +187,7 @@ export async function getWeeklyInsightsHandler(
         include: { foodItem: { select: { calories: true } } },
       }),
       prisma.workoutSession.findMany({
-        where: { userId, status: "COMPLETED", endedAt: { gte: sevenDaysAgo } },
+        where: { userId, endedAt: { not: null, gte: sevenDaysAgo } },
         select: { id: true, endedAt: true },
       }),
       prisma.weightLog.findMany({
