@@ -665,10 +665,481 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 );
               }),
+            const SizedBox(height: 20),
+            // Change Plan Action Button
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _showChangePlanSheet(isArabic);
+                },
+                icon: const Icon(Icons.tune_rounded, size: 18, color: Color(0xFF235A42)),
+                label: Text(
+                  isArabic ? 'تغيير أو تخصيص خطة التمرين' : 'Change or Customize Workout Plan',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF235A42),
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF235A42), width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  backgroundColor: const Color(0xFFEAF5EE),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  void _showChangePlanSheet(bool isArabic) {
+    int selectedDays = _activeDays;
+    bool isSwitching = false;
+    String? switchingSplitType;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final routines = RoutineCatalogue.forDays(selectedDays);
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD3E4D7),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF5EE),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.tune_rounded,
+                          color: Color(0xFF235A42),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isArabic ? 'تغيير خطة التمرين' : 'Change Workout Plan',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1E3A2B),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isArabic
+                                  ? 'اختر جدولاً جاهزاً للتبديل فوراً أو أعد بناء الخطة'
+                                  : 'Switch instantly to a proven split or rebuild it',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: const Color(0xFF6B7C6E),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF8A9E8E)),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Days per week selector tabs
+                  Text(
+                    isArabic ? 'أيام التمرين في الأسبوع' : 'TRAINING DAYS PER WEEK',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF8A9E8E),
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [3, 4, 5, 6].map((days) {
+                      final isSelected = selectedDays == days;
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          child: InkWell(
+                            onTap: () {
+                              setSheetState(() {
+                                selectedDays = days;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected ? const Color(0xFF235A42) : const Color(0xFFF1F5F2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected ? const Color(0xFF235A42) : const Color(0xFFD3E4D7),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  isArabic ? '$days أيام' : '$days Days',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    color: isSelected ? Colors.white : const Color(0xFF4A6B56),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Available routines list
+                  Flexible(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isArabic ? 'الجداول المتاحة' : 'AVAILABLE SPLITS',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF8A9E8E),
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...routines.map((routine) {
+                            final isCurrent = _activeRoutine?.splitType == routine.splitType &&
+                                _activeDays == selectedDays;
+                            final isThisSwitching = isSwitching && switchingSplitType == routine.splitType;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: isCurrent ? const Color(0xFFEAF5EE) : const Color(0xFFF9FAF9),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isCurrent ? const Color(0xFF235A42) : const Color(0xFFDCE5DF),
+                                  width: isCurrent ? 1.8 : 1.0,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          routine.name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF1E3A2B),
+                                          ),
+                                        ),
+                                      ),
+                                      if (isCurrent)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF235A42),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.check_circle_rounded, size: 12, color: Colors.white),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                isArabic ? 'الخطة الحالية' : 'CURRENT',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    routine.tagline,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: const Color(0xFF5A6E5D),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Breakdown preview chips
+                                  Wrap(
+                                    spacing: 5,
+                                    runSpacing: 5,
+                                    children: routine.breakdown.take(7).map((day) {
+                                      final isRest = day.toLowerCase().contains('rest');
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: isRest ? const Color(0xFFE8EDE9) : const Color(0xFFD4E9DC),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          day,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: isRest ? const Color(0xFF7A8B7B) : const Color(0xFF235A42),
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                  if (!isCurrent) ...[
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 38,
+                                      child: ElevatedButton(
+                                        onPressed: isSwitching
+                                            ? null
+                                            : () async {
+                                                setSheetState(() {
+                                                  isSwitching = true;
+                                                  switchingSplitType = routine.splitType;
+                                                });
+                                                await _quickSwitchRoutine(
+                                                  selectedDays,
+                                                  routine,
+                                                  isArabic,
+                                                  sheetContext,
+                                                );
+                                              },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF235A42),
+                                          elevation: 0,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                        child: isThisSwitching
+                                            ? const SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.white,
+                                                ),
+                                              )
+                                            : Text(
+                                                isArabic ? 'تطبيق هذه الخطة فوراً' : 'Switch to this Plan',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            );
+                          }),
+
+                          const SizedBox(height: 12),
+                          // Option to re-open Wizard
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F6F2),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF235A42),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        isArabic ? 'المعالج الذكي الشامل' : 'Custom Wizard Builder',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF1E3A2B),
+                                        ),
+                                      ),
+                                      Text(
+                                        isArabic
+                                            ? 'حدد الهدف والمعدات وتخصيص التمارين خطوة بخطوة'
+                                            : 'Configure goals, equipment, and full plan customization',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: const Color(0xFF6B7C6E),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(sheetContext).pop();
+                                    setState(() {
+                                      _state = WorkoutHubState.unconfigured;
+                                    });
+                                  },
+                                  style: TextButton.styleFrom(
+                                    backgroundColor: const Color(0xFFEAF5EE),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isArabic ? 'بدء المعالج' : 'Launch',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF235A42),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _quickSwitchRoutine(
+    int days,
+    RoutineSuggestion routine,
+    bool isArabic,
+    BuildContext sheetContext,
+  ) async {
+    try {
+      await _dio.post('/workouts/setup', data: {
+        'daysPerWeek': days,
+        'splitType': routine.splitType,
+        'splitName': routine.name,
+      });
+
+      if (sheetContext.mounted) {
+        Navigator.of(sheetContext).pop();
+      }
+
+      await _loadRoutine();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isArabic
+                  ? 'تم تغيير خطة التمرين إلى "${routine.name}" بنجاح!'
+                  : 'Workout plan changed to "${routine.name}" successfully!',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: const Color(0xFF235A42),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMsg = isArabic ? 'حدث خطأ أثناء تغيير الخطة' : 'Failed to switch workout plan';
+        if (e is DioException && e.response?.data is Map) {
+          errorMsg = e.response?.data['error'] as String? ?? errorMsg;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg, style: const TextStyle(color: Colors.white)),
+            backgroundColor: const Color(0xFFE53935),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
 
@@ -716,6 +1187,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 focusArea: _currentSession?.todayDayName ?? 'Lower (Volume)',
                 exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
                 completedDays: _completedDaysThisWeek,
+                isArabic: isArabic,
+                onChangePlan: () => _showChangePlanSheet(isArabic),
                 onTap: () => _showRoutineDetailsModal(isArabic),
               ),
               const SizedBox(height: 22),
@@ -3107,6 +3580,8 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   final int exerciseCount;
   final List<bool> completedDays;
   final VoidCallback onTap;
+  final VoidCallback? onChangePlan;
+  final bool isArabic;
 
   const _WorkoutActiveSummaryBanner({
     required this.routineName,
@@ -3114,6 +3589,8 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
     required this.exerciseCount,
     required this.completedDays,
     required this.onTap,
+    this.onChangePlan,
+    this.isArabic = false,
   });
 
   @override
@@ -3156,14 +3633,49 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'ACTIVE SUMMARY',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF4A6B56),
-                            letterSpacing: 1.0,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'ACTIVE SUMMARY',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF4A6B56),
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            if (onChangePlan != null)
+                              GestureDetector(
+                                onTap: onChangePlan,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.85),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: const Color(0xFF235A42).withOpacity(0.25),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.tune_rounded, size: 12, color: Color(0xFF235A42)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        isArabic ? 'تغيير الخطة' : 'Change Plan',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF235A42),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         const SizedBox(height: 6),
                         Row(
