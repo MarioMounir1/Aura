@@ -93,9 +93,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
       final resp = await _dio.get('/workouts/routine?date=$todayStr');
       if (!mounted) return;
-      final data = resp.data['data']['routine'];
-      final sessionData = resp.data['data']['currentSession'];
-      final swapNote = resp.data['data']?['swapSuggestionNote'] as String?;
+      final rootData = resp.data is Map ? resp.data['data'] as Map<String, dynamic>? : null;
+      final data = rootData?['routine'] as Map<String, dynamic>?;
+      final sessionData = rootData?['currentSession'] as Map<String, dynamic>?;
+      final swapNote = rootData?['swapSuggestionNote'] as String?;
       if (data != null) {
         // Backend returned a saved routine
         final splitType = data['splitType'] as String;
@@ -103,8 +104,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         final days      = data['daysPerWeek'] as int? ?? 4;
         final suggestions = RoutineCatalogue.forDays(days);
         final found = suggestions.where((s) => s.splitType == splitType).toList();
-        final streak = resp.data['data']['streakDays'] as int? ?? 0;
-        final completedList = (resp.data['data']['completedDaysThisWeek'] as List<dynamic>?)
+        final streak = (rootData?['streakDays'] as num?)?.toInt() ?? 0;
+        final completedList = (rootData?['completedDaysThisWeek'] as List<dynamic>?)
                 ?.map((e) => e == true)
                 .toList() ??
             List.filled(7, false);
