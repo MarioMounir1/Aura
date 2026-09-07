@@ -195,7 +195,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
         boxShadow: [
           BoxShadow(
@@ -205,13 +205,13 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header: Step Indicators & Back Button
           _buildHeader(isAr),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
 
           // Dynamic Step Body
           AnimatedSwitcher(
@@ -234,7 +234,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
               children: [
                 if (_currentStep > 1)
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(0xFF235A42)),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 15, color: Color(0xFF235A42)),
                     onPressed: () => _goToStep(_currentStep - 1),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -243,24 +243,24 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
                 Text(
                   isAr ? 'إنشاء خطة التمارين' : 'Workout Plan Builder',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                     color: const Color(0xFF1E3A2B),
                   ),
                 ),
               ],
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: const Color(0xFFEAF5EE),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFC7E2D1)),
               ),
               child: Text(
                 '${isAr ? "الخطوة" : "Step"} $_currentStep / 4',
                 style: GoogleFonts.inter(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF235A42),
                 ),
@@ -268,7 +268,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         // Step progress line
         Row(
           children: List.generate(4, (index) {
@@ -277,8 +277,8 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
             final isCurrent = _currentStep == stepIndex;
             return Expanded(
               child: Container(
-                height: 4,
-                margin: EdgeInsets.only(right: index < 3 ? 6 : 0),
+                height: 3,
+                margin: EdgeInsets.only(right: index < 3 ? 5 : 0),
                 decoration: BoxDecoration(
                   color: isCompleted ? const Color(0xFF235A42) : const Color(0xFFE2ECE5),
                   borderRadius: BorderRadius.circular(2),
@@ -355,48 +355,48 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
       children: [
         Text(
           isAr ? 'كم يوماً في الأسبوع تريد التدريب؟' : 'How many days do you want to train?',
-          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
+          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Text(
           isAr ? 'اختر الأيام المناسبة لجدولك اليومي.' : 'Select the weekly commitment that best fits your lifestyle.',
-          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D)),
+          style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF5A6E5D)),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         ...options.map((opt) {
           final days = opt['days'] as int;
           final isSelected = _selectedDays == days;
           return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: 8),
             child: InkWell(
               onTap: () => _onSelectDays(days),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFFEAF5EE) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isSelected ? const Color(0xFF235A42) : const Color(0xFFE2ECE5),
-                    width: isSelected ? 1.8 : 1.2,
+                    width: isSelected ? 1.6 : 1.1,
                   ),
                 ),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: isSelected ? const Color(0xFF235A42) : const Color(0xFFF1F6F3),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         opt['icon'] as IconData,
-                        size: 20,
+                        size: 18,
                         color: isSelected ? Colors.white : const Color(0xFF5A6E5D),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,14 +406,14 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
                               Text(
                                 opt['title'] as String,
                                 style: GoogleFonts.inter(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF1E3A2B),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: isSelected ? const Color(0xFF235A42).withValues(alpha: 0.12) : const Color(0xFFEFF4F0),
                                   borderRadius: BorderRadius.circular(6),
@@ -421,7 +421,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
                                 child: Text(
                                   opt['badge'] as String,
                                   style: GoogleFonts.inter(
-                                    fontSize: 10,
+                                    fontSize: 9.5,
                                     fontWeight: FontWeight.w700,
                                     color: isSelected ? const Color(0xFF235A42) : const Color(0xFF5A6E5D),
                                   ),
@@ -429,10 +429,10 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1),
                           Text(
                             opt['subtitle'] as String,
-                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF5A6E5D)),
+                            style: GoogleFonts.inter(fontSize: 10.5, color: const Color(0xFF5A6E5D)),
                           ),
                         ],
                       ),
@@ -440,7 +440,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
                     Icon(
                       isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                       color: isSelected ? const Color(0xFF235A42) : const Color(0xFFCBDCD0),
-                      size: 20,
+                      size: 18,
                     ),
                   ],
                 ),
@@ -448,7 +448,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
             ),
           );
         }),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         _buildActionButton(
           label: isAr ? 'التالي: اختيار تقسيم التمارين' : 'Next: Select Split Style',
           onPressed: () => _goToStep(2),
@@ -469,30 +469,30 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
       children: [
         Text(
           isAr ? 'اختر نظام تقسيم العضلات' : 'Choose Your Training Split',
-          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
+          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Text(
           isAr ? 'الأنظمة المقترحة لـ $_selectedDays أيام أسبوعياً:' : 'Optimized splits for $_selectedDays days/week:',
-          style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D)),
+          style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF5A6E5D)),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         ...availableSplits.map((split) {
           final isSelected = _selectedRoutine.splitType == split.splitType;
           return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: 8),
             child: InkWell(
               onTap: () => setState(() => _selectedRoutine = split),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFFEAF5EE) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                     color: isSelected ? const Color(0xFF235A42) : const Color(0xFFE2ECE5),
-                    width: isSelected ? 1.8 : 1.2,
+                    width: isSelected ? 1.6 : 1.1,
                   ),
                 ),
                 child: Column(
@@ -501,49 +501,61 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          split.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF1E3A2B),
+                        Expanded(
+                          child: Text(
+                            split.name,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1E3A2B),
+                            ),
                           ),
                         ),
                         Icon(
                           isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                           color: isSelected ? const Color(0xFF235A42) : const Color(0xFFCBDCD0),
-                          size: 20,
+                          size: 18,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 3),
                     Text(
                       split.tagline,
-                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D)),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF5A6E5D)),
                     ),
-                    const SizedBox(height: 12),
-                    // Weekly breakdown tags
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: split.breakdown.take(7).map((dayName) {
-                        final isRest = dayName.toLowerCase().contains('rest');
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isRest ? const Color(0xFFF3F5F4) : const Color(0xFFD8ECDF),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            dayName,
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: isRest ? const Color(0xFF8B9B8E) : const Color(0xFF1E3A2B),
+                    const SizedBox(height: 8),
+                    // Weekly breakdown tags in a clean horizontal single row
+                    SizedBox(
+                      height: 22,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: split.breakdown.take(7).length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 5),
+                        itemBuilder: (context, idx) {
+                          final dayName = split.breakdown[idx];
+                          final isRest = dayName.toLowerCase().contains('rest');
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isRest ? const Color(0xFFF1F4F2) : const Color(0xFFD8ECDF),
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                            child: Center(
+                              child: Text(
+                                dayName,
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: isRest ? const Color(0xFF7A8B7D) : const Color(0xFF1E3A2B),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -551,7 +563,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
             ),
           );
         }),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         _buildActionButton(
           label: isAr ? 'التالي: اختيار الهدف والتركيز' : 'Next: Choose Goals & Focus',
           onPressed: () => _goToStep(3),
@@ -584,72 +596,72 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
       children: [
         Text(
           isAr ? 'ما هو هدفك التدريبي الأساسي؟' : 'What is your primary training goal?',
-          style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
+          style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         ...goals.map((g) {
           final isSelected = _selectedGoal == g['id'];
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 6),
             child: InkWell(
               onTap: () => setState(() => _selectedGoal = g['id'] as String),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFFEAF5EE) : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: isSelected ? const Color(0xFF235A42) : const Color(0xFFE2ECE5),
-                    width: isSelected ? 1.6 : 1.0,
+                    width: isSelected ? 1.5 : 1.0,
                   ),
                 ),
                 child: Row(
                   children: [
-                    Icon(g['icon'] as IconData, size: 18, color: isSelected ? const Color(0xFF235A42) : const Color(0xFF5A6E5D)),
-                    const SizedBox(width: 10),
+                    Icon(g['icon'] as IconData, size: 16, color: isSelected ? const Color(0xFF235A42) : const Color(0xFF5A6E5D)),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         g['label'] as String,
                         style: GoogleFonts.inter(
-                          fontSize: 13,
+                          fontSize: 12.5,
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: const Color(0xFF1E3A2B),
                         ),
                       ),
                     ),
                     if (isSelected)
-                      const Icon(Icons.check_rounded, color: Color(0xFF235A42), size: 18),
+                      const Icon(Icons.check_rounded, color: Color(0xFF235A42), size: 16),
                   ],
                 ),
               ),
             ),
           );
         }),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Text(
           isAr ? 'منطقة التركيز المفضلة:' : 'Target Muscle Emphasis:',
-          style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
+          style: GoogleFonts.outfit(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A2B)),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 6,
+          runSpacing: 6,
           children: focuses.map((f) {
             final isSelected = _selectedFocus == f['id'];
             return InkWell(
               onTap: () => setState(() => _selectedFocus = f['id'] as String),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: isSelected ? const Color(0xFF235A42) : const Color(0xFFF1F6F3),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   f['label'] as String,
                   style: GoogleFonts.inter(
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: isSelected ? Colors.white : const Color(0xFF235A42),
                   ),
@@ -658,7 +670,7 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
             );
           }).toList(),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 14),
         _buildActionButton(
           label: isAr ? 'إنشاء الخطة ومراجعة المدرب الذكي' : 'Generate & Review with AI Coach',
           onPressed: () => _goToStep(4),
@@ -886,19 +898,19 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
           backgroundColor: const Color(0xFF235A42),
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
         onPressed: onPressed,
         child: isLoading
             ? const SizedBox(
-                width: 20,
-                height: 20,
+                width: 18,
+                height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
             : Text(
                 label,
-                style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w700),
               ),
       ),
     );
