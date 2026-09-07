@@ -48,6 +48,17 @@ export interface OllamaCallOptions {
   numPredict?: number;
 }
 
+// ── Helper: Timeout Wrapper ───────────────────────────────────────────────
+
+function withTimeout<R>(promise: Promise<R>, timeoutMs: number, operationName: string): Promise<R> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation '${operationName}' timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 // ── Helper: AI Chat Call with Gemini ──────────────────────────────────────
 
 async function callOllamaChatDetailed(
@@ -58,12 +69,13 @@ async function callOllamaChatDetailed(
 ): Promise<OllamaResult<string>> {
   const callerName = options?.callerName ?? "callCoachChat";
   const startTime = Date.now();
+  const timeoutMs = options?.timeoutMs ?? 6000;
 
   try {
     const modelName = resolveGeminiModelName();
     const model = getGenAI().getGenerativeModel({ model: modelName });
     const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
-    const result = await model.generateContent(prompt);
+    const result = await withTimeout(model.generateContent(prompt), timeoutMs, callerName);
     const text = result.response.text().trim();
     const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
     return {
@@ -97,6 +109,7 @@ async function callOllamaJsonChatDetailed<T>(
 ): Promise<OllamaResult<T>> {
   const callerName = options?.callerName ?? "callCoachJsonChat";
   const startTime = Date.now();
+  const timeoutMs = options?.timeoutMs ?? 6000;
 
   try {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -114,10 +127,14 @@ async function callOllamaJsonChatDetailed<T>(
     };
     let text = "";
     try {
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-        generationConfig,
-      });
+      const result = await withTimeout(
+        model.generateContent({
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig,
+        }),
+        timeoutMs,
+        callerName
+      );
       text = result.response.text().trim();
     } catch (geminiErr: any) {
       console.warn(`⚠️ [Gemini Model Retry] ${modelName} failed (${geminiErr.message}), retrying with gemini-1.5-flash...`);
@@ -125,10 +142,14 @@ async function callOllamaJsonChatDetailed<T>(
         model: "gemini-1.5-flash",
         systemInstruction: systemPrompt,
       });
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-        generationConfig,
-      });
+      const result = await withTimeout(
+        model.generateContent({
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig,
+        }),
+        Math.min(timeoutMs, 4000),
+        `${callerName}_retry`
+      );
       text = result.response.text().trim();
     }
     const jsonMatch = text.match(/\{[\s\S]*\}/);
