@@ -1,6 +1,3 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
-
 // lib/core/utils/constants.dart
 // Aura — App-wide constants
 
@@ -11,13 +8,9 @@ class AppConstants {
   static String get baseUrl {
     const envUrl = String.fromEnvironment('API_BASE_URL');
     if (envUrl.isNotEmpty) return envUrl;
-    if (kReleaseMode) {
-      return 'https://aura-backend-m4jk.onrender.com';
-    }
-    if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:3000';
-    }
-    return 'http://127.0.0.1:3000';
+    // Default to production cloud backend for both debug and release,
+    // ensuring emulator/device testing always connects out of the box.
+    return 'https://aura-backend-m4jk.onrender.com';
   }
 
   static String get apiV1 => '$baseUrl/api/v1';
