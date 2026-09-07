@@ -1,494 +1,264 @@
-# Aura
+# 🌿 Aura — AI Nutrition & Fitness Ecosystem
 
 <p align="center">
   <img src="mobile/assets/images/aura_logo.png" width="220" alt="Aura Logo" />
 </p>
 
-> **A premium, full-stack AI-powered nutrition & fitness ecosystem. Track calories with dual AI engines (Google Gemini 2.0 Flash & local Ollama Vision), scan product barcodes, log water & weight, manage workout splits with natural language commands, access Egyptian & international food databases, and upgrade seamlessly with RevenueCat subscriptions — all wrapped in a state-of-the-art dark mode Flutter experience.**
+<p align="center">
+  <strong>The Intelligent Nutrition, Calorie & Workout Ecosystem Powered by Dual-Engine AI</strong>
+</p>
 
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-7.x-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
-[![Ollama](https://img.shields.io/badge/Ollama-Local_AI-FF6F61)](https://ollama.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
----
-
-## 📖 Overview
-
-**Aura** is an elite, hybrid-AI fitness suite designed to solve the challenge of tracking calories and macros in international and local markets. The ecosystem is composed of two primary pillars:
-
-1. **AI-First Mobile App (`mobile/`)** — A gorgeous dark-mode, multi-lingual app (AR/EN) featuring the **Leaf & Flame Hybrid Brand Emblem**, fast parallel splash initialization, camera barcode scanning, interactive workout routines with NLP commands, water & weight tracking, local Ollama AI meal vision, RevenueCat custom glassmorphic paywalls, and one-tap **Google & Apple Sign-In**.
-2. **Multimodal REST Backend (`backend/`)** — A production-grade Express API (v2.0.0) built with TypeScript and Prisma. Orchestrates queries to Google Gemini, Open Food Facts, and local Ollama inference models, manages user authentication (JWT + Social OAuth), handles RevenueCat webhooks & subscription quotas, tracks user data in PostgreSQL, and enforces rate limiting via Redis.
+<p align="center">
+  <a href="https://flutter.dev/"><img src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white" alt="Flutter" /></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white" alt="Node.js" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://www.prisma.io/"><img src="https://img.shields.io/badge/Prisma-7.x-2D3748?logo=prisma&logoColor=white" alt="Prisma" /></a>
+  <a href="https://deepmind.google/technologies/gemini/"><img src="https://img.shields.io/badge/AI-Gemini_2.0_Flash-4285F4?logo=google&logoColor=white" alt="Gemini" /></a>
+  <a href="https://ollama.com/"><img src="https://img.shields.io/badge/Local_AI-Ollama-FF6F61" alt="Ollama" /></a>
+  <a href="https://www.revenuecat.com/"><img src="https://img.shields.io/badge/IAP-RevenueCat-E53935" alt="RevenueCat" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
+</p>
 
 ---
 
-## ✨ System Architecture
+## 📖 Executive Summary
+
+**Aura** is an elite, full-stack nutrition and fitness platform designed to make daily calorie, macro, and workout tracking effortless. Combining the analytical accuracy of **Google Gemini 2.0 Flash** with the privacy and offline freedom of **on-device Ollama Vision**, Aura recognizes complex meals (including deep knowledge of Middle Eastern & Egyptian cuisine), reads product barcodes, transcribes voice meal logs, and builds periodized workout splits tailored to any phone display.
+
+---
+
+## 🏛️ System Architecture
 
 ```
-                 ┌──────────────────────────────────────┐
-                 │        Flutter Mobile Client         │
-                 │              (mobile/)               │
-                 └──────┬────────────┬────────────▲─────┘
-                        │            │            │
-             (HTTPS / REST)          │            │
-        All routes authenticated     │            │
-        via Bearer JWT token         │            │
-                        │     (Local Multipart)   │
-                        │     POST /scan-local    │
-                        ▼            ▼            │
-  ┌───────────────────────────────────────────────┴─────┐
-  │           Express API Gateway v2 (/api/v1)          │
-  │   (JWT Auth · Social OAuth · Rate Limiting · Log)   │
-  └──────┬───────────────────┬────────────────────┬─────┘
-         │                   │                    │
-   (Prisma ORM)       (Cloud API Call)    (Local API Call)
-         │                   │                    │
-         ▼                   ▼                    ▼
-┌──────────────────┐┌──────────────────┐┌──────────────────┐
-│    PostgreSQL    ││  Google Gemini / ││   Local Ollama   │
-│  (Users, Meals, ││ Open Food Facts  ││ (llava / llama3) │
-│  Water, Weight, │└──────────────────┘└──────────────────┘
-│  Workouts, Plans)│
-└──────────────────┘
+                             ┌──────────────────────────────────────┐
+                             │       Flutter Mobile Client          │
+                             │       (Android / iOS / Tablets)      │
+                             └──────┬────────────┬────────────▲─────┘
+                                    │            │            │
+                         (HTTPS / REST)          │            │
+                    All routes authenticated     │            │
+                    via Bearer JWT token         │            │
+                                    │     (Local Multipart)   │
+                                    │     POST /scan-local    │
+                                    ▼            ▼            │
+              ┌───────────────────────────────────────────────┴─────┐
+              │           Express API Gateway v2 (/api/v1)          │
+              │   (JWT Auth · Social OAuth · Rate Limiting · Log)   │
+              └──────┬───────────────────┬────────────────────┬─────┘
+                     │                   │                    │
+               (Prisma ORM)       (Cloud API Call)    (Local API Call)
+                     │                   │                    │
+                     ▼                   ▼                    ▼
+            ┌──────────────────┐┌──────────────────┐┌──────────────────┐
+            │    PostgreSQL    ││  Google Gemini / ││   Local Ollama   │
+            │  (Users, Meals,  ││ Open Food Facts  ││ (llava / llama3) │
+            │  Water, Weight,  │└──────────────────┘└──────────────────┘
+            │  Workouts, Plans)│
+            └──────────────────┘
 ```
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features & Capabilities
 
-### 📱 Mobile App
-- 🔐 **Multi-method Auth** — Email/password + **Sign in with Google** (Android & iOS) + **Sign in with Apple** (iOS only)
-- 🧭 **Onboarding & Profile Setup** — Height, weight, age, gender, activity level, and fitness goal. Auto-calculates TDEE and macro targets
-- 📊 **High-Density Dashboard** — Sleek compact dark-mode UI with live macro rings, calorie progress, and floating pill navigation bar
-- 🥗 **AI Meal Analysis (Gemini 2.0 Flash)** — Instant photo & text meal analysis with strict non-food detection, Egyptian restaurant dish knowledge, and itemized macro breakdowns
-- 📷 **Smart Barcode Scanner** — Real-time camera scanner with Flashlight (Torch) support, camera flip, smart permission recovery, and Open Food Facts lookup with offline AI fallback
-- 🦙 **Offline Local AI Scan** — Snap or upload a plate photo — inference runs entirely on-device via Ollama (`llava` / `llama3.2-vision`). Free tier includes 2 free scans daily; unlimited for Premium
-- 💳 **RevenueCat In-App Subscriptions** — Seamless native in-app purchases via RevenueCat SDK (`purchases_flutter`). Displays custom dark glassmorphic paywall sheet (`CustomPaywallSheet`), strictly verifying active entitlements before upgrading
-- 🔍 **Egyptian Food Database Search** — Bilingual (AR/EN) searchable database with categories, serving sizes, and full macro details
-- 💧 **Water Tracking** — Log intake in ml, see daily progress vs goal with an hourly breakdown
-- ⚖️ **Weight Logging** — Track weight history with trend analysis (delta, min/max/avg over 7–365 days)
-- 🍽️ **Weekly Meal Plans** — Auto-generate a personalized 7-day meal plan based on your calorie goal. Mark entries as eaten
-- 🏋️ **Workout Hub & NLP Interpreter** — Configure training splits (3–6 days/week: Full Body, PPL, Upper/Lower, Bro Split, Arnold Split). Natural language workout commands ("replace bench press with incline dumbell"), exercise alternatives, exercise swapping, custom session overrides, live set logging with warm-up / working / top / back-off labels, and AI weekly recaps
-- 💡 **AI Macro Suggestions** — Get personalized supplement and food suggestions to hit daily macro targets
-- 🌍 **AR/EN Localization + RTL** — Full bilingual support with dynamic RTL layout switching
-- ⚙️ **Settings** — Language toggle, profile editing, goal updates, subscription management
+### 🥗 1. Dual-Engine Nutrition Intelligence
+- **Cloud Gemini 2.0 Flash**: Snap or type any meal. Delivers rapid itemized ingredient breakdowns, gram estimation, and macro decomposition. Includes strict non-food detection (guards against selfies, objects, and animals).
+- **Egyptian & Regional Food Database**: Specially tuned for regional recipes (Koshary, Hawawshi, Molokhia, Shawarma, Ful, Taameya) alongside standard international items.
+- **Local On-Device Ollama Inference**: Private offline photo scanning via Ollama (`llava`, `llama3.2-vision`) with automated fallbacks.
+- **Smart Barcode Scanner**: High-speed real-time camera scanning with torch toggle and camera flip, querying **Open Food Facts** with persistent caching and offline AI estimate fallbacks.
+- **Microphone Voice Meal Logging**: Instant Arabic and English voice transcription (`speech_to_text`) that feeds directly into the AI nutrition analyzer.
 
-### 🛠️ Backend API
-- ✅ **Full JWT Authentication** with bcrypt password hashing
-- 🔑 **Social OAuth** — Google Sign-In token verification + Apple identity token decoding with account linking
-- ⚡ **Gemini 2.0 Flash Integration** — Centralized AI service with itemized ingredient decomposition, strict `is_food` validation (HTTP 422 for non-food images), and zero hallucination fallbacks
-- 💳 **Subscription Verification & Quota API** — Server-side subscription sync (`/users/subscribe`, `/users/unsubscribe`) and RevenueCat webhook integration (`/revenuecat/webhook`); enforces 2 daily free AI scan limits
-- 📦 **Barcode Engine** — Open Food Facts API product search with 6-hour caching (`/meals/scan-barcode`) and unlimited barcode logging (`/meals/log-barcode`)
-- 📦 **Food Database** — Search by name (AR/EN), filter by category, paginated results
-- 📋 **Food Logs** — Log items from the database; combined daily summary with totals vs goals
-- 🤖 **Dual AI Engine** — Cloud Gemini 2.0 Flash for ultra-fast analysis; Ollama for private offline vision inference
-- 📅 **Meal Plan Engine** — Generate and manage weekly meal plans from the food database
-- 🏋️ **Workout Routine & NLP API** — Save training split config, serve sessions, swap exercises, process NLP session commands, override daily session types, and generate weekly recap AI summaries
-- 📈 **Weight & Water History** — Full log history with statistics
-- 🔒 **Rate Limiting** — Redis-backed rate limiters on AI and barcode endpoints
-- 🐳 **Docker Support** — `Dockerfile` + `docker-compose.yml` for containerized deployment
-- 🧪 **Test Suite** — Jest + Supertest integration tests
+### 🏋️ 2. Adaptive Workout Hub & Plan Builder
+- **Material 3 Guided Wizard**: A sleek 4-step wizard (Fitness Goal, Equipment, Days per Week, and AI Routine Review) adapted cleanly to any phone aspect ratio without vertical overflow.
+- **Direct 1-Tap Split Switcher**: Change training plans instantly at any time without needing to chat with the AI coach. Choose from proven splits:
+  - **3-Day**: Full Body A/B/C, Classic PPL (1×)
+  - **4-Day**: Upper / Lower Split, Bro Split (4-Day)
+  - **5-Day**: Upper / Lower / PPL Hybrid, Bro Split (5-Day)
+  - **6-Day**: PPL 2× (Classic), Arnold Split
+- **Live In-Session Tracker**: Inline logger for sets, reps, weight, and RPE with tags for *Warm-up, Working, Top, and Back-off* sets.
+- **Instant Coach Notes**: Dynamic contextual workout tips generated instantaneously without slow gateway stalls.
+- **Calendar & Streak Tracking**: Weekly completion heatmaps, streak counters, rest day scheduling, and missed session recovery.
+
+### 💧 3. Hydration & Weight Analytics
+- **Water Tracker**: Quick-log buttons (+250ml, +500ml) with custom bottle sizes, daily target progress, and hourly hydration breakdown.
+- **Body Weight Tracker**: Weight history graphs, delta calculations, target timeline projection, and 7/30/90/365-day moving averages.
+
+### 🔐 4. Enterprise Security & Offline Durability
+- **Triple-Method Authentication**: Secure Email/Password, **Sign in with Google**, and **Sign in with Apple** (iOS).
+- **Encrypted Keystore Persistence**: Tokens are securely preserved via Android Keystore and iOS Keychain with ProGuard `-keep` rules to prevent sudden logout on release builds.
+- **Robust 401 Interceptors**: Selective authentication handling that prevents erroneous session wipes.
+
+### 💎 5. Premium Monetization & AdMob
+- **RevenueCat Paywall**: Native in-app subscriptions with custom dark glassmorphic UI (`CustomPaywallSheet`). Verifies entitlements server-side.
+- **Google AdMob Banners**: Non-intrusive banner ads for free-tier users, automatically dismissed for Premium subscribers.
+
+### 🌍 6. Internationalization & Design
+- **Arabic & English Support**: Dynamic RTL layout adaptation with cultural context and custom localized typography.
+- **Aura Green Design System**: Bespoke aesthetic featuring `#235A42` (Aura Deep Forest), `#EAF5EE` (Sage Surface), and `#1E3A2B` (Dark Emerald).
 
 ---
 
-## 📂 Project Structure
+## 📂 Repository Structure
 
 ```
 Aura/
-├── backend/                        # 🛠️ Node.js REST API (v2.0.0)
+├── backend/                              # 🛠️ Node.js / Express REST API (v2.0.0)
+│   ├── prisma/
+│   │   ├── schema.prisma                 # PostgreSQL database models
+│   │   └── seed.ts                       # Egyptian & international food database
 │   ├── src/
-│   │   ├── app.ts                  # Express entry point & global middleware
+│   │   ├── app.ts                        # Express entry point & middleware
 │   │   ├── routes/
-│   │   │   └── v1.routes.ts        # All /api/v1 endpoints
-│   │   ├── controllers/            # Business logic per domain
-│   │   │   ├── user.controller.ts  # Auth (email, Google, Apple) + profile + subscriptions
-│   │   │   ├── meal.controller.ts
-│   │   │   ├── local-llama.controller.ts
-│   │   │   ├── barcode.controller.ts  # OpenFoodFacts lookup & barcode logging
-│   │   │   ├── history.controller.ts
-│   │   │   ├── suggestion.controller.ts
-│   │   │   ├── profile.controller.ts
-│   │   │   ├── food.controller.ts
-│   │   │   ├── food-log.controller.ts
-│   │   │   ├── water.controller.ts
-│   │   │   ├── weight.controller.ts
-│   │   │   ├── meal-plan.controller.ts
-│   │   │   └── workout.controller.ts  # Routine, sessions, NLP interpreter, recap
-│   │   ├── middleware/             # Auth, rate limiting, validation, error handling
-│   │   ├── services/               # Prisma client, AI service wrappers
-│   │   └── types/                  # Shared TypeScript types
-│   ├── prisma/                     # PostgreSQL schema & seed data
-│   ├── Dockerfile
-│   ├── docker-compose.yml
+│   │   │   └── v1.routes.ts              # API v1 endpoint registry
+│   │   ├── controllers/                  # Domain business logic
+│   │   │   ├── user.controller.ts        # Auth, Google/Apple OAuth, Profile
+│   │   │   ├── meal.controller.ts        # Gemini 2.0 Flash nutrition parsing
+│   │   │   ├── local-llama.controller.ts # Local Ollama vision endpoints
+│   │   │   ├── barcode.controller.ts     # Open Food Facts integration
+│   │   │   ├── workout.controller.ts     # Routine, session & workout engine
+│   │   │   ├── coach.service.ts          # AI coaching with 6s fail-safe race
+│   │   │   ├── water.controller.ts       # Hydration tracking
+│   │   │   └── weight.controller.ts      # Weight logs & trends
+│   │   └── middleware/                   # JWT auth, rate limits, validators
+│   ├── Dockerfile                        # Multi-stage production container
+│   ├── docker-compose.yml                # API + PostgreSQL + Redis stack
 │   └── package.json
 │
-└── mobile/                         # 📱 Flutter Mobile App
-    ├── ios/                        # 🍎 iOS project (Xcode)
-    │   ├── Runner/
-    │   │   ├── Info.plist          # Google Sign-In URL scheme + privacy strings
-    │   │   ├── Runner.entitlements # Sign in with Apple capability
-    │   │   └── AppDelegate.swift   # Google Sign-In URL handler
-    │   └── Flutter/
-    │       └── GoogleSignIn.xcconfig.template  # Google credentials template
-    ├── android/                    # 🤖 Android project (Gradle)
+└── mobile/                               # 📱 Flutter Application
+    ├── android/                          # Android Native Config & ProGuard
+    ├── ios/                              # iOS Xcode Project & Capabilities
+    ├── assets/                           # Brand emblems, audio, icons
     ├── lib/
-    │   ├── main.dart               # App entry, BLoC providers, router, LanguageCubit
+    │   ├── main.dart                     # App initialization & MultiBlocProvider
     │   ├── core/
-    │   │   ├── theme/              # AppTheme, AppColors design tokens
-    │   │   ├── network/            # Dio API client with secure token injection
-    │   │   ├── utils/              # Constants (box names, endpoints)
-    │   │   └── widgets/            # Shared reusable widgets
+    │   │   ├── network/                  # Dio client, interceptors & Keystore storage
+    │   │   ├── theme/                    # Color tokens & typography
+    │   │   └── widgets/                  # Ad banners, buttons, cards
     │   └── features/
-    │       ├── auth/               # Login · Register · Google · Apple · AuthBloc
-    │       ├── premium/            # RevenueCat paywalls & entitlement cubits
-    │       ├── profile/            # Onboarding · ProfileBloc · TDEE setup
-    │       └── calorie_tracker/    # All tracker features + BLoCs
-    │           ├── presentation/
-    │           │   ├── dashboard_screen.dart
-    │           │   ├── meals_dashboard_screen.dart
-    │           │   ├── analyze_meal_screen.dart
-    │           │   ├── food_search_screen.dart
-    │           │   ├── water_tracking_screen.dart
-    │           │   ├── weight_progress_screen.dart
-    │           │   ├── meal_plans_screen.dart
-    │           │   ├── workout_screen.dart
-    │           │   ├── ai_suggestion_screen.dart
-    │           │   ├── history_screen.dart
-    │           │   ├── settings_screen.dart
-    │           │   ├── splash_screen.dart
-    │           │   ├── home_shell_screen.dart
-    │           │   ├── gyms_screen.dart
-    │           │   └── market_screen.dart
-    │           └── bloc/           # CalorieTrackerBloc, DashboardBloc, FoodSearchBloc,
-    │                               # WaterBloc, WeightBloc, MealPlanBloc, WorkoutBloc
-    └── pubspec.yaml
+    │       ├── auth/                     # Login, Register, Social Auth BLoCs
+    │       ├── premium/                  # RevenueCat paywalls & subscription state
+    │       ├── profile/                  # Onboarding, TDEE calculator
+    │       └── calorie_tracker/          # Core domain features
+    │           ├── data/                 # Repositories & workout catalogues
+    │           └── presentation/
+    │               ├── meals_dashboard_screen.dart   # High-density dashboard
+    │               ├── workout_screen.dart           # Workout Hub & Split Switcher
+    │               ├── workout_plan_wizard.dart      # 4-Step Material 3 Wizard
+    │               ├── voice_meal_logging_sheet.dart # Speech-to-Text logger
+    │               └── barcode_confirmation_sheet.dart
+    └── pubspec.yaml                      # Dependencies & asset declarations
 ```
 
 ---
 
-## ⚡ Setup & Quick Start
+## 🚀 Quick Start Guide
 
-### 1. Prerequisites
-- [Node.js](https://nodejs.org/) (v18+)
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (v3.3.0+, Dart ≥3.3.0)
-- [PostgreSQL](https://www.postgresql.org/)
-- [Redis](https://redis.io/)
-- [Ollama](https://ollama.com/) _(optional — required only for local AI scan)_
+### Prerequisites
+- **Node.js**: v18+ & npm v9+
+- **Flutter SDK**: v3.22+
+- **PostgreSQL**: v14+ (or Docker)
+- **Redis**: v7+ (for rate limiting)
+- **Gemini API Key**: from [Google AI Studio](https://aistudio.google.com/)
 
 ---
 
-### 2. Configure Backend
+### 1. Backend Setup
 
 ```bash
+# Navigate to backend
 cd backend
+
+# Install dependencies
 npm install
+
+# Configure environment variables
 cp .env.example .env
+# Edit .env with your DATABASE_URL, GEMINI_API_KEY, and JWT_SECRET
+
+# Run Prisma migrations & seed database
+npx prisma migrate dev
+npx prisma db seed
+
+# Start development server
+npm run dev
 ```
 
-Edit `.env` with your values:
+*The API will be available at `http://localhost:5000/api/v1`.*
+
+#### Running with Docker:
+```bash
+cd backend
+docker-compose up -d --build
+```
+
+---
+
+### 2. Mobile App Setup
+
+```bash
+# Navigate to mobile directory
+cd mobile
+
+# Fetch Flutter dependencies
+flutter pub get
+
+# Run on connected device or emulator (Debug)
+flutter run
+
+# Build release Android App Bundle (AAB) for Google Play
+flutter build appbundle --release
+
+# Build standalone release APK
+flutter build apk --release
+```
+
+---
+
+## 📡 Core API Reference (`/api/v1`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/users/register` | Register with email & password |
+| `POST` | `/users/login` | Log in and receive JWT token |
+| `POST` | `/users/google` | Verify Google ID token & sign in |
+| `POST` | `/users/apple` | Verify Apple identity token & sign in |
+| `GET` | `/users/profile` | Retrieve user profile & TDEE macro targets |
+| `POST` | `/meals/analyze` | Multimodal meal analysis (Gemini 2.0 Flash) |
+| `POST` | `/meals/scan-barcode` | Open Food Facts lookup with cached response |
+| `POST` | `/meals/log-barcode` | Log scanned product directly into diary |
+| `GET` | `/foods/search` | Search Egyptian & international food database |
+| `GET` | `/workouts/routine` | Get active workout routine & today's session |
+| `POST` | `/workouts/setup` | Set/switch routine split (days, splitType, name) |
+| `POST` | `/workouts/session/log` | Record completed workout session & sets |
+| `POST` | `/workouts/session/override`| Override today's session (e.g. skip/rest) |
+| `GET` | `/water/today` | Fetch today's hydration total & logs |
+| `POST` | `/water/log` | Log water intake in milliliters |
+| `GET` | `/weight/history` | Get historical weigh-ins & analytics |
+| `POST` | `/weight/log` | Record a new body weight measurement |
+
+---
+
+## 🔐 Environment Variables (`backend/.env`)
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/nutrition_db?schema=public"
+PORT=5000
+NODE_ENV=development
+DATABASE_URL="postgresql://user:password@localhost:5432/aura_db?schema=public"
 REDIS_URL="redis://localhost:6379"
-GEMINI_API_KEY="your_google_gemini_api_key"
-AI_PROVIDER="ollama"           # "ollama" or "google"
+
+JWT_SECRET="your_secure_jwt_secret"
+JWT_EXPIRES_IN="30d"
+
+GEMINI_API_KEY="AIzaSy..."
 OLLAMA_BASE_URL="http://127.0.0.1:11434"
-OLLAMA_VISION_MODEL="llava"
-OLLAMA_MODEL="llama3"
-JWT_SECRET="generate-a-secure-random-key"
-PORT=3000
+
+REVENUECAT_WEBHOOK_SECRET="your_webhook_secret"
+GOOGLE_CLIENT_ID="your_google_client_id"
+APPLE_CLIENT_ID="your_apple_client_id"
 ```
-
-Push DB schema & seed Egyptian restaurant data:
-
-```bash
-npm run db:push
-npm run db:seed
-```
-
-Start the development server:
-
-```bash
-npm run dev
-# → API running on http://localhost:3000
-```
-
----
-
-### 3. Run Ollama Locally _(optional)_
-
-```bash
-# Pull the required models
-ollama pull llama3
-ollama pull llava
-
-# Verify connection
-curl http://localhost:11434
-```
-
----
-
-### 4. Run Flutter Mobile App
-
-```bash
-cd mobile
-flutter pub get
-flutter run
-```
-
-### 5. Build Android Release Bundle (`.aab` for Google Play)
-
-```bash
-cd mobile
-flutter build appbundle --release
-# Output: mobile/build/app/outputs/bundle/release/app-release.aab
-```
-
----
-
-### 6. iOS Setup (Google & Apple Sign-In)
-
-> **Requires a Mac with Xcode to build.**
-
-**Google Sign-In:**
-1. Download `GoogleService-Info.plist` from [Firebase Console](https://console.firebase.google.com)
-2. Copy `ios/Flutter/GoogleSignIn.xcconfig.template` → `ios/Flutter/GoogleSignIn.xcconfig`
-3. Fill in `GOOGLE_CLIENT_ID` and `GOOGLE_REVERSED_CLIENT_ID` from the plist
-4. Add `#include "GoogleSignIn.xcconfig"` to both `ios/Flutter/Debug.xcconfig` and `ios/Flutter/Release.xcconfig`
-
-**Apple Sign-In:**
-1. Open `Runner.xcworkspace` in Xcode
-2. Go to `Runner → Signing & Capabilities → + Capability → Sign in with Apple`
-3. Ensure your Apple Developer account has the **Sign in with Apple** service enabled for the App ID
-
-> ⚠️ `GoogleService-Info.plist` and `GoogleSignIn.xcconfig` are git-ignored — never commit them.
-
----
-
-### 6. Docker (Alternative)
-
-```bash
-cd backend
-docker-compose up --build
-```
-
----
-
-## 📡 Full API Reference (`/api/v1`)
-
-All endpoints below (except Auth and Webhooks) require:
-```
-Authorization: Bearer <jwt_token>
-```
-
-### 🔐 Auth & Subscriptions
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/auth/register` | Create a new account (email + password) |
-| `POST` | `/auth/signup` | Alias for register |
-| `POST` | `/auth/login` | Authenticate with email & password → JWT |
-| `POST` | `/auth/google` | Sign in / register with Google ID token → JWT |
-| `POST` | `/auth/apple` | Sign in / register with Apple identity token → JWT |
-| `POST` | `/users/me/upgrade` | Upgrade user account to Premium |
-| `POST` | `/users/subscribe` | Sync active RevenueCat subscription |
-| `DELETE`| `/users/subscribe` | Cancel subscription status |
-| `POST` | `/revenuecat/webhook` | RevenueCat webhook endpoint for server sync |
-
-> **Account Linking:** If a Google or Apple email matches an existing account, the social ID is automatically linked — no duplicate accounts.
-
-### 👤 User & Profile
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/users/me` | Get current user + today's macro summary |
-| `PUT` | `/users/me/goals` | Update daily calorie & macro goals |
-| `PUT` | `/users/profile` | Update physical profile (recalculates TDEE) |
-| `GET` | `/users/tdee` | Get TDEE breakdown (Mifflin-St Jeor formula) |
-
-### 🥗 AI Meal Analysis & Barcode
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/meals/analyze` | Analyze meal via text or image (Gemini) |
-| `POST` | `/meals/scan-local` | Analyze meal image using local Ollama vision |
-| `POST` | `/meals/scan-barcode` | Look up product nutrition by barcode (Open Food Facts) |
-| `POST` | `/meals/log-barcode` | Persist confirmed barcode meal (unlimited quota) |
-| `GET` | `/meals/usage` | Get today's AI scan usage vs daily free limit |
-| `POST` | `/meals/manual` | Manually log a meal with known macros |
-| `GET` | `/meals/history` | Paginated meal log history |
-| `GET` | `/meals/suggestions` | AI macro suggestions & supplement recommendations |
-| `PUT` | `/meals/:id` | Update meal log entry |
-| `DELETE` | `/meals/:id` | Delete a meal log entry |
-
-### 🔍 Food Database
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/foods/search` | Search by name (AR/EN), filter by category |
-| `GET` | `/foods/categories` | List all categories with bilingual labels |
-| `GET` | `/foods/:id` | Get a food item with full nutritional details |
-
-### 📋 Food Logs
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/food-logs` | Log a database food item for today |
-| `GET` | `/food-logs/today` | Today's combined food log summary vs goals |
-| `PUT` | `/food-logs/:id` | Update food log entry quantity or meal type |
-| `DELETE` | `/food-logs/:id` | Delete a food log entry |
-
-### 💧 Water Tracking
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/water` | Log water intake (ml) |
-| `GET` | `/water/today` | Today's intake total, progress, hourly breakdown |
-| `DELETE` | `/water/:id` | Delete a water log entry |
-
-### ⚖️ Weight Tracking
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/weight` | Log today's weight (also updates TDEE profile) |
-| `GET` | `/weight/history` | Weight history with trend stats (7–365 days) |
-| `DELETE` | `/weight/:id` | Delete a weight log entry |
-
-### 🍽️ Meal Plans
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/meal-plans/today` | Get today's meal plan with totals |
-| `GET` | `/meal-plans/week` | Full week plan grouped by day |
-| `POST` | `/meal-plans/generate` | Auto-generate weekly plan from calorie goal |
-| `PUT` | `/meal-plans/:id/eaten` | Toggle meal plan entry as eaten |
-
-### 🏋️ Workouts & AI Commands
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/workouts/exercises` | List all available workout exercises |
-| `POST` | `/workouts/setup` | Save training split config (days/week, split type) |
-| `GET` | `/workouts/routine` | Get active workout routine + today's session |
-| `POST` | `/workouts/session/start` | Start active workout session |
-| `POST` | `/workouts/session/exercise` | Add exercise to active session |
-| `POST` | `/workouts/session/set` | Log a set (reps, weight, set type) |
-| `POST` | `/workouts/session/:id/finish` | Complete and log workout session |
-| `GET` | `/workouts/exercises/:id/alternatives` | Get suggested alternative exercises |
-| `POST` | `/workouts/session/swap` | Swap exercise in session with an alternative |
-| `POST` | `/workouts/session/override` | Override day session type (Legs, Rest, etc.) |
-| `POST` | `/workouts/session/interpret` | Interpret NLP workout commands ("swap bench press") |
-| `GET` | `/workouts/weekly-recap` | Get AI-generated weekly recap summary |
-| `GET` | `/workouts/recommend` | Get ranked routine recommendations for user |
-
----
-
-## 🔑 Authentication Flow
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                  Sign-In Options                        │
-├──────────────────┬─────────────────┬────────────────────┤
-│   Email/Password │  Google Sign-In │  Apple Sign-In     │
-│   (All platforms)│ (Android + iOS) │  (iOS only)        │
-└────────┬─────────┴────────┬────────┴──────────┬─────────┘
-         │                  │                   │
-         ▼                  ▼                   ▼
-    POST /auth/login   POST /auth/google   POST /auth/apple
-         │                  │                   │
-         └──────────────────┴───────────────────┘
-                            │
-                     JWT Token returned
-                            │
-                   Stored in flutter_secure_storage
-                            │
-                   Injected into every API request
-```
-
-**Account Linking Logic:**
-- If a social sign-in email matches an existing account → the social ID is linked, user is logged in
-- If no account exists → a new account is auto-created
-- Social-only accounts cannot log in with email/password (clear error returned)
-
----
-
-## 🏋️ Workout Splits Available
-
-| Days/Week | Splits Available |
-|-----------|-----------------|
-| **3 days** | Full Body A/B/C · Classic PPL (1×) |
-| **4 days** | Upper / Lower Split · Bro Split |
-| **5 days** | UL/PPL Hybrid · Bro Split (5-day) |
-| **6 days** | PPL 2× (Classic) · Arnold Split |
-
-Each session generates dynamic set labels: **Warm-up → Working Sets → Top Set → Back-off Set**, with weight & rep targets based on last week's performance.
-
----
-
-## 🤖 Local AI Scan — Response Example
-
-```json
-{
-  "success": true,
-  "source": "local_llama_inference",
-  "mealAnalysis": {
-    "detectedFood": "Homemade Rice and Chicken Plate",
-    "calories": 620,
-    "protein": 42,
-    "carbs": 80,
-    "fats": 12
-  },
-  "llamaRecommendation": {
-    "triggerWarning": true,
-    "message": "This meal lacks sufficient protein for your daily goal. We recommend adding 30g of protein."
-  }
-}
-```
-
----
-
-## 🧪 Running Tests
-
-```bash
-cd backend
-npm test                 # Run all integration tests
-npm run test:coverage    # Run with coverage report
-```
-
----
-
-## 🌍 Localization
-
-The app ships with full **Arabic & English** localization via Flutter's `flutter_localizations` and generated `AppLocalizations`. To switch language at runtime, the `LanguageCubit` persists the preference via `SharedPreferences` and rebuilds the entire widget tree with the correct locale and text direction (RTL for Arabic).
-
----
-
-## 📦 Key Dependencies
-
-### Backend
-| Package | Purpose |
-|---------|---------|
-| `express` | HTTP server |
-| `@prisma/client` | PostgreSQL ORM |
-| `@google/generative-ai` | Gemini AI integration |
-| `jsonwebtoken` + `bcryptjs` | JWT auth & password hashing |
-| `express-rate-limit` + `ioredis` | Redis-backed rate limiting |
-| `multer` | Multipart image upload |
-| `zod` | Request schema validation |
-| `bullmq` | Background job queue |
-
-### Mobile
-| Package | Purpose |
-|---------|---------|
-| `flutter_bloc` | BLoC state management |
-| `dio` | HTTP client with interceptors |
-| `mobile_scanner` | Live camera barcode scanning |
-| `purchases_flutter` | Native RevenueCat in-app subscriptions |
-| `google_sign_in` | Native Google OAuth (Android & iOS) |
-| `sign_in_with_apple` | Native Apple Sign-In (iOS only) |
-| `hive_flutter` | Offline meal log cache |
-| `flutter_secure_storage` | Secure JWT token storage |
-| `go_router` | Declarative navigation |
-| `fl_chart` | Macro & progress charts |
-| `google_fonts` | Premium typography |
-| `image_picker` | Camera / gallery meal photos |
-| `shared_preferences` | Language preference persistence |
-| `dartz` | Functional Either types for error handling |
 
 ---
 
 ## 📄 License
-Licensed under the [MIT License](LICENSE).
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
