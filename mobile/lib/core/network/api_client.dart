@@ -35,21 +35,28 @@ class ApiClient {
           if (_cachedToken != null && _cachedToken!.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $_cachedToken';
           } else {
-            final token = await _secureStorage.read(key: AppConstants.tokenKey);
-            _cachedToken = token;
-            if (token != null && token.isNotEmpty) {
-              options.headers['Authorization'] = 'Bearer $token';
-            }
+            try {
+              final token = await _secureStorage.read(key: AppConstants.tokenKey);
+              _cachedToken = token;
+              if (token != null && token.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $token';
+              }
+            } catch (_) {}
           }
           return handler.next(options);
         },
         onError: (error, handler) async {
-          if (error.response?.statusCode == 401) {
-            // Token expired — clear in-memory and secure storage
+          final isAuthEndpoint = error.requestOptions.path.contains('/auth/');
+          final hadAuthHeader = error.requestOptions.headers['Authorization'] != null;
+
+          if (error.response?.statusCode == 401 && !isAuthEndpoint && hadAuthHeader) {
+            // Token confirmed expired by backend on an authenticated call
             _cachedToken = null;
             _cachedUserId = null;
-            await _secureStorage.delete(key: AppConstants.tokenKey);
-            await _secureStorage.delete(key: AppConstants.userIdKey);
+            try {
+              await _secureStorage.delete(key: AppConstants.tokenKey);
+              await _secureStorage.delete(key: AppConstants.userIdKey);
+            } catch (_) {}
             onUnauthorized?.call();
           }
           return handler.next(error);
@@ -85,52 +92,72 @@ class ApiClient {
   /// Save auth token to secure storage and in-memory cache
   Future<void> saveToken(String token) async {
     _cachedToken = token;
-    await _secureStorage.write(key: AppConstants.tokenKey, value: token);
+    try {
+      await _secureStorage.write(key: AppConstants.tokenKey, value: token);
+    } catch (_) {}
   }
 
   /// Clear all auth data
   Future<void> clearAuth() async {
     _cachedToken = null;
     _cachedUserId = null;
-    await _secureStorage.delete(key: AppConstants.tokenKey);
-    await _secureStorage.delete(key: AppConstants.userIdKey);
-    await _secureStorage.delete(key: 'is_premium');
+    try {
+      await _secureStorage.delete(key: AppConstants.tokenKey);
+      await _secureStorage.delete(key: AppConstants.userIdKey);
+      await _secureStorage.delete(key: 'is_premium');
+    } catch (_) {}
     
     // Clear onboarding flag and cached user profile from shared preferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('onboarding_completed');
-    await prefs.remove('cached_user_profile');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('onboarding_completed');
+      await prefs.remove('cached_user_profile');
+    } catch (_) {}
   }
 
   /// Check if user is authenticated
   Future<bool> isAuthenticated() async {
     if (_cachedToken != null && _cachedToken!.isNotEmpty) return true;
-    final token = await _secureStorage.read(key: AppConstants.tokenKey);
-    _cachedToken = token;
-    return token != null && token.isNotEmpty;
+    try {
+      final token = await _secureStorage.read(key: AppConstants.tokenKey);
+      _cachedToken = token;
+      return token != null && token.isNotEmpty;
+    } catch (_) {
+      return _cachedToken != null && _cachedToken!.isNotEmpty;
+    }
   }
 
   /// Save isPremium to secure storage
   Future<void> saveIsPremium(bool isPremium) async {
-    await _secureStorage.write(key: 'is_premium', value: isPremium ? 'true' : 'false');
+    try {
+      await _secureStorage.write(key: 'is_premium', value: isPremium ? 'true' : 'false');
+    } catch (_) {}
   }
 
   /// Get isPremium status from secure storage
   Future<bool> getIsPremium() async {
-    final val = await _secureStorage.read(key: 'is_premium');
-    return val == 'true';
+    try {
+      final val = await _secureStorage.read(key: 'is_premium');
+      return val == 'true';
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Save active userId to secure storage and in-memory cache
   Future<void> saveUserId(String userId) async {
     _cachedUserId = userId;
-    await _secureStorage.write(key: AppConstants.userIdKey, value: userId);
+    try {
+      await _secureStorage.write(key: AppConstants.userIdKey, value: userId);
+    } catch (_) {}
   }
 
   /// Get active userId from in-memory cache or secure storage
   Future<String?> getUserId() async {
     if (_cachedUserId != null && _cachedUserId!.isNotEmpty) return _cachedUserId;
-    _cachedUserId = await _secureStorage.read(key: AppConstants.userIdKey);
+    try {
+      _cachedUserId = await _secureStorage.read(key: AppConstants.userIdKey);
+    } catch (_) {}
     return _cachedUserId;
   }
 }
