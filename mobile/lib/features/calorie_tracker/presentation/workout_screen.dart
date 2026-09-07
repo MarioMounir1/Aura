@@ -3594,6 +3594,7 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   });
 
   @override
+    @override
   Widget build(BuildContext context) {
     final doneCount = completedDays.where((d) => d).length;
     final totalCount = completedDays.isEmpty ? 7 : completedDays.length;
@@ -3626,15 +3627,16 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-              child: Row(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               'ACTIVE SUMMARY',
@@ -3645,118 +3647,123 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
                                 letterSpacing: 1.0,
                               ),
                             ),
-                            if (onChangePlan != null)
-                              GestureDetector(
-                                onTap: onChangePlan,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.85),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(0xFF235A42).withOpacity(0.25),
-                                      width: 1,
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.bolt_rounded, color: Color(0xFF235A42), size: 22),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    routineName,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF1E3A2B),
                                     ),
                                   ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.tune_rounded, size: 12, color: Color(0xFF235A42)),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        isArabic ? 'تغيير الخطة' : 'Change Plan',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF235A42),
-                                        ),
-                                      ),
-                                    ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Today: $focusArea',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF235A42),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '$exerciseCount Exercises · 60 mins · Est. 450 kcal',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF3B5745),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Weekly progress arc
+                      SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 60,
+                              height: 60,
+                              child: CircularProgressIndicator(
+                                value: progress,
+                                strokeWidth: 5.5,
+                                backgroundColor: Colors.white.withOpacity(0.5),
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+                              ),
+                            ),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '$doneCount/$totalCount',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF1E3A2B),
                                   ),
                                 ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.bolt_rounded, color: Color(0xFF235A42), size: 22),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                routineName,
-                                style: GoogleFonts.inter(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF1E3A2B),
+                                Text(
+                                  'days',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF4A6B56),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Today: $focusArea',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF235A42),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '$exerciseCount Exercises · 60 mins · Est. 450 kcal',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF3B5745),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  // Weekly progress arc
-                  SizedBox(
-                    width: 60,
-                    height: 60,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 60,
-                          height: 60,
-                          child: CircularProgressIndicator(
-                            value: progress,
-                            strokeWidth: 5.5,
-                            backgroundColor: Colors.white.withOpacity(0.5),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
+                  if (onChangePlan != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      height: 1,
+                      color: const Color(0xFF235A42).withOpacity(0.12),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: onChangePlan,
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
+                        child: Row(
                           children: [
+                            const Icon(Icons.tune_rounded, size: 14, color: Color(0xFF235A42)),
+                            const SizedBox(width: 8),
                             Text(
-                              '$doneCount/$totalCount',
+                              isArabic ? 'تغيير أو تخصيص جدول التمرين' : 'Change or customize workout plan',
                               style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: const Color(0xFF1E3A2B),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF235A42),
                               ),
                             ),
-                            Text(
-                              'days',
-                              style: GoogleFonts.inter(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF4A6B56),
-                              ),
+                            const Spacer(),
+                            Icon(
+                              isArabic ? Icons.arrow_back_ios_new_rounded : Icons.arrow_forward_ios_rounded,
+                              size: 12,
+                              color: const Color(0xFF235A42),
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
