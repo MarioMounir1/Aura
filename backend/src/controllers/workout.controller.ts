@@ -622,9 +622,18 @@ async function buildCurrentSession(
 ): Promise<CurrentSession> {
   const data = await fetchSessionData(userId, splitType, splitName, dateStr, configuredAt);
   if (skipAiCoachNotes) {
+    let coachNote = "Your workout routine is configured and today's session is ready! Let's get to work.";
+    if (data.todayDayName === "Rest") {
+      coachNote = "Today is a dedicated rest day. Focus on hydration, mobility, and high-quality recovery.";
+    } else if (streakDays && streakDays >= 3) {
+      coachNote = `Incredible ${streakDays}-day streak! Keep this momentum going with clean form and controlled tempo.`;
+    } else if (streakDays && streakDays > 0) {
+      coachNote = `Great consistency! Prioritize clean execution on compound lifts first today.`;
+    }
+
     return {
       ...data,
-      coachNote: "Your workout routine is configured and today's session is ready! Let's get to work.",
+      coachNote,
       exercises: data.exercises.map((ex) => ({
         ...ex,
         coachNote: (ex.lastWeekWeight && ex.lastWeekWeight > 0)
@@ -747,7 +756,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       }
     }
 
-    const currentSession = await buildCurrentSession(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt, streakDays);
+    const currentSession = await buildCurrentSession(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt, streakDays, true);
 
     // Compute real weekly completion from DB (ONLY completed sessions with endedAt != null)
     const now = new Date(targetDateStr + "T12:00:00Z");
@@ -861,11 +870,10 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
 
     const uniqueTypes = Array.from(new Set(daysArr)).filter(t => t !== "Rest");
     const completedSessionNames = Array.from(completedDateStrs);
-    const swapSuggestionNote = await generateSwapSuggestionNote({
-      splitName,
-      completedDaysThisWeek: completedSessionNames,
-      availableOptions: uniqueTypes,
-    });
+    const recommendedOption = uniqueTypes[0] ?? "Full Body";
+    const swapSuggestionNote = completedSessionNames.length > 0
+      ? `Selecting ${recommendedOption} keeps your training balanced and recovery on track today.`
+      : `Selecting ${recommendedOption} keeps your training balanced and recovery on track today.`;
 
     // Compute overtraining risk: compare actual consecutive completed days against split's max consecutive
     let splitMaxConsecutive = 0;
@@ -895,10 +903,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
 
     let overtrainingNote: string | null = null;
     if (overtrainingRisk) {
-      overtrainingNote = await generateOvertrainingNote({
-        consecutiveDays: Math.max(actualConsecutive, streakDays),
-        splitMaxAllowed: splitMaxConsecutive,
-      });
+      overtrainingNote = `You've completed ${Math.max(actualConsecutive, streakDays)} consecutive workout days without rest. Consider taking a rest day to recover.`;
     }
 
     res.status(200).json({
