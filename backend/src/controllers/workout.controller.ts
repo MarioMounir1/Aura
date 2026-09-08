@@ -713,7 +713,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
   try {
     const userId = req.user!.id;
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.age || !user.weightKg || !user.workoutSplitType || !user.workoutDays) {
+    if (!user || !user.workoutSplitType || !user.workoutDays) {
       res.status(200).json({
         success: true,
         data: { routine: null, currentSession: null },
