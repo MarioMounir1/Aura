@@ -11,12 +11,14 @@
 //   4. Start Workout → state = activeWorkout (inline tracker)
 //   5. Finish → state = ready, sets cleared
 
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/widgets/ad_banner.dart';
@@ -77,12 +79,93 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   void initState() {
     super.initState();
     _dio = ApiClient().dio;
-    _loadRoutine(silent: true);
+    _loadCachedRoutine().then((_) {
+      _loadRoutine(silent: true);
+    });
   }
 
   @override
   void dispose() {
     super.dispose();
+  }
+
+  static const String _cachedRoutineKey = 'cached_workout_routine_payload';
+
+  Future<void> _loadCachedRoutine() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedStr = prefs.getString(_cachedRoutineKey);
+      if (cachedStr != null && cachedStr.isNotEmpty) {
+        final decoded = jsonDecode(cachedStr) as Map<String, dynamic>;
+        if (mounted) {
+          _applyRoutineData(decoded);
+        }
+      }
+    } catch (_) {
+      // Ignore cache read errors
+    }
+  }
+
+  Future<void> _saveCachedRoutine(Map<String, dynamic> rootData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cachedRoutineKey, jsonEncode(rootData));
+    } catch (_) {
+      // Ignore cache write errors
+    }
+  }
+
+  void _applyRoutineData(Map<String, dynamic> rootData) {
+    final data = rootData['routine'] as Map<String, dynamic>?;
+    final sessionData = rootData['currentSession'] as Map<String, dynamic>?;
+    final swapNote = rootData['swapSuggestionNote'] as String?;
+    if (data == null) return;
+
+    final splitType = data['splitType'] as String;
+    final splitName = data['splitName'] as String? ?? data['splitType'] as String;
+    final days      = data['daysPerWeek'] as int? ?? 4;
+    final suggestions = RoutineCatalogue.forDays(days);
+    final found = suggestions.where((s) => s.splitType == splitType).toList();
+    final streak = (rootData['streakDays'] as num?)?.toInt() ?? 0;
+    final completedList = (rootData['completedDaysThisWeek'] as List<dynamic>?)
+            ?.map((e) => e == true)
+            .toList() ??
+        List.filled(7, false);
+
+    final rawWeekDetails = data['weekScheduleDetails'] as List<dynamic>?;
+    final weekDetails = rawWeekDetails != null
+        ? rawWeekDetails.map((e) => WeekDayDetail.fromJson(e as Map<String, dynamic>)).toList()
+        : <WeekDayDetail>[];
+
+    final overtrainRisk = data['overtrainingRisk'] as bool? ?? false;
+    final overtrainNote = data['overtrainingNote'] as String?;
+
+    if (!mounted) return;
+    setState(() {
+      _streakDays = streak;
+      _completedDaysThisWeek = completedList;
+      _weekScheduleDetails = weekDetails;
+      _swapSuggestionNote = swapNote;
+      _overtrainingRisk = overtrainRisk;
+      _overtrainingNote = overtrainNote;
+      _activeDays   = days;
+      _activeRoutine = found.isNotEmpty
+          ? found.first
+          : RoutineSuggestion(
+              name: splitName,
+              splitType: splitType,
+              tagline: data['description'] as String? ?? '',
+              breakdown: (data['weekSchedule'] as List<dynamic>?)
+                      ?.map((e) => e.toString())
+                      .toList() ??
+                  [],
+            );
+      _currentSession = sessionData != null
+          ? CurrentSession.fromJson(sessionData)
+          : null;
+      _state = WorkoutHubState.ready;
+      _isRefreshingInPlace = false;
+    });
   }
 
   // ── Load existing routine from backend ─────────────────────
@@ -95,79 +178,44 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       if (!mounted) return;
       final rootData = resp.data is Map ? resp.data['data'] as Map<String, dynamic>? : null;
       final data = rootData?['routine'] as Map<String, dynamic>?;
-      final sessionData = rootData?['currentSession'] as Map<String, dynamic>?;
-      final swapNote = rootData?['swapSuggestionNote'] as String?;
-      if (data != null) {
+      if (data != null && rootData != null) {
         // Backend returned a saved routine
-        final splitType = data['splitType'] as String;
-        final splitName = data['splitName'] as String? ?? data['splitType'] as String;
-        final days      = data['daysPerWeek'] as int? ?? 4;
-        final suggestions = RoutineCatalogue.forDays(days);
-        final found = suggestions.where((s) => s.splitType == splitType).toList();
-        final streak = (rootData?['streakDays'] as num?)?.toInt() ?? 0;
-        final completedList = (rootData?['completedDaysThisWeek'] as List<dynamic>?)
-                ?.map((e) => e == true)
-                .toList() ??
-            List.filled(7, false);
-
-        final rawWeekDetails = data['weekScheduleDetails'] as List<dynamic>?;
-        final weekDetails = rawWeekDetails != null
-            ? rawWeekDetails.map((e) => WeekDayDetail.fromJson(e as Map<String, dynamic>)).toList()
-            : <WeekDayDetail>[];
-
-        final overtrainRisk = data['overtrainingRisk'] as bool? ?? false;
-        final overtrainNote = data['overtrainingNote'] as String?;
-
-        if (!mounted) return;
-        setState(() {
-          _streakDays = streak;
-          _completedDaysThisWeek = completedList;
-          _weekScheduleDetails = weekDetails;
-          _swapSuggestionNote = swapNote;
-          _overtrainingRisk = overtrainRisk;
-          _overtrainingNote = overtrainNote;
-          _activeDays   = days;
-          _activeRoutine = found.isNotEmpty
-              ? found.first
-              : RoutineSuggestion(
-                  name: splitName,
-                  splitType: splitType,
-                  tagline: data['description'] as String? ?? '',
-                  breakdown: (data['weekSchedule'] as List<dynamic>?)
-                          ?.map((e) => e.toString())
-                          .toList() ??
-                      [],
-                );
-          _currentSession = sessionData != null
-              ? CurrentSession.fromJson(sessionData as Map<String, dynamic>)
-              : null;
-          _state = WorkoutHubState.ready;
-          _isRefreshingInPlace = false;
-        });
+        _applyRoutineData(rootData);
+        _saveCachedRoutine(rootData);
       } else {
         if (!mounted) return;
-        setState(() {
-          _isRefreshingInPlace = false;
-          _state = WorkoutHubState.unconfigured;
-          _activeRoutine = null;
-        });
+        final prefs = await SharedPreferences.getInstance();
+        final hasCache = prefs.containsKey(_cachedRoutineKey);
+        if (!hasCache) {
+          setState(() {
+            _isRefreshingInPlace = false;
+            _state = WorkoutHubState.unconfigured;
+            _activeRoutine = null;
+          });
+        } else {
+          setState(() => _isRefreshingInPlace = false);
+        }
       }
     } on DioException catch (e) {
       if (!mounted) return;
       setState(() {
         _isRefreshingInPlace = false;
-        _state = WorkoutHubState.unconfigured;
-        _activeRoutine = null;
-        if (e.response?.statusCode != 404 && e.response?.statusCode != 401) {
-          _errorMessage = 'Could not load routine. Please try again.';
+        if (_activeRoutine == null) {
+          _state = WorkoutHubState.unconfigured;
+          _activeRoutine = null;
+          if (e.response?.statusCode != 404 && e.response?.statusCode != 401) {
+            _errorMessage = 'Could not load routine. Please try again.';
+          }
         }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _isRefreshingInPlace = false;
-        _state = WorkoutHubState.unconfigured;
-        _activeRoutine = null;
+        if (_activeRoutine == null) {
+          _state = WorkoutHubState.unconfigured;
+          _activeRoutine = null;
+        }
       });
     }
   }
