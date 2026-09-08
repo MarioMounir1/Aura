@@ -1,10 +1,12 @@
 // lib/features/calorie_tracker/presentation/workout_plan_wizard.dart
 // Aura — Step-by-Step Guided Workout Plan Builder + AI Coach Conversation
 
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/workout_models.dart';
 
 class WorkoutPlanWizard extends StatefulWidget {
@@ -163,6 +165,12 @@ class _WorkoutPlanWizardState extends State<WorkoutPlanWizard> {
       });
 
       if (mounted && (resp.statusCode == 200 || resp.statusCode == 201 || resp.data?['success'] == true)) {
+        if (resp.data is Map && resp.data['data'] != null) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('cached_workout_routine_payload', jsonEncode(resp.data['data']));
+          } catch (_) {}
+        }
         widget.onRoutineConfirmed();
       }
     } catch (e) {
