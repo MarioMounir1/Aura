@@ -5,6 +5,7 @@
 // ============================================================
 
 import { Router } from "express";
+import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook, forgotPassword, resetPassword } from "../controllers/user.controller";
 import { analyzeMealHandler, manualLogMealHandler, updateMealLog, voiceLogMealHandler } from "../controllers/meal.controller";
 import { getDailyBriefingHandler, getWeeklyInsightsHandler } from "../controllers/coach.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
