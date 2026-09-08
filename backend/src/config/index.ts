@@ -74,6 +74,12 @@ export const GEMINI_CONFIG = {
   topK: 40,
 };
 
+export const OLLAMA_CONFIG = {
+  baseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
+  model: process.env.OLLAMA_MODEL ?? "llama3",
+  temperature: 0.1,
+};
+
 export const MACRO_BOUNDS = {
   calories: { min: 10, max: 5000 },
   protein: { min: 0, max: 500 },
