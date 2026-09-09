@@ -764,6 +764,7 @@ export interface DailyBriefingInput {
   proteinTarget: number;
   proteinConsumedToday: number;
   todaysWorkoutSplit?: string;
+  routineName?: string;
   streakDays: number;
   weightTrend?: string;
 }
@@ -779,10 +780,27 @@ export async function generateDailyEcosystemBriefing(
 ): Promise<DailyBriefingResult> {
   const remainingCals = Math.max(0, input.calorieTarget - input.caloriesConsumedToday);
 
-  if (input.todaysWorkoutSplit && input.todaysWorkoutSplit !== "Rest Day") {
+  if (input.todaysWorkoutSplit) {
+    const session = input.todaysWorkoutSplit.trim();
+    const isRest =
+      session.toLowerCase() === "rest" ||
+      session.toLowerCase() === "rest day" ||
+      session.toLowerCase() === "skipped";
+
+    if (isRest) {
+      const routineSuffix = input.routineName ? ` in your ${input.routineName}` : "";
+      return {
+        headline: "Active Recovery Day 🧘",
+        message: `Today is a scheduled rest day${routineSuffix}. Focus on hydration, mobility, and hitting your ${input.proteinTarget}g protein target for optimal muscle repair!`,
+        focusArea: "Active Recovery",
+      };
+    }
+
+    const headline = session.toLowerCase().endsWith("day") ? `${session} 🔥` : `${session} Day 🔥`;
+    const routineSuffix = input.routineName && input.routineName !== session ? ` (${input.routineName})` : "";
     return {
-      headline: `${input.todaysWorkoutSplit} Day 🔥`,
-      message: `Today's session is ${input.todaysWorkoutSplit}. Fuel up with clean energy and prioritize hitting your ${input.proteinTarget}g protein target!`,
+      headline,
+      message: `Today's session is ${session}${routineSuffix}. Fuel up with clean energy and prioritize hitting your ${input.proteinTarget}g protein target!`,
       focusArea: "Strength & Power",
     };
   }
