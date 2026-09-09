@@ -4,6 +4,7 @@ import {
   generateDailyEcosystemBriefing,
   generateWeeklyInsightsReport,
 } from "../services/coach.service";
+import { buildCurrentSession } from "./workout.controller";
 
 // ── In-Memory Cache (15 min TTL) for Instant Responses ─────
 interface CacheItem<T> {
@@ -45,6 +46,8 @@ export async function getDailyBriefingHandler(
         targetWeightKg: true,
         workoutSplitName: true,
         workoutSplitType: true,
+        workoutDays: true,
+        workoutConfiguredAt: true,
       },
     });
 
@@ -91,11 +94,7 @@ export async function getDailyBriefingHandler(
       proteinConsumedToday += Math.round((f.foodItem?.protein ?? 0) * servings);
     });
 
-    // 3. Active routine split
-    const todaysWorkoutSplit: string | undefined =
-      user?.workoutSplitName ?? user?.workoutSplitType ?? undefined;
-
-    // 4. Calculate workout streak (consecutive active days)
+    // 3. Calculate workout streak (consecutive active days)
     const recentSessions = await prisma.workoutSession.findMany({
       where: {
         userId,
@@ -110,6 +109,29 @@ export async function getDailyBriefingHandler(
     );
     const streakDays = uniqueDates.size;
 
+    // 4. Fetch today's scheduled session directly from Workout Hub
+    let todaysWorkoutDay: string | undefined;
+    let routineName: string | undefined =
+      user?.workoutSplitName ?? user?.workoutSplitType ?? undefined;
+
+    if (user?.workoutSplitType) {
+      try {
+        const currentSession = await buildCurrentSession(
+          userId,
+          user.workoutSplitType,
+          user.workoutSplitName ?? user.workoutSplitType,
+          undefined,
+          user.workoutConfiguredAt,
+          streakDays,
+          true
+        );
+        todaysWorkoutDay = currentSession.todayDayName;
+        routineName = currentSession.routineName;
+      } catch (err) {
+        console.warn("Could not fetch current session from Workout Hub:", err);
+      }
+    }
+
     // 5. Generate AI Briefing
     const briefing = await generateDailyEcosystemBriefing({
       userName: user?.name?.split(" ")[0],
@@ -117,7 +139,8 @@ export async function getDailyBriefingHandler(
       caloriesConsumedToday: Math.round(caloriesConsumedToday),
       proteinTarget,
       proteinConsumedToday: Math.round(proteinConsumedToday),
-      todaysWorkoutSplit,
+      todaysWorkoutSplit: todaysWorkoutDay,
+      routineName,
       streakDays,
       weightTrend: user?.goal ? `${user.goal} Phase` : "Healthy Lifestyle",
     });
@@ -130,7 +153,7 @@ export async function getDailyBriefingHandler(
         proteinTarget,
         proteinConsumedToday: Math.round(proteinConsumedToday),
         streakDays,
-        todaysWorkoutSplit: todaysWorkoutSplit ?? "Rest Day",
+        todaysWorkoutSplit: todaysWorkoutDay ?? "Rest",
       },
     };
 
