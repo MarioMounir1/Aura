@@ -1,10 +1,15 @@
 // lib/features/calorie_tracker/presentation/widgets/ai_coach_briefing_card.dart
 // Aura — Daily AI Coach Briefing Card (Light Sage & Forest Green Aura Theme)
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../profile/presentation/bloc/profile_bloc.dart';
+import '../../../profile/presentation/bloc/profile_state.dart';
+import '../../data/models/workout_models.dart';
 import 'weekly_insights_sheet.dart';
 
 class AiCoachBriefingCard extends StatefulWidget {
@@ -26,6 +31,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
   late String _headline;
   late String _message;
   late String _focusArea;
+  bool _initializedLocal = false;
 
   @override
   void initState() {
@@ -37,6 +43,78 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
     _fetchBriefing();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedLocal) {
+      _initializedLocal = true;
+      _resolveLocalData();
+    }
+  }
+
+  void _applyLocal(String h, String m, String f) {
+    _cachedHeadline = h;
+    _cachedMessage = m;
+    _cachedFocusArea = f;
+    _headline = h;
+    _message = m;
+    _focusArea = f;
+  }
+
+  void _resolveLocalData() {
+    try {
+      final profileState = context.read<ProfileBloc?>()?.state;
+      if (profileState is ProfileLoaded) {
+        final u = profileState.user;
+        final splitName = u['workoutSplitName'] as String? ?? 'Workout';
+        final splitType = u['workoutSplitType'] as String?;
+        int proteinTarget = 140;
+        final pGoal = u['dailyProteinGoal'] ?? u['proteinGoal'];
+        if (pGoal is num) {
+          proteinTarget = pGoal.toInt();
+        } else if (u['weightKg'] is num) {
+          proteinTarget = (u['weightKg'] * 1.8).round();
+        }
+
+        if (splitType != null && splitType.isNotEmpty) {
+          final allSuggestions = [
+            ...RoutineCatalogue.forDays(6),
+            ...RoutineCatalogue.forDays(5),
+            ...RoutineCatalogue.forDays(4),
+            ...RoutineCatalogue.forDays(3),
+          ];
+          final match = allSuggestions.firstWhere(
+            (s) => s.splitType == splitType,
+            orElse: () => RoutineCatalogue.forDays(6).first,
+          );
+          final breakdown = match.breakdown;
+          if (breakdown.isNotEmpty) {
+            final todayIndex = (DateTime.now().weekday - 1) % 7; // Mon = 0
+            final todaySession = breakdown[todayIndex % breakdown.length];
+            final displayName = splitName.isNotEmpty ? splitName : match.name;
+
+            if (todaySession.toLowerCase() == 'rest') {
+              _applyLocal(
+                'Active Recovery Day 🧘',
+                'Today is a scheduled rest day in your $displayName. Focus on hydration, mobility, and hitting your ${proteinTarget}g protein target!',
+                'Active Recovery',
+              );
+            } else {
+              final formattedHeadline = todaySession.toLowerCase().endsWith('day')
+                  ? '$todaySession 🔥'
+                  : '$todaySession Day 🔥';
+              _applyLocal(
+                formattedHeadline,
+                "Today's session is $todaySession ($displayName). Fuel up with clean energy and prioritize hitting your ${proteinTarget}g protein target!",
+                'Strength & Power',
+              );
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadFromPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -45,13 +123,40 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       final f = prefs.getString('cached_coach_focus');
       if (h != null && m != null && mounted) {
         setState(() {
-          _headline = h;
-          _message = m;
-          if (f != null) _focusArea = f;
-          _cachedHeadline = h;
-          _cachedMessage = m;
-          if (f != null) _cachedFocusArea = f;
+          _applyLocal(h, m, f ?? _focusArea);
         });
+      }
+
+      // Also check local Workout Hub payload for any saved overrides
+      final routineJson = prefs.getString('cached_workout_routine_payload');
+      if (routineJson != null) {
+        final root = jsonDecode(routineJson) as Map<String, dynamic>;
+        final session = root['currentSession'] as Map<String, dynamic>?;
+        if (session != null) {
+          final todayDay = session['todayDayName'] as String?;
+          final rName = session['routineName'] as String? ?? 'Workout';
+          final isRest = session['isRestDay'] == true || todayDay?.toLowerCase() == 'rest';
+          if (todayDay != null && todayDay.isNotEmpty && mounted) {
+            setState(() {
+              if (isRest) {
+                _applyLocal(
+                  'Active Recovery Day 🧘',
+                  'Today is a scheduled rest day in your $rName. Focus on hydration, mobility, and recovery!',
+                  'Active Recovery',
+                );
+              } else {
+                final formattedHeadline = todayDay.toLowerCase().endsWith('day')
+                    ? '$todayDay 🔥'
+                    : '$todayDay Day 🔥';
+                _applyLocal(
+                  formattedHeadline,
+                  "Today's session is $todayDay ($rName). Fuel up with clean energy and prioritize hitting your protein target!",
+                  'Strength & Power',
+                );
+              }
+            });
+          }
+        }
       }
     } catch (_) {}
   }
