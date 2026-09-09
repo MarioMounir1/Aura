@@ -611,7 +611,7 @@ async function attachSessionCoachNotes(
 }
 
 // ── Build currentSession from configured date + routine ────
-async function buildCurrentSession(
+export async function buildCurrentSession(
   userId: string,
   splitType: string,
   splitName: string,
