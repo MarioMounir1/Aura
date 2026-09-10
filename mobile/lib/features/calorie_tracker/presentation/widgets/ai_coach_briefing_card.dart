@@ -85,11 +85,15 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
           (Match m) => '${m[1]},',
         );
 
-        _applyLocal(
-          'Ready to Progress? 🎯',
-          'Your daily target is $calFormatted kcal with ${proteinTarget}g protein. Log your first meal to start today\'s progress!',
-          'Daily Progress',
-        );
+        if (mounted) {
+          setState(() {
+            _applyLocal(
+              'Ready to Progress? 🎯',
+              'Your daily target is $calFormatted kcal with ${proteinTarget}g protein. Log your first meal to start today\'s progress!',
+              'Daily Progress',
+            );
+          });
+        }
       }
     } catch (_) {}
   }
@@ -101,11 +105,15 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       final m = prefs.getString('cached_coach_message');
       final f = prefs.getString('cached_coach_focus');
 
-      // Purge any outdated workout split cache
+      // Purge and delete any outdated workout split cache from disk
       final isOutdatedWorkout = h != null &&
           (h.contains('Split') || h.contains('Day 🔥') || (m != null && m.contains("Today's session is")));
 
-      if (h != null && m != null && !isOutdatedWorkout && mounted) {
+      if (isOutdatedWorkout) {
+        await prefs.remove('cached_coach_headline');
+        await prefs.remove('cached_coach_message');
+        await prefs.remove('cached_coach_focus');
+      } else if (h != null && m != null && mounted) {
         setState(() {
           _applyLocal(h, m, f ?? _focusArea);
         });
@@ -121,6 +129,15 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         final newHeadline = (data['headline'] as String?)?.trim();
         final newMessage = (data['message'] as String?)?.trim();
         final newFocus = (data['focusArea'] as String?)?.trim();
+
+        // Strict guard: Reject any workout split text that may come from an old cloud build or cache
+        final isWorkoutText = (newHeadline?.contains('Split') ?? false) ||
+            (newHeadline?.contains('Day 🔥') ?? false) ||
+            (newMessage?.contains("Today's session is") ?? false);
+
+        if (isWorkoutText) {
+          return;
+        }
 
         if (newHeadline != null &&
             newHeadline.isNotEmpty &&
