@@ -4,7 +4,6 @@ import {
   generateDailyEcosystemBriefing,
   generateWeeklyInsightsReport,
 } from "../services/coach.service";
-import { buildCurrentSession } from "./workout.controller";
 
 // ── In-Memory Cache (15 min TTL) for Instant Responses ─────
 interface CacheItem<T> {
@@ -19,7 +18,7 @@ const weeklyCache = new Map<string, CacheItem<any>>();
 /**
  * GET /api/v1/coach/daily-briefing
  * Returns a holistic, personalized daily briefing connecting nutrition targets,
- * today's workout split, active streak, and progress goals.
+ * daily calorie/protein progress, active streak, and progress goals.
  */
 export async function getDailyBriefingHandler(
   req: Request,
@@ -35,7 +34,7 @@ export async function getDailyBriefingHandler(
       return;
     }
 
-    // 1. Fetch User Profile & Routine Info
+    // 1. Fetch User Profile & Goal Info
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -44,10 +43,6 @@ export async function getDailyBriefingHandler(
         goal: true,
         weightKg: true,
         targetWeightKg: true,
-        workoutSplitName: true,
-        workoutSplitType: true,
-        workoutDays: true,
-        workoutConfiguredAt: true,
       },
     });
 
@@ -94,7 +89,7 @@ export async function getDailyBriefingHandler(
       proteinConsumedToday += Math.round((f.foodItem?.protein ?? 0) * servings);
     });
 
-    // 3. Calculate workout streak (consecutive active days)
+    // 3. Calculate active logging streak (consecutive active days)
     const recentSessions = await prisma.workoutSession.findMany({
       where: {
         userId,
@@ -109,38 +104,13 @@ export async function getDailyBriefingHandler(
     );
     const streakDays = uniqueDates.size;
 
-    // 4. Fetch today's scheduled session directly from Workout Hub
-    let todaysWorkoutDay: string | undefined;
-    let routineName: string | undefined =
-      user?.workoutSplitName ?? user?.workoutSplitType ?? undefined;
-
-    if (user?.workoutSplitType) {
-      try {
-        const currentSession = await buildCurrentSession(
-          userId,
-          user.workoutSplitType,
-          user.workoutSplitName ?? user.workoutSplitType,
-          undefined,
-          user.workoutConfiguredAt,
-          streakDays,
-          true
-        );
-        todaysWorkoutDay = currentSession.todayDayName;
-        routineName = currentSession.routineName;
-      } catch (err) {
-        console.warn("Could not fetch current session from Workout Hub:", err);
-      }
-    }
-
-    // 5. Generate AI Briefing
+    // 4. Generate AI Progress Briefing
     const briefing = await generateDailyEcosystemBriefing({
       userName: user?.name?.split(" ")[0],
       calorieTarget,
       caloriesConsumedToday: Math.round(caloriesConsumedToday),
       proteinTarget,
       proteinConsumedToday: Math.round(proteinConsumedToday),
-      todaysWorkoutSplit: todaysWorkoutDay,
-      routineName,
       streakDays,
       weightTrend: user?.goal ? `${user.goal} Phase` : "Healthy Lifestyle",
     });
@@ -153,7 +123,6 @@ export async function getDailyBriefingHandler(
         proteinTarget,
         proteinConsumedToday: Math.round(proteinConsumedToday),
         streakDays,
-        todaysWorkoutSplit: todaysWorkoutDay ?? "Rest",
       },
     };
 
