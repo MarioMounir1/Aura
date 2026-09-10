@@ -1,11 +1,12 @@
 // lib/features/calorie_tracker/presentation/widgets/weekly_insights_sheet.dart
 // Aura — Weekly AI Health & Fitness Insights Sheet (Aura Light Theme)
 
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/utils/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../../core/network/api_client.dart';
 
 class WeeklyInsightsSheet extends StatefulWidget {
   const WeeklyInsightsSheet({super.key});
@@ -15,6 +16,8 @@ class WeeklyInsightsSheet extends StatefulWidget {
 }
 
 class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
+  static const String _cacheKey = 'cached_weekly_insights_data';
+
   bool _isLoading = true;
   int _consistencyScore = 0;
   String _headline = 'Weekly Progress Overview';
@@ -30,27 +33,43 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
   @override
   void initState() {
     super.initState();
+    _loadFromCache();
     _fetchWeeklyInsights();
+  }
+
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cached = prefs.getString(_cacheKey);
+      if (cached != null) {
+        final root = jsonDecode(cached) as Map<String, dynamic>;
+        final stats = root['stats'] as Map<String, dynamic>? ?? {};
+        if (mounted) {
+          setState(() {
+            _consistencyScore = (root['consistencyScore'] as num?)?.toInt() ?? 0;
+            _headline = root['headline'] ?? 'Weekly Progress Overview';
+            _summary = root['summary'] ?? '';
+            _keyWin = root['keyWin'] ?? '';
+            _nextWeekFocus = root['nextWeekFocus'] ?? '';
+            _totalWorkouts = (stats['totalWorkouts'] as num?)?.toInt() ?? 0;
+            _avgDailyCalories = (stats['avgDailyCalories'] as num?)?.toInt() ?? 0;
+            _calorieTarget = (stats['calorieTarget'] as num?)?.toInt() ?? 2000;
+            _daysLogged = (stats['daysLoggedCount'] as num?)?.toInt() ?? 0;
+            _weightDelta = (stats['weightDeltaKg'] as num?)?.toDouble();
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _fetchWeeklyInsights() async {
     try {
-      const storage = FlutterSecureStorage();
-      final token = await storage.read(key: AppConstants.tokenKey);
-
-      final dio = Dio(
-        BaseOptions(
-          baseUrl: AppConstants.apiV1,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 12),
-          headers: {
-            'Accept': 'application/json',
-            if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-          },
-        ),
+      final response = await ApiClient().dio.get(
+        '/coach/weekly-insights',
+        options: Options(receiveTimeout: const Duration(seconds: 15)),
       );
 
-      final response = await dio.get('/coach/weekly-insights');
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
         final stats = data['stats'] as Map<String, dynamic>? ?? {};
@@ -70,12 +89,26 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
             _isLoading = false;
           });
         }
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_cacheKey, jsonEncode(data));
+        } catch (_) {}
       } else {
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          // If no cache was present, provide a friendly default so it doesn't spin forever
+          if (_summary.isEmpty) {
+            _headline = 'Start Your Weekly Journey 🚀';
+            _summary = 'Log your daily meals and workout sessions to track consistency and hit your goals.';
+            _keyWin = 'Dashboard ready to record your progress';
+            _nextWeekFocus = 'Log your first meal and workout today';
+          }
+          _isLoading = false;
+        });
       }
     }
   }
