@@ -763,8 +763,6 @@ export interface DailyBriefingInput {
   caloriesConsumedToday: number;
   proteinTarget: number;
   proteinConsumedToday: number;
-  todaysWorkoutSplit?: string;
-  routineName?: string;
   streakDays: number;
   weightTrend?: string;
 }
@@ -779,52 +777,51 @@ export async function generateDailyEcosystemBriefing(
   input: DailyBriefingInput
 ): Promise<DailyBriefingResult> {
   const remainingCals = Math.max(0, input.calorieTarget - input.caloriesConsumedToday);
+  const percentCals = input.calorieTarget > 0
+    ? Math.round((input.caloriesConsumedToday / input.calorieTarget) * 100)
+    : 0;
 
-  if (input.todaysWorkoutSplit) {
-    const session = input.todaysWorkoutSplit.trim();
-    const isRest =
-      session.toLowerCase() === "rest" ||
-      session.toLowerCase() === "rest day" ||
-      session.toLowerCase() === "skipped";
-
-    if (isRest) {
-      const routineSuffix = input.routineName ? ` in your ${input.routineName}` : "";
-      return {
-        headline: "Active Recovery Day 🧘",
-        message: `Today is a scheduled rest day${routineSuffix}. Focus on hydration, mobility, and hitting your ${input.proteinTarget}g protein target for optimal muscle repair!`,
-        focusArea: "Active Recovery",
-      };
-    }
-
-    const headline = session.toLowerCase().endsWith("day") ? `${session} 🔥` : `${session} Day 🔥`;
-    const routineSuffix = input.routineName && input.routineName !== session ? ` (${input.routineName})` : "";
+  // 1. Daily goal completed / within target window (90% - 110%)
+  if (percentCals >= 90 && percentCals <= 110) {
     return {
-      headline,
-      message: `Today's session is ${session}${routineSuffix}. Fuel up with clean energy and prioritize hitting your ${input.proteinTarget}g protein target!`,
-      focusArea: "Strength & Power",
+      headline: "Daily Goal Crushed! 🏆",
+      message: `You've logged ${input.caloriesConsumedToday} of ${input.calorieTarget} kcal and ${input.proteinConsumedToday}g of ${input.proteinTarget}g protein. Top-tier consistency today!`,
+      focusArea: "Goal Achieved",
     };
   }
 
-  if (input.streakDays >= 3) {
+  // 2. Active streak highlight if streak is 3+ and logging in progress
+  if (input.streakDays >= 3 && input.caloriesConsumedToday > 0) {
     return {
       headline: `${input.streakDays}-Day Streak Strong ⚡`,
-      message: `Impressive consistency with ${input.streakDays} active days! Focus on nutrient-dense meals and clean hydration today.`,
-      focusArea: "Active Recovery",
+      message: `You're ${percentCals}% toward your daily target with ${remainingCals} kcal remaining. Maintain this ${input.streakDays}-day momentum!`,
+      focusArea: "Consistency",
     };
   }
 
+  // 3. Active logging in progress during the day
   if (input.caloriesConsumedToday > 0) {
     return {
       headline: `${remainingCals} kcal Remaining 🎯`,
-      message: `You've logged ${input.caloriesConsumedToday} of ${input.calorieTarget} kcal today. Keep meals balanced to hit your daily target.`,
-      focusArea: "Nutrition Balance",
+      message: `You've logged ${input.caloriesConsumedToday} of ${input.calorieTarget} kcal and ${input.proteinConsumedToday}g protein. Keep pacing your meals to hit your target!`,
+      focusArea: "Daily Progress",
     };
   }
 
+  // 4. Start of day with active streak
+  if (input.streakDays >= 3) {
+    return {
+      headline: `${input.streakDays}-Day Streak Active ⚡`,
+      message: `Keep your ${input.streakDays}-day consistency alive! Your target is ${input.calorieTarget} kcal and ${input.proteinTarget}g protein today.`,
+      focusArea: "Consistency",
+    };
+  }
+
+  // 5. Start of day / fresh start
   return {
-    headline: "Daily Nutrition Focus 🎯",
-    message: `Your daily target is ${input.calorieTarget} kcal and ${input.proteinTarget}g protein. Log your meals to track progress.`,
-    focusArea: "Consistency",
+    headline: "Ready to Progress? 🎯",
+    message: `Your daily target is ${input.calorieTarget} kcal with ${input.proteinTarget}g protein. Log your first meal to kick off today's progress!`,
+    focusArea: "Daily Target",
   };
 }
 
