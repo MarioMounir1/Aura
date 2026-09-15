@@ -117,11 +117,11 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
   try {
     await processUpload(req, res);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Upload failed";
+    console.error("❌ [ImageScan] Upload error:", err);
     res.status(400).json({
       success: false,
       source: "local_llama_inference",
-      error: msg,
+      error: "Unable to upload image. Please try again with a valid photo.",
       code: "UPLOAD_ERROR",
     });
     return;
@@ -132,7 +132,7 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
     res.status(400).json({
       success: false,
       source: "local_llama_inference",
-      error: "No image provided. Please upload an image file in the 'image' field.",
+      error: "Please select or take a clear photo of your meal to scan.",
       code: "MISSING_IMAGE",
     });
     return;
@@ -162,8 +162,8 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
       res.status(isPremium ? 429 : 402).json({
         success: false,
         error: isPremium 
-          ? `Premium limit reached. You can only use ${scanType} ${limit} times per day.`
-          : `Free limit reached. Upgrade to Premium for 10 ${scanType} scans!`,
+          ? `Daily ${scanType} scan limit reached (${limit}/day). Scans reset at midnight UTC.`
+          : `Daily free ${scanType} limit reached. Upgrade to Premium for 10 daily scans!`,
         code: "QUOTA_EXCEEDED",
       });
       return;
@@ -175,7 +175,6 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
 
   // ── Step 3: Analyze Image using AI Engine (Gemini / Ollama) ──────
   let mealAnalysis: LlamaMealAnalysis;
-  const mimeType = file.mimetype; // e.g. "image/jpeg"
 
   try {
     console.log(`🔮 [ImageScan] Analyzing meal image (${(file.size / 1024).toFixed(1)} KB)...`);
@@ -195,10 +194,32 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Image scan failed";
     console.error("❌ [ImageScan] AI analysis error:", msg);
+
+    if (msg.includes("NO_FOOD_DETECTED")) {
+      res.status(422).json({
+        success: false,
+        source: "local_llama_inference",
+        error: "No food or beverage was detected in the photo. Please make sure your meal is clearly visible and try again.",
+        code: "NO_FOOD_DETECTED",
+      });
+      return;
+    }
+
+    const isQuota = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("limit");
+    if (isQuota) {
+      res.status(429).json({
+        success: false,
+        source: "local_llama_inference",
+        error: "AI service is currently busy. Please wait a moment and try again.",
+        code: "QUOTA_EXCEEDED",
+      });
+      return;
+    }
+
     res.status(500).json({
       success: false,
       source: "local_llama_inference",
-      error: `Meal image scan failed: ${msg}`,
+      error: "Unable to analyze this meal photo. Please try again with a clearer picture.",
       code: "SCAN_ERROR",
     });
     return;
@@ -213,7 +234,7 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
       data: {
         userId,
         mealName:      mealAnalysis.detectedFood,
-        restaurantName: "Local Llama Scan",
+        restaurantName: "AI Scan",
         calories:      mealAnalysis.calories,
         protein:       mealAnalysis.protein,
         carbs:         mealAnalysis.carbs,
