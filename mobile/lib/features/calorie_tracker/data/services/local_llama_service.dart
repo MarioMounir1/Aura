@@ -71,11 +71,11 @@ class LocalLlamaService {
       if (body != null && body['success'] == true) {
         return AiUsageQuota.fromJson(body['data']);
       }
-      throw const LlamaApiException('Failed to fetch AI usage quota');
+      throw const LlamaApiException('Failed to fetch AI usage quota.');
     } on DioException catch (e) {
       throw _mapDioError(e);
-    } catch (e) {
-      throw LlamaApiException('Error fetching AI usage: $e');
+    } catch (_) {
+      throw const LlamaApiException('Unable to retrieve daily scan limits. Please try again.');
     }
   }
 
@@ -89,14 +89,13 @@ class LocalLlamaService {
   Future<LlamaMealResponse> scanMealImage(File imageFile, String scanType) async {
     // Validate file exists before sending
     if (!imageFile.existsSync()) {
-      throw const LlamaNetworkException('Image file does not exist on device.');
+      throw const LlamaNetworkException('Selected image could not be found on your device.');
     }
 
     final fileSize = await imageFile.length();
     if (fileSize > 15 * 1024 * 1024) {
-      // 15 MB guard — Ollama vision struggles with very large images
       throw const LlamaNetworkException(
-        'Image is too large (max 15 MB). Please use a compressed photo.',
+        'Image is too large (max 15 MB). Please choose a smaller photo.',
       );
     }
 
@@ -111,8 +110,8 @@ class LocalLlamaService {
           filename: 'meal_scan_${DateTime.now().millisecondsSinceEpoch}.jpg',
         ),
       });
-    } catch (e) {
-      throw LlamaNetworkException('Failed to prepare image for upload: $e');
+    } catch (_) {
+      throw const LlamaNetworkException('Unable to process the photo. Please select another image.');
     }
 
     // ── POST request with strict error handling ─────────────
@@ -130,15 +129,15 @@ class LocalLlamaService {
       );
     } on DioException catch (e) {
       throw _mapDioError(e);
-    } catch (e) {
-      throw LlamaNetworkException('Unexpected upload error: $e');
+    } catch (_) {
+      throw const LlamaNetworkException('Unable to upload image. Please try again.');
     }
 
     // ── Parse the JSON response ─────────────────────────────
     final body = response.data;
     if (body == null || body is! Map<String, dynamic>) {
       throw const LlamaApiException(
-        'Server returned an empty or non-JSON response.',
+        'Server returned an invalid response. Please try again.',
       );
     }
 
@@ -146,7 +145,7 @@ class LocalLlamaService {
       return LlamaMealResponse.fromJson(body);
     } on LlamaApiException {
       rethrow; // Already typed — pass through
-    } catch (e) {
+    } catch (_) {
       throw const LlamaApiException('Could not parse meal analysis response.');
     }
   }
@@ -157,22 +156,22 @@ class LocalLlamaService {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
         return const LlamaNetworkException(
-          'Connection to local server timed out. Is the Node.js backend running?',
+          'Connection timed out. Please check your network and try again.',
           isTimeout: true,
         );
       case DioExceptionType.receiveTimeout:
         return const LlamaNetworkException(
-          'AI meal analysis is taking too long. Please try again.',
+          'Meal analysis is taking longer than expected. Please try again.',
           isTimeout: true,
         );
       case DioExceptionType.sendTimeout:
         return const LlamaNetworkException(
-          'Image upload timed out. Check your connection to the local server.',
+          'Image upload timed out. Please check your internet connection.',
           isTimeout: true,
         );
       case DioExceptionType.connectionError:
         return const LlamaNetworkException(
-          'Cannot reach local server. Make sure the Node.js backend is running on port 3000.',
+          'Unable to reach server. Please check your internet connection.',
           isConnectionError: true,
         );
       case DioExceptionType.badResponse:
@@ -182,29 +181,34 @@ class LocalLlamaService {
 
         if (statusCode == 401) {
           return const LlamaNetworkException(
-            'Authentication failed. Please log in again.',
+            'Session expired. Please log in again.',
           );
         }
         if (statusCode == 402 || statusCode == 429) {
           return LlamaNetworkException(
             errMsg ??
                 (statusCode == 402
-                    ? 'Free limit reached. Upgrade to Premium for more scans!'
-                    : 'Premium limit reached. Daily scans reset at midnight UTC.'),
+                    ? 'Daily free scan limit reached. Upgrade to Premium for 10 daily scans!'
+                    : 'Daily scan limit reached. Scans reset at midnight UTC.'),
+          );
+        }
+        if (statusCode == 422) {
+          return LlamaNetworkException(
+            errMsg ?? 'No food or beverage was detected in the photo. Please try a clear photo of your meal.',
           );
         }
         if (statusCode == 502 || statusCode == 504) {
           return LlamaNetworkException(
-            errMsg ?? 'AI meal analysis service temporarily unavailable. Please try again.',
+            errMsg ?? 'Meal analysis service is temporarily unavailable. Please try again shortly.',
             isTimeout: statusCode == 504,
           );
         }
         return LlamaNetworkException(
-          errMsg ?? 'Server error ($statusCode). Please try again.',
+          errMsg ?? 'Unable to analyze image. Please try again.',
         );
       default:
-        return LlamaNetworkException(
-          'Network error: ${e.message ?? e.type.name}',
+        return const LlamaNetworkException(
+          'Network connection error. Please check your internet connection.',
         );
     }
   }
