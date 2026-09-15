@@ -26,9 +26,14 @@ export async function getDailyBriefingHandler(
 ): Promise<void> {
   try {
     const userId = req.user!.id;
+    const qCalTarget = Number(req.query.calorieTarget);
+    const qCalConsumed = Number(req.query.caloriesConsumed);
+    const qProteinTarget = Number(req.query.proteinTarget);
+    const qProteinConsumed = Number(req.query.proteinConsumed);
 
-    // Check fast cache
-    const cached = briefingCache.get(userId);
+    // Check fast cache (keyed by userId and calorie target)
+    const cacheKey = `${userId}:${!isNaN(qCalTarget) && qCalTarget > 0 ? qCalTarget : "default"}`;
+    const cached = briefingCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       res.status(200).json({ success: true, data: cached.data });
       return;
@@ -40,15 +45,31 @@ export async function getDailyBriefingHandler(
       select: {
         name: true,
         dailyCalorieGoal: true,
+        proteinGoal: true,
         goal: true,
         weightKg: true,
+        heightCm: true,
+        age: true,
+        gender: true,
+        activityLevel: true,
         targetWeightKg: true,
       },
     });
 
-    const calorieTarget = user?.dailyCalorieGoal ?? 2000;
-    // Default protein target ~2g per kg or ~25% of calories
-    const proteinTarget = user?.weightKg ? Math.round(user.weightKg * 1.8) : 130;
+    let calorieTarget = !isNaN(qCalTarget) && qCalTarget > 0 ? qCalTarget : (user?.dailyCalorieGoal ?? 2000);
+    // If calorieTarget is default 2000 and user has bio stats, calculate accurate TDEE:
+    if (calorieTarget === 2000 && user?.weightKg && user?.heightCm && user?.age) {
+      const g = (user.gender ?? "male").toLowerCase();
+      const bmr = 10 * user.weightKg + 6.25 * user.heightCm - 5 * user.age + (g === "male" ? 5 : -161);
+      const act = user.activityLevel ?? "moderate";
+      const mult = act === "sedentary" ? 1.2 : act === "lightly_active" ? 1.375 : act === "very_active" ? 1.725 : 1.55;
+      const adj = user.goal === "lose" ? -500 : user.goal === "gain" ? 500 : 0;
+      calorieTarget = Math.round(Math.min(5000, Math.max(1200, bmr * mult + adj)));
+    }
+
+    let proteinTarget = !isNaN(qProteinTarget) && qProteinTarget > 0
+      ? qProteinTarget
+      : (user?.proteinGoal ?? (user?.weightKg ? Math.round(user.weightKg * 1.8) : 130));
 
     // 2. Fetch today's nutrition logs
     const todayStart = new Date();
@@ -89,6 +110,13 @@ export async function getDailyBriefingHandler(
       proteinConsumedToday += Math.round((f.foodItem?.protein ?? 0) * servings);
     });
 
+    if (!isNaN(qCalConsumed) && qCalConsumed > caloriesConsumedToday) {
+      caloriesConsumedToday = qCalConsumed;
+    }
+    if (!isNaN(qProteinConsumed) && qProteinConsumed > proteinConsumedToday) {
+      proteinConsumedToday = qProteinConsumed;
+    }
+
     // 3. Calculate active logging streak (consecutive active days)
     const recentSessions = await prisma.workoutSession.findMany({
       where: {
@@ -99,9 +127,13 @@ export async function getDailyBriefingHandler(
       select: { endedAt: true },
     });
 
-    const uniqueDates = new Set(
-      recentSessions.map((s) => (s.endedAt ? s.endedAt.toISOString().slice(0, 10) : ""))
-    );
+    const uniqueDates = new Set<string>();
+    recentSessions.forEach((s) => {
+      if (s.endedAt) {
+        uniqueDates.add(s.endedAt.toISOString().slice(0, 10));
+      }
+    });
+
     const streakDays = uniqueDates.size;
 
     // 4. Generate AI Progress Briefing
@@ -126,7 +158,7 @@ export async function getDailyBriefingHandler(
       },
     };
 
-    briefingCache.set(userId, { data: resultData, expiresAt: Date.now() + CACHE_TTL_MS });
+    briefingCache.set(cacheKey, { data: resultData, expiresAt: Date.now() + CACHE_TTL_MS });
 
     res.status(200).json({
       success: true,
@@ -151,9 +183,11 @@ export async function getWeeklyInsightsHandler(
 ): Promise<void> {
   try {
     const userId = req.user!.id;
+    const qCalTarget = Number(req.query.calorieTarget);
 
     // Check fast cache
-    const cached = weeklyCache.get(userId);
+    const weeklyCacheKey = `${userId}:${!isNaN(qCalTarget) && qCalTarget > 0 ? qCalTarget : "default"}`;
+    const cached = weeklyCache.get(weeklyCacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       res.status(200).json({ success: true, data: cached.data });
       return;
@@ -164,9 +198,26 @@ export async function getWeeklyInsightsHandler(
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { dailyCalorieGoal: true },
+      select: {
+        dailyCalorieGoal: true,
+        weightKg: true,
+        heightCm: true,
+        age: true,
+        gender: true,
+        activityLevel: true,
+        goal: true,
+      },
     });
-    const calorieTarget = user?.dailyCalorieGoal ?? 2000;
+
+    let calorieTarget = !isNaN(qCalTarget) && qCalTarget > 0 ? qCalTarget : (user?.dailyCalorieGoal ?? 2000);
+    if (calorieTarget === 2000 && user?.weightKg && user?.heightCm && user?.age) {
+      const g = (user.gender ?? "male").toLowerCase();
+      const bmr = 10 * user.weightKg + 6.25 * user.heightCm - 5 * user.age + (g === "male" ? 5 : -161);
+      const act = user.activityLevel ?? "moderate";
+      const mult = act === "sedentary" ? 1.2 : act === "lightly_active" ? 1.375 : act === "very_active" ? 1.725 : 1.55;
+      const adj = user.goal === "lose" ? -500 : user.goal === "gain" ? 500 : 0;
+      calorieTarget = Math.round(Math.min(5000, Math.max(1200, bmr * mult + adj)));
+    }
 
     // 1. Fetch 7-day nutrition logs
     const [mealLogs, foodLogs, completedWorkouts, weightLogs] = await Promise.all([
@@ -198,19 +249,24 @@ export async function getWeeklyInsightsHandler(
     });
 
     foodLogs.forEach((f) => {
-      const cals = (f.foodItem?.calories ?? 0) * (f.servings ?? 1);
-      totalCaloriesLogged += cals;
+      const servings = f.servings ?? 1;
+      totalCaloriesLogged += Math.round((f.foodItem?.calories ?? 0) * servings);
       activeDaysSet.add(f.loggedAt.toISOString().slice(0, 10));
     });
 
-    const daysLoggedCount = Math.max(1, activeDaysSet.size);
-    const avgDailyCalories = Math.round(totalCaloriesLogged / daysLoggedCount);
+    const avgDailyCalories = activeDaysSet.size > 0
+      ? Math.round(totalCaloriesLogged / activeDaysSet.size)
+      : 0;
 
+    // 2. Weight delta calculation
     let weightDeltaKg: number | undefined;
     if (weightLogs.length >= 2) {
-      weightDeltaKg = weightLogs[weightLogs.length - 1].weightKg - weightLogs[0].weightKg;
+      const firstWeight = weightLogs[0].weightKg;
+      const lastWeight = weightLogs[weightLogs.length - 1].weightKg;
+      weightDeltaKg = Math.round((lastWeight - firstWeight) * 10) / 10;
     }
 
+    // 3. Generate Weekly AI Report
     const report = await generateWeeklyInsightsReport({
       totalCaloriesLogged: Math.round(totalCaloriesLogged),
       avgDailyCalories,
@@ -232,7 +288,7 @@ export async function getWeeklyInsightsHandler(
       },
     };
 
-    weeklyCache.set(userId, { data: resultData, expiresAt: Date.now() + CACHE_TTL_MS });
+    weeklyCache.set(weeklyCacheKey, { data: resultData, expiresAt: Date.now() + CACHE_TTL_MS });
 
     res.status(200).json({
       success: true,
