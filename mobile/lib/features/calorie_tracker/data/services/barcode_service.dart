@@ -66,8 +66,8 @@ class BarcodeService {
       );
     } on DioException catch (e) {
       throw _mapDioError(e);
-    } catch (e) {
-      throw BarcodeNetworkException('Unexpected error: $e');
+    } catch (_) {
+      throw const BarcodeNetworkException('Unable to look up barcode. Please try again.');
     }
 
     final body = response.data;
@@ -77,7 +77,7 @@ class BarcodeService {
 
     if (body['success'] != true) {
       final code = body['code'] as String?;
-      final msg  = body['error'] as String? ?? 'Unknown error';
+      final msg  = body['error'] as String? ?? 'Product could not be found.';
       if (code == 'BARCODE_NOT_FOUND') {
         throw BarcodeNotFoundException(msg);
       }
@@ -86,7 +86,7 @@ class BarcodeService {
 
     final dataJson = body['data'];
     if (dataJson == null || dataJson is! Map<String, dynamic>) {
-      throw const BarcodeNetworkException('Server returned malformed data.');
+      throw const BarcodeNetworkException('Product information is incomplete. Please try again.');
     }
 
     return BarcodeProduct.fromJson(dataJson);
@@ -113,8 +113,8 @@ class BarcodeService {
       );
     } on DioException catch (e) {
       throw _mapDioError(e);
-    } catch (e) {
-      throw BarcodeNetworkException('Unexpected error: $e');
+    } catch (_) {
+      throw const BarcodeNetworkException('Unable to estimate nutrition. Please try again.');
     }
 
     final body = response.data;
@@ -123,13 +123,13 @@ class BarcodeService {
     }
 
     if (body['success'] != true) {
-      final msg = body['error'] as String? ?? 'Estimation failed';
+      final msg = body['error'] as String? ?? 'Nutrition estimation failed. Please try again.';
       throw BarcodeNetworkException(msg);
     }
 
     final dataJson = body['data'];
     if (dataJson == null || dataJson is! Map<String, dynamic>) {
-      throw const BarcodeNetworkException('Server returned malformed data.');
+      throw const BarcodeNetworkException('Estimated nutrition data is invalid.');
     }
 
     return BarcodeProduct.fromJson(dataJson);
@@ -163,14 +163,14 @@ class BarcodeService {
       );
     } on DioException catch (e) {
       throw _mapDioError(e);
-    } catch (e) {
-      throw BarcodeNetworkException('Unexpected error: $e');
+    } catch (_) {
+      throw const BarcodeNetworkException('Unable to log meal. Please try again.');
     }
 
     final body = response.data;
     if (body == null || body is! Map<String, dynamic> || body['success'] != true) {
       throw BarcodeNetworkException(
-        (body is Map ? body['error'] as String? : null) ?? 'Failed to log meal.',
+        (body is Map ? body['error'] as String? : null) ?? 'Failed to log meal. Please try again.',
       );
     }
 
@@ -192,18 +192,18 @@ class BarcodeService {
         );
       }
       if (statusCode == 401) {
-        return const BarcodeNetworkException('Authentication failed. Please log in again.');
+        return const BarcodeNetworkException('Session expired. Please log in again.');
       }
       if (statusCode == 429) {
         return const BarcodeNetworkException('Too many requests. Please wait a moment.');
       }
-      return BarcodeNetworkException(msg ?? 'Server error ($statusCode). Please try again.');
+      return BarcodeNetworkException(msg ?? 'Unable to process barcode request. Please try again.');
     }
 
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
         return const BarcodeNetworkException(
-          'Connection timed out. Is the backend running?',
+          'Connection timed out. Please check your network and try again.',
           isTimeout: true,
         );
       case DioExceptionType.receiveTimeout:
@@ -213,10 +213,10 @@ class BarcodeService {
         );
       case DioExceptionType.connectionError:
         return const BarcodeNetworkException(
-          'Cannot reach server. Check your internet connection.',
+          'Unable to connect to server. Please check your internet connection.',
         );
       default:
-        return BarcodeNetworkException('Network error: ${e.message ?? e.type.name}');
+        return const BarcodeNetworkException('Network error. Please check your internet connection.');
     }
   }
 }
