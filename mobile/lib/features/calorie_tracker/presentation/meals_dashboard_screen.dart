@@ -849,7 +849,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
               const SizedBox(height: 14),
 
               // 2. AI Coach Daily Briefing Card
-              const AiCoachBriefingCard(),
+              AiCoachBriefingCard(
+                calorieTarget: caloriesTarget,
+                caloriesConsumed: caloriesConsumed,
+                proteinTarget: proteinTarget,
+                proteinConsumed: proteinConsumed,
+              ),
               const SizedBox(height: 14),
 
               // 3. Daily Summary Banner
