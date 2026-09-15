@@ -15,6 +15,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/error/error_handler.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../data/models/barcode_product.dart';
 import '../data/services/barcode_service.dart';
@@ -72,6 +73,7 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLogging = false);
+        final cleanMsg = AppErrorHandler.getUserMessage(e, 'Unable to log meal. Please try again.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
@@ -83,7 +85,7 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Failed to log meal: $e',
+                    cleanMsg,
                     style: GoogleFonts.inter(fontSize: 12, color: _C.textPri),
                   ),
                 ),
