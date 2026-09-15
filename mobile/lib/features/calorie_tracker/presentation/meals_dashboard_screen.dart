@@ -376,25 +376,27 @@ class _MealsDashboardState extends State<MealsDashboard> {
       _fetchQuota();
     } on LlamaApiException catch (e) {
       if (!mounted) return;
+      final clean = AppErrorHandler.getUserMessage(e.message, 'Could not analyze meal photo. Please try again.');
       setState(() {
-        _errorMessage = e.message;
+        _errorMessage = clean;
         _layoutState  = LayoutState.idle;
       });
       if (e.message.toLowerCase().contains('limit') || e.message.toLowerCase().contains('upgrade')) {
         PurchaseService.instance.presentPaywall(context);
       } else {
-        _showErrorSnackbar(e.message);
+        _showErrorSnackbar(clean);
       }
     } on LlamaNetworkException catch (e) {
       if (!mounted) return;
+      final clean = AppErrorHandler.getUserMessage(e.message, 'Connection error. Please check your network.');
       setState(() {
-        _errorMessage = e.message;
+        _errorMessage = clean;
         _layoutState  = LayoutState.idle;
       });
       if (e.message.toLowerCase().contains('limit') || e.message.toLowerCase().contains('upgrade')) {
         PurchaseService.instance.presentPaywall(context);
       } else {
-        _showErrorSnackbar(e.message);
+        _showErrorSnackbar(clean);
       }
     } catch (e) {
       if (!mounted) return;
@@ -1030,12 +1032,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
     } on BarcodeNetworkException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      _showErrorSnackbar('Barcode lookup failed: ${e.message}');
+      _showErrorSnackbar(AppErrorHandler.getUserMessage(e, 'Could not find product details. Please try again.'));
       return;
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      _showErrorSnackbar('Unexpected error: $e');
+      _showErrorSnackbar(AppErrorHandler.getUserMessage(e, 'Something went wrong. Please try again.'));
       return;
     }
 
@@ -3589,7 +3591,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _isSaving = false);
-        widget.onError('Could not sync edit to server: $e');
+        widget.onError(AppErrorHandler.getUserMessage(e, 'Could not save meal changes. Please try again.'));
       }
     } else {
       try {
@@ -3622,7 +3624,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
       } catch (e) {
         if (!mounted) return;
         setState(() => _isSaving = false);
-        widget.onError('Could not sync to server: $e');
+        widget.onError(AppErrorHandler.getUserMessage(e, 'Could not log meal. Please try again.'));
       }
     }
   }
@@ -4011,13 +4013,14 @@ class _BarcodeNamePromptSheetState extends State<_BarcodeNamePromptSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isEstimating = false);
+        final cleanMsg = AppErrorHandler.getUserMessage(e, 'Could not estimate nutrition. Please try again.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
             backgroundColor: const Color(0xFF1F1F1F),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Text(
-              'Estimation failed: $e',
+              cleanMsg,
               style: GoogleFonts.inter(fontSize: 12, color: Colors.white),
             ),
           ),
