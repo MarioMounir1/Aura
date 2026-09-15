@@ -66,8 +66,12 @@ export async function analyzeMealHandler(
     try {
       await processUpload(req, res);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Upload failed";
-      res.status(400).json({ success: false, error: msg, code: "UPLOAD_ERROR" });
+      console.error("❌ [Meal] Upload error:", err);
+      res.status(400).json({
+        success: false,
+        error: "Unable to upload image. Please try again with a valid photo.",
+        code: "UPLOAD_ERROR",
+      });
       return;
     }
   }
@@ -166,8 +170,8 @@ export async function analyzeMealHandler(
     res.status(isQuota ? 429 : 502).json({
       success: false,
       error: isQuota
-        ? "Google Gemini API rate limit or quota exceeded. Please wait a minute and try again."
-        : `AI analysis failed: ${msg}`,
+        ? "Daily AI analysis limit reached. Please wait a moment and try again."
+        : "Unable to analyze meal. Please check your connection or try again with a clearer description.",
       code: isQuota ? "QUOTA_EXCEEDED" : "AI_ERROR",
     });
     return;
