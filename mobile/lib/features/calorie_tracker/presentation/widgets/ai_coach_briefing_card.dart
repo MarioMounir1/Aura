@@ -12,8 +12,19 @@ import 'weekly_insights_sheet.dart';
 
 class AiCoachBriefingCard extends StatefulWidget {
   final VoidCallback? onWeeklyInsightsTap;
+  final double? calorieTarget;
+  final double? caloriesConsumed;
+  final double? proteinTarget;
+  final double? proteinConsumed;
 
-  const AiCoachBriefingCard({super.key, this.onWeeklyInsightsTap});
+  const AiCoachBriefingCard({
+    super.key,
+    this.onWeeklyInsightsTap,
+    this.calorieTarget,
+    this.caloriesConsumed,
+    this.proteinTarget,
+    this.proteinConsumed,
+  });
 
   @override
   State<AiCoachBriefingCard> createState() => _AiCoachBriefingCardState();
@@ -50,6 +61,18 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
     }
   }
 
+  @override
+  void didUpdateWidget(covariant AiCoachBriefingCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.calorieTarget != oldWidget.calorieTarget ||
+        widget.caloriesConsumed != oldWidget.caloriesConsumed ||
+        widget.proteinTarget != oldWidget.proteinTarget ||
+        widget.proteinConsumed != oldWidget.proteinConsumed) {
+      _resolveLocalData();
+      _fetchBriefing();
+    }
+  }
+
   void _applyLocal(String h, String m, String f) {
     _cachedHeadline = h;
     _cachedMessage = m;
@@ -59,41 +82,124 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
     _focusArea = f;
   }
 
-  void _resolveLocalData() {
+  int _getActiveCalorieTarget() {
+    if (widget.calorieTarget != null && widget.calorieTarget! > 0) {
+      return widget.calorieTarget!.round();
+    }
+
     try {
       final profileState = context.read<ProfileBloc?>()?.state;
       if (profileState is ProfileLoaded) {
         final u = profileState.user;
-        int calorieTarget = 2000;
         final rawCal = u['dailyCalorieGoal'] ?? u['targetCalories'] ?? u['calories'];
-        if (rawCal is num) {
-          calorieTarget = rawCal.toInt();
-        } else if (rawCal != null) {
-          calorieTarget = int.tryParse(rawCal.toString()) ?? 2000;
+        if (rawCal is num && rawCal > 0) {
+          return rawCal.toInt();
+        }
+        final goals = u['goals'];
+        if (goals is Map) {
+          final gCal = goals['dailyCalories'] ?? goals['calories'] ?? goals['dailyCalorieGoal'];
+          if (gCal is num && gCal > 0) {
+            return gCal.toInt();
+          }
         }
 
-        int proteinTarget = 130;
+        // TDEE calculation from user biometrics
+        final w = double.tryParse((u['weightKg'] ?? '').toString());
+        final h = double.tryParse((u['heightCm'] ?? '').toString());
+        final a = int.tryParse((u['age'] ?? '').toString());
+        final g = (u['gender'] ?? 'male').toString().toLowerCase();
+        final act = (u['activityLevel'] ?? 'moderate').toString();
+        final goalType = (u['goal'] ?? 'maintain').toString();
+
+        if (w != null && h != null && a != null) {
+          final double bmr = (10 * w) + (6.25 * h) - (5 * a) + (g == 'male' ? 5 : -161);
+          final double mult = act == 'sedentary'
+              ? 1.2
+              : act == 'lightly_active'
+                  ? 1.375
+                  : act == 'very_active'
+                      ? 1.725
+                      : 1.55;
+          final double adj = goalType == 'lose'
+              ? -500
+              : goalType == 'gain'
+                  ? 500
+                  : 0;
+          return (bmr * mult + adj).round().clamp(1200, 5000);
+        }
+      }
+    } catch (_) {}
+
+    return 2000;
+  }
+
+  int _getActiveProteinTarget() {
+    if (widget.proteinTarget != null && widget.proteinTarget! > 0) {
+      return widget.proteinTarget!.round();
+    }
+
+    try {
+      final profileState = context.read<ProfileBloc?>()?.state;
+      if (profileState is ProfileLoaded) {
+        final u = profileState.user;
         final pGoal = u['dailyProteinGoal'] ?? u['proteinGoal'];
-        if (pGoal is num) {
-          proteinTarget = pGoal.toInt();
-        } else if (u['weightKg'] is num) {
-          proteinTarget = (u['weightKg'] * 1.8).round();
+        if (pGoal is num && pGoal > 0) {
+          return pGoal.toInt();
         }
-
-        final calFormatted = calorieTarget.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
-
-        if (mounted) {
-          setState(() {
-            _applyLocal(
-              'Ready to Progress? 🎯',
-              'Your daily target is $calFormatted kcal with ${proteinTarget}g protein. Log your first meal to start today\'s progress!',
-              'Daily Progress',
-            );
-          });
+        final goals = u['goals'];
+        if (goals is Map && goals['protein'] is num && goals['protein'] > 0) {
+          return (goals['protein'] as num).toInt();
         }
+        if (u['weightKg'] is num) {
+          return (u['weightKg'] * 1.8).round();
+        }
+      }
+    } catch (_) {}
+
+    return 130;
+  }
+
+  void _resolveLocalData() {
+    try {
+      final calorieTarget = _getActiveCalorieTarget();
+      final proteinTarget = _getActiveProteinTarget();
+
+      final calFormatted = calorieTarget.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      );
+
+      final double consumed = widget.caloriesConsumed ?? 0.0;
+      final double consumedProt = widget.proteinConsumed ?? 0.0;
+
+      String headline = 'Ready to Progress? 🎯';
+      String message =
+          'Your daily target is $calFormatted kcal with ${proteinTarget}g protein. Log your first meal to start today\'s progress!';
+      String focusArea = 'Daily Progress';
+
+      if (consumed > 0) {
+        final remaining = calorieTarget - consumed.round();
+        if (remaining > 0) {
+          final remFormatted = remaining.toString().replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (Match m) => '${m[1]},',
+          );
+          headline = '$remFormatted kcal Remaining 🎯';
+          message =
+              'You\'ve logged ${consumed.round()} of $calFormatted kcal and ${consumedProt.round()}g protein. Keep pacing your meals!';
+          focusArea = 'Daily Progress';
+        } else {
+          headline = 'Daily Goal Met! 🏆';
+          message =
+              'You\'ve reached $calFormatted kcal today with ${consumedProt.round()}g protein. Great job hitting your nutrition targets!';
+          focusArea = 'Goal Reached';
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _applyLocal(headline, message, focusArea);
+        });
       }
     } catch (_) {}
   }
@@ -114,6 +220,17 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         await prefs.remove('cached_coach_message');
         await prefs.remove('cached_coach_focus');
       } else if (h != null && m != null && mounted) {
+        // If cached message contains a stale calorie figure that does not match active target, regenerate locally
+        final activeTarget = _getActiveCalorieTarget();
+        final activeFormatted = activeTarget.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match match) => '${match[1]},',
+        );
+        if (m.contains('kcal') && !m.contains(activeFormatted) && !m.contains(activeTarget.toString())) {
+          _resolveLocalData();
+          return;
+        }
+
         setState(() {
           _applyLocal(h, m, f ?? _focusArea);
         });
@@ -123,7 +240,22 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
 
   Future<void> _fetchBriefing() async {
     try {
-      final response = await ApiClient().dio.get('/coach/daily-briefing');
+      final calorieTarget = _getActiveCalorieTarget();
+      final proteinTarget = _getActiveProteinTarget();
+      final consumed = widget.caloriesConsumed?.round() ?? 0;
+      final consumedProt = widget.proteinConsumed?.round() ?? 0;
+
+      final queryParams = <String, dynamic>{
+        'calorieTarget': calorieTarget,
+        'proteinTarget': proteinTarget,
+        'caloriesConsumed': consumed,
+        'proteinConsumed': consumedProt,
+      };
+
+      final response = await ApiClient().dio.get(
+        '/coach/daily-briefing',
+        queryParameters: queryParams,
+      );
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
         final newHeadline = (data['headline'] as String?)?.trim();
