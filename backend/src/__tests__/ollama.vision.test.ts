@@ -5,22 +5,24 @@
 
 import { analyzeMeal, AnalyzeImageInput } from '../services/ai.service';
 
-const mockGenerateContent = jest.fn();
-
-jest.mock('@google/generative-ai', () => ({
-  GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
-    getGenerativeModel: jest.fn().mockReturnValue({
-      generateContent: mockGenerateContent,
-    }),
-  })),
-  SchemaType: {
-    OBJECT: 'object',
-    STRING: 'string',
-    NUMBER: 'number',
-    ARRAY: 'array',
-    BOOLEAN: 'boolean',
-  },
-}));
+jest.mock('@google/generative-ai', () => {
+  const mockGenerateContent = jest.fn();
+  return {
+    GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
+      getGenerativeModel: jest.fn().mockReturnValue({
+        generateContent: mockGenerateContent,
+      }),
+    })),
+    SchemaType: {
+      OBJECT: 'object',
+      STRING: 'string',
+      NUMBER: 'number',
+      ARRAY: 'array',
+      BOOLEAN: 'boolean',
+    },
+    __mockGenerateContent: mockGenerateContent,
+  };
+});
 
 describe('Gemini Vision Service — analyzeMeal() & 100-Calorie Margin', () => {
   beforeEach(() => {
@@ -31,7 +33,8 @@ describe('Gemini Vision Service — analyzeMeal() & 100-Calorie Margin', () => {
   it('preserves reported calories when within 100-calorie margin of calculated macros', async () => {
     // 40*4 + 45*4 + 22*9 = 160 + 180 + 198 = 538 kcal
     // Reported: 550 kcal (diff = 12 <= 100 kcal) -> should preserve 550
-    mockGenerateContent.mockResolvedValueOnce({
+    const genAI = require('@google/generative-ai');
+    genAI.__mockGenerateContent.mockResolvedValueOnce({
       response: {
         text: () =>
           JSON.stringify({
@@ -70,7 +73,8 @@ describe('Gemini Vision Service — analyzeMeal() & 100-Calorie Margin', () => {
   it('reconciles reported calories when exceeding 100-calorie margin of calculated macros', async () => {
     // 40*4 + 45*4 + 22*9 = 538 kcal
     // Reported: 700 kcal (diff = 162 > 100 kcal) -> should clamp to 538 + 100 = 638
-    mockGenerateContent.mockResolvedValueOnce({
+    const genAI = require('@google/generative-ai');
+    genAI.__mockGenerateContent.mockResolvedValueOnce({
       response: {
         text: () =>
           JSON.stringify({
