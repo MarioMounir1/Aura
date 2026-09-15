@@ -240,9 +240,9 @@ export async function scanBarcodeHandler(
       console.log(`🔍 [Barcode] Product not found in Open Food Facts: ${barcode}`);
       res.status(404).json({
         success: false,
-        error: "Product not found in Open Food Facts database.",
+        error: "Product not found in barcode database.",
         code: "BARCODE_NOT_FOUND",
-        hint: "Try scanning the product label with the AI photo scanner instead.",
+        hint: "Enter the product name to estimate nutrition or scan with the AI photo scanner.",
       });
       return;
     }
@@ -259,8 +259,8 @@ export async function scanBarcodeHandler(
     res.status(isTimeout ? 504 : 502).json({
       success: false,
       error: isTimeout
-        ? "Open Food Facts lookup timed out. Please try again."
-        : `Barcode lookup failed: ${msg}`,
+        ? "Barcode lookup timed out. Please try again."
+        : "Unable to retrieve product details. Please check your connection or enter the product name manually.",
       code: isTimeout ? "LOOKUP_TIMEOUT" : "LOOKUP_ERROR",
     });
     return;
@@ -272,9 +272,9 @@ export async function scanBarcodeHandler(
     console.log(`🔍 [Barcode] Not found in OFF database: ${barcode}`);
     res.status(404).json({
       success: false,
-      error: "Product not found in Open Food Facts database.",
+      error: "Product not found in barcode database.",
       code: "BARCODE_NOT_FOUND",
-      hint: "Try scanning the product label with the AI photo scanner instead.",
+      hint: "Enter the product name to estimate nutrition or scan with the AI photo scanner.",
     });
     return;
   }
