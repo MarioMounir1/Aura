@@ -174,6 +174,10 @@ function userPublicProfile(user: {
     activityLevel: user.activityLevel,
     goal: user.goal,
     language: user.language,
+    dailyCalorieGoal: user.dailyCalorieGoal,
+    proteinGoal: user.proteinGoal,
+    carbsGoal: user.carbsGoal,
+    fatsGoal: user.fatsGoal,
     goals: {
       dailyCalories: user.dailyCalorieGoal,
       protein: user.proteinGoal,
