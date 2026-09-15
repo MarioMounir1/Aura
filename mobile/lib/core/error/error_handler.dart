@@ -47,7 +47,42 @@ class AppErrorHandler {
 
     // 6. Generic string or Exception
     final rawString = error.toString().trim();
-    return _cleanMessage(rawString, fallback);
+    return _interpretRawMessage(rawString, fallback);
+  }
+
+  /// Domain-aware message interpreter for string/exception representations
+  static String _interpretRawMessage(String raw, String? fallback) {
+    final lower = raw.toLowerCase();
+
+    // Specific domain errors (scanning, food detection, barcode)
+    if (lower.contains('no_food_detected') || lower.contains('no food or beverage')) {
+      return 'No food or beverage was detected. Please make sure the meal is clearly visible and try again.';
+    }
+
+    if (lower.contains('barcode_not_found') || lower.contains('product not found')) {
+      return 'Product not found in the barcode database. You can enter the name to estimate nutrition.';
+    }
+
+    if (lower.contains('quota_exceeded') || lower.contains('free limit reached') || lower.contains('premium limit reached')) {
+      if (lower.contains('free')) {
+        return 'Daily free scan limit reached. Upgrade to Premium for 10 daily scans!';
+      }
+      return 'Daily scan limit reached. Scans reset at midnight UTC.';
+    }
+
+    if (lower.contains('port 3000') || lower.contains('node.js') || lower.contains('is the backend running') || lower.contains('cannot reach local server')) {
+      return 'Unable to connect to the server. Please check your internet connection and try again.';
+    }
+
+    if (lower.contains('socketexception') || lower.contains('failed host lookup') || lower.contains('connection refused')) {
+      return 'Network connection error. Please check your internet connection.';
+    }
+
+    if (lower.contains('timeout') || lower.contains('timed out')) {
+      return 'Request timed out. Please try again.';
+    }
+
+    return _cleanMessage(raw, fallback);
   }
 
   /// Internal Dio error interpreter
@@ -69,7 +104,7 @@ class AppErrorHandler {
         if (responseData is Map<String, dynamic>) {
           final serverMsg = responseData['message'] ?? responseData['error'];
           if (serverMsg is String && serverMsg.isNotEmpty && !_isTechnicalNoise(serverMsg)) {
-            return _cleanMessage(serverMsg, fallback);
+            return _interpretRawMessage(serverMsg, fallback);
           }
         }
 
@@ -78,16 +113,16 @@ class AppErrorHandler {
             return 'Invalid request. Please verify your details.';
           } else if (statusCode == 401) {
             return 'Session expired. Please log in again.';
+          } else if (statusCode == 402 || statusCode == 429) {
+            return 'Daily scan limit reached. Please upgrade or try again tomorrow.';
           } else if (statusCode == 403) {
             return 'You do not have permission to perform this action.';
           } else if (statusCode == 404) {
             return 'The requested information could not be found.';
-          } else if (statusCode == 409) {
-            return 'This item already exists or has a conflict.';
-          } else if (statusCode == 429) {
-            return 'Too many requests. Please slow down and try again.';
+          } else if (statusCode == 422) {
+            return 'No food or beverage was detected. Please scan a clear photo of your meal.';
           } else if (statusCode >= 500) {
-            return 'Server issue. Please try again shortly.';
+            return 'Service is temporarily busy. Please try again shortly.';
           }
         }
         return fallback ?? 'Something went wrong. Please try again.';
@@ -119,8 +154,8 @@ class AppErrorHandler {
       return 'Unable to complete purchase. Please try again.';
     }
 
-    if (code.contains('camera') || message.contains('camera')) {
-      return 'Camera permission is required to continue.';
+    if (code.contains('camera') || message.contains('camera') || message.contains('permission')) {
+      return 'Camera permission is required to scan meals and barcodes.';
     }
 
     if (code.contains('network') || message.contains('network')) {
@@ -172,6 +207,11 @@ class AppErrorHandler {
         lower.contains('unhandled exception') ||
         lower.contains('nullcheckoperator') ||
         lower.contains('rangeerror') ||
+        lower.contains('node.js') ||
+        lower.contains('port 3000') ||
+        lower.contains('10.0.2.2') ||
+        lower.contains('localhost') ||
+        lower.contains('prisma') ||
         lower.contains('{') && lower.contains('}') ||
         text.length > 200;
   }
