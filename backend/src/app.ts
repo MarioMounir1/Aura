@@ -68,17 +68,21 @@ app.use((_req: Request, res: Response) => {
 app.use(errorHandler);
 
 if (process.env.NODE_ENV !== "test") {
-  try {
-    console.log("🔄 Synchronizing Prisma database tables...");
-    const rootDir = process.cwd();
-    execSync(`npx prisma db push --accept-data-loss`, {
-      cwd: rootDir,
-      env: { ...process.env },
-      stdio: "inherit",
-    });
-    console.log("✅ Database tables synchronized successfully!");
-  } catch (dbErr: any) {
-    console.error("⚠️ Prisma db push failed:", dbErr?.message || dbErr);
+  // Synchronize Prisma schema in development only.
+  // In production, migrations should be applied via `prisma migrate deploy` in your deploy pipeline.
+  if (process.env.NODE_ENV === "development") {
+    try {
+      console.log("🔄 Synchronizing Prisma database tables (development)...");
+      const rootDir = process.cwd();
+      execSync(`npx prisma db push`, {
+        cwd: rootDir,
+        env: { ...process.env },
+        stdio: "inherit",
+      });
+      console.log("✅ Database tables synchronized successfully!");
+    } catch (dbErr: any) {
+      console.error("⚠️ Prisma db push failed:", dbErr?.message || dbErr);
+    }
   }
 
   app.listen(Number(PORT), "0.0.0.0", () => {
