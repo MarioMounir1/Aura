@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../../core/error/error_handler.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../premium/data/services/purchase_service.dart';
 import '../../domain/repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -90,6 +92,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
+    unawaited(PurchaseService.instance.logOut());
     await _authRepository.logout();
     emit(Unauthenticated());
   }
