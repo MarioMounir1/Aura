@@ -82,6 +82,17 @@ class PurchaseService {
     }
   }
 
+  /// Log out the user from RevenueCat and clear cached premium state
+  Future<void> logOut() async {
+    try {
+      setMockPremiumStatus(false);
+      if (!Platform.isAndroid && !Platform.isIOS) return;
+      await Purchases.logOut();
+    } catch (e) {
+      print('⚠️ [RevenueCat] LogOut error: $e');
+    }
+  }
+
   /// Check current entitlement status synchronously/on-demand
   Future<bool> isPremium() async {
     try {
