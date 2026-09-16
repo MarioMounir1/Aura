@@ -1,5 +1,6 @@
 // lib/features/premium/presentation/premium_upgrade_screen.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -77,13 +78,15 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
     try {
       bool success = false;
       if (package != null) {
-        // Perform simulated / real purchase
+        // Perform real in-app purchase via RevenueCat
         success = await PurchaseService.instance.purchasePackage(package);
-      } else {
-        // Fallback mock checkout since package is null (RevenueCat not configured yet)
-        print('ℹ️ Simulating 1-second purchase in Test Mode (fallback)...');
+      } else if (kDebugMode) {
+        // Fallback mock checkout strictly in Debug Mode for local testing
+        print('ℹ️ Simulating 1-second purchase in Debug Mode (fallback)...');
         await Future.delayed(const Duration(seconds: 1));
         success = true;
+      } else {
+        throw Exception('Subscription plans are temporarily unavailable. Please try again shortly.');
       }
 
       if (success) {
