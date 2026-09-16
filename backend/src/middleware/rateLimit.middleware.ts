@@ -100,3 +100,12 @@ export const barcodeLimiter = createRateLimiter({
   maxRequests: 60,
   windowSeconds: 60,
 });
+
+// AI Workout Coach limiter (Gemini conversational LLM calls)
+// Protects backend & Google Cloud billing against chat spam / abuse.
+export const aiCoachLimiter = createRateLimiter({
+  keyPrefix: "ai-coach",
+  maxRequests: 15,
+  windowSeconds: 60,
+});
+
