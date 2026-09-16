@@ -19,12 +19,13 @@ import { sendPasswordResetEmail } from "../services/email.service";
 
 export async function upgradeUser(req: Request, res: Response): Promise<void> {
   const userId = req.user!.id;
-  const secretKey = process.env.REVENUECAT_SECRET_KEY || "sk_vaJIkGGEPnvOtqAXEDyvQpajTSGzs";
+  const isProduction = process.env.NODE_ENV === "production";
+  const secretKey = process.env.REVENUECAT_SECRET_KEY;
 
   try {
-    // Development fallback for local simulation
-    if (secretKey === "goog_mock_key_123456" || process.env.NODE_ENV !== "production") {
-      console.log(`ℹ️ [Workout] Mock upgrade allowed in development/test for user: ${userId}`);
+    // Development fallback for local simulation (strictly forbidden in production)
+    if (!isProduction && (!secretKey || secretKey === "goog_mock_key_123456")) {
+      console.log(`ℹ️ [User] Mock upgrade allowed in development/test for user: ${userId}`);
       const updated = await prisma.user.update({
         where: { id: userId },
         data: { isPremium: true },
@@ -33,6 +34,12 @@ export async function upgradeUser(req: Request, res: Response): Promise<void> {
         success: true,
         data: { user: userPublicProfile(updated) },
       });
+      return;
+    }
+
+    if (!secretKey) {
+      console.error("❌ [RevenueCat] REVENUECAT_SECRET_KEY is not configured.");
+      res.status(500).json({ success: false, error: "Payment verification service is not configured." });
       return;
     }
 
@@ -816,9 +823,9 @@ export async function revenueCatWebhook(req: Request, res: Response): Promise<vo
   const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
   const authHeader = req.headers.authorization;
 
-  // Authorization token verification
-  if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
-    console.warn("⚠️ [RevenueCat Webhook] Rejected unauthorized request headers.");
+  // Authorization token verification (must be set and match in production)
+  if (!webhookSecret || authHeader !== `Bearer ${webhookSecret}`) {
+    console.warn("⚠️ [RevenueCat Webhook] Rejected unauthorized request: invalid or missing webhook secret.");
     res.status(401).json({ success: false, error: "Unauthorized webhook caller." });
     return;
   }
