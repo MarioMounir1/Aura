@@ -20,7 +20,7 @@ import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/wei
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
 import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine, interpretWorkoutSessionRequest, getWeeklyRecap, getExerciseFormGuide } from "../controllers/workout.controller";
 import { requireAuth } from "../middleware/auth.middleware";
-import { analyzeMealLimiter, authLimiter, barcodeLimiter } from "../middleware/rateLimit.middleware";
+import { analyzeMealLimiter, authLimiter, barcodeLimiter, aiCoachLimiter } from "../middleware/rateLimit.middleware";
 
 const router = Router();
 
@@ -460,7 +460,7 @@ router.post("/workouts/session/override", requireAuth, overrideSessionType);
  * @access  Private (JWT required)
  * @body    { message: string }
  */
-router.post("/workouts/session/interpret", requireAuth, interpretWorkoutSessionRequest);
+router.post("/workouts/session/interpret", requireAuth, aiCoachLimiter, interpretWorkoutSessionRequest);
 
 /**
  * @route   GET /api/v1/workouts/weekly-recap
