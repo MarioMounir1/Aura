@@ -55,7 +55,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     with SingleTickerProviderStateMixin {
 
   // ── State ──────────────────────────────────────────────────
-  WorkoutHubState _state = WorkoutHubState.unconfigured;
+  WorkoutHubState _state = WorkoutHubState.loading;
   int _activeDays = 4;
   RoutineSuggestion? _activeRoutine;
   CurrentSession? _currentSession;
@@ -481,12 +481,27 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ══════════════════════════════════════════════════════════════
 
   Widget _buildLoadingView(bool isArabic) {
-    return const Align(
-      alignment: Alignment.topCenter,
-      child: LinearProgressIndicator(
-        valueColor: AlwaysStoppedAnimation<Color>(_C.cyan),
-        minHeight: 3,
-        backgroundColor: Colors.transparent,
+    return Container(
+      color: const Color(0xFFF6F8F5),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+            child: _WorkoutHeader(
+              showAction: false,
+              onActionTap: () {},
+              streakDays: _streakDays,
+            ),
+          ),
+          const Expanded(
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF235A42),
+                strokeWidth: 2.5,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
