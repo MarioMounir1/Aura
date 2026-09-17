@@ -283,7 +283,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                         subtitle: '4 Days Free · then \$4.99/month',
                         priceText: '\$4.99',
                         periodText: '/mo',
-                        comparisonText: 'Cancel anytime in Google Play',
+                        comparisonText: null,
                         onTap: () => setState(() => _isAnnualSelected = false),
                       ),
 
