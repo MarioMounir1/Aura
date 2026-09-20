@@ -23,6 +23,9 @@ class UpdateProfileEvent extends ProfileEvent {
   final String? goal;
   final String? trainingExperience; // new: new | consistent | experienced
   final int? dailyCalorieGoal;
+  final int? dailyProteinGoal;
+  final int? dailyCarbsGoal;
+  final int? dailyFatsGoal;
   final int? dailyWaterGoalMl;
   final String? language;
 
@@ -37,6 +40,9 @@ class UpdateProfileEvent extends ProfileEvent {
     this.goal,
     this.trainingExperience,
     this.dailyCalorieGoal,
+    this.dailyProteinGoal,
+    this.dailyCarbsGoal,
+    this.dailyFatsGoal,
     this.dailyWaterGoalMl,
     this.language,
   });
@@ -53,6 +59,9 @@ class UpdateProfileEvent extends ProfileEvent {
         goal,
         trainingExperience,
         dailyCalorieGoal,
+        dailyProteinGoal,
+        dailyCarbsGoal,
+        dailyFatsGoal,
         dailyWaterGoalMl,
         language,
       ];
