@@ -26,6 +26,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
     String? goal,
     String? trainingExperience,
     int? dailyCalorieGoal,
+    int? dailyProteinGoal,
+    int? dailyCarbsGoal,
+    int? dailyFatsGoal,
     int? dailyWaterGoalMl,
     String? language,
   }) async {
@@ -41,6 +44,9 @@ class ProfileRepositoryImpl implements ProfileRepository {
       if (goal != null) data['goal'] = goal;
       if (trainingExperience != null) data['trainingExperience'] = trainingExperience;
       if (dailyCalorieGoal != null) data['dailyCalorieGoal'] = dailyCalorieGoal;
+      if (dailyProteinGoal != null) data['proteinGoal'] = dailyProteinGoal;
+      if (dailyCarbsGoal != null) data['carbsGoal'] = dailyCarbsGoal;
+      if (dailyFatsGoal != null) data['fatsGoal'] = dailyFatsGoal;
       if (dailyWaterGoalMl != null) data['dailyWaterGoalMl'] = dailyWaterGoalMl;
       if (language != null) data['language'] = language;
 
