@@ -114,6 +114,9 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       goal: event.goal,
       trainingExperience: event.trainingExperience,
       dailyCalorieGoal: event.dailyCalorieGoal,
+      dailyProteinGoal: event.dailyProteinGoal,
+      dailyCarbsGoal: event.dailyCarbsGoal,
+      dailyFatsGoal: event.dailyFatsGoal,
       dailyWaterGoalMl: event.dailyWaterGoalMl,
       language: event.language,
     );
