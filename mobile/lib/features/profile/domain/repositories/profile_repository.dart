@@ -17,6 +17,9 @@ abstract class ProfileRepository {
     String? goal, // lose | maintain | gain
     String? trainingExperience, // new | consistent | experienced
     int? dailyCalorieGoal,
+    int? dailyProteinGoal,
+    int? dailyCarbsGoal,
+    int? dailyFatsGoal,
     int? dailyWaterGoalMl,
     String? language, // en | ar
   });
