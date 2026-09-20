@@ -319,11 +319,35 @@ class _MealsDashboardState extends State<MealsDashboard> {
     final summaryProtein = (goals['protein'] as num?)?.toDouble();
     proteinTarget  = userProteinGoal ?? ((summaryProtein != null && summaryProtein > 0) ? summaryProtein : 150.0);
 
+    // If proteinTarget is default 150.0 but calories are high or user has biometrics, calculate accurate target
+    if (proteinTarget <= 150.0 && caloriesTarget > 2400) {
+      try {
+        final profileState = context.read<ProfileBloc>().state;
+        if (profileState is ProfileLoaded) {
+          final w = double.tryParse((profileState.user['weightKg'] ?? '').toString());
+          if (w != null && w > 0) {
+            final pWeight = (w * 2.0).roundToDouble();
+            final pCal = ((caloriesTarget * 0.25) / 4.0).roundToDouble();
+            proteinTarget = (pWeight > pCal ? pWeight : pCal).clamp(80.0, 250.0);
+          } else {
+            proteinTarget = (((caloriesTarget * 0.25) / 4.0).roundToDouble()).clamp(80.0, 250.0);
+          }
+        }
+      } catch (_) {}
+    }
+
     final summaryCarbs = (goals['carbs'] as num?)?.toDouble();
     carbsTarget    = userCarbsGoal ?? ((summaryCarbs != null && summaryCarbs > 0) ? summaryCarbs : 200.0);
+    if (carbsTarget <= 200.0 && caloriesTarget > 2400) {
+      final f = ((caloriesTarget * 0.25) / 9.0).roundToDouble();
+      carbsTarget = (((caloriesTarget - (proteinTarget * 4.0 + f * 9.0)) / 4.0).roundToDouble()).clamp(50.0, 700.0);
+    }
 
     final summaryFats = (goals['fats'] as num?)?.toDouble();
     fatsTarget     = userFatsGoal ?? ((summaryFats != null && summaryFats > 0) ? summaryFats : 65.0);
+    if (fatsTarget <= 65.0 && caloriesTarget > 2400) {
+      fatsTarget = ((caloriesTarget * 0.25) / 9.0).roundToDouble();
+    }
 
     caloriesConsumed = logs.fold(0.0, (s, m) => s + m.calories);
     proteinConsumed  = logs.fold(0.0, (s, m) => s + m.protein);
@@ -857,10 +881,17 @@ class _MealsDashboardState extends State<MealsDashboard> {
               ),
               const SizedBox(height: 14),
 
-              // 3. Daily Summary Banner
+              // 3. Daily Summary Banner with Macro Indicators
               _DailySummaryBanner(
                 caloriesConsumed: caloriesConsumed,
                 caloriesTarget: caloriesTarget,
+                proteinConsumed: proteinConsumed,
+                proteinTarget: proteinTarget,
+                carbsConsumed: carbsConsumed,
+                carbsTarget: carbsTarget,
+                fatsConsumed: fatsConsumed,
+                fatsTarget: fatsTarget,
+                onNutrientsTap: _showNutrientsSheet,
               ),
               const SizedBox(height: 22),
 
@@ -4227,11 +4258,83 @@ class _TimelineDashboardHeader extends StatelessWidget {
 class _DailySummaryBanner extends StatelessWidget {
   final double caloriesConsumed;
   final double caloriesTarget;
+  final double proteinConsumed;
+  final double proteinTarget;
+  final double carbsConsumed;
+  final double carbsTarget;
+  final double fatsConsumed;
+  final double fatsTarget;
+  final VoidCallback? onNutrientsTap;
 
   const _DailySummaryBanner({
     required this.caloriesConsumed,
     required this.caloriesTarget,
+    this.proteinConsumed = 0.0,
+    this.proteinTarget = 150.0,
+    this.carbsConsumed = 0.0,
+    this.carbsTarget = 200.0,
+    this.fatsConsumed = 0.0,
+    this.fatsTarget = 65.0,
+    this.onNutrientsTap,
   });
+
+  Widget _buildMacroPill({
+    required String label,
+    required double consumed,
+    required double target,
+    required Color color,
+  }) {
+    final double safeTarget = target > 0 ? target : 1.0;
+    final double progress = (consumed / safeTarget).clamp(0.0, 1.0);
+
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF4A6B56),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            '${consumed.round()}/${target.round()}g',
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1E3A2B),
+            ),
+          ),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 4,
+              backgroundColor: const Color(0xFFD6E6DB),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -4280,66 +4383,125 @@ class _DailySummaryBanner extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'DAILY SUMMARY',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF4A6B56),
-                          letterSpacing: 1.0,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'DAILY SUMMARY',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF4A6B56),
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            caloriesConsumed > 0 ? 'Fueling your\nmomentum.' : 'A good day\nstarts here.',
+                            style: GoogleFonts.outfit(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1E3A2B),
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            '$consumedStr of $targetStr kcal logged',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF3B5745),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 62,
+                      height: 62,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x101E3A2B),
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$percent%',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1E3A2B),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'A good day\nstarts here.',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1E3A2B),
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '$consumedStr of $targetStr kcal logged',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF3B5745),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Container(
-                  width: 62,
-                  height: 62,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x101E3A2B),
-                        blurRadius: 8,
-                        offset: Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$percent%',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF1E3A2B),
-                      ),
+                const SizedBox(height: 14),
+                // ── 3-Macro Progress Row ──
+                GestureDetector(
+                  onTap: onNutrientsTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white.withOpacity(0.9), width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1E3A2B).withOpacity(0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        _buildMacroPill(
+                          label: 'Protein',
+                          consumed: proteinConsumed,
+                          target: proteinTarget,
+                          color: const Color(0xFF2563EB),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          width: 1,
+                          height: 28,
+                          color: const Color(0xFFD3E4D7),
+                        ),
+                        _buildMacroPill(
+                          label: 'Carbs',
+                          consumed: carbsConsumed,
+                          target: carbsTarget,
+                          color: const Color(0xFFD97706),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          width: 1,
+                          height: 28,
+                          color: const Color(0xFFD3E4D7),
+                        ),
+                        _buildMacroPill(
+                          label: 'Fats',
+                          consumed: fatsConsumed,
+                          target: fatsTarget,
+                          color: const Color(0xFF059669),
+                        ),
+                      ],
                     ),
                   ),
                 ),
