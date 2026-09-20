@@ -303,8 +303,9 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
             newHeadline.isNotEmpty &&
             newMessage != null &&
             newMessage.isNotEmpty) {
+          final validMessage = newMessage;
           _cachedHeadline = newHeadline;
-          _cachedMessage = newMessage;
+          _cachedMessage = validMessage;
           if (newFocus != null && newFocus.isNotEmpty) {
             _cachedFocusArea = newFocus;
           }
@@ -312,7 +313,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
           if (mounted) {
             setState(() {
               _headline = newHeadline;
-              _message = newMessage;
+              _message = validMessage;
               if (newFocus != null && newFocus.isNotEmpty) {
                 _focusArea = newFocus;
               }
@@ -322,7 +323,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
           try {
             final prefs = await SharedPreferences.getInstance();
             await prefs.setString('cached_coach_headline', newHeadline);
-            await prefs.setString('cached_coach_message', newMessage);
+            await prefs.setString('cached_coach_message', validMessage);
             if (newFocus != null && newFocus.isNotEmpty) {
               await prefs.setString('cached_coach_focus', newFocus);
             }
