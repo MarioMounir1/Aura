@@ -283,7 +283,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
         final newHeadline = (data['headline'] as String?)?.trim();
-        final newMessage = (data['message'] as String?)?.trim();
+        String? newMessage = (data['message'] as String?)?.trim();
         final newFocus = (data['focusArea'] as String?)?.trim();
 
         // Strict guard: Reject any workout split text that may come from an old cloud build or cache
