@@ -22,6 +22,9 @@ const UpdateProfileSchema = z.object({
   goal:               z.enum(["lose", "maintain", "gain"]).optional(),
   trainingExperience: z.enum(["new", "consistent", "experienced"]).optional(),
   dailyCalorieGoal:   z.number().int().min(500).max(10000).optional(),
+  proteinGoal:        z.number().int().min(20).max(1000).optional(),
+  carbsGoal:          z.number().int().min(20).max(1000).optional(),
+  fatsGoal:           z.number().int().min(10).max(1000).optional(),
   dailyWaterGoalMl:   z.number().int().min(500).max(10000).optional(),
   language:           z.enum(["en", "ar"]).optional(),
 });
@@ -152,16 +155,28 @@ export async function updateProfile(req: Request, res: Response): Promise<void> 
     }
 
     if (weightKg && heightCm && age && gender) {
-      // Only auto-calculate if user didn't override dailyCalorieGoal explicitly
-      if (data.dailyCalorieGoal === undefined) {
-        const tdee = calculateTDEE(weightKg, heightCm, age, gender, activityLevel, goal, targetWeightKg);
-        autoGoals = {
-          dailyCalorieGoal: tdee.recommendedCalories,
-          proteinGoal:      tdee.recommendedProtein,
-          carbsGoal:        tdee.recommendedCarbs,
-          fatsGoal:         tdee.recommendedFats,
-        };
-      }
+      const tdee = calculateTDEE(weightKg, heightCm, age, gender, activityLevel, goal, targetWeightKg);
+      const effectiveCalories = data.dailyCalorieGoal ?? tdee.recommendedCalories;
+
+      // Dynamic Macro Calculation based on calories & weight
+      const proteinFromWeight = Math.round(weightKg * 2.0);
+      const proteinFromCal = Math.round((effectiveCalories * 0.25) / 4);
+      const calculatedProtein = Math.max(80, Math.min(250, Math.max(proteinFromWeight, proteinFromCal)));
+      const calculatedFats = Math.round((effectiveCalories * 0.25) / 9);
+      const calculatedCarbs = Math.max(50, Math.round((effectiveCalories - (calculatedProtein * 4 + calculatedFats * 9)) / 4));
+
+      autoGoals = {
+        dailyCalorieGoal: effectiveCalories,
+        proteinGoal:      data.proteinGoal ?? calculatedProtein,
+        carbsGoal:        data.carbsGoal ?? calculatedCarbs,
+        fatsGoal:         data.fatsGoal ?? calculatedFats,
+      };
+    } else if (data.proteinGoal !== undefined || data.carbsGoal !== undefined || data.fatsGoal !== undefined) {
+      autoGoals = {
+        ...(data.proteinGoal !== undefined && { proteinGoal: data.proteinGoal }),
+        ...(data.carbsGoal   !== undefined && { carbsGoal:   data.carbsGoal }),
+        ...(data.fatsGoal    !== undefined && { fatsGoal:    data.fatsGoal }),
+      };
     }
 
     const updatedUser = await prisma.user.update({
