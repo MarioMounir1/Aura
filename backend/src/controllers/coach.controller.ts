@@ -31,8 +31,8 @@ export async function getDailyBriefingHandler(
     const qProteinTarget = Number(req.query.proteinTarget);
     const qProteinConsumed = Number(req.query.proteinConsumed);
 
-    // Check fast cache (keyed by userId and calorie target)
-    const cacheKey = `${userId}:${!isNaN(qCalTarget) && qCalTarget > 0 ? qCalTarget : "default"}`;
+    // Check fast cache (keyed by userId, calorie target, and protein target)
+    const cacheKey = `${userId}:${!isNaN(qCalTarget) && qCalTarget > 0 ? qCalTarget : "default"}:${!isNaN(qProteinTarget) && qProteinTarget > 0 ? qProteinTarget : "default"}`;
     const cached = briefingCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       res.status(200).json({ success: true, data: cached.data });
@@ -69,7 +69,11 @@ export async function getDailyBriefingHandler(
 
     let proteinTarget = !isNaN(qProteinTarget) && qProteinTarget > 0
       ? qProteinTarget
-      : (user?.proteinGoal ?? (user?.weightKg ? Math.round(user.weightKg * 1.8) : 130));
+      : (user?.proteinGoal && !(user.proteinGoal === 150 && (calorieTarget > 2500 || (user.weightKg && user.weightKg * 2 > 160)))
+          ? user.proteinGoal
+          : (user?.weightKg
+              ? Math.max(80, Math.min(250, Math.max(Math.round(user.weightKg * 2.0), Math.round((calorieTarget * 0.25) / 4))))
+              : (user?.proteinGoal ?? 150)));
 
     // 2. Fetch today's nutrition logs
     const todayStart = new Date();
