@@ -134,8 +134,11 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
   }
 
   int _getActiveProteinTarget() {
+    final cal = _getActiveCalorieTarget();
     if (widget.proteinTarget != null && widget.proteinTarget! > 0) {
-      return widget.proteinTarget!.round();
+      if (!(widget.proteinTarget!.round() == 150 && cal > 2400)) {
+        return widget.proteinTarget!.round();
+      }
     }
 
     try {
@@ -143,8 +146,24 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       if (profileState is ProfileLoaded) {
         final u = profileState.user;
         final pGoal = u['dailyProteinGoal'] ?? u['proteinGoal'];
+        final w = double.tryParse((u['weightKg'] ?? '').toString());
+
+        int? dynamicTarget;
+        if (w != null && w > 0) {
+          final pFromWeight = (w * 2.0).round();
+          final pFromCal = ((cal * 0.25) / 4).round();
+          final highest = pFromWeight > pFromCal ? pFromWeight : pFromCal;
+          dynamicTarget = highest.clamp(80, 250);
+        }
+
         if (pGoal is num && pGoal > 0) {
+          if (pGoal == 150 && dynamicTarget != null && dynamicTarget > 165) {
+            return dynamicTarget;
+          }
           return pGoal.toInt();
+        }
+        if (dynamicTarget != null) {
+          return dynamicTarget;
         }
         final goals = u['goals'];
         if (goals is Map && goals['protein'] is num && goals['protein'] > 0) {
@@ -220,13 +239,18 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         await prefs.remove('cached_coach_message');
         await prefs.remove('cached_coach_focus');
       } else if (h != null && m != null && mounted) {
-        // If cached message contains a stale calorie figure that does not match active target, regenerate locally
+        // If cached message contains a stale calorie or protein figure, regenerate locally
         final activeTarget = _getActiveCalorieTarget();
+        final activeProtein = _getActiveProteinTarget();
         final activeFormatted = activeTarget.toString().replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match match) => '${match[1]},',
         );
         if (m.contains('kcal') && !m.contains(activeFormatted) && !m.contains(activeTarget.toString())) {
+          _resolveLocalData();
+          return;
+        }
+        if (m.contains('protein') && !m.contains('${activeProtein}g protein') && activeProtein > 160) {
           _resolveLocalData();
           return;
         }
@@ -269,6 +293,10 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
 
         if (isWorkoutText) {
           return;
+        }
+
+        if (newMessage != null && newMessage.contains('150g protein') && proteinTarget > 165) {
+          newMessage = newMessage.replaceAll('150g protein', '${proteinTarget}g protein');
         }
 
         if (newHeadline != null &&
