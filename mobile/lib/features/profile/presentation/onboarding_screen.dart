@@ -442,6 +442,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
 
     final calculatedCalories = tdee['calories'] ?? 2000;
+    final calculatedProtein  = tdee['protein'] ?? 150;
+    final calculatedCarbs    = tdee['carbs'] ?? 200;
+    final calculatedFats     = tdee['fats'] ?? 65;
 
     // Update profile on the backend first, then trigger onboarding complete on success
     context.read<ProfileBloc>().add(UpdateProfileEvent(
@@ -453,6 +456,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       activityLevel: activity.id,
       goal: effectiveGoalId,
       dailyCalorieGoal: calculatedCalories,
+      dailyProteinGoal: calculatedProtein,
+      dailyCarbsGoal: calculatedCarbs,
+      dailyFatsGoal: calculatedFats,
       language: isArabic ? 'ar' : 'en',
     ));
   }
