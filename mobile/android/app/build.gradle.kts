@@ -58,6 +58,22 @@ android {
             }
         }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("com.google.mlkit:barcode-scanning:17.3.0")
+        force("androidx.camera:camera-core:1.4.1")
+        force("androidx.camera:camera-camera2:1.4.1")
+        force("androidx.camera:camera-lifecycle:1.4.1")
+        force("androidx.camera:camera-view:1.4.1")
+    }
 }
 
 kotlin {
@@ -71,6 +87,15 @@ flutter {
 }
 
 dependencies {
+    // AndroidX Activity KTX for enableEdgeToEdge backward compatibility
+    implementation("androidx.activity:activity-ktx:1.9.3")
+
+    // ML Kit & CameraX 16 KB page-aligned native libraries
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("androidx.camera:camera-core:1.4.1")
+    implementation("androidx.camera:camera-camera2:1.4.1")
+    implementation("androidx.camera:camera-lifecycle:1.4.1")
+
     // Firebase BoM — manages all Firebase library versions
     implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
 
