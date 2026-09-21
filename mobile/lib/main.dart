@@ -113,13 +113,20 @@ Future<void> main() async {
     debugPrint('Orientation setup error: $e');
   }
 
-  // Configure status bar for light pre-screen
+  // Configure edge-to-edge system UI overlay style
+  try {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  } catch (e) {
+    debugPrint('Edge-to-edge setup error: $e');
+  }
+
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Color(0xFFF6F8F5),
+      systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarDividerColor: Colors.transparent,
     ),
   );
 
