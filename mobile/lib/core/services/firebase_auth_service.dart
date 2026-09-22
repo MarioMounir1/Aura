@@ -30,11 +30,21 @@ class FirebaseAuthService {
   Future<GoogleSignInResult?> signInWithGoogle() async {
     try {
       try {
-        await _googleSignIn.signOut();
+        if (await _googleSignIn.isSignedIn()) {
+          await _googleSignIn.signOut();
+        }
       } catch (_) {}
 
-      // Trigger the Google account picker
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      // Trigger the Google account picker with a 20-second timeout to prevent hanging
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn().timeout(
+        const Duration(seconds: 20),
+        onTimeout: () {
+          throw PlatformException(
+            code: 'SIGN_IN_TIMEOUT',
+            message: 'Google Play Services took too long to respond. Please try again.',
+          );
+        },
+      );
       if (googleUser == null) return null; // user cancelled
 
       // Get authentication tokens
