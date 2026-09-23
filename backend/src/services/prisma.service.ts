@@ -13,7 +13,10 @@ const connectionString = process.env.DATABASE_URL;
 const isProduction =
   process.env.NODE_ENV === "production" ||
   connectionString?.includes("sslmode=") ||
-  connectionString?.includes("render.com");
+  connectionString?.includes("render.com") ||
+  connectionString?.includes("supabase.co") ||
+  connectionString?.includes("supabase.com") ||
+  connectionString?.includes("pooler.supabase.com");
 
 const pool = new Pool({
   connectionString,
