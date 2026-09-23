@@ -435,6 +435,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   void _updateSetWeight(int exIndex, int setIndex, double delta) {
     final sets = _activeExerciseSets[exIndex];
     if (sets == null || setIndex >= sets.length) return;
+    HapticFeedback.selectionClick();
     setState(() {
       sets[setIndex].weight = (sets[setIndex].weight + delta).clamp(0.0, 999.0);
     });
@@ -443,6 +444,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   void _updateSetReps(int exIndex, int setIndex, int delta) {
     final sets = _activeExerciseSets[exIndex];
     if (sets == null || setIndex >= sets.length) return;
+    HapticFeedback.selectionClick();
     setState(() {
       sets[setIndex].reps = (sets[setIndex].reps + delta).clamp(1, 999);
     });
@@ -774,7 +776,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  Widget _buildLiveWorkoutSessionHeader(bool isArabic, int totalExercises) {
+  Widget _buildLiveWorkoutSessionHeader(bool isArabic, List<SessionExercise> exercises) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -838,14 +840,28 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                isArabic
-                    ? 'تمرين ${_activeExerciseIndex + 1} من $totalExercises'
-                    : 'Exercise ${_activeExerciseIndex + 1} of $totalExercises',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF7A8B7B),
+              InkWell(
+                onTap: () => _showWorkoutOverviewSheet(isArabic, exercises),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isArabic
+                            ? 'تمرين ${_activeExerciseIndex + 1} من ${exercises.length}'
+                            : 'Exercise ${_activeExerciseIndex + 1} of ${exercises.length}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF7A8B7B),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.format_list_bulleted_rounded, size: 12, color: Color(0xFF7A8B7B)),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1047,7 +1063,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1111,208 +1127,390 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           Row(
             children: [
               SizedBox(
-                width: 36,
+                width: 26,
                 child: Center(
                   child: Text(
                     'SET',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7A8B7B),
-                      letterSpacing: 0.4,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8A9C8D),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
               ),
+              const SizedBox(width: 4),
               SizedBox(
-                width: 52,
+                width: 36,
                 child: Center(
                   child: Text(
                     'PREV',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7A8B7B),
-                      letterSpacing: 0.4,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8A9C8D),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
               Expanded(
+                flex: 12,
                 child: Center(
                   child: Text(
                     'WEIGHT',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7A8B7B),
-                      letterSpacing: 0.4,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8A9C8D),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
               Expanded(
+                flex: 10,
                 child: Center(
                   child: Text(
                     'REPS',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7A8B7B),
-                      letterSpacing: 0.4,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8A9C8D),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               SizedBox(
-                width: 42,
+                width: 38,
                 child: Center(
                   child: Text(
                     'DONE',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7A8B7B),
-                      letterSpacing: 0.4,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8A9C8D),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
 
-          // Clean, Compact Set Rows
+          // Clean, Elegant Set Rows (Zero Clutter, High Affordance)
           ...List.generate(setsList.length, (sIdx) {
             final setDraft = setsList[sIdx];
             final isDone = setDraft.isCompleted;
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               decoration: BoxDecoration(
-                color: isDone ? const Color(0xFFF4FAF6) : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+                color: isDone ? const Color(0xFFF1F8F4) : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                border: isDone
+                    ? Border.all(
+                        color: const Color(0xFF235A42).withValues(alpha: 0.2),
+                        width: 1.0,
+                      )
+                    : null,
               ),
               child: Row(
                 children: [
-                  // Set number
+                  // Set number badge
                   SizedBox(
-                    width: 36,
+                    width: 26,
                     child: Center(
-                      child: Text(
-                        '${setDraft.setIndex}',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isDone ? const Color(0xFF235A42) : const Color(0xFF1C2B1E),
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          color: isDone ? const Color(0xFF235A42) : const Color(0xFFEDF3EE),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${setDraft.setIndex}',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: isDone ? Colors.white : const Color(0xFF4A5D4D),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 4),
 
                   // Prev
                   SizedBox(
-                    width: 52,
+                    width: 36,
                     child: Center(
                       child: Text(
                         ex.lastWeekWeight != null && ex.lastWeekWeight! > 0
                             ? '${ex.lastWeekWeight!.toStringAsFixed(0)}'
-                            : '-',
+                            : '—',
                         style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
                           color: const Color(0xFF7A8B7B),
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
 
-                  // Weight pill button
+                  // Weight Stepper Capsule: [- 50 kg +]
                   Expanded(
+                    flex: 12,
                     child: Center(
-                      child: GestureDetector(
-                        onTap: () => _showEditWeightDialog(_activeExerciseIndex, sIdx),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDone ? Colors.white : const Color(0xFFF1F6F2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isDone ? const Color(0xFF235A42).withOpacity(0.3) : const Color(0xFFE2EBE4),
-                            ),
+                      child: Container(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDone ? Colors.white : const Color(0xFFF3F6F4),
+                          borderRadius: BorderRadius.circular(19),
+                          border: Border.all(
+                            color: isDone
+                                ? const Color(0xFF235A42).withValues(alpha: 0.25)
+                                : const Color(0xFFE4EDE6),
+                            width: 1.0,
                           ),
-                          child: Text(
-                            '${setDraft.weight % 1 == 0 ? setDraft.weight.toInt() : setDraft.weight} kg',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C2B1E),
+                        ),
+                        child: Row(
+                          children: [
+                            // Minus circular button
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _updateSetWeight(_activeExerciseIndex, sIdx, -2.5),
+                                borderRadius: BorderRadius.circular(15),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x0C000000),
+                                        blurRadius: 3,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.remove_rounded, size: 14, color: Color(0xFF235A42)),
+                                ),
+                              ),
                             ),
-                          ),
+                            // Editable number
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => _showEditWeightDialog(_activeExerciseIndex, sIdx),
+                                child: Center(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Text(
+                                        '${setDraft.weight % 1 == 0 ? setDraft.weight.toInt() : setDraft.weight}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF1C2B1E),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        'kg',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF7A8B7B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Plus circular button
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _updateSetWeight(_activeExerciseIndex, sIdx, 2.5),
+                                borderRadius: BorderRadius.circular(15),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x0C000000),
+                                        blurRadius: 3,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.add_rounded, size: 14, color: Color(0xFF235A42)),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
 
-                  // Reps pill button
+                  // Reps Stepper Capsule: [- 10 +]
                   Expanded(
+                    flex: 10,
                     child: Center(
-                      child: GestureDetector(
-                        onTap: () => _showEditRepsDialog(_activeExerciseIndex, sIdx),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isDone ? Colors.white : const Color(0xFFF1F6F2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isDone ? const Color(0xFF235A42).withOpacity(0.3) : const Color(0xFFE2EBE4),
-                            ),
+                      child: Container(
+                        height: 38,
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDone ? Colors.white : const Color(0xFFF3F6F4),
+                          borderRadius: BorderRadius.circular(19),
+                          border: Border.all(
+                            color: isDone
+                                ? const Color(0xFF235A42).withValues(alpha: 0.25)
+                                : const Color(0xFFE4EDE6),
+                            width: 1.0,
                           ),
-                          child: Text(
-                            '${setDraft.reps}',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C2B1E),
+                        ),
+                        child: Row(
+                          children: [
+                            // Minus circular button
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _updateSetReps(_activeExerciseIndex, sIdx, -1),
+                                borderRadius: BorderRadius.circular(15),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x0C000000),
+                                        blurRadius: 3,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.remove_rounded, size: 14, color: Color(0xFF235A42)),
+                                ),
+                              ),
                             ),
-                          ),
+                            // Editable number
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => _showEditRepsDialog(_activeExerciseIndex, sIdx),
+                                child: Center(
+                                  child: Text(
+                                    '${setDraft.reps}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF1C2B1E),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Plus circular button
+                            Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () => _updateSetReps(_activeExerciseIndex, sIdx, 1),
+                                borderRadius: BorderRadius.circular(15),
+                                child: Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Color(0x0C000000),
+                                        blurRadius: 3,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(Icons.add_rounded, size: 14, color: Color(0xFF235A42)),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
 
-                  // Done Checkmark
+                  // Tactile Done Action Button (Clean 36x36 Circle Stamp)
                   SizedBox(
-                    width: 42,
+                    width: 38,
                     child: Center(
-                      child: GestureDetector(
-                        onTap: () => _toggleSetCompleted(_activeExerciseIndex, sIdx),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: isDone ? const Color(0xFF22C55E) : Colors.white,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDone ? const Color(0xFF22C55E) : const Color(0xFFD3E4D7),
-                              width: 1.5,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _toggleSetCompleted(_activeExerciseIndex, sIdx),
+                          borderRadius: BorderRadius.circular(18),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDone ? const Color(0xFF235A42) : const Color(0xFFF2F6F3),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF235A42),
+                                width: 1.8,
+                              ),
+                              boxShadow: isDone
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF235A42).withValues(alpha: 0.32),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : [
+                                      const BoxShadow(
+                                        color: Color(0x08000000),
+                                        blurRadius: 3,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
                             ),
-                            boxShadow: isDone
-                                ? [
-                                    BoxShadow(
-                                      color: const Color(0xFF22C55E).withOpacity(0.3),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: Icon(
-                            Icons.check_rounded,
-                            size: 17,
-                            color: isDone ? Colors.white : const Color(0xFFD3E4D7),
+                            child: Icon(
+                              Icons.check_rounded,
+                              size: isDone ? 20 : 18,
+                              color: isDone ? Colors.white : const Color(0xFF235A42),
+                            ),
                           ),
                         ),
                       ),
@@ -1323,37 +1521,67 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             );
           }),
 
-          // Add / Remove Set Row
+          const SizedBox(height: 10),
+
+          // Add / Remove Set Row (Pill Buttons)
           Center(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                TextButton.icon(
-                  onPressed: () => _addSet(_activeExerciseIndex),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    minimumSize: Size.zero,
-                    foregroundColor: const Color(0xFF235A42),
-                  ),
-                  icon: const Icon(Icons.add_circle_outline_rounded, size: 15),
-                  label: Text(
-                    isArabic ? 'إضافة مجموعة' : 'Add Set',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                InkWell(
+                  onTap: () => _addSet(_activeExerciseIndex),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF5EE),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFD4E6D8), width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_rounded, size: 15, color: Color(0xFF235A42)),
+                        const SizedBox(width: 4),
+                        Text(
+                          isArabic ? 'إضافة مجموعة' : 'Add Set',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF235A42),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 if (setsList.length > 1) ...[
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: () => _removeSet(_activeExerciseIndex),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      minimumSize: Size.zero,
-                      foregroundColor: const Color(0xFF9E7A7A),
-                    ),
-                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 15),
-                    label: Text(
-                      isArabic ? 'حذف مجموعة' : 'Remove Set',
-                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                  const SizedBox(width: 10),
+                  InkWell(
+                    onTap: () => _removeSet(_activeExerciseIndex),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDF2F2),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFF2D3D3), width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.remove_rounded, size: 14, color: Color(0xFFB91C1C)),
+                          const SizedBox(width: 4),
+                          Text(
+                            isArabic ? 'حذف مجموعة' : 'Remove Set',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFB91C1C),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -1436,90 +1664,126 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  Widget _buildExerciseTimelineDrawer(bool isArabic, List<SessionExercise> exercises) {
-    final List<Widget> tiles = List.generate(exercises.length, (idx) {
-      final ex = exercises[idx];
-      final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
-          ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
-          : null;
-      final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
-
-      final bool isCompleted = (_activeExerciseSets[idx]?.isNotEmpty == true) &&
-          (_activeExerciseSets[idx]!.every((s) => s.isCompleted));
-      final bool isCurrent = _activeExerciseIndex == idx;
-
-      return _ExerciseTimelineTile(
-        key: ValueKey('${ex.name}_$idx'),
-        index: idx,
-        title: ex.name,
-        targetSetsReps: setsRepsStr,
-        prBadgeText: prText,
-        restTime: null,
-        isLast: idx == exercises.length - 1,
-        isCurrent: isCurrent,
-        isCompleted: isCompleted,
-        onTap: () {
-          setState(() => _activeExerciseIndex = idx);
-        },
-      );
-    });
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x06000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+  void _showWorkoutOverviewSheet(bool isArabic, List<SessionExercise> exercises) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(18, 14, 18, 28),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InkWell(
-              onTap: () {
-                setState(() => _showAllExercises = !_showAllExercises);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      isArabic
-                          ? 'جدول التمارين (${exercises.length} تمارين)'
-                          : 'Exercise Timeline (${exercises.length} Exercises)',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1C2B1E),
-                      ),
-                    ),
-                    Icon(
-                      _showAllExercises
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      size: 20,
-                      color: const Color(0xFF235A42),
-                    ),
-                  ],
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD3E4D7),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            if (_showAllExercises) ...[
-              const Divider(height: 1, color: Color(0xFFE2EBE4)),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                child: Column(
-                  children: tiles,
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isArabic ? 'جدول التمارين' : 'Exercise Timeline',
+                  style: GoogleFonts.inter(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1C2B1E),
+                  ),
                 ),
-              ),
-            ],
+                Text(
+                  '${exercises.length} ${isArabic ? "تمارين" : "exercises"}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF7A8B7B),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...List.generate(exercises.length, (idx) {
+              final ex = exercises[idx];
+              final isCurrent = idx == _activeExerciseIndex;
+              final isCompleted = (_activeExerciseSets[idx]?.isNotEmpty == true) &&
+                  (_activeExerciseSets[idx]!.every((s) => s.isCompleted));
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: isCurrent ? const Color(0xFFF1F8F4) : const Color(0xFFFBFDFB),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isCurrent ? const Color(0xFF235A42) : const Color(0xFFE8EFEA),
+                    width: isCurrent ? 1.5 : 1.0,
+                  ),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                  leading: Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: isCompleted
+                          ? const Color(0xFF235A42)
+                          : (isCurrent ? const Color(0xFF235A42) : const Color(0xFFEDF3EE)),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: isCompleted
+                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                          : Text(
+                              '${idx + 1}',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: isCurrent ? Colors.white : const Color(0xFF4A5D4D),
+                              ),
+                            ),
+                    ),
+                  ),
+                  title: Text(
+                    ex.name,
+                    style: GoogleFonts.inter(
+                      fontWeight: isCurrent ? FontWeight.w800 : FontWeight.w600,
+                      color: isCurrent ? const Color(0xFF235A42) : const Color(0xFF1C2B1E),
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${ex.targetSets} sets · ${ex.muscleGroup}',
+                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF7A8B7B)),
+                  ),
+                  trailing: isCurrent
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF235A42),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'ACTIVE',
+                            style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white),
+                          ),
+                        )
+                      : (isCompleted
+                          ? const Icon(Icons.check_circle_rounded, color: Color(0xFF235A42), size: 20)
+                          : const Icon(Icons.chevron_right_rounded, color: Color(0xFFB0C0B4), size: 18)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() => _activeExerciseIndex = idx);
+                  },
+                ),
+              );
+            }),
           ],
         ),
       ),
@@ -2528,15 +2792,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
             // ── ACTIVE WORKOUT: Option A In-Place Gym Mode ──────────
             if (_state == WorkoutHubState.activeWorkout) ...[
-              _buildLiveWorkoutSessionHeader(isArabic, exercises.length),
+              _buildLiveWorkoutSessionHeader(isArabic, exercises),
               const SizedBox(height: 10),
               _buildExerciseSwitcherPills(exercises, isArabic),
               if (_restSecondsRemaining > 0)
                 _buildRestTimerBanner(isArabic),
               const SizedBox(height: 12),
               _buildActiveExerciseTrackerCard(isArabic, exercises),
-              const SizedBox(height: 14),
-              _buildExerciseTimelineDrawer(isArabic, exercises),
               const SizedBox(height: 18),
             ],
 
