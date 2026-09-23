@@ -205,70 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 32),
-
-                            // ── Eyebrow with Shield Check Icon ───────────────
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFE5F2E9),
-                                        borderRadius: BorderRadius.circular(11),
-                                        border: Border.all(
-                                          color: const Color(0xFFD4E8DC),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.verified_user_outlined,
-                                          color: AuraAuthTokens.brandDark,
-                                          size: 19,
-                                        ),
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: -2,
-                                      right: -2,
-                                      child: Container(
-                                        width: 9,
-                                        height: 9,
-                                        decoration: BoxDecoration(
-                                          color: AuraAuthTokens.amberBadge,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'YOUR DAILY RITUAL',
-                                  style: GoogleFonts.roboto(
-                                    textStyle: textTheme.labelSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.4,
-                                      color: AuraAuthTokens.terracotta,
-                                    ),
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.4,
-                                    color: AuraAuthTokens.terracotta,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 28),
 
                             // ── Main Editorial Serif Headline ────────────────
                             Text(
