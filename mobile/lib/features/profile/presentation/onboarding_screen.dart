@@ -1021,6 +1021,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             goalLabel: goal.label,
             goalEmoji: goal.emoji,
             goalAccent: goal.accent,
+            calorieAdjust: goal.calorieAdjust,
           ),
           const SizedBox(height: 14),
 
@@ -1425,12 +1426,67 @@ class _PlanCalorieCard extends StatelessWidget {
   final String goalLabel;
   final String goalEmoji;
   final Color goalAccent;
+  final int calorieAdjust;
   const _PlanCalorieCard({
     required this.calories,
     required this.goalLabel,
     required this.goalEmoji,
     required this.goalAccent,
+    required this.calorieAdjust,
   });
+
+  Widget _buildAdjustmentPill() {
+    final String text;
+    final Color bg;
+    final Color border;
+    final Color fg;
+    final IconData icon;
+
+    if (calorieAdjust > 0) {
+      text = '+$calorieAdjust kcal Surplus';
+      bg = const Color(0xFFEAF5EE);
+      border = const Color(0xFFBCE3CA);
+      fg = const Color(0xFF1B6B44);
+      icon = Icons.trending_up_rounded;
+    } else if (calorieAdjust < 0) {
+      text = '-${calorieAdjust.abs()} kcal Deficit';
+      bg = const Color(0xFFFFF4EC);
+      border = const Color(0xFFFFD8BF);
+      fg = const Color(0xFFC84E00);
+      icon = Icons.trending_down_rounded;
+    } else {
+      text = 'Maintenance';
+      bg = const Color(0xFFF1F5F2);
+      border = const Color(0xFFDCE4DF);
+      fg = const Color(0xFF4B6354);
+      icon = Icons.horizontal_rule_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: fg,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1453,13 +1509,31 @@ class _PlanCalorieCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(goalEmoji, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 8),
-              Text(
-                goalLabel,
-                style: GoogleFonts.inter(fontSize: 13, color: _T.textSec, fontWeight: FontWeight.w600),
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(goalEmoji, style: const TextStyle(fontSize: 19)),
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: Text(
+                        goalLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: _T.textSec,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
+              _buildAdjustmentPill(),
             ],
           ),
           const SizedBox(height: 12),
