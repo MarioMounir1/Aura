@@ -832,6 +832,7 @@ export interface WeeklyInsightsInput {
   avgDailyCalories: number;
   calorieTarget: number;
   totalWorkouts: number;
+  targetWorkouts?: number;
   weightDeltaKg?: number;
   daysLoggedCount: number;
 }
@@ -847,7 +848,15 @@ export interface WeeklyInsightsResult {
 export async function generateWeeklyInsightsReport(
   input: WeeklyInsightsInput
 ): Promise<WeeklyInsightsResult> {
-  const consistencyScore = Math.min(100, Math.round((input.daysLoggedCount / 7) * 100));
+  const targetWorkouts = Math.max(1, input.targetWorkouts ?? 5);
+  const workoutScore = Math.min(1.0, input.totalWorkouts / targetWorkouts);
+  const loggingScore = Math.min(1.0, input.daysLoggedCount / 7);
+
+  let consistencyScore = 0;
+  if (input.daysLoggedCount > 0 || input.totalWorkouts > 0) {
+    consistencyScore = Math.min(100, Math.round((workoutScore * 0.5 + loggingScore * 0.5) * 100));
+    if (consistencyScore < 20) consistencyScore = 20;
+  }
 
   if (input.daysLoggedCount === 0 && input.totalWorkouts === 0) {
     return {
@@ -863,17 +872,52 @@ export async function generateWeeklyInsightsReport(
     return {
       consistencyScore,
       headline: "Phenomenal Consistency! 🏆",
-      summary: `You logged ${input.daysLoggedCount} of 7 days and crushed ${input.totalWorkouts} workouts with ${input.avgDailyCalories} kcal daily average.`,
-      keyWin: `${input.totalWorkouts} workout sessions completed`,
+      summary: `You logged ${input.daysLoggedCount} of 7 days and crushed ${input.totalWorkouts} workout${input.totalWorkouts > 1 ? "s" : ""}${input.avgDailyCalories > 0 ? ` with a ${input.avgDailyCalories} kcal daily average` : ""}.`,
+      keyWin: `${input.totalWorkouts} workout session${input.totalWorkouts > 1 ? "s" : ""} completed`,
       nextWeekFocus: "Maintain this top-tier training and nutrition rhythm",
     };
   }
 
+  // Key Win logic: always highlight real wins, never "0 active tracking days"
+  let keyWin = "";
+  if (input.totalWorkouts > 0) {
+    keyWin = `${input.totalWorkouts} workout session${input.totalWorkouts > 1 ? "s" : ""} crushed`;
+  } else if (input.daysLoggedCount > 0) {
+    keyWin = `${input.daysLoggedCount} active tracking day${input.daysLoggedCount > 1 ? "s" : ""}`;
+  } else {
+    keyWin = "Building momentum for the week";
+  }
+
+  // Headline
+  const headline = input.totalWorkouts > 0
+    ? "Workout Momentum Rolling! 🏋️"
+    : "Building Weekly Momentum 📈";
+
+  // Summary
+  let summary = "";
+  if (input.totalWorkouts > 0 && input.avgDailyCalories === 0) {
+    summary = `You crushed ${input.totalWorkouts} workout session${input.totalWorkouts > 1 ? "s" : ""} this week! Remember to log your meals to track your nutrition adherence alongside your training.`;
+  } else if (input.totalWorkouts > 0 && input.avgDailyCalories > 0) {
+    summary = `You logged ${input.daysLoggedCount} active day${input.daysLoggedCount > 1 ? "s" : ""} this week with ${input.totalWorkouts} workout session${input.totalWorkouts > 1 ? "s" : ""} completed.`;
+  } else {
+    summary = `You logged ${input.daysLoggedCount} active day${input.daysLoggedCount > 1 ? "s" : ""} this week with a ${input.avgDailyCalories} kcal daily average.`;
+  }
+
+  // Next Week Focus
+  let nextWeekFocus = "";
+  if (input.totalWorkouts > 0 && input.avgDailyCalories === 0) {
+    nextWeekFocus = `Log your meals today to fuel your recovery and hit your ${input.calorieTarget} kcal target`;
+  } else if (input.totalWorkouts === 0 && input.daysLoggedCount > 0) {
+    nextWeekFocus = "Complete your scheduled workout to pair training with nutrition tracking";
+  } else {
+    nextWeekFocus = `Aim for ${Math.min(7, Math.max(input.daysLoggedCount + 1, 3))} active tracking days next week`;
+  }
+
   return {
     consistencyScore,
-    headline: "Building Weekly Momentum 📈",
-    summary: `You logged ${input.daysLoggedCount} days this week with ${input.totalWorkouts} workouts completed.`,
-    keyWin: `${input.daysLoggedCount} active tracking days`,
-    nextWeekFocus: `Aim for ${Math.min(7, input.daysLoggedCount + 2)} logged days next week`,
+    headline,
+    summary,
+    keyWin,
+    nextWeekFocus,
   };
 }
