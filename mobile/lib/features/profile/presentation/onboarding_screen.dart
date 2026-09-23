@@ -345,6 +345,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // ── Navigation ────────────────────────────────────────────
   void _nextStep() {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (!_validateCurrent()) return;
     HapticFeedback.lightImpact();
     if (_currentStep < 4) {
@@ -358,6 +359,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _prevStep() {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_currentStep > 0) {
       HapticFeedback.lightImpact();
       _pageController.previousPage(
@@ -846,7 +848,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     child: PageView(
                       controller: _pageController,
                       physics: const NeverScrollableScrollPhysics(),
-                      onPageChanged: (p) => setState(() => _currentStep = p),
+                      onPageChanged: (p) {
+                        FocusManager.instance.primaryFocus?.unfocus();
+                        setState(() => _currentStep = p);
+                      },
                       children: [
                         _buildStep1_Goal(),
                         _buildStep2_BasicInfo(),
