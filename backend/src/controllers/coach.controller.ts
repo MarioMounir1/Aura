@@ -189,12 +189,15 @@ export async function getWeeklyInsightsHandler(
     const userId = req.user!.id;
     const qCalTarget = Number(req.query.calorieTarget);
 
-    // Check fast cache
+    // Check fast cache (can force-refresh when logging in real-time)
+    const forceRefresh = req.query.refresh === "true" || req.query.refresh === "1";
     const weeklyCacheKey = `${userId}:${!isNaN(qCalTarget) && qCalTarget > 0 ? qCalTarget : "default"}`;
-    const cached = weeklyCache.get(weeklyCacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      res.status(200).json({ success: true, data: cached.data });
-      return;
+    if (!forceRefresh) {
+      const cached = weeklyCache.get(weeklyCacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        res.status(200).json({ success: true, data: cached.data });
+        return;
+      }
     }
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -210,6 +213,8 @@ export async function getWeeklyInsightsHandler(
         gender: true,
         activityLevel: true,
         goal: true,
+        workoutDays: true,
+        workoutSplitType: true,
       },
     });
 
@@ -223,7 +228,7 @@ export async function getWeeklyInsightsHandler(
       calorieTarget = Math.round(Math.min(5000, Math.max(1200, bmr * mult + adj)));
     }
 
-    // 1. Fetch 7-day nutrition logs
+    // 1. Fetch 7-day nutrition logs & activity
     const [mealLogs, foodLogs, completedWorkouts, weightLogs] = await Promise.all([
       prisma.mealLog.findMany({
         where: { userId, createdAt: { gte: sevenDaysAgo } },
@@ -235,31 +240,43 @@ export async function getWeeklyInsightsHandler(
       }),
       prisma.workoutSession.findMany({
         where: { userId, endedAt: { not: null, gte: sevenDaysAgo } },
-        select: { id: true, endedAt: true },
+        select: { id: true, endedAt: true, startedAt: true },
       }),
       prisma.weightLog.findMany({
         where: { userId, loggedAt: { gte: sevenDaysAgo } },
         orderBy: { loggedAt: "asc" },
-        select: { weightKg: true },
+        select: { weightKg: true, loggedAt: true },
       }),
     ]);
 
-    const activeDaysSet = new Set<string>();
+    const foodDaysSet = new Set<string>();
     let totalCaloriesLogged = 0;
 
     mealLogs.forEach((m) => {
       totalCaloriesLogged += m.calories ?? 0;
-      activeDaysSet.add(m.createdAt.toISOString().slice(0, 10));
+      foodDaysSet.add(m.createdAt.toISOString().slice(0, 10));
     });
 
     foodLogs.forEach((f) => {
       const servings = f.servings ?? 1;
       totalCaloriesLogged += Math.round((f.foodItem?.calories ?? 0) * servings);
-      activeDaysSet.add(f.loggedAt.toISOString().slice(0, 10));
+      foodDaysSet.add(f.loggedAt.toISOString().slice(0, 10));
     });
 
-    const avgDailyCalories = activeDaysSet.size > 0
-      ? Math.round(totalCaloriesLogged / activeDaysSet.size)
+    // Active days include days where user logged food, finished a workout, or logged weight
+    const activeDaysSet = new Set<string>(foodDaysSet);
+    completedWorkouts.forEach((w) => {
+      const d = w.endedAt || w.startedAt;
+      if (d) {
+        activeDaysSet.add(new Date(d).toISOString().slice(0, 10));
+      }
+    });
+    weightLogs.forEach((wl) => {
+      activeDaysSet.add(new Date(wl.loggedAt).toISOString().slice(0, 10));
+    });
+
+    const avgDailyCalories = foodDaysSet.size > 0
+      ? Math.round(totalCaloriesLogged / foodDaysSet.size)
       : 0;
 
     // 2. Weight delta calculation
@@ -271,11 +288,13 @@ export async function getWeeklyInsightsHandler(
     }
 
     // 3. Generate Weekly AI Report
+    const targetWorkouts = user?.workoutDays ?? 5;
     const report = await generateWeeklyInsightsReport({
       totalCaloriesLogged: Math.round(totalCaloriesLogged),
       avgDailyCalories,
       calorieTarget,
       totalWorkouts: completedWorkouts.length,
+      targetWorkouts,
       weightDeltaKg,
       daysLoggedCount: activeDaysSet.size,
     });
@@ -287,12 +306,14 @@ export async function getWeeklyInsightsHandler(
         avgDailyCalories,
         calorieTarget,
         totalWorkouts: completedWorkouts.length,
+        targetWorkouts,
         daysLoggedCount: activeDaysSet.size,
         weightDeltaKg,
       },
     };
 
-    weeklyCache.set(weeklyCacheKey, { data: resultData, expiresAt: Date.now() + CACHE_TTL_MS });
+    // Fast 30s TTL cache so real-time food logging reflects promptly
+    weeklyCache.set(weeklyCacheKey, { data: resultData, expiresAt: Date.now() + 30000 });
 
     res.status(200).json({
       success: true,
