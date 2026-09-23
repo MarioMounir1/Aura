@@ -175,6 +175,10 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       }
     } catch (_) {}
 
+    if (cal > 2400) {
+      return ((cal * 0.25) / 4).round().clamp(120, 260);
+    }
+
     return 130;
   }
 
@@ -226,19 +230,25 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
   Future<void> _loadFromPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final h = prefs.getString('cached_coach_headline');
+      var h = prefs.getString('cached_coach_headline');
       final m = prefs.getString('cached_coach_message');
       final f = prefs.getString('cached_coach_focus');
 
-      // Purge and delete any outdated workout split or old headline cache from disk
+      // Purge and delete any outdated workout split cache from disk
       final isOutdatedWorkout = h != null &&
-          (h.contains('Split') || h.contains('Day 🔥') || h.contains('Ready to Progress') || (m != null && m.contains("Today's session is")));
+          (h.contains('Split') || h.contains('Day 🔥') || (m != null && m.contains("Today's session is")));
 
       if (isOutdatedWorkout) {
         await prefs.remove('cached_coach_headline');
         await prefs.remove('cached_coach_message');
         await prefs.remove('cached_coach_focus');
       } else if (h != null && m != null && mounted) {
+        // Remap legacy 'Ready to Progress' from cache
+        if (h.contains('Ready to Progress')) {
+          h = 'Weekly Insights';
+          await prefs.setString('cached_coach_headline', 'Weekly Insights');
+        }
+
         // If cached message contains a stale calorie or protein figure, regenerate locally
         final activeTarget = _getActiveCalorieTarget();
         final activeProtein = _getActiveProteinTarget();
@@ -256,7 +266,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         }
 
         setState(() {
-          _applyLocal(h, m, f ?? _focusArea);
+          _applyLocal(h!, m, f ?? _focusArea);
         });
       }
     } catch (_) {}
@@ -282,7 +292,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
-        final newHeadline = (data['headline'] as String?)?.trim();
+        String? newHeadline = (data['headline'] as String?)?.trim();
         String? newMessage = (data['message'] as String?)?.trim();
         final newFocus = (data['focusArea'] as String?)?.trim();
 
@@ -295,7 +305,12 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
           return;
         }
 
-        if (newMessage != null && newMessage.contains('150g protein') && proteinTarget > 165) {
+        // Remap legacy 'Ready to Progress' from cloud backend or cache to 'Weekly Insights'
+        if (newHeadline != null && newHeadline.contains('Ready to Progress')) {
+          newHeadline = 'Weekly Insights';
+        }
+
+        if (newMessage != null && newMessage.contains('150g protein') && proteinTarget > 150) {
           newMessage = newMessage.replaceAll('150g protein', '${proteinTarget}g protein');
         }
 
