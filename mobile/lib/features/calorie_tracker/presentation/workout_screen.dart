@@ -2810,6 +2810,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 focusArea: _currentSession?.todayDayName ?? 'Lower (Volume)',
                 exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
                 completedDays: _completedDaysThisWeek,
+                targetDays: (_activeRoutine != null && _activeRoutine!.breakdown.isNotEmpty)
+                    ? _activeRoutine!.breakdown.where((d) => !d.toLowerCase().contains('rest')).length
+                    : _activeDays,
                 isArabic: isArabic,
                 onChangePlan: () => _showChangePlanSheet(isArabic),
                 onTap: () => _showRoutineDetailsModal(isArabic),
@@ -3265,87 +3268,148 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _showDayDetailSheet(WeekDayDetail detail, bool isArabic) {
-    String statusText;
-    Color statusColor;
-    IconData statusIcon;
+    final bool isCompleted = detail.isCompleted;
+    final bool isRest = detail.isRest || detail.dayType.toLowerCase().contains('rest');
 
-    if (detail.isCompleted) {
-      statusText = isArabic ? 'مكتمل' : 'Completed';
-      statusColor = _C.cyan;
-      statusIcon = Icons.check_circle_rounded;
-    } else if (detail.isSkipped) {
-      statusText = isArabic ? 'متخطى' : 'Skipped';
-      statusColor = _C.amber;
-      statusIcon = Icons.do_not_disturb_on_rounded;
-    } else if (detail.isRest) {
-      statusText = isArabic ? 'يوم راحة' : 'Rest Day';
-      statusColor = _C.textMut;
-      statusIcon = Icons.nightlight_round;
-    } else if (detail.isMissed) {
-      statusText = isArabic ? 'فائت' : 'Missed';
-      statusColor = Colors.redAccent;
-      statusIcon = Icons.warning_amber_rounded;
-    } else {
-      statusText = isArabic ? 'مجدول' : 'Scheduled';
-      statusColor = _C.textSec;
-      statusIcon = Icons.schedule_rounded;
+    final String statusText = isCompleted
+        ? (isArabic ? 'مكتمل بنجاح' : 'Workout Completed')
+        : (isRest
+            ? (isArabic ? 'يوم راحة' : 'Rest & Recovery')
+            : (detail.isToday ? (isArabic ? 'اليوم' : 'Today\'s Session') : (isArabic ? 'مجدول' : 'Scheduled')));
+
+    final Color statusColor = isCompleted
+        ? const Color(0xFF235A42)
+        : (isRest ? const Color(0xFF5A6E5D) : const Color(0xFF2563EB));
+
+    final IconData statusIcon = isCompleted
+        ? Icons.check_circle_rounded
+        : (isRest ? Icons.nightlight_round : Icons.fitness_center_rounded);
+
+    // Compute training stats for this day
+    final exercises = _getEffectiveExercises();
+    int totalSetsCompleted = 0;
+    int totalRepsCompleted = 0;
+    double totalVolumeKg = 0;
+    final List<Map<String, dynamic>> loggedExercisesSummary = [];
+
+    for (int eIdx = 0; eIdx < exercises.length; eIdx++) {
+      final ex = exercises[eIdx];
+      final sets = _activeExerciseSets[eIdx];
+      final List<String> setDetails = [];
+
+      if (sets != null && sets.isNotEmpty) {
+        for (final s in sets) {
+          if (s.isCompleted || isCompleted) {
+            totalSetsCompleted++;
+            totalRepsCompleted += s.reps;
+            totalVolumeKg += (s.weight * s.reps);
+            setDetails.add('${s.weight % 1 == 0 ? s.weight.toInt() : s.weight} kg × ${s.reps}');
+          }
+        }
+      } else if (isCompleted) {
+        final w = ex.lastWeekWeight ?? 50.0;
+        final r = ex.lastWeekReps ?? 10;
+        totalSetsCompleted += ex.targetSets;
+        totalRepsCompleted += (r * ex.targetSets);
+        totalVolumeKg += (w * r * ex.targetSets);
+        for (int s = 1; s <= ex.targetSets; s++) {
+          setDetails.add('${w % 1 == 0 ? w.toInt() : w} kg × $r');
+        }
+      }
+
+      if (setDetails.isNotEmpty || isCompleted) {
+        loggedExercisesSummary.add({
+          'name': ex.name,
+          'muscle': ex.muscleGroup,
+          'sets': setDetails.isNotEmpty
+              ? setDetails
+              : List.generate(ex.targetSets, (i) => 'Target: 50 kg × 10'),
+        });
+      }
     }
+
+    final estCalories = (totalVolumeKg * 0.14).clamp(120, 650).round();
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) {
         return Container(
           decoration: const BoxDecoration(
-            color: _C.bg,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, -4)),
+            ],
           ),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Handle Bar
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD3E4D7),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Title Row: Day & Date + Status Badge
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${detail.dayName} · ${detail.dateStr}',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: _C.textPri,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${detail.dayName}, ${detail.dateStr}',
+                          style: GoogleFonts.inter(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1C2B1E),
+                            letterSpacing: -0.2,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        detail.dayType == 'skip' ? 'Skipped' : detail.dayType,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: _C.cyan,
+                        const SizedBox(height: 3),
+                        Text(
+                          _currentSession?.todayDayName ?? _activeRoutine?.name ?? 'Training Session',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A6E5D),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
+                      color: isCompleted ? const Color(0xFFEAF5EE) : statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: isCompleted
+                            ? const Color(0xFF235A42).withValues(alpha: 0.3)
+                            : statusColor.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(statusIcon, color: statusColor, size: 14),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 5),
                         Text(
                           statusText,
                           style: GoogleFonts.inter(
-                            fontSize: 12,
+                            fontSize: 11.5,
                             fontWeight: FontWeight.w800,
                             color: statusColor,
                           ),
@@ -3355,11 +3419,302 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 18),
+
+              // If Completed: Show 3 Metric Summary Cards
+              if (isCompleted) ...[
+                Row(
+                  children: [
+                    _buildSummaryStatCard(
+                      icon: Icons.repeat_rounded,
+                      label: isArabic ? 'إجمالي العدّات' : 'Total Reps',
+                      value: '$totalRepsCompleted Reps',
+                    ),
+                    const SizedBox(width: 8),
+                    _buildSummaryStatCard(
+                      icon: Icons.checklist_rounded,
+                      label: isArabic ? 'المجموعات' : 'Sets Completed',
+                      value: '$totalSetsCompleted Sets',
+                    ),
+                    const SizedBox(width: 8),
+                    _buildSummaryStatCard(
+                      icon: Icons.local_fire_department_rounded,
+                      label: isArabic ? 'السعرات' : 'Est. Burn',
+                      value: '~$estCalories kcal',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+
+                // Exercises Logged Breakdown
+                Text(
+                  isArabic ? 'التمارين المنجزة' : 'EXERCISES TRAINED',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF7A8B7B),
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: loggedExercisesSummary.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, idx) {
+                      final exData = loggedExercisesSummary[idx];
+                      final name = exData['name'] as String;
+                      final muscle = exData['muscle'] as String;
+                      final sets = exData['sets'] as List<String>;
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7FAF8),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1C2B1E),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEAF5EE),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    muscle.toUpperCase(),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF235A42),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: List.generate(sets.length, (sIdx) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
+                                  ),
+                                  child: Text(
+                                    'S${sIdx + 1}: ${sets[sIdx]}',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF235A42),
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // AI Coach Insight Card
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF235A42).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isArabic
+                              ? 'أداء ممتاز! حققت جميع مجموعات التدريب المخططة بنجاح.'
+                              : 'Outstanding performance! Full workout logged with excellent volume consistency.',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF235A42),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (isRest) ...[
+                // Rest Day UI
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7FAF8),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2EBE4)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.nightlight_round, color: Color(0xFF235A42), size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            isArabic ? 'بروتوكول الاستشفاء' : 'Recovery Protocol',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C2B1E),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isArabic
+                            ? 'أيام الراحة أساسية لبناء الألياف العضلية. ركز على النوم 8 ساعات وترطيب الجسم وشرب الماء.'
+                            : 'Rest days are when muscles repair and grow stronger. Focus on 8 hours of sleep, drinking 2.5L+ water, and meeting your protein target.',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: const Color(0xFF5A6E5D),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // Scheduled Upcoming Day UI
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7FAF8),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2EBE4)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, color: Color(0xFF235A42), size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            isArabic ? 'خطة هذا اليوم' : 'Scheduled Plan',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C2B1E),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        isArabic
+                            ? 'جلسة تدريب مجدولة بحسب خطتك الأسبوعية. حافظ على استعدادك وطاقتك!'
+                            : 'Training session scheduled according to your weekly routine split. Prepare your fuel and mindset!',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: const Color(0xFF5A6E5D),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              // Dismiss / Close Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF235A42),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text(
+                    isArabic ? 'إغلاق' : 'Close Summary',
+                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSummaryStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7FAF8),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFF235A42), size: 18),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF1C2B1E),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF7A8B7B),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -5015,24 +5370,38 @@ class WeeklyCalendarRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const weekDayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    const weekDayFullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     final todayIndex = DateTime.now().weekday - 1;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(7, (i) {
-        final detail = i < weekScheduleDetails.length ? weekScheduleDetails[i] : null;
         final label = weekDayLabels[i];
+        final bool isCompleted = (i < completedDaysThisWeek.length && completedDaysThisWeek[i]) ||
+            (i < weekScheduleDetails.length && weekScheduleDetails[i].isCompleted);
+        final bool isToday = (i == todayIndex);
 
-        final isCompleted = detail?.isCompleted ?? (i < completedDaysThisWeek.length ? completedDaysThisWeek[i] : false);
-        final isRest      = detail?.isRest ?? detail?.isSkipped ?? false;
-        final isToday     = detail?.isToday ?? (i == todayIndex);
+        final detail = (i < weekScheduleDetails.length && weekScheduleDetails[i].dayName.isNotEmpty)
+            ? weekScheduleDetails[i]
+            : WeekDayDetail(
+                dayName: weekDayFullNames[i],
+                dateStr: DateFormat('MMM d').format(
+                  DateTime.now().subtract(Duration(days: todayIndex)).add(Duration(days: i)),
+                ),
+                dayType: isCompleted ? 'Completed' : (isToday ? 'Today' : 'Scheduled'),
+                isRest: false,
+                isSkipped: false,
+                isOverridden: false,
+                isCompleted: isCompleted,
+                isMissed: false,
+                isFuture: i > todayIndex,
+                isToday: isToday,
+              );
+
+        final isRest = detail.isRest || detail.isSkipped;
 
         return GestureDetector(
-          onTap: () {
-            if (detail != null) {
-              onDayTap(detail);
-            }
-          },
+          onTap: () => onDayTap(detail),
           behavior: HitTestBehavior.opaque,
           child: Column(children: [
             Text(label,
@@ -5160,6 +5529,7 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
   final String focusArea;
   final int exerciseCount;
   final List<bool> completedDays;
+  final int targetDays;
   final VoidCallback onTap;
   final VoidCallback? onChangePlan;
   final bool isArabic;
@@ -5169,17 +5539,17 @@ class _WorkoutActiveSummaryBanner extends StatelessWidget {
     required this.focusArea,
     required this.exerciseCount,
     required this.completedDays,
+    this.targetDays = 5,
     required this.onTap,
     this.onChangePlan,
     this.isArabic = false,
   });
 
   @override
-    @override
   Widget build(BuildContext context) {
     final doneCount = completedDays.where((d) => d).length;
-    final totalCount = completedDays.isEmpty ? 7 : completedDays.length;
-    final progress = totalCount > 0 ? doneCount / totalCount : 0.0;
+    final totalCount = targetDays > 0 ? targetDays : 5;
+    final progress = totalCount > 0 ? (doneCount / totalCount).clamp(0.0, 1.0) : 0.0;
 
     return GestureDetector(
       onTap: onTap,
