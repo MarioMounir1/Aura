@@ -11,10 +11,12 @@
 //   4. Start Workout → state = activeWorkout (inline tracker)
 //   5. Finish → state = ready, sets cleared
 
+import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -31,7 +33,6 @@ import 'bloc/workout_bloc.dart';
 import 'bloc/workout_event.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'bloc/workout_state.dart';
-import 'active_workout_view.dart';
 
 import 'workout_plan_wizard.dart';
 
@@ -39,6 +40,26 @@ import 'workout_plan_wizard.dart';
 enum WorkoutHubState { unconfigured, loading, ready, activeWorkout }
 
 typedef _C = AppColors;
+
+// ── Active Workout In-Place Set Draft ────────────────────────
+class _ActiveSetDraft {
+  final int setIndex;
+  final String label;
+  double weight;
+  int reps;
+  bool isCompleted;
+  String? workoutExerciseId;
+
+  _ActiveSetDraft({
+    required this.setIndex,
+    required this.label,
+    required this.weight,
+    required this.reps,
+    this.isCompleted = false,
+    this.workoutExerciseId,
+  });
+}
+
 
 // ═══════════════════════════════════════════════════════════════
 // WorkoutScreen
@@ -73,6 +94,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   List<bool> _completedDaysThisWeek = List.filled(7, false);
   bool _isRefreshingInPlace = false;
 
+  // ── In-Place Active Workout Session State ──────────────────────
+  int _activeExerciseIndex = 0;
+  Timer? _sessionTimer;
+  int _sessionElapsedSeconds = 0;
+  Timer? _restTimer;
+  int _restSecondsRemaining = 0;
+  int _totalRestSeconds = 90;
+  final Map<int, List<_ActiveSetDraft>> _activeExerciseSets = {};
+
   late final Dio _dio;
 
   @override
@@ -86,6 +116,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   @override
   void dispose() {
+    _sessionTimer?.cancel();
+    _restTimer?.cancel();
     super.dispose();
   }
 
@@ -222,13 +254,94 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
 
 
-  // ── Launch Active Workout ──────────────────────────────────
+  // ── Active Workout In-Place Helpers ──────────────────────────
+  List<SessionExercise> _getEffectiveExercises() {
+    if (_currentSession != null && _currentSession!.exercises.isNotEmpty) {
+      return _currentSession!.exercises;
+    }
+    return const [
+      SessionExercise(
+        name: 'Barbell Bench Press',
+        targetSets: 3,
+        muscleGroup: 'Chest · Triceps',
+        lastWeekWeight: 80,
+        lastWeekReps: 8,
+      ),
+      SessionExercise(
+        name: 'Incline Dumbbell Press',
+        targetSets: 3,
+        muscleGroup: 'Upper Chest',
+        lastWeekWeight: 28,
+        lastWeekReps: 10,
+      ),
+      SessionExercise(
+        name: 'Overhead Press',
+        targetSets: 3,
+        muscleGroup: 'Front Delts',
+        lastWeekWeight: 50,
+        lastWeekReps: 8,
+      ),
+      SessionExercise(
+        name: 'Cable Lateral Raises',
+        targetSets: 3,
+        muscleGroup: 'Side Delts',
+        lastWeekWeight: 12,
+        lastWeekReps: 12,
+      ),
+      SessionExercise(
+        name: 'Cable Chest Flyes',
+        targetSets: 3,
+        muscleGroup: 'Chest',
+        lastWeekWeight: 20,
+        lastWeekReps: 12,
+      ),
+    ];
+  }
+
+  String _formatDuration(int totalSeconds) {
+    final m = totalSeconds ~/ 60;
+    final s = totalSeconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
   void _startWorkout() {
+    final exercises = _getEffectiveExercises();
+
+    _activeExerciseSets.clear();
+    for (int i = 0; i < exercises.length; i++) {
+      final ex = exercises[i];
+      final setsCount = ex.targetSets > 0 ? ex.targetSets : 3;
+      final defaultWeight = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
+          ? ex.lastWeekWeight!
+          : 50.0;
+      final defaultReps = (ex.lastWeekReps != null && ex.lastWeekReps! > 0)
+          ? ex.lastWeekReps!
+          : 10;
+
+      _activeExerciseSets[i] = List.generate(setsCount, (sIdx) {
+        return _ActiveSetDraft(
+          setIndex: sIdx + 1,
+          label: sIdx == setsCount - 1 ? 'Top Set' : 'Working Set',
+          weight: defaultWeight,
+          reps: defaultReps,
+          workoutExerciseId: ex.workoutExerciseId ?? ex.id,
+        );
+      });
+    }
+
+    _activeExerciseIndex = 0;
+    _sessionElapsedSeconds = 0;
+    _sessionTimer?.cancel();
+    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _sessionElapsedSeconds++);
+    });
+
     final workoutState = context.read<WorkoutBloc>().state;
     if (workoutState is! WorkoutSessionActive) {
       context.read<WorkoutBloc>().add(StartWorkoutSession(
-        _currentSession != null ? _currentSession!.routineName : 'Custom Session',
-        initialExercises: _currentSession?.exercises,
+        _currentSession != null ? _currentSession!.routineName : 'Live Workout',
+        initialExercises: exercises,
       ));
     }
 
@@ -238,11 +351,1179 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _finishWorkout() {
+    _sessionTimer?.cancel();
+    _restTimer?.cancel();
     context.read<WorkoutBloc>().add(const FinishWorkoutSession());
 
     setState(() {
       _state = WorkoutHubState.ready;
+      _restSecondsRemaining = 0;
     });
+    _loadRoutine(silent: true);
+  }
+
+  void _startRestTimer([int seconds = 90]) {
+    _restTimer?.cancel();
+    setState(() {
+      _totalRestSeconds = seconds;
+      _restSecondsRemaining = seconds;
+    });
+    _restTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      if (_restSecondsRemaining <= 1) {
+        t.cancel();
+        setState(() {
+          _restSecondsRemaining = 0;
+        });
+      } else {
+        setState(() {
+          _restSecondsRemaining--;
+        });
+      }
+    });
+  }
+
+  void _adjustRestTimer(int delta) {
+    setState(() {
+      _restSecondsRemaining = (_restSecondsRemaining + delta).clamp(0, 999);
+      if (_restSecondsRemaining > _totalRestSeconds) {
+        _totalRestSeconds = _restSecondsRemaining;
+      }
+    });
+    if (_restSecondsRemaining == 0) {
+      _restTimer?.cancel();
+    }
+  }
+
+  void _skipRestTimer() {
+    _restTimer?.cancel();
+    setState(() {
+      _restSecondsRemaining = 0;
+    });
+  }
+
+  void _toggleSetCompleted(int exIndex, int setIndex) {
+    final setsList = _activeExerciseSets[exIndex];
+    if (setsList == null || setIndex < 0 || setIndex >= setsList.length) return;
+    final setDraft = setsList[setIndex];
+
+    HapticFeedback.lightImpact();
+
+    setState(() {
+      setDraft.isCompleted = !setDraft.isCompleted;
+    });
+
+    if (setDraft.isCompleted) {
+      final exercises = _getEffectiveExercises();
+      final ex = exercises.length > exIndex ? exercises[exIndex] : null;
+      final weId = setDraft.workoutExerciseId ?? ex?.workoutExerciseId ?? ex?.id ?? (ex != null ? ex.name : 'exercise_$exIndex');
+
+      context.read<WorkoutBloc>().add(LogSetEvent(
+        setIndex: setDraft.setIndex,
+        weightKg: setDraft.weight,
+        reps: setDraft.reps,
+        workoutExerciseId: weId,
+      ));
+
+      _startRestTimer(90);
+    }
+  }
+
+  void _updateSetWeight(int exIndex, int setIndex, double delta) {
+    final sets = _activeExerciseSets[exIndex];
+    if (sets == null || setIndex >= sets.length) return;
+    setState(() {
+      sets[setIndex].weight = (sets[setIndex].weight + delta).clamp(0.0, 999.0);
+    });
+  }
+
+  void _updateSetReps(int exIndex, int setIndex, int delta) {
+    final sets = _activeExerciseSets[exIndex];
+    if (sets == null || setIndex >= sets.length) return;
+    setState(() {
+      sets[setIndex].reps = (sets[setIndex].reps + delta).clamp(1, 999);
+    });
+  }
+
+  void _addSet(int exIndex) {
+    final setsList = _activeExerciseSets[exIndex];
+    if (setsList == null) return;
+    final lastSet = setsList.isNotEmpty ? setsList.last : null;
+    final newIndex = setsList.length + 1;
+    setState(() {
+      setsList.add(_ActiveSetDraft(
+        setIndex: newIndex,
+        label: 'Set $newIndex',
+        weight: lastSet?.weight ?? 50.0,
+        reps: lastSet?.reps ?? 10,
+        workoutExerciseId: lastSet?.workoutExerciseId,
+      ));
+    });
+  }
+
+  void _removeSet(int exIndex) {
+    final setsList = _activeExerciseSets[exIndex];
+    if (setsList == null || setsList.length <= 1) return;
+    setState(() {
+      setsList.removeLast();
+    });
+  }
+
+  void _saveAndNextExercise(int totalExercises) {
+    // Mark any uncompleted sets for current exercise as completed & log them
+    final currentSets = _activeExerciseSets[_activeExerciseIndex];
+    final exercises = _getEffectiveExercises();
+    final ex = exercises.length > _activeExerciseIndex ? exercises[_activeExerciseIndex] : null;
+
+    if (currentSets != null) {
+      for (final s in currentSets) {
+        if (!s.isCompleted) {
+          s.isCompleted = true;
+          final weId = s.workoutExerciseId ?? ex?.workoutExerciseId ?? ex?.id ?? (ex != null ? ex.name : 'exercise_$_activeExerciseIndex');
+          context.read<WorkoutBloc>().add(LogSetEvent(
+            setIndex: s.setIndex,
+            weightKg: s.weight,
+            reps: s.reps,
+            workoutExerciseId: weId,
+          ));
+        }
+      }
+    }
+
+    HapticFeedback.mediumImpact();
+
+    if (_activeExerciseIndex < totalExercises - 1) {
+      setState(() {
+        _activeExerciseIndex++;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${ex?.name ?? "Exercise"} saved! Next: ${exercises[_activeExerciseIndex].name}',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF235A42),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(milliseconds: 1400),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } else {
+      _finishWorkout();
+    }
+  }
+
+  void _showEditWeightDialog(int exIndex, int setIndex) {
+    final sets = _activeExerciseSets[exIndex];
+    if (sets == null || setIndex >= sets.length) return;
+    double currentVal = sets[setIndex].weight;
+    final controller = TextEditingController(
+      text: currentVal % 1 == 0 ? currentVal.toInt().toString() : currentVal.toString(),
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              'Set ${setIndex + 1} — Weight',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF1C2B1E)),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.remove_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = double.tryParse(controller.text) ?? currentVal;
+                        final newVal = (val - 2.5).clamp(0.0, 999.0);
+                        setDialogState(() {
+                          controller.text = newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 105,
+                      child: TextField(
+                        controller: controller,
+                        textAlign: TextAlign.center,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        autofocus: true,
+                        style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
+                        decoration: InputDecoration(
+                          suffixText: 'kg',
+                          filled: true,
+                          fillColor: const Color(0xFFF1F6F2),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = double.tryParse(controller.text) ?? currentVal;
+                        final newVal = (val + 2.5).clamp(0.0, 999.0);
+                        setDialogState(() {
+                          controller.text = newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel', style: GoogleFonts.inter(color: const Color(0xFF7A8B7B), fontWeight: FontWeight.w600)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF235A42),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  final parsed = double.tryParse(controller.text);
+                  if (parsed != null && parsed >= 0) {
+                    setState(() {
+                      sets[setIndex].weight = parsed;
+                    });
+                  }
+                  Navigator.pop(ctx);
+                },
+                child: Text('Done', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showEditRepsDialog(int exIndex, int setIndex) {
+    final sets = _activeExerciseSets[exIndex];
+    if (sets == null || setIndex >= sets.length) return;
+    int currentVal = sets[setIndex].reps;
+    final controller = TextEditingController(text: currentVal.toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              'Set ${setIndex + 1} — Reps',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF1C2B1E)),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.remove_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = int.tryParse(controller.text) ?? currentVal;
+                        final newVal = (val - 1).clamp(1, 999);
+                        setDialogState(() {
+                          controller.text = newVal.toString();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 105,
+                      child: TextField(
+                        controller: controller,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        autofocus: true,
+                        style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
+                        decoration: InputDecoration(
+                          suffixText: 'reps',
+                          filled: true,
+                          fillColor: const Color(0xFFF1F6F2),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = int.tryParse(controller.text) ?? currentVal;
+                        final newVal = (val + 1).clamp(1, 999);
+                        setDialogState(() {
+                          controller.text = newVal.toString();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel', style: GoogleFonts.inter(color: const Color(0xFF7A8B7B), fontWeight: FontWeight.w600)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF235A42),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  final parsed = int.tryParse(controller.text);
+                  if (parsed != null && parsed >= 0) {
+                    setState(() {
+                      sets[setIndex].reps = parsed;
+                    });
+                  }
+                  Navigator.pop(ctx);
+                },
+                child: Text('Done', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _exitWorkoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'End Workout Early?',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF1C2B1E)),
+        ),
+        content: Text(
+          'Are you sure you want to stop this workout session? Your logged sets will be retained.',
+          style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF5A6E5D)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Keep Going', style: GoogleFonts.inter(color: const Color(0xFF235A42), fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _sessionTimer?.cancel();
+              _restTimer?.cancel();
+              setState(() {
+                _state = WorkoutHubState.ready;
+                _restSecondsRemaining = 0;
+              });
+            },
+            child: Text('End Session', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveWorkoutSessionHeader(bool isArabic, int totalExercises) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0C000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // LIVE status pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF5EE),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF22C55E),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isArabic ? 'مباشر' : 'LIVE',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF235A42),
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          // Digital stopwatch + exercise progress subtitle
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _formatDuration(_sessionElapsedSeconds),
+                style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1C2B1E),
+                  letterSpacing: 0.5,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                isArabic
+                    ? 'تمرين ${_activeExerciseIndex + 1} من $totalExercises'
+                    : 'Exercise ${_activeExerciseIndex + 1} of $totalExercises',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF7A8B7B),
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          // Close / Exit button
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _exitWorkoutConfirmation,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F6F2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
+                ),
+                child: const Icon(Icons.close_rounded, color: Color(0xFF5A6E5D), size: 18),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExerciseSwitcherPills(List<SessionExercise> exercises, bool isArabic) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: List.generate(exercises.length, (idx) {
+          final ex = exercises[idx];
+          final isSelected = idx == _activeExerciseIndex;
+          final isCompleted = (_activeExerciseSets[idx]?.isNotEmpty == true) &&
+              (_activeExerciseSets[idx]!.every((s) => s.isCompleted));
+
+          return Padding(
+            padding: EdgeInsets.only(right: idx == exercises.length - 1 ? 0 : 8),
+            child: InkWell(
+              onTap: () {
+                setState(() => _activeExerciseIndex = idx);
+              },
+              borderRadius: BorderRadius.circular(20),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF235A42)
+                      : (isCompleted ? const Color(0xFFEAF5EE) : Colors.white),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF235A42)
+                        : (isCompleted
+                            ? const Color(0xFF235A42).withOpacity(0.3)
+                            : const Color(0xFFD3E4D7)),
+                    width: 1.2,
+                  ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF235A42).withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isCompleted) ...[
+                      Icon(
+                        Icons.check_rounded,
+                        size: 13,
+                        color: isSelected ? Colors.white : const Color(0xFF235A42),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      '${idx + 1}. ${ex.name}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                        color: isSelected
+                            ? Colors.white
+                            : (isCompleted ? const Color(0xFF235A42) : const Color(0xFF5A6E5D)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildRestTimerBanner(bool isArabic) {
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF5EE),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF235A42).withOpacity(0.25), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.hourglass_bottom_rounded, color: Color(0xFF235A42), size: 18),
+          const SizedBox(width: 8),
+          Text(
+            isArabic ? 'الراحة: ' : 'Rest: ',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF235A42),
+            ),
+          ),
+          Text(
+            _formatDuration(_restSecondsRemaining),
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1C2B1E),
+            ),
+          ),
+          const Spacer(),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: Color(0xFFD3E4D7)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+            ),
+            onPressed: () => _adjustRestTimer(30),
+            child: Text(
+              '+30s',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF235A42),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          TextButton(
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF235A42),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: Size.zero,
+            ),
+            onPressed: _skipRestTimer,
+            child: Text(
+              isArabic ? 'تخطي' : 'Skip',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveExerciseTrackerCard(bool isArabic, List<SessionExercise> exercises) {
+    if (_activeExerciseIndex >= exercises.length) {
+      _activeExerciseIndex = exercises.length - 1;
+    }
+    final ex = exercises[_activeExerciseIndex];
+    final setsList = _activeExerciseSets[_activeExerciseIndex] ?? [];
+    final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
+        ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg × ${ex.lastWeekReps ?? 10}'
+        : null;
+
+    final isLastExercise = _activeExerciseIndex == exercises.length - 1;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Muscle Tag + Guide info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF5EE),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  ex.muscleGroup.isNotEmpty ? ex.muscleGroup.toUpperCase() : (isArabic ? 'تمرين' : 'CHEST'),
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF235A42),
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.info_outline_rounded, color: Color(0xFF7A8B7B), size: 19),
+                onPressed: () => _onExerciseTileTap(ex.name, '${ex.targetSets} Sets', isArabic),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Exercise Title
+          Text(
+            ex.name,
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF1C2B1E),
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 3),
+
+          // Last week performance badge or coach note
+          Text(
+            prText ?? (ex.targetSets > 0 ? '${ex.targetSets} Working Sets' : '3 Sets'),
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF5A6E5D),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFE2EBE4)),
+          const SizedBox(height: 10),
+
+          // Clean Table Headers
+          Row(
+            children: [
+              SizedBox(
+                width: 36,
+                child: Center(
+                  child: Text(
+                    'SET',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF7A8B7B),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 52,
+                child: Center(
+                  child: Text(
+                    'PREV',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF7A8B7B),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'WEIGHT',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF7A8B7B),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    'REPS',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF7A8B7B),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 42,
+                child: Center(
+                  child: Text(
+                    'DONE',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF7A8B7B),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Clean, Compact Set Rows
+          ...List.generate(setsList.length, (sIdx) {
+            final setDraft = setsList[sIdx];
+            final isDone = setDraft.isCompleted;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              decoration: BoxDecoration(
+                color: isDone ? const Color(0xFFF4FAF6) : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  // Set number
+                  SizedBox(
+                    width: 36,
+                    child: Center(
+                      child: Text(
+                        '${setDraft.setIndex}',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: isDone ? const Color(0xFF235A42) : const Color(0xFF1C2B1E),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Prev
+                  SizedBox(
+                    width: 52,
+                    child: Center(
+                      child: Text(
+                        ex.lastWeekWeight != null && ex.lastWeekWeight! > 0
+                            ? '${ex.lastWeekWeight!.toStringAsFixed(0)}'
+                            : '-',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF7A8B7B),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Weight pill button
+                  Expanded(
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () => _showEditWeightDialog(_activeExerciseIndex, sIdx),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDone ? Colors.white : const Color(0xFFF1F6F2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDone ? const Color(0xFF235A42).withOpacity(0.3) : const Color(0xFFE2EBE4),
+                            ),
+                          ),
+                          child: Text(
+                            '${setDraft.weight % 1 == 0 ? setDraft.weight.toInt() : setDraft.weight} kg',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C2B1E),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Reps pill button
+                  Expanded(
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () => _showEditRepsDialog(_activeExerciseIndex, sIdx),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isDone ? Colors.white : const Color(0xFFF1F6F2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDone ? const Color(0xFF235A42).withOpacity(0.3) : const Color(0xFFE2EBE4),
+                            ),
+                          ),
+                          child: Text(
+                            '${setDraft.reps}',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1C2B1E),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Done Checkmark
+                  SizedBox(
+                    width: 42,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () => _toggleSetCompleted(_activeExerciseIndex, sIdx),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(
+                            color: isDone ? const Color(0xFF22C55E) : Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isDone ? const Color(0xFF22C55E) : const Color(0xFFD3E4D7),
+                              width: 1.5,
+                            ),
+                            boxShadow: isDone
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFF22C55E).withOpacity(0.3),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: Icon(
+                            Icons.check_rounded,
+                            size: 17,
+                            color: isDone ? Colors.white : const Color(0xFFD3E4D7),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          // Add / Remove Set Row
+          Center(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _addSet(_activeExerciseIndex),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    minimumSize: Size.zero,
+                    foregroundColor: const Color(0xFF235A42),
+                  ),
+                  icon: const Icon(Icons.add_circle_outline_rounded, size: 15),
+                  label: Text(
+                    isArabic ? 'إضافة مجموعة' : 'Add Set',
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (setsList.length > 1) ...[
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: () => _removeSet(_activeExerciseIndex),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      foregroundColor: const Color(0xFF9E7A7A),
+                    ),
+                    icon: const Icon(Icons.remove_circle_outline_rounded, size: 15),
+                    label: Text(
+                      isArabic ? 'حذف مجموعة' : 'Remove Set',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Primary "Save Exercise & Continue" Button
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: () => _saveAndNextExercise(exercises.length),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF235A42),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (isLastExercise) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.emoji_events_rounded, color: Color(0xFFFBBF24), size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          isArabic ? 'حفظ وإنهاء التمرين 🏆' : 'Save & Finish Workout 🏆',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isArabic ? 'اكتملت جميع التمارين' : 'All exercises completed',
+                      style: GoogleFonts.inter(
+                        fontSize: 10.5,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ] else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          isArabic ? 'حفظ التمرين والمتابعة ➔' : 'Save Exercise & Continue ➔',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      isArabic
+                          ? 'التالي: ${exercises[_activeExerciseIndex + 1].name}'
+                          : 'Next: ${exercises[_activeExerciseIndex + 1].name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 10.5,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExerciseTimelineDrawer(bool isArabic, List<SessionExercise> exercises) {
+    final List<Widget> tiles = List.generate(exercises.length, (idx) {
+      final ex = exercises[idx];
+      final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
+          ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
+          : null;
+      final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
+
+      final bool isCompleted = (_activeExerciseSets[idx]?.isNotEmpty == true) &&
+          (_activeExerciseSets[idx]!.every((s) => s.isCompleted));
+      final bool isCurrent = _activeExerciseIndex == idx;
+
+      return _ExerciseTimelineTile(
+        key: ValueKey('${ex.name}_$idx'),
+        index: idx,
+        title: ex.name,
+        targetSetsReps: setsRepsStr,
+        prBadgeText: prText,
+        restTime: null,
+        isLast: idx == exercises.length - 1,
+        isCurrent: isCurrent,
+        isCompleted: isCompleted,
+        onTap: () {
+          setState(() => _activeExerciseIndex = idx);
+        },
+      );
+    });
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x06000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () {
+                setState(() => _showAllExercises = !_showAllExercises);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isArabic
+                          ? 'جدول التمارين (${exercises.length} تمارين)'
+                          : 'Exercise Timeline (${exercises.length} Exercises)',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C2B1E),
+                      ),
+                    ),
+                    Icon(
+                      _showAllExercises
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: const Color(0xFF235A42),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_showAllExercises) ...[
+              const Divider(height: 1, color: Color(0xFFE2EBE4)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                child: Column(
+                  children: tiles,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   void _showPostWorkoutSummarySheet(String summaryNote) {
@@ -417,7 +1698,19 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       listeners: [
         BlocListener<WorkoutBloc, WorkoutState>(
           listener: (context, workoutState) {
-            if (workoutState is WorkoutError) {
+            if (workoutState is WorkoutSessionActive) {
+              for (int i = 0; i < workoutState.currentLogs.length; i++) {
+                final log = workoutState.currentLogs[i];
+                if (_activeExerciseSets.containsKey(i) && log.sets.isNotEmpty) {
+                  final dbId = log.sets.first.id;
+                  if (dbId != null && dbId.isNotEmpty) {
+                    for (var draft in _activeExerciseSets[i]!) {
+                      draft.workoutExerciseId = dbId;
+                    }
+                  }
+                }
+              }
+            } else if (workoutState is WorkoutError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(workoutState.message, style: const TextStyle(color: Colors.white)),
@@ -446,8 +1739,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _exitWorkoutWithoutFinishing() {
+    _sessionTimer?.cancel();
+    _restTimer?.cancel();
     setState(() {
       _state = WorkoutHubState.ready;
+      _restSecondsRemaining = 0;
     });
   }
 
@@ -456,20 +1752,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       case WorkoutHubState.loading:
         return _buildLoadingView(isArabic);
       case WorkoutHubState.activeWorkout:
-        return BlocBuilder<WorkoutBloc, WorkoutState>(
-          builder: (context, workoutState) {
-            if (workoutState is WorkoutSessionActive) {
-              return ActiveWorkoutView(
-                key: const ValueKey('activeWorkout'),
-                sessionState: workoutState,
-                isArabic: isArabic,
-                onFinish: _finishWorkout,
-                onExit: _exitWorkoutWithoutFinishing,
-              );
-            }
-            return _buildLoadingView(isArabic);
-          },
-        );
       case WorkoutHubState.unconfigured:
       case WorkoutHubState.ready:
         return _buildHubView(isArabic);
@@ -1226,13 +2508,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           children: [
             const SizedBox(height: 4),
 
-            // 1. Top Header
-            _WorkoutHeader(
-              showAction: false,
-              onActionTap: () {},
-              streakDays: _streakDays,
-            ),
-            const SizedBox(height: 16),
+            // 1. Top Header (only when not in active workout)
+            if (_state != WorkoutHubState.activeWorkout) ...[
+              _WorkoutHeader(
+                showAction: false,
+                onActionTap: () {},
+                streakDays: _streakDays,
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // ── UNCONFIGURED: Step-by-Step Wizard & AI Review ──────────
             if (_state == WorkoutHubState.unconfigured)
@@ -1242,7 +2526,21 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 onRoutineConfirmed: () => _loadRoutine(silent: false),
               ),
 
-            // ── READY: Timeline Hub content ──────────────
+            // ── ACTIVE WORKOUT: Option A In-Place Gym Mode ──────────
+            if (_state == WorkoutHubState.activeWorkout) ...[
+              _buildLiveWorkoutSessionHeader(isArabic, exercises.length),
+              const SizedBox(height: 10),
+              _buildExerciseSwitcherPills(exercises, isArabic),
+              if (_restSecondsRemaining > 0)
+                _buildRestTimerBanner(isArabic),
+              const SizedBox(height: 12),
+              _buildActiveExerciseTrackerCard(isArabic, exercises),
+              const SizedBox(height: 14),
+              _buildExerciseTimelineDrawer(isArabic, exercises),
+              const SizedBox(height: 18),
+            ],
+
+            // ── READY (NOT in active workout): Routine Banner & Timeline ─────
             if (_state == WorkoutHubState.ready) ...[
               // 2. Active Routine Banner
               _WorkoutActiveSummaryBanner(
@@ -1274,7 +2572,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                         letterSpacing: 0.6,
                       ),
                     ),
-                    const SizedBox(width: 6),
                     Icon(
                       _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                       size: 18,
@@ -1298,6 +2595,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                 ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg x ${ex.lastWeekReps ?? 10}'
                                 : null;
                             final setsRepsStr = '${ex.targetSets} Sets · ${ex.muscleGroup.isNotEmpty ? ex.muscleGroup : "Target"}';
+
                             return _ExerciseTimelineTile(
                               key: ValueKey('${ex.name}_$idx'),
                               index: idx,
@@ -1306,56 +2604,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                               prBadgeText: prText,
                               restTime: null,
                               isLast: idx == exercises.length - 1,
+                              isCurrent: false,
+                              isCompleted: false,
                               onTap: () => _onExerciseTileTap(ex.name, setsRepsStr, isArabic),
                             );
                           })
-                        : [
-                            _ExerciseTimelineTile(
-                              index: 0,
-                              title: 'Barbell Bench Press',
-                              targetSetsReps: '3 Sets · Chest · Triceps',
-                              prBadgeText: 'Last: 80 kg x 8',
-                              restTime: '2:00',
-                              isLast: false,
-                              onTap: () => _onExerciseTileTap('Barbell Bench Press', '3 Sets · Chest · Triceps', isArabic),
-                            ),
-                            _ExerciseTimelineTile(
-                              index: 1,
-                              title: 'Incline Dumbbell Press',
-                              targetSetsReps: '3 Sets · Upper Chest',
-                              prBadgeText: 'Last: 28 kg x 10',
-                              restTime: '2:00',
-                              isLast: false,
-                              onTap: () => _onExerciseTileTap('Incline Dumbbell Press', '3 Sets · Upper Chest', isArabic),
-                            ),
-                            _ExerciseTimelineTile(
-                              index: 2,
-                              title: 'Overhead Press',
-                              targetSetsReps: '3 Sets · Front Delts',
-                              prBadgeText: 'Last: 50 kg x 8',
-                              restTime: '2:00',
-                              isLast: false,
-                              onTap: () => _onExerciseTileTap('Overhead Press', '3 Sets · Front Delts', isArabic),
-                            ),
-                            _ExerciseTimelineTile(
-                              index: 3,
-                              title: 'Cable Lateral Raises',
-                              targetSetsReps: '3 Sets · Side Delts',
-                              prBadgeText: 'Last: 12 kg x 12',
-                              restTime: '1:30',
-                              isLast: false,
-                              onTap: () => _onExerciseTileTap('Cable Lateral Raises', '3 Sets · Side Delts', isArabic),
-                            ),
-                            _ExerciseTimelineTile(
-                              index: 4,
-                              title: 'Cable Chest Flyes',
-                              targetSetsReps: '3 Sets · Chest',
-                              prBadgeText: 'Last: 20 kg x 12',
-                              restTime: '1:30',
-                              isLast: true,
-                              onTap: () => _onExerciseTileTap('Cable Chest Flyes', '3 Sets · Chest', isArabic),
-                            ),
-                          ];
+                        : [];
 
                     final visibleTiles = _showAllExercises ? tiles : tiles.take(2).toList();
                     final remainingCount = tiles.length - visibleTiles.length;
@@ -1363,44 +2617,46 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     return Column(
                       children: [
                         ...visibleTiles,
-                        const SizedBox(height: 6),
-                        Center(
-                          child: InkWell(
-                            onTap: () {
-                              setState(() => _showAllExercises = !_showAllExercises);
-                            },
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEAF5EE),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    _showAllExercises
-                                        ? (isArabic ? 'طّي الجدول' : 'Fold timeline')
-                                        : (isArabic ? 'عرض كل التمارين (+$remainingCount)' : 'Show all exercises (+$remainingCount)'),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                        if (remainingCount > 0) ...[
+                          const SizedBox(height: 6),
+                          Center(
+                            child: InkWell(
+                              onTap: () {
+                                setState(() => _showAllExercises = !_showAllExercises);
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEAF5EE),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: const Color(0xFFD3E4D7), width: 1.2),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _showAllExercises
+                                          ? (isArabic ? 'طّي الجدول' : 'Fold timeline')
+                                          : (isArabic ? 'عرض كل التمارين (+$remainingCount)' : 'Show all exercises (+$remainingCount)'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF235A42),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                                      size: 16,
                                       color: const Color(0xFF235A42),
                                     ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(
-                                    _showAllExercises ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                                    size: 16,
-                                    color: const Color(0xFF235A42),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     );
                   },
@@ -1414,19 +2670,20 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 onTap: _startWorkout,
               ),
               const SizedBox(height: 20),
+            ],
 
-              // 6. AI Coach Assistant Card
-              CoachChatCard(
-                coachNote: _currentSession?.coachNote,
-                isArabic: isArabic,
-                dio: _dio,
-                onSessionUpdated: (updatedSession) {
-                  setState(() {
-                    _currentSession = updatedSession;
-                  });
-                },
-                onRoutineUpdated: () => _loadRoutine(silent: true),
-              ),
+            // 6. AI Coach Assistant Card
+            CoachChatCard(
+              coachNote: _currentSession?.coachNote,
+              isArabic: isArabic,
+              dio: _dio,
+              onSessionUpdated: (updatedSession) {
+                setState(() {
+                  _currentSession = updatedSession;
+                });
+              },
+              onRoutineUpdated: () => _loadRoutine(silent: true),
+            ),
               const SizedBox(height: 20),
 
               // 7. Weekly Progress Card
@@ -1477,7 +2734,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               ),
               const SizedBox(height: 32),
             ],
-          ],
         ),
       ),
     );
@@ -4080,6 +5336,8 @@ class _ExerciseTimelineTile extends StatelessWidget {
   final String? restTime;
   final String? emoji;
   final bool isLast;
+  final bool isCurrent;
+  final bool isCompleted;
   final VoidCallback onTap;
 
   const _ExerciseTimelineTile({
@@ -4091,6 +5349,8 @@ class _ExerciseTimelineTile extends StatelessWidget {
     this.restTime,
     this.emoji,
     required this.isLast,
+    this.isCurrent = false,
+    this.isCompleted = false,
     required this.onTap,
   });
 
@@ -4122,22 +5382,37 @@ class _ExerciseTimelineTile extends StatelessWidget {
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: index == 0 ? const Color(0xFFDCEEE3) : const Color(0xFF235A42),
+                      color: isCompleted
+                          ? const Color(0xFF235A42)
+                          : (isCurrent ? const Color(0xFF235A42) : const Color(0xFFF1F6F2)),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFF235A42),
+                        color: (isCompleted || isCurrent)
+                            ? const Color(0xFF235A42)
+                            : const Color(0xFFD3E4D7),
                         width: 2,
                       ),
+                      boxShadow: isCurrent
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF235A42).withOpacity(0.35),
+                                blurRadius: 6,
+                                offset: const Offset(0, 1),
+                              ),
+                            ]
+                          : null,
                     ),
                     child: Center(
-                      child: Text(
-                        index == 0 ? '✓' : '$index',
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: index == 0 ? const Color(0xFF235A42) : Colors.white,
-                        ),
-                      ),
+                      child: isCompleted
+                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 12)
+                          : Text(
+                              '${index + 1}',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isCurrent ? Colors.white : const Color(0xFF5A6E5D),
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -4156,15 +5431,33 @@ class _ExerciseTimelineTile extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isCompleted
+                          ? const Color(0xFFF4FAF6)
+                          : (isCurrent ? Colors.white : Colors.white),
                       borderRadius: BorderRadius.circular(18),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0A000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+                      border: Border.all(
+                        color: isCurrent
+                            ? const Color(0xFF235A42)
+                            : (isCompleted
+                                ? const Color(0xFF235A42).withOpacity(0.35)
+                                : const Color(0xFFE2EBE4)),
+                        width: isCurrent ? 1.6 : 1.0,
+                      ),
+                      boxShadow: isCurrent
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF235A42).withOpacity(0.12),
+                                blurRadius: 12,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                          : const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              ),
+                            ],
                     ),
                     child: Row(
                       children: [
@@ -4187,6 +5480,43 @@ class _ExerciseTimelineTile extends StatelessWidget {
                                       ),
                                     ),
                                   ),
+                                  if (isCurrent) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF235A42),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        'ACTIVE',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ] else if (isCompleted) ...[
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEAF5EE),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '✓ DONE',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: const Color(0xFF235A42),
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
                                   if (restTime != null) ...[
                                     const Icon(Icons.timer_outlined, size: 12, color: Color(0xFF7A8B7B)),
                                     const SizedBox(width: 3),
@@ -4231,9 +5561,9 @@ class _ExerciseTimelineTile extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Color(0xFFB0C0B4),
+                        Icon(
+                          isCurrent ? Icons.fitness_center_rounded : Icons.chevron_right_rounded,
+                          color: isCurrent ? const Color(0xFF235A42) : const Color(0xFFB0C0B4),
                           size: 18,
                         ),
                       ],
