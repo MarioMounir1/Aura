@@ -405,24 +405,6 @@ https://aura-fit.com''';
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
-
-                        // Card Footer Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.auto_awesome, color: Color(0xFF235A42), size: 12),
-                            const SizedBox(width: 5),
-                            Text(
-                              'aura-fit.com • AI Health & Nutrition',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF5A7060),
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
