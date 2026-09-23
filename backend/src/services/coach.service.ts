@@ -819,7 +819,7 @@ export async function generateDailyEcosystemBriefing(
 
   // 5. Start of day / fresh start
   return {
-    headline: "Ready to Progress? 🎯",
+    headline: "Weekly Insights",
     message: `Your daily target is ${input.calorieTarget} kcal with ${input.proteinTarget}g protein. Log your first meal to kick off today's progress!`,
     focusArea: "Daily Target",
   };
