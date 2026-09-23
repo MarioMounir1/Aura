@@ -305,7 +305,10 @@ class TeneenApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
-              // ── Global Standard Layout, Dynamic Scaling & LTR ──
+              // ── Global Standard Layout, Dynamic Scaling & Keyboard Dismiss ──
+              navigatorObservers: [
+                KeyboardDismissNavigatorObserver(),
+              ],
               builder: (context, child) {
                 final mediaQueryData = MediaQuery.of(context);
                 // Clamp text scaler to standard bounds so UI doesn't blow up or overflow on devices with large system fonts
@@ -319,7 +322,16 @@ class TeneenApp extends StatelessWidget {
                   ),
                   child: Directionality(
                     textDirection: TextDirection.ltr,
-                    child: child ?? const SizedBox.shrink(),
+                    child: Listener(
+                      behavior: HitTestBehavior.translucent,
+                      onPointerDown: (_) {
+                        final currentFocus = FocusManager.instance.primaryFocus;
+                        if (currentFocus != null && currentFocus.hasFocus) {
+                          currentFocus.unfocus();
+                        }
+                      },
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   ),
                 );
               },
@@ -341,6 +353,29 @@ class TeneenApp extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Automatically dismisses the soft keyboard whenever any screen/route transition occurs anywhere in the app.
+class KeyboardDismissNavigatorObserver extends NavigatorObserver {
+  KeyboardDismissNavigatorObserver();
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    super.didPush(route, previousRoute);
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    super.didPop(route, previousRoute);
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
   }
 }
 
