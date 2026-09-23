@@ -20,6 +20,8 @@ import '../../../core/cubit/unit_cubit.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_event.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
+import '../../calorie_tracker/data/models/workout_models.dart';
+import '../../../core/network/api_client.dart';
 import '../../../main.dart';
 
 // ── Design Tokens ─────────────────────────────────────────────
@@ -230,6 +232,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // ── Step 4: Activity ──────────────────────────────────────
   int _selectedActivityIndex = 2; // default: moderate
 
+  // ── Workout Routine State ─────────────────────────────────
+  bool _includeWorkoutPlan = true;
+  int _workoutDays = 4;
+  RoutineSuggestion? _selectedRoutine;
+
   // ── Animation ─────────────────────────────────────────────
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -237,6 +244,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   void initState() {
     super.initState();
+    final initialRoutines = RoutineCatalogue.forDays(4);
+    if (initialRoutines.isNotEmpty) {
+      _selectedRoutine = initialRoutines.first;
+    }
+
     _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -446,6 +458,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final calculatedCarbs    = tdee['carbs'] ?? 200;
     final calculatedFats     = tdee['fats'] ?? 65;
 
+    // Setup workout routine on backend if user kept the workout plan
+    if (_includeWorkoutPlan && _selectedRoutine != null) {
+      ApiClient().dio.post('/workouts/setup', data: {
+        'daysPerWeek': _workoutDays,
+        'splitType': _selectedRoutine!.splitType,
+        'splitName': _selectedRoutine!.name,
+      }).catchError((e) {
+        debugPrint('⚠️ [Onboarding] Failed to setup workout routine: $e');
+      });
+    }
+
     // Update profile on the backend first, then trigger onboarding complete on success
     context.read<ProfileBloc>().add(UpdateProfileEvent(
       age: age,
@@ -461,6 +484,341 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       dailyFatsGoal: calculatedFats,
       language: isArabic ? 'ar' : 'en',
     ));
+  }
+
+  // ── Workout Plan Preview & Customization Sheet ─────────────
+  void _showWorkoutPlanSheet(BuildContext context) {
+    int sheetDays = _workoutDays;
+    var availableRoutines = RoutineCatalogue.forDays(sheetDays);
+    RoutineSuggestion sheetRoutine = _selectedRoutine ?? (availableRoutines.isNotEmpty ? availableRoutines.first : RoutineCatalogue.forDays(4).first);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final routines = RoutineCatalogue.forDays(sheetDays);
+            if (!routines.any((r) => r.splitType == sheetRoutine.splitType)) {
+              sheetRoutine = routines.first;
+            }
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFAFBF9),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: _T.border,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Personalized Workout Routine',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: _T.textPri,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Customize your frequency & training split',
+                              style: GoogleFonts.inter(fontSize: 12.5, color: _T.textSec),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: _T.textSec),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, color: _T.border),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'TRAINING FREQUENCY',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.1,
+                              color: _T.textMut,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [3, 4, 5, 6].map((days) {
+                              final isSelected = sheetDays == days;
+                              return Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                                  child: InkWell(
+                                    onTap: () {
+                                      setSheetState(() {
+                                        sheetDays = days;
+                                        final newRoutines = RoutineCatalogue.forDays(days);
+                                        sheetRoutine = newRoutines.first;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? _T.cyan : Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: isSelected ? _T.cyan : _T.border,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '$days Days',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                          color: isSelected ? Colors.white : _T.textPri,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'SELECT TRAINING SPLIT',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.1,
+                              color: _T.textMut,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          ...routines.map((routine) {
+                            final isSel = routine.splitType == sheetRoutine.splitType;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: InkWell(
+                                onTap: () => setSheetState(() => sheetRoutine = routine),
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: isSel ? _T.cyan.withOpacity(0.06) : Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isSel ? _T.cyan : _T.border,
+                                      width: isSel ? 1.8 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              routine.name,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 14.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: isSel ? _T.cyan : _T.textPri,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              routine.tagline,
+                                              style: GoogleFonts.inter(fontSize: 12, color: _T.textSec),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        isSel ? Icons.check_circle_rounded : Icons.radio_button_off_rounded,
+                                        color: isSel ? _T.cyan : _T.border,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 16),
+                          Text(
+                            'WEEKLY SCHEDULE BREAKDOWN',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.1,
+                              color: _T.textMut,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: _T.border),
+                            ),
+                            child: Column(
+                              children: List.generate(sheetRoutine.breakdown.length, (idx) {
+                                final label = sheetRoutine.breakdown[idx];
+                                final isRest = label.toLowerCase().contains('rest');
+                                return Padding(
+                                  padding: EdgeInsets.only(bottom: idx < sheetRoutine.breakdown.length - 1 ? 8 : 0),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: isRest ? const Color(0xFFF1F5F2) : _T.cyan.withOpacity(0.1),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${idx + 1}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: isRest ? _T.textMut : _T.cyan,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Day ${idx + 1}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: _T.textSec,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: isRest ? const Color(0xFFF6F8F5) : const Color(0xFFEAF5EE),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: isRest ? _T.border : const Color(0xFFC2E4CF),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          label,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: isRest ? _T.textMut : const Color(0xFF1E6B47),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: _T.border, width: 1)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _workoutDays = sheetDays;
+                                _selectedRoutine = sheetRoutine;
+                                _includeWorkoutPlan = true;
+                              });
+                              Navigator.pop(ctx);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _T.cyan,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Keep This Routine (${sheetRoutine.name})',
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _includeWorkoutPlan = false;
+                            });
+                            Navigator.pop(ctx);
+                          },
+                          icon: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFD32F2F)),
+                          label: Text(
+                            "I Don't Want a Workout Plan (Nutrition Only)",
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFD32F2F),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   // ── Build ─────────────────────────────────────────────────
@@ -912,7 +1270,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: _ActivityCard(
                 activity: a,
                 isSelected: isSelected,
-                onTap: () => setState(() => _selectedActivityIndex = i),
+                onTap: () {
+                  setState(() {
+                    _selectedActivityIndex = i;
+                    final suggestedDays = i >= 3 ? 5 : (i >= 2 ? 4 : 3);
+                    _workoutDays = suggestedDays;
+                    final suggestions = RoutineCatalogue.forDays(suggestedDays);
+                    if (suggestions.isNotEmpty) {
+                      _selectedRoutine = suggestions.first;
+                    }
+                  });
+                },
               ),
             );
           }),
@@ -1038,7 +1406,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           const SizedBox(height: 14),
 
           // Workout suggestion card
-          _WorkoutSuggestionCard(split: workoutSplit, activityLabel: activity.label),
+          _WorkoutSuggestionCard(
+            isIncluded: _includeWorkoutPlan,
+            split: _selectedRoutine != null
+                ? '${_selectedRoutine!.name} · ${_workoutDays}×/week'
+                : workoutSplit,
+            activityLabel: activity.label,
+            onTap: () => _showWorkoutPlanSheet(context),
+          ),
           const SizedBox(height: 14),
 
           // Timeline (optional)
@@ -1622,59 +1997,168 @@ class _MacroTile extends StatelessWidget {
 }
 
 class _WorkoutSuggestionCard extends StatelessWidget {
+  final bool isIncluded;
   final String split;
   final String activityLabel;
-  const _WorkoutSuggestionCard({required this.split, required this.activityLabel});
+  final VoidCallback onTap;
+
+  const _WorkoutSuggestionCard({
+    required this.isIncluded,
+    required this.split,
+    required this.activityLabel,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: _T.card,
-        border: Border.all(color: _T.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
+    if (!isIncluded) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF7C4DFF), Color(0xFF3F51B5)],
-              ),
+              borderRadius: BorderRadius.circular(16),
+              color: _T.card,
+              border: Border.all(color: _T.border),
             ),
-            child: const Center(child: Text('🏋️', style: TextStyle(fontSize: 22))),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  'Suggested Workout Plan',
-                  style: GoogleFonts.inter(fontSize: 12, color: _T.textSec, fontWeight: FontWeight.w600),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFEFF5F1),
+                  ),
+                  child: const Center(child: Text('🥗', style: TextStyle(fontSize: 22))),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  split,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: _T.textPri,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Workout Plan',
+                        style: GoogleFonts.inter(fontSize: 12, color: _T.textSec, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Nutrition Only (No Workout Plan)',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: _T.textPri,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tap to add a workout routine',
+                        style: GoogleFonts.inter(fontSize: 11.5, color: _T.cyan, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  activityLabel,
-                  style: GoogleFonts.inter(fontSize: 12, color: _T.textSec),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _T.cyan.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _T.cyan.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    '+ Add',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _T.cyan,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios_rounded, color: _T.textMut, size: 14),
-        ],
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: _T.card,
+            border: Border.all(color: _T.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF7C4DFF), Color(0xFF3F51B5)],
+                  ),
+                ),
+                child: const Center(child: Text('🏋️', style: TextStyle(fontSize: 22))),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Suggested Workout Plan',
+                          style: GoogleFonts.inter(fontSize: 12, color: _T.textSec, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEAF5EE),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Active',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1B6B44),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      split,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: _T.textPri,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$activityLabel · Tap to preview or change',
+                      style: GoogleFonts.inter(fontSize: 12, color: _T.cyan, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: _T.textMut, size: 14),
+            ],
+          ),
+        ),
       ),
     );
   }
