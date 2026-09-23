@@ -318,23 +318,34 @@ https://aura-fit.com''';
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Aura Logo & Badge
+                        // Aura Brand Logo & Title
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF235A42),
-                                shape: BoxShape.circle,
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x121E3A2B),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 16),
+                              clipBehavior: Clip.antiAlias,
+                              child: Image.asset(
+                                'assets/images/aura_logo.png',
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 9),
                             Text(
                               'AURA',
                               style: GoogleFonts.outfit(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 2.5,
                                 color: const Color(0xFF1E3A2B),
