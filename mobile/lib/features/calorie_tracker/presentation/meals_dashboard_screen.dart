@@ -896,40 +896,14 @@ class _MealsDashboardState extends State<MealsDashboard> {
               const SizedBox(height: 22),
 
               // 3. Meal Timeline Section Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'MEAL TIMELINE',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF5A6E5D),
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _showNutrientsSheet,
-                    child: Row(
-                      children: [
-                        Text(
-                          'See nutrients',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1E3A2B),
-                          ),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 16,
-                          color: Color(0xFF1E3A2B),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                'MEAL TIMELINE',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF5A6E5D),
+                  letterSpacing: 0.6,
+                ),
               ),
               const SizedBox(height: 14),
 
