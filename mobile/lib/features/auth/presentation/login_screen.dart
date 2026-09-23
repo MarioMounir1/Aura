@@ -337,7 +337,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                   // ── Sign in CTA Button ──────────────────────
                                   AuraPrimaryButton(
-                                    label: 'Sign in to Aura',
+                                    label: 'Sign in',
                                     isLoading: isLoading,
                                     onPressed: _submit,
                                   ),
