@@ -182,6 +182,9 @@ https://aura-fit.com''';
     }
   }
 
+  // ignore: unused_element
+  void _shareViaSystem() {}
+
   Future<void> _copyToClipboard() async {
     final text = _generateShareText();
     await Clipboard.setData(ClipboardData(text: text));
