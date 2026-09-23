@@ -20,14 +20,11 @@ class DashboardTabWrapper extends StatefulWidget {
 }
 
 class _DashboardTabWrapperState extends State<DashboardTabWrapper> {
-  DashboardLoaded? _lastLoaded;
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
         if (state is DashboardLoaded) {
-          _lastLoaded = state;
           return MealsDashboard(
             foodSummary: state.foodSummary,
             mealLogs: state.todayMealLogs,
@@ -35,7 +32,6 @@ class _DashboardTabWrapperState extends State<DashboardTabWrapper> {
         }
 
         if (state is DashboardInitial || state is DashboardLoading) {
-          _lastLoaded = null;
           return const MealsDashboard(
             foodSummary: null,
             mealLogs: [],
@@ -148,9 +144,12 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
+        FocusManager.instance.primaryFocus?.unfocus();
+        if (_currentIndex != index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        }
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
@@ -159,11 +158,11 @@ class _HomeShellScreenState extends State<HomeShellScreen> {
         child: Center(
           child: Container(
             decoration: isSelected && hasHalo
-                ? BoxDecoration(
+                ? const BoxDecoration(
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF235A42).withOpacity(0.25),
+                        color: Color(0x40235A42),
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),
