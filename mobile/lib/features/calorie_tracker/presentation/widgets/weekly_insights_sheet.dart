@@ -182,27 +182,6 @@ https://aura-fit.com''';
     }
   }
 
-  Future<void> _shareViaSystem() async {
-    final text = _generateShareText();
-    try {
-      const platform = MethodChannel('com.mario.aura/app_info');
-      await platform.invokeMethod('shareText', {
-        'text': text,
-        'title': 'Share My Aura Progress',
-      });
-    } catch (_) {
-      await Clipboard.setData(ClipboardData(text: text));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Progress summary copied to clipboard! Paste into your favorite app.'),
-            backgroundColor: Color(0xFF235A42),
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _copyToClipboard() async {
     final text = _generateShareText();
     await Clipboard.setData(ClipboardData(text: text));
@@ -462,32 +441,39 @@ https://aura-fit.com''';
                 ),
                 const SizedBox(height: 10),
 
-                // Social Sharing Buttons Row
+                // Social Sharing Buttons Row: WhatsApp & Instagram
                 Row(
                   children: [
                     // WhatsApp
                     Expanded(
                       child: InkWell(
                         onTap: _shareToWhatsApp,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             color: const Color(0xFF25D366),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(16),
                             boxShadow: const [
-                              BoxShadow(color: Color(0x2025D366), blurRadius: 8, offset: Offset(0, 3)),
+                              BoxShadow(
+                                color: Color(0x2825D366),
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
+                              ),
                             ],
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
-                              const SizedBox(width: 6),
+                              const CustomPaint(
+                                size: Size(20, 20),
+                                painter: _WhatsAppLogoPainter(color: Colors.white),
+                              ),
+                              const SizedBox(width: 8),
                               Text(
                                 'WhatsApp',
                                 style: GoogleFonts.outfit(
-                                  fontSize: 12.5,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),
@@ -497,69 +483,42 @@ https://aura-fit.com''';
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
 
                     // Instagram
                     Expanded(
                       child: InkWell(
                         onTap: _shareToInstagram,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
                               colors: [Color(0xFF833AB4), Color(0xFFFD1D1D), Color(0xFFFCAF45)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(16),
                             boxShadow: const [
-                              BoxShadow(color: Color(0x20E1306C), blurRadius: 8, offset: Offset(0, 3)),
-                            ],
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 16),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Instagram',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
+                              BoxShadow(
+                                color: Color(0x28E1306C),
+                                blurRadius: 10,
+                                offset: Offset(0, 4),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // More Apps (System Share)
-                    Expanded(
-                      child: InkWell(
-                        onTap: _shareViaSystem,
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 11),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF235A42),
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: const [
-                              BoxShadow(color: Color(0x20235A42), blurRadius: 8, offset: Offset(0, 3)),
-                            ],
-                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.share_rounded, color: Colors.white, size: 16),
-                              const SizedBox(width: 6),
+                              const CustomPaint(
+                                size: Size(20, 20),
+                                painter: _InstagramLogoPainter(color: Colors.white),
+                              ),
+                              const SizedBox(width: 8),
                               Text(
-                                'More',
+                                'Instagram',
                                 style: GoogleFonts.outfit(
-                                  fontSize: 12.5,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white,
                                 ),
@@ -1011,4 +970,116 @@ https://aura-fit.com''';
       ),
     );
   }
+}
+
+/// Authentic official vector WhatsApp silhouette logo
+class _WhatsAppLogoPainter extends CustomPainter {
+  final Color color;
+  const _WhatsAppLogoPainter({this.color = Colors.white});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 24.0, size.height / 24.0);
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    final path = Path()
+      ..moveTo(12.04, 2.0)
+      ..cubicTo(6.58, 2.0, 2.13, 6.45, 2.13, 11.91)
+      ..cubicTo(2.13, 13.66, 2.59, 15.36, 3.45, 16.86)
+      ..lineTo(2.05, 22.0)
+      ..lineTo(7.3, 20.62)
+      ..cubicTo(8.75, 21.41, 10.38, 21.83, 12.04, 21.83)
+      ..cubicTo(17.5, 21.83, 21.95, 17.38, 21.95, 11.92)
+      ..cubicTo(21.95, 6.46, 17.5, 2.0, 12.04, 2.0)
+      ..close()
+      ..moveTo(12.04, 20.15)
+      ..cubicTo(10.56, 20.15, 9.11, 19.76, 7.85, 19.0)
+      ..lineTo(7.55, 18.82)
+      ..lineTo(4.43, 19.64)
+      ..lineTo(5.26, 16.6)
+      ..lineTo(5.06, 16.29)
+      ..cubicTo(4.24, 14.98, 3.81, 13.47, 3.81, 11.91)
+      ..cubicTo(3.81, 7.37, 7.5, 3.68, 12.04, 3.68)
+      ..cubicTo(16.58, 3.68, 20.27, 7.37, 20.27, 11.91)
+      ..cubicTo(20.27, 16.45, 16.58, 20.15, 12.04, 20.15)
+      ..close()
+      ..moveTo(16.56, 14.41)
+      ..cubicTo(16.31, 14.29, 15.09, 13.69, 14.86, 13.61)
+      ..cubicTo(14.63, 13.52, 14.47, 13.48, 14.3, 13.73)
+      ..cubicTo(14.14, 13.98, 13.66, 14.54, 13.51, 14.71)
+      ..cubicTo(13.37, 14.87, 13.22, 14.9, 12.97, 14.77)
+      ..cubicTo(12.72, 14.65, 11.92, 14.39, 10.97, 13.54)
+      ..cubicTo(10.23, 12.88, 9.73, 12.06, 9.58, 11.81)
+      ..cubicTo(9.44, 11.57, 9.56, 11.43, 9.69, 11.31)
+      ..cubicTo(9.8, 11.2, 9.93, 11.02, 10.05, 10.88)
+      ..cubicTo(10.18, 10.74, 10.22, 10.63, 10.3, 10.47)
+      ..cubicTo(10.38, 10.3, 10.34, 10.16, 10.28, 10.04)
+      ..cubicTo(10.22, 9.92, 9.73, 8.71, 9.52, 8.22)
+      ..cubicTo(9.32, 7.73, 9.12, 7.8, 8.97, 7.79)
+      ..cubicTo(8.83, 7.79, 8.67, 7.78, 8.5, 7.78)
+      ..cubicTo(8.34, 7.78, 8.07, 7.84, 7.84, 8.09)
+      ..cubicTo(7.62, 8.34, 6.98, 8.94, 6.98, 10.15)
+      ..cubicTo(6.98, 11.37, 7.86, 12.54, 7.99, 12.71)
+      ..cubicTo(8.11, 12.87, 9.73, 15.37, 12.21, 16.44)
+      ..cubicTo(12.8, 16.69, 13.26, 16.85, 13.62, 16.96)
+      ..cubicTo(14.22, 17.15, 14.76, 17.12, 15.19, 17.06)
+      ..cubicTo(15.67, 16.99, 16.67, 16.45, 16.88, 15.86)
+      ..cubicTo(17.09, 15.27, 17.09, 14.77, 17.02, 14.65)
+      ..cubicTo(16.96, 14.54, 16.81, 14.48, 16.56, 14.41)
+      ..close();
+
+    path.fillType = PathFillType.evenOdd;
+    canvas.drawPath(path, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _WhatsAppLogoPainter oldDelegate) => oldDelegate.color != color;
+}
+
+/// Authentic official vector Instagram camera logo
+class _InstagramLogoPainter extends CustomPainter {
+  final Color color;
+  const _InstagramLogoPainter({this.color = Colors.white});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 24.0, size.height / 24.0);
+
+    final strokePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    final fillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    // Outer rounded square
+    final outerRect = RRect.fromRectAndRadius(
+      const Rect.fromLTWH(3.0, 3.0, 18.0, 18.0),
+      const Radius.circular(5.5),
+    );
+    canvas.drawRRect(outerRect, strokePaint);
+
+    // Inner camera lens circle
+    canvas.drawCircle(const Offset(12.0, 12.0), 4.5, strokePaint);
+
+    // Top-right camera dot
+    canvas.drawCircle(const Offset(16.8, 7.2), 1.25, fillPaint);
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _InstagramLogoPainter oldDelegate) => oldDelegate.color != color;
 }
