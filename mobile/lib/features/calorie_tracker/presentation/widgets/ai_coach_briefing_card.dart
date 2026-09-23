@@ -418,6 +418,12 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       );
     }
 
+    final displayHeadline = _headline.contains('Ready to Progress') ? 'Weekly Insights' : _headline;
+    final activeProt = _getActiveProteinTarget();
+    final displayMessage = (_message.contains('150g protein') && activeProt > 150)
+        ? _message.replaceAll('150g protein', '${activeProt}g protein')
+        : _message;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -516,7 +522,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
 
                 // Headline
                 Text(
-                  _headline,
+                  displayHeadline,
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -528,7 +534,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
 
                 // Actionable 2-sentence guidance
                 Text(
-                  _message,
+                  displayMessage,
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
