@@ -31,7 +31,7 @@ class AiCoachBriefingCard extends StatefulWidget {
 }
 
 class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
-  static String _cachedHeadline = 'Ready to Progress? 🎯';
+  static String _cachedHeadline = 'Weekly Insights';
   static String _cachedMessage =
       'Track your meals to stay on pace with your daily calorie and protein targets.';
   static String _cachedFocusArea = 'Daily Progress';
@@ -191,7 +191,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       final double consumed = widget.caloriesConsumed ?? 0.0;
       final double consumedProt = widget.proteinConsumed ?? 0.0;
 
-      String headline = 'Ready to Progress? 🎯';
+      String headline = 'Weekly Insights';
       String message =
           'Your daily target is $calFormatted kcal with ${proteinTarget}g protein. Log your first meal to start today\'s progress!';
       String focusArea = 'Daily Progress';
@@ -230,9 +230,9 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       final m = prefs.getString('cached_coach_message');
       final f = prefs.getString('cached_coach_focus');
 
-      // Purge and delete any outdated workout split cache from disk
+      // Purge and delete any outdated workout split or old headline cache from disk
       final isOutdatedWorkout = h != null &&
-          (h.contains('Split') || h.contains('Day 🔥') || (m != null && m.contains("Today's session is")));
+          (h.contains('Split') || h.contains('Day 🔥') || h.contains('Ready to Progress') || (m != null && m.contains("Today's session is")));
 
       if (isOutdatedWorkout) {
         await prefs.remove('cached_coach_headline');
