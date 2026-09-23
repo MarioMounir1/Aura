@@ -252,14 +252,13 @@ async function main() {
       update: {
         name: ex.name,
         muscleGroup: ex.muscleGroup,
-        mechanic: ex.mechanic,
+        tips: ex.mechanic,
       },
       create: {
         id: `seed-ex-${ex.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}`,
         name: ex.name,
         muscleGroup: ex.muscleGroup,
-        mechanic: ex.mechanic,
-        isCustom: false,
+        tips: ex.mechanic,
       },
     });
     exCount++;
