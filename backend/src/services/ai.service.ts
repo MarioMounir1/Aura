@@ -268,8 +268,8 @@ Analyze the nutritional content of this meal. It may be from any restaurant, cui
           contents: [{ role: "user", parts }],
           generationConfig,
         }),
-        7000,
-        `Gemini API (${currentModel}) exceeded 7s timeout`
+        20000,
+        `Gemini API (${currentModel}) exceeded 20s timeout`
       );
 
       responseText = result.response.text();
