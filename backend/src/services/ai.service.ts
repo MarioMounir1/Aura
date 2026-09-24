@@ -85,7 +85,12 @@ Your task:
      "fats": 0,
      "confidence_score": 0.0
 2. If the image DOES contain edible food or drink:
-   - DIET / ZERO SUGAR / WATER / TEA / BLACK COFFEE: If you detect Diet Coke, Coke Zero, Pepsi Max, Diet Pepsi, Zero Sugar beverages, plain water, black coffee, or unsweetened tea, set "is_food": true, calories: 0 or 1, protein: 0, carbs: 0, fats: 0. NEVER assign 150 calories to a diet or zero sugar drink.
+   - CRITICAL DISH NAMING: NEVER return generic names like 'Healthy Meal', 'Balanced Meal', 'Food Plate', or 'Meal'. You MUST identify the specific dish name accurately (e.g., 'Large Chicken Pizza with Soda', 'Grilled Chicken Salad', 'Oatmeal with Sliced Banana and Grapes', 'Cheeseburger & Fries'). If a pizza is visible, specify the pizza type (e.g., 'Chicken BBQ Pizza' or 'Large Chicken Pizza'). If a beverage or soda can is visible alongside the food, explicitly include it in the dish name.
+   - REALISTIC PORTIONS & FAST FOOD CALORIES:
+     * Whole Pizza (medium/large): 1200 - 2400 kcal (50-80g protein, 120-220g carbs, 50-100g fat). NEVER estimate 450 kcal for a whole pizza!
+     * Single Pizza Slice: 250 - 420 kcal.
+     * Regular Soda / Soft Drink can (330ml): ~140 - 160 kcal (38g carbs, 0g protein, 0g fat).
+     * Diet / Zero Sugar Soda / Black Coffee / Water: 0 kcal, 0g protein, 0g carbs, 0g fat. NEVER assign 150 calories to a diet or zero sugar drink.
    - Carefully count individual whole items (e.g., number of eggs, slices of toast, pieces of meat/chicken).
    - Use standard verified nutritional references (USDA, global databases) for any cuisine:
      * 1 whole large egg: ~72-75 kcal (6.3g protein, 5g fat, 0.4g carbs). 5 whole eggs = ~360-375 kcal (31.5g protein, 25g fat, 2g carbs).
@@ -100,23 +105,7 @@ You MUST respond ONLY with a single JSON object conforming strictly to the schem
 // ── Core AI Analysis Function ──────────────────────────────
 
 export async function analyzeMeal(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const provider = (process.env.AI_PROVIDER ?? "ollama").toLowerCase();
-
-  if (provider === "ollama") {
-    try {
-      return await analyzeWithOllama(input);
-    } catch (ollamaErr) {
-      console.warn("⚠️ Local Ollama failed, trying Gemini fallback:", ollamaErr);
-      return await analyzeWithGemini(input);
-    }
-  }
-
-  try {
-    return await analyzeWithGemini(input);
-  } catch (geminiErr) {
-    console.warn("⚠️ Gemini API failed, falling back to local Ollama vision:", geminiErr);
-    return await analyzeWithOllama(input);
-  }
+  return await analyzeWithGemini(input);
 }
 
 // ── Local Ollama Vision & LLM Implementation ───────────────
@@ -213,14 +202,16 @@ Provide realistic portion estimation and return strictly JSON:
 // ── Google Gemini Implementation ───────────────────────────
 
 async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const rawModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  const rawModel = process.env.GEMINI_MODEL ?? "gemini-3.5-flash";
   const modelName = resolveGeminiModelName(rawModel);
-  console.log(`🔮 Calling Gemini API (${modelName}): ${input.type === "text" ? input.mealDescription : "Image buffer"}`);
 
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    systemInstruction: SYSTEM_INSTRUCTION,
-  });
+  const candidateModels = Array.from(new Set([
+    modelName,
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+  ]));
 
   const generationConfig = {
     responseMimeType: "application/json",
@@ -257,42 +248,35 @@ Analyze the nutritional content of this meal. It may be from any restaurant, cui
   }
 
   let responseText: string | undefined;
-  try {
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig,
-    });
-    responseText = result.response.text();
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`⚠️ Gemini API call with ${modelName} failed (${msg}). Retrying with gemini-2.5-flash-lite...`);
-    if (modelName !== "gemini-2.5-flash-lite") {
-      try {
-        const fallbackModel = genAI.getGenerativeModel({
-          model: "gemini-2.5-flash-lite",
-          systemInstruction: SYSTEM_INSTRUCTION,
-        });
-        const fallbackResult = await fallbackModel.generateContent({
-          contents: [{ role: "user", parts }],
-          generationConfig,
-        });
-        responseText = fallbackResult.response.text();
-      } catch (fallbackErr: unknown) {
-        // Graceful fallback for text analysis when AI provider is unavailable
-        if (input.type === "text") {
-          console.warn("⚠️ Gemini API fallback failed, using offline text estimate:", fallbackErr);
-          return fallbackTextEstimate(input);
-        }
-        const fallbackMsg = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
-        throw new Error(`Gemini API call failed: ${fallbackMsg}`);
+  let lastError: Error | null = null;
+
+  for (const currentModel of candidateModels) {
+    try {
+      console.log(`🔮 Calling Gemini API (${currentModel}): ${input.type === "text" ? input.mealDescription : "Image buffer"}`);
+      const model = genAI.getGenerativeModel({
+        model: currentModel,
+        systemInstruction: SYSTEM_INSTRUCTION,
+      });
+
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts }],
+        generationConfig,
+      });
+      responseText = result.response.text();
+      if (responseText && responseText.trim().length > 0) {
+        break;
       }
-    } else {
-      if (input.type === "text") {
-        console.warn("⚠️ Gemini API failed, using offline text estimate:", msg);
-        return fallbackTextEstimate(input);
-      }
-      throw new Error(`Gemini API call failed: ${msg}`);
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      console.warn(`⚠️ Gemini API call with ${currentModel} failed (${lastError.message}). Trying next candidate model...`);
     }
+  }
+
+  if (!responseText || responseText.trim() === "") {
+    if (input.type === "text") {
+      return fallbackTextEstimate(input);
+    }
+    throw new Error(`Gemini API call failed across all candidate models: ${lastError?.message ?? "Empty response"}`);
   }
 
   if (!responseText || responseText.trim() === "") {
