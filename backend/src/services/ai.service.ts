@@ -76,7 +76,9 @@ const SYSTEM_INSTRUCTION = `You are a world-class, highly accurate nutritional a
 
 Your task:
 1. FIRST check if the image or description contains edible food or beverage.
-   - If the image contains non-food objects (e.g. laptop, computer, keyboard, screen, phone, electronics, furniture, clothing, animal, person, room, table without food, random items), you MUST set:
+   - Note: If food or beverage is depicted on a screen, monitor, mobile device, menu, packaging, plate, or table, ALWAYS focus on and analyze the food and beverage items shown!
+   - ONLY set "is_food": false if there is genuinely NO edible food or beverage anywhere in the photo (e.g., purely a blank wall, empty electronics, clothing, animal, or person with no food or drink).
+     If genuinely no food or beverage is present, set:
      "is_food": false,
      "dish_name": "Not Food",
      "calories": 0,
@@ -212,8 +214,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Prom
 // ── Google Gemini Implementation ───────────────────────────
 
 async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  // Prioritize verified fast and reliable models: 3.5-flash (primary, ~3-4s) and 3-flash-preview (instant fallback)
+  // Prioritize fast, high-availability models: 3.5-flash-lite (~2-3s) and 3.5-flash
   const candidateModels = [
+    "gemini-3.5-flash-lite",
     "gemini-3.5-flash",
     "gemini-3-flash-preview",
   ];
@@ -289,6 +292,7 @@ Analyze the nutritional content of this meal. It may be from any restaurant, cui
     throw new Error(`Gemini API call failed across all candidate models: ${lastError?.message ?? "Empty response"}`);
   }
 
+  console.log("🔍 [Gemini raw response]:", responseText);
   let parsed: any;
   try {
     parsed = JSON.parse(responseText);
