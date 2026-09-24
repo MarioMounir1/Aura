@@ -9,6 +9,7 @@
 
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/utils/constants.dart';
 import '../models/llama_meal_response.dart';
@@ -67,7 +68,9 @@ class LocalLlamaService {
 
   Future<AiUsageQuota> fetchAiUsage() async {
     try {
-      final response = await _dio.get<dynamic>('/meals/usage');
+      final url = '${AppConstants.apiV1}/meals/usage';
+      debugPrint('🚀 [GeminiScan] GET $url');
+      final response = await _dio.get<dynamic>(url);
       final body = response.data;
       if (body != null && body['success'] == true) {
         return AiUsageQuota.fromJson(body['data']);
@@ -117,9 +120,11 @@ class LocalLlamaService {
 
     // ── POST request with strict error handling ─────────────
     late final Response<dynamic> response;
+    final url = '${AppConstants.apiV1}$_endpoint';
+    debugPrint('🚀 [GeminiScan] POST $url (size: ${(fileSize / 1024).toStringAsFixed(1)} KB)');
     try {
       response = await _dio.post<dynamic>(
-        _endpoint,
+        url,
         data: formData,
         options: Options(
           contentType: 'multipart/form-data',
@@ -178,6 +183,7 @@ class LocalLlamaService {
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode ?? 0;
         final errBody    = e.response?.data;
+        debugPrint('❌ [GeminiScan] Server error $statusCode: $errBody');
         final errMsg     = errBody is Map ? (errBody['details'] as String? ?? errBody['error'] as String? ?? errBody['message'] as String?) : null;
 
         if (statusCode == 401) {
