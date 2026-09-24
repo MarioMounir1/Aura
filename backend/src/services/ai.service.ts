@@ -100,7 +100,114 @@ You MUST respond ONLY with a single JSON object conforming strictly to the schem
 // ── Core AI Analysis Function ──────────────────────────────
 
 export async function analyzeMeal(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  return analyzeWithGemini(input);
+  const provider = (process.env.AI_PROVIDER ?? "ollama").toLowerCase();
+
+  if (provider === "ollama") {
+    try {
+      return await analyzeWithOllama(input);
+    } catch (ollamaErr) {
+      console.warn("⚠️ Local Ollama failed, trying Gemini fallback:", ollamaErr);
+      return await analyzeWithGemini(input);
+    }
+  }
+
+  try {
+    return await analyzeWithGemini(input);
+  } catch (geminiErr) {
+    console.warn("⚠️ Gemini API failed, falling back to local Ollama vision:", geminiErr);
+    return await analyzeWithOllama(input);
+  }
+}
+
+// ── Local Ollama Vision & LLM Implementation ───────────────
+
+async function analyzeWithOllama(input: AnalyzeInput): Promise<MealAnalysisResult> {
+  const baseUrl = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434";
+
+  if (input.type === "image") {
+    const visionModel = process.env.OLLAMA_VISION_MODEL ?? "llava";
+    console.log(`🔮 Calling local Ollama Vision (${visionModel}) on ${baseUrl}...`);
+
+    const base64Image = input.imageBuffer.toString("base64");
+    const prompt = `You are a world-class nutritionist AI. Carefully analyze the food or beverage in this image.
+CRITICAL INSTRUCTIONS:
+1. Identify the exact food/dish name (e.g. 'Large Chicken Pizza with Soda', 'Cheeseburger & Fries', 'Grilled Chicken Salad'). NEVER return generic names like 'Healthy Meal' or 'Balanced Meal'. If it is pizza, say Pizza! If there is a drink (e.g. Primos Cola), mention it.
+2. Estimate REALISTIC calories, protein (g), carbs (g), and fats (g) for the ENTIRE visible portion.
+   - Large pizza: 1200 - 2200 kcal (60g protein, 120g carbs, 50g fat).
+   - Pizza slice: 280 - 400 kcal.
+   - Regular soda/cola can: 140 - 160 kcal (39g carbs).
+   - Diet / Zero soda: 0 kcal.
+3. If not food/drink, set is_food: false and dish_name: "Not Food".
+4. Return ONLY a single raw JSON object:
+{
+  "is_food": true,
+  "dish_name": "exact food name",
+  "calories": 1200,
+  "protein": 60,
+  "carbs": 100,
+  "fats": 50
+}`;
+
+    const res = await fetch(`${baseUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: visionModel,
+        prompt,
+        images: [base64Image],
+        stream: false,
+        format: "json",
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Ollama Vision returned ${res.status}: ${res.statusText}`);
+    }
+
+    const data: any = await res.json();
+    const rawText = data.response ?? "";
+    const cleanText = rawText.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleanText);
+
+    return parseAndValidateResponse(parsed);
+  } else {
+    const textModel = process.env.OLLAMA_MODEL ?? "llama3";
+    console.log(`🔮 Calling local Ollama LLM (${textModel}) for text: "${input.mealDescription}"...`);
+
+    const prompt = `You are a world-class nutritionist AI. Estimate the calories and macronutrients for:
+"${input.mealDescription}" (Restaurant: ${input.restaurantName || "Homemade"}).
+Provide realistic portion estimation and return strictly JSON:
+{
+  "is_food": true,
+  "dish_name": "${input.mealDescription}",
+  "calories": 450,
+  "protein": 30,
+  "carbs": 40,
+  "fats": 15
+}`;
+
+    const res = await fetch(`${baseUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: textModel,
+        prompt,
+        stream: false,
+        format: "json",
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Ollama returned ${res.status}: ${res.statusText}`);
+    }
+
+    const data: any = await res.json();
+    const rawText = data.response ?? "";
+    const cleanText = rawText.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleanText);
+
+    return parseAndValidateResponse(parsed);
+  }
 }
 
 // ── Google Gemini Implementation ───────────────────────────
