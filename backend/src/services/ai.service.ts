@@ -199,19 +199,24 @@ Provide realistic portion estimation and return strictly JSON:
   }
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => reject(new Error(errorMsg)), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutHandle);
+  });
+}
+
 // ── Google Gemini Implementation ───────────────────────────
 
 async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  const rawModel = process.env.GEMINI_MODEL ?? "gemini-3.5-flash";
-  const modelName = resolveGeminiModelName(rawModel);
-
-  const candidateModels = Array.from(new Set([
-    modelName,
+  // Prioritize verified fast and reliable models: 3.5-flash (primary, ~3-4s) and 3-flash-preview (instant fallback)
+  const candidateModels = [
     "gemini-3.5-flash",
-    "gemini-3.6-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest",
-  ]));
+    "gemini-3-flash-preview",
+  ];
 
   const generationConfig = {
     responseMimeType: "application/json",
@@ -258,10 +263,15 @@ Analyze the nutritional content of this meal. It may be from any restaurant, cui
         systemInstruction: SYSTEM_INSTRUCTION,
       });
 
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts }],
-        generationConfig,
-      });
+      const result = await withTimeout(
+        model.generateContent({
+          contents: [{ role: "user", parts }],
+          generationConfig,
+        }),
+        7000,
+        `Gemini API (${currentModel}) exceeded 7s timeout`
+      );
+
       responseText = result.response.text();
       if (responseText && responseText.trim().length > 0) {
         break;
@@ -277,13 +287,6 @@ Analyze the nutritional content of this meal. It may be from any restaurant, cui
       return fallbackTextEstimate(input);
     }
     throw new Error(`Gemini API call failed across all candidate models: ${lastError?.message ?? "Empty response"}`);
-  }
-
-  if (!responseText || responseText.trim() === "") {
-    if (input.type === "text") {
-      return fallbackTextEstimate(input);
-    }
-    throw new Error("Gemini returned an empty response.");
   }
 
   let parsed: any;
