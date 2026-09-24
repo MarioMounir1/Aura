@@ -1897,21 +1897,17 @@ class _ResultCardWidget extends StatefulWidget {
 
 class _ResultCardWidgetState extends State<_ResultCardWidget> {
   double _servingMultiplier = 1.0;
-  late String _foodName;
-  late int _calories;
-  late int _protein;
-  late int _carbs;
-  late int _fats;
+  String? _editedFoodName;
+  int? _editedCalories;
+  int? _editedProtein;
+  int? _editedCarbs;
+  int? _editedFats;
 
-  @override
-  void initState() {
-    super.initState();
-    _foodName = widget.llamaResult.mealAnalysis.detectedFood;
-    _calories = widget.llamaResult.mealAnalysis.calories;
-    _protein  = widget.llamaResult.mealAnalysis.protein;
-    _carbs    = widget.llamaResult.mealAnalysis.carbs;
-    _fats     = widget.llamaResult.mealAnalysis.fats;
-  }
+  String get _foodName => _editedFoodName ?? widget.llamaResult.mealAnalysis.detectedFood;
+  int get _calories    => _editedCalories ?? widget.llamaResult.mealAnalysis.calories;
+  int get _protein     => _editedProtein  ?? widget.llamaResult.mealAnalysis.protein;
+  int get _carbs       => _editedCarbs    ?? widget.llamaResult.mealAnalysis.carbs;
+  int get _fats        => _editedFats     ?? widget.llamaResult.mealAnalysis.fats;
 
   String _getCategoryBadgeText() {
     final hour = DateTime.now().hour;
@@ -1976,7 +1972,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
             onPressed: () {
               final text = controller.text.trim();
               if (text.isNotEmpty) {
-                setState(() => _foodName = text);
+                setState(() => _editedFoodName = text);
               }
               Navigator.pop(ctx);
             },
@@ -2184,11 +2180,11 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                       final f = int.tryParse(fatCtrl.text.trim());
 
                       setState(() {
-                        if (n.isNotEmpty) _foodName = n;
-                        if (c != null && c >= 0) _calories = c;
-                        if (p != null && p >= 0) _protein = p;
-                        if (cb != null && cb >= 0) _carbs = cb;
-                        if (f != null && f >= 0) _fats = f;
+                        if (n.isNotEmpty) _editedFoodName = n;
+                        if (c != null && c >= 0) _editedCalories = c;
+                        if (p != null && p >= 0) _editedProtein = p;
+                        if (cb != null && cb >= 0) _editedCarbs = cb;
+                        if (f != null && f >= 0) _editedFats = f;
                       });
                       Navigator.pop(ctx);
                     },
@@ -2475,7 +2471,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                             icon: Icons.local_fire_department_rounded,
                             iconColor: AppColors.success,
                             theme: theme,
-                            onTap: () => _editMacro(context, 'Calories', _calories, (v) => _calories = v),
+                            onTap: () => _editMacro(context, 'Calories', _calories, (v) => _editedCalories = v),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -2486,7 +2482,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                             icon: Icons.grain_rounded,
                             iconColor: AppColors.carbs,
                             theme: theme,
-                            onTap: () => _editMacro(context, 'Carbs', _carbs, (v) => _carbs = v),
+                            onTap: () => _editMacro(context, 'Carbs', _carbs, (v) => _editedCarbs = v),
                           ),
                         ),
                       ],
@@ -2501,7 +2497,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                             icon: Icons.fitness_center_rounded,
                             iconColor: AppColors.protein,
                             theme: theme,
-                            onTap: () => _editMacro(context, 'Protein', _protein, (v) => _protein = v),
+                            onTap: () => _editMacro(context, 'Protein', _protein, (v) => _editedProtein = v),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -2512,7 +2508,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                             icon: Icons.opacity_rounded,
                             iconColor: AppColors.fats,
                             theme: theme,
-                            onTap: () => _editMacro(context, 'Fats', _fats, (v) => _fats = v),
+                            onTap: () => _editMacro(context, 'Fats', _fats, (v) => _editedFats = v),
                           ),
                         ),
                       ],
