@@ -50,6 +50,7 @@ class LocalLlamaService {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          options.baseUrl = AppConstants.apiV1;
           final token = await secureStorage.read(key: AppConstants.tokenKey);
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -177,7 +178,7 @@ class LocalLlamaService {
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode ?? 0;
         final errBody    = e.response?.data;
-        final errMsg     = errBody is Map ? (errBody['error'] as String?) : null;
+        final errMsg     = errBody is Map ? (errBody['details'] as String? ?? errBody['error'] as String? ?? errBody['message'] as String?) : null;
 
         if (statusCode == 401) {
           return const LlamaNetworkException(
