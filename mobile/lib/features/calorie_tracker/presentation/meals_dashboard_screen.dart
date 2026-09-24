@@ -39,6 +39,8 @@ import '../../../core/widgets/ad_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
+import 'bloc/dashboard_bloc.dart';
+import 'bloc/dashboard_event.dart';
 
 // â”€â”€ Layout State Enum â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -167,6 +169,63 @@ class _MealsDashboardState extends State<MealsDashboard> {
     super.initState();
     _initData();
     _fetchQuota();
+    _fetchTodayMeals();
+  }
+
+  Future<void> _fetchTodayMeals() async {
+    try {
+      final dateStr = DateTime.now().toIso8601String().split('T')[0];
+      final url = '${AppConstants.apiV1}/meals/history?date=$dateStr';
+      final dio = Dio();
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: AppConstants.tokenKey);
+      final response = await dio.get<dynamic>(
+        url,
+        options: Options(headers: {
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        }),
+      );
+      final data = response.data;
+      if (data != null && data['success'] == true && data['data'] != null) {
+        final rawLogs = data['data']['logs'] as List<dynamic>?;
+        if (rawLogs != null && mounted) {
+          final fetchedEntries = rawLogs.map((item) {
+            final double cal = (item['calories'] as num?)?.toDouble() ?? 0.0;
+            final double p = (item['protein'] as num?)?.toDouble() ?? 0.0;
+            final double c = (item['carbs'] as num?)?.toDouble() ?? 0.0;
+            final double f = (item['fats'] as num?)?.toDouble() ?? 0.0;
+            final isNutritious = p > 25 && cal < 400;
+            final List<MealWarning> warnings = [];
+            if (c > 80) warnings.add(const MealWarning(warningText: 'High carb load detected', isSevere: false));
+            if (f > 20) warnings.add(const MealWarning(warningText: 'High saturated fat warning', isSevere: false));
+            if (cal > 700) warnings.add(const MealWarning(warningText: 'Sodium & saturated fat spike detected', isSevere: true));
+            return MealEntry(
+              id: item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+              foodName: item['mealName'] as String? ?? 'Meal Log',
+              restaurantName: item['restaurantName'] as String? ?? 'AI Scan',
+              protein: p,
+              carbs: c,
+              fat: f,
+              calories: cal,
+              warnings: warnings,
+              isHighlyNutritious: isNutritious,
+              createdAt: DateTime.tryParse(item['createdAt']?.toString() ?? '') ?? DateTime.now(),
+              source: item['source'] as String? ?? 'image',
+              imagePath: item['imageUrl'] as String?,
+              ingredientsBreakdown: const [],
+            );
+          }).toList();
+
+          setState(() {
+            logs = fetchedEntries;
+            _recalcTotals();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to sync today meals: $e');
+    }
   }
 
   Future<void> _fetchQuota() async {
@@ -375,8 +434,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
     try {
       final picked = await _imagePicker.pickImage(
         source: source,
-        imageQuality: 85,
-        maxWidth: 1280,
+        imageQuality: 80,
+        maxWidth: 1024,
+        maxHeight: 1024,
       );
       if (picked == null) {
         _isPickingImage = false;
@@ -503,6 +563,10 @@ class _MealsDashboardState extends State<MealsDashboard> {
       _llamaResult  = null;
       _selectedImage = null;
     });
+    try {
+      context.read<DashboardBloc>().add(const RefreshDashboard());
+    } catch (_) {}
+    _fetchTodayMeals();
   }
 
   void _discardResult() {
@@ -526,6 +590,10 @@ class _MealsDashboardState extends State<MealsDashboard> {
             logs.insert(0, entry);
             _recalcTotals();
           });
+          try {
+            context.read<DashboardBloc>().add(const RefreshDashboard());
+          } catch (_) {}
+          _fetchTodayMeals();
         },
         service: _manualService,
         onError: _showErrorSnackbar,
