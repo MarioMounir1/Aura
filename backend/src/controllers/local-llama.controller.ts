@@ -73,34 +73,34 @@ function generateRecommendation(
     const deficit = Math.round(userProteinGoal * 0.2);
     return {
       triggerWarning: true,
-      message: `Llama Notice: This meal lacks sufficient protein for your daily goal. The carb load is high (${carbs}g). We recommend adding ${deficit}g of lean protein to your next meal.`,
+      message: `Aura Coach: This meal lacks sufficient protein for your daily goal. The carb load is high (${carbs}g). We recommend adding ${deficit}g of lean protein to your next meal.`,
     };
   }
 
   if (calories > 800) {
     return {
       triggerWarning: true,
-      message: `Llama Notice: This is a high-calorie meal (${calories} kcal). Consider balancing your remaining meals today with lighter, protein-dense options to stay within your daily target.`,
+      message: `Aura Coach: This is a high-calorie meal (${calories} kcal). Consider balancing your remaining meals today with lighter, protein-dense options to stay within your daily target.`,
     };
   }
 
   if (fats > 30) {
     return {
       triggerWarning: true,
-      message: `Llama Notice: This meal has elevated fat content (${fats}g). Pair your next meal with complex carbs and lean protein to balance your macro distribution.`,
+      message: `Aura Coach: This meal has elevated fat content (${fats}g). Pair your next meal with complex carbs and lean protein to balance your macro distribution.`,
     };
   }
 
   if (protein >= 30 && calories < 600) {
     return {
       triggerWarning: false,
-      message: `Llama says: Excellent macro balance! This meal supports muscle synthesis with ${protein}g of protein and a controlled caloric load. Keep it up.`,
+      message: `Aura Coach: Excellent macro balance! This meal supports muscle synthesis with ${protein}g of protein and a controlled caloric load. Keep it up.`,
     };
   }
 
   return {
     triggerWarning: false,
-    message: `Llama says: This looks like a balanced meal. Your macros are within healthy ranges — Calories: ${calories} kcal, Protein: ${protein}g, Carbs: ${carbs}g, Fats: ${fats}g.`,
+    message: `Aura Coach: This looks like a balanced meal. Your macros are within healthy ranges — Calories: ${calories} kcal, Protein: ${protein}g, Carbs: ${carbs}g, Fats: ${fats}g.`,
   };
 }
 
