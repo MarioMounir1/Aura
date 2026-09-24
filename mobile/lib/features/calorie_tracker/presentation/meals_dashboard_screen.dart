@@ -4422,94 +4422,107 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.auraTheme;
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      decoration: const BoxDecoration(
-        color: DashboardThemeColors.cardBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: theme.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
-      padding: EdgeInsets.fromLTRB(24, 20, 24, 24 + bottomPadding),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, 24 + bottomPadding),
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // â”€â”€ Sheet handle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Sheet handle ──────────────────────────────────────
             Center(
               child: Container(
-                width: 40,
+                width: 44,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: DashboardThemeColors.trackBg,
+                  color: theme.borderMid,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
             ),
 
-            // â”€â”€ Title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Title & Close Button ──────────────────────────────
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (_isEdit
-                        ? DashboardThemeColors.accentBlue
-                        : DashboardThemeColors.accentEmerald
-                    ).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    color: theme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     _isEdit ? Icons.edit_rounded : Icons.edit_note_rounded,
-                    color: _isEdit
-                        ? DashboardThemeColors.accentBlue
-                        : DashboardThemeColors.accentEmerald,
+                    color: theme.primary,
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _isEdit ? 'Edit Meal' : 'Manual Macro Log',
-                      style: GoogleFonts.outfit(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: DashboardThemeColors.textPrimary,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isEdit ? 'Edit Meal' : 'Manual Macro Log',
+                        style: GoogleFonts.outfit(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textPrimary,
+                        ),
                       ),
-                    ),
-                    Text(
-                      _isEdit
-                          ? 'Update macros for this entry'
-                          : 'Log a meal by entering macros directly',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: DashboardThemeColors.textMuted,
+                      const SizedBox(height: 2),
+                      Text(
+                        _isEdit
+                            ? 'Update macros for this entry'
+                            : 'Log a meal by entering macros directly',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: theme.textSecondary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: theme.textSecondary, size: 22),
+                  onPressed: () => Navigator.of(context).pop(),
+                  tooltip: 'Close',
                 ),
               ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
 
-            // â”€â”€ Meal name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Meal name ─────────────────────────────────────────
             _MacroField(
               controller: _mealNameCtrl,
               label: 'Meal Name',
               hint: 'e.g. Grilled Chicken & Rice',
               unit: '',
-              icon: Icons.restaurant_menu_outlined,
+              icon: Icons.restaurant_menu_rounded,
+              iconColor: theme.primary,
               isOptional: true,
               validator: null,
+              theme: theme,
             ),
 
             const SizedBox(height: 12),
 
-            // â”€â”€ Macro fields in 2Ã—2 grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Macro fields in 2×2 grid ──────────────────────────
             Row(
               children: [
                 Expanded(
@@ -4518,9 +4531,10 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                     label: 'Calories',
                     hint: '0',
                     unit: 'kcal',
-                    icon: Icons.local_fire_department_outlined,
-                    iconColor: DashboardThemeColors.accentLime,
+                    icon: Icons.local_fire_department_rounded,
+                    iconColor: AppColors.success,
                     validator: _numValidator,
+                    theme: theme,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -4530,9 +4544,10 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                     label: 'Protein',
                     hint: '0',
                     unit: 'g',
-                    icon: Icons.fitness_center_outlined,
-                    iconColor: DashboardThemeColors.accentEmerald,
+                    icon: Icons.fitness_center_rounded,
+                    iconColor: AppColors.protein,
                     validator: _numValidator,
+                    theme: theme,
                   ),
                 ),
               ],
@@ -4548,9 +4563,10 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                     label: 'Carbs',
                     hint: '0',
                     unit: 'g',
-                    icon: Icons.grain_outlined,
-                    iconColor: DashboardThemeColors.accentBlue,
+                    icon: Icons.grain_rounded,
+                    iconColor: AppColors.carbs,
                     validator: _numValidator,
+                    theme: theme,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -4560,9 +4576,10 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                     label: 'Fats',
                     hint: '0',
                     unit: 'g',
-                    icon: Icons.opacity_outlined,
-                    iconColor: DashboardThemeColors.accentRed,
+                    icon: Icons.opacity_rounded,
+                    iconColor: AppColors.fats,
                     validator: _numValidator,
+                    theme: theme,
                   ),
                 ),
               ],
@@ -4570,39 +4587,37 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
 
             const SizedBox(height: 24),
 
-            // â”€â”€ Save button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Save button ───────────────────────────────────────
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _isSaving ? null : _handleSave,
                 icon: _isSaving
                     ? const SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.black,
+                          color: Colors.white,
                         ),
                       )
-                    : Icon(_isEdit ? Icons.save_outlined : Icons.check_rounded, size: 18),
+                    : Icon(_isEdit ? Icons.check_circle_rounded : Icons.add_rounded, size: 20),
                 label: Text(
                   _isSaving ? 'Saving...' : (_isEdit ? 'Save Changes' : 'Save Log'),
                   style: GoogleFonts.outfit(
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isEdit
-                      ? DashboardThemeColors.accentBlue
-                      : DashboardThemeColors.accentEmerald,
-                  foregroundColor: Colors.black,
-                  disabledBackgroundColor:
-                      DashboardThemeColors.accentEmerald.withValues(alpha: 0.5),
+                  backgroundColor: theme.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: theme.primary.withValues(alpha: 0.5),
+                  disabledForegroundColor: Colors.white70,
                   elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
               ),
@@ -4617,13 +4632,12 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
     if (value == null || value.trim().isEmpty) return 'Required';
     final n = double.tryParse(value.trim());
     if (n == null) return 'Enter a number';
-    if (n < 0) return 'Must be â‰¥ 0';
+    if (n < 0) return 'Must be ≥ 0';
     return null;
   }
 }
 
-// â”€â”€ Reusable Macro Input Field â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ── Reusable Macro Input Field ──────────────────────────────────────────
 
 class _MacroField extends StatelessWidget {
   final TextEditingController controller;
@@ -4634,6 +4648,7 @@ class _MacroField extends StatelessWidget {
   final Color? iconColor;
   final bool isOptional;
   final String? Function(String?)? validator;
+  final AuraThemeExtension theme;
 
   const _MacroField({
     required this.controller,
@@ -4644,6 +4659,7 @@ class _MacroField extends StatelessWidget {
     this.iconColor,
     this.isOptional = false,
     this.validator,
+    required this.theme,
   });
 
   @override
@@ -4655,9 +4671,9 @@ class _MacroField extends StatelessWidget {
           : const TextInputType.numberWithOptions(decimal: true),
       validator: isOptional ? null : validator,
       style: GoogleFonts.outfit(
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
-        color: DashboardThemeColors.textPrimary,
+        color: theme.textPrimary,
       ),
       decoration: InputDecoration(
         labelText: label + (isOptional ? ' (optional)' : ''),
@@ -4666,55 +4682,55 @@ class _MacroField extends StatelessWidget {
         prefixIcon: Icon(
           icon,
           size: 18,
-          color: iconColor ?? DashboardThemeColors.textMuted,
+          color: iconColor ?? theme.textSecondary,
         ),
         labelStyle: GoogleFonts.inter(
           fontSize: 12,
-          color: DashboardThemeColors.textMuted,
+          fontWeight: FontWeight.w500,
+          color: theme.textSecondary,
         ),
         hintStyle: GoogleFonts.outfit(
           fontSize: 13,
-          color: DashboardThemeColors.textMuted.withValues(alpha: 0.5),
+          color: theme.textMuted.withValues(alpha: 0.6),
         ),
         suffixStyle: GoogleFonts.inter(
-          fontSize: 11,
-          color: DashboardThemeColors.textMuted,
+          fontSize: 12,
+          color: theme.textSecondary,
           fontWeight: FontWeight.w600,
         ),
         filled: true,
-        fillColor: DashboardThemeColors.cardSurface,
+        fillColor: theme.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: DashboardThemeColors.trackBg),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: theme.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: DashboardThemeColors.trackBg),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: theme.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: DashboardThemeColors.accentEmerald,
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: theme.primary,
             width: 1.5,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: DashboardThemeColors.accentRed),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(
-            color: DashboardThemeColors.accentRed,
+            color: AppColors.error,
             width: 1.5,
           ),
         ),
         errorStyle: GoogleFonts.inter(
           fontSize: 10,
-          color: DashboardThemeColors.accentRed,
+          color: AppColors.error,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
     );
   }
