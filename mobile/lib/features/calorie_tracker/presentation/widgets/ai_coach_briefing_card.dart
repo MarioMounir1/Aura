@@ -1,6 +1,7 @@
 // lib/features/calorie_tracker/presentation/widgets/ai_coach_briefing_card.dart
 // Aura — Daily AI Coach Briefing Card (Light Sage & Forest Green Aura Theme)
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -35,11 +36,13 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
   static String _cachedMessage =
       'Track your meals to stay on pace with your daily calorie and protein targets.';
   static String _cachedFocusArea = 'Daily Progress';
+  static Map<String, dynamic>? _cachedYesterday;
 
   final bool _isLoading = false;
   late String _headline;
   late String _message;
   late String _focusArea;
+  Map<String, dynamic>? _yesterdayStats = _cachedYesterday;
   bool _initializedLocal = false;
 
   @override
@@ -217,6 +220,22 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
               'You\'ve reached $calFormatted kcal today with ${consumedProt.round()}g protein. Great job hitting your nutrition targets!';
           focusArea = 'Goal Reached';
         }
+      } else if (_yesterdayStats != null &&
+          ((_yesterdayStats!['mealCount'] as num? ?? 0) > 0 ||
+              (_yesterdayStats!['calories'] as num? ?? 0) > 0)) {
+        final yCal = (_yesterdayStats!['calories'] as num? ?? 0).round();
+        final yProt = (_yesterdayStats!['protein'] as num? ?? 0).round();
+        final yCount = (_yesterdayStats!['mealCount'] as num? ?? 0).toInt();
+        final mealWord = yCount == 1 ? 'meal' : 'meals';
+        final yCalFmt = yCal.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        );
+
+        headline = 'Yesterday: $yCalFmt kcal & ${yProt}g Protein 🎯';
+        message =
+            'You logged $yCount $mealWord yesterday ($yCalFmt of $calFormatted kcal, ${yProt}g protein). Let\'s hit your $calFormatted kcal target today!';
+        focusArea = 'Yesterday\'s Recap';
       }
 
       if (mounted) {
@@ -234,6 +253,15 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       final m = prefs.getString('cached_coach_message');
       final f = prefs.getString('cached_coach_focus');
 
+      final cachedY = prefs.getString('cached_yesterday_stats');
+      if (cachedY != null) {
+        try {
+          final parsed = jsonDecode(cachedY) as Map<String, dynamic>;
+          _cachedYesterday = parsed;
+          _yesterdayStats = parsed;
+        } catch (_) {}
+      }
+
       // Purge and delete any outdated workout split cache from disk
       final isOutdatedWorkout = h != null &&
           (h.contains('Split') || h.contains('Day 🔥') || (m != null && m.contains("Today's session is")));
@@ -249,24 +277,28 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
           await prefs.setString('cached_coach_headline', 'Weekly Insights');
         }
 
-        // If cached message contains a stale calorie or protein figure, regenerate locally
-        final activeTarget = _getActiveCalorieTarget();
-        final activeProtein = _getActiveProteinTarget();
-        final activeFormatted = activeTarget.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match match) => '${match[1]},',
-        );
-        if (m.contains('kcal') && !m.contains(activeFormatted) && !m.contains(activeTarget.toString())) {
-          _resolveLocalData();
-          return;
-        }
-        if (m.contains('protein') && !m.contains('${activeProtein}g protein') && activeProtein > 160) {
-          _resolveLocalData();
-          return;
+        final isYesterdayMessage = (h.contains('Yesterday')) || (f != null && f.contains('Yesterday'));
+
+        if (!isYesterdayMessage) {
+          // If cached message contains a stale calorie or protein figure, regenerate locally
+          final activeTarget = _getActiveCalorieTarget();
+          final activeProtein = _getActiveProteinTarget();
+          final activeFormatted = activeTarget.toString().replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (Match match) => '${match[1]},',
+          );
+          if (m.contains('kcal') && !m.contains(activeFormatted) && !m.contains(activeTarget.toString())) {
+            _resolveLocalData();
+            return;
+          }
+          if (m.contains('protein') && !m.contains('${activeProtein}g protein') && activeProtein > 160) {
+            _resolveLocalData();
+            return;
+          }
         }
 
         setState(() {
-          _applyLocal(h!, m, f ?? _focusArea);
+          _applyLocal(h, m, f ?? _focusArea);
         });
       }
     } catch (_) {}
@@ -295,6 +327,16 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         String? newHeadline = (data['headline'] as String?)?.trim();
         String? newMessage = (data['message'] as String?)?.trim();
         final newFocus = (data['focusArea'] as String?)?.trim();
+
+        if (data['yesterday'] is Map<String, dynamic>) {
+          final yMap = data['yesterday'] as Map<String, dynamic>;
+          _cachedYesterday = yMap;
+          _yesterdayStats = yMap;
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('cached_yesterday_stats', jsonEncode(yMap));
+          } catch (_) {}
+        }
 
         // Strict guard: Reject any workout split text that may come from an old cloud build or cache
         final isWorkoutText = (newHeadline?.contains('Split') ?? false) ||
@@ -357,6 +399,32 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => const WeeklyInsightsSheet(),
+    );
+  }
+
+  Widget _buildMacroBadge(String emoji, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F6F2),
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: const Color(0xFFD6E7DC), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 10.5)),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF235A42),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -424,12 +492,18 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         ? _message.replaceAll('150g protein', '${activeProt}g protein')
         : _message;
 
+    final isYesterdayRecap = _focusArea.contains('Yesterday') || displayHeadline.contains('Yesterday');
+    final double consumed = widget.caloriesConsumed ?? 0.0;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFDCEEE3), width: 1.2),
+        border: Border.all(
+          color: isYesterdayRecap ? const Color(0xFFC7E2D1) : const Color(0xFFDCEEE3),
+          width: 1.2,
+        ),
         boxShadow: const [
           BoxShadow(
             color: Color(0x081E3A2B),
@@ -483,16 +557,32 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF4F7F5),
+                              color: isYesterdayRecap
+                                  ? const Color(0xFFEBF5EE)
+                                  : const Color(0xFFF4F7F5),
                               borderRadius: BorderRadius.circular(8),
+                              border: isYesterdayRecap
+                                  ? Border.all(color: const Color(0xFFBFE3CD), width: 0.8)
+                                  : null,
                             ),
-                            child: Text(
-                              _focusArea,
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF5A7060),
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isYesterdayRecap) ...[
+                                  const Icon(Icons.history_rounded, size: 12, color: Color(0xFF235A42)),
+                                  const SizedBox(width: 4),
+                                ],
+                                Text(
+                                  _focusArea,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isYesterdayRecap
+                                        ? const Color(0xFF235A42)
+                                        : const Color(0xFF5A7060),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -542,6 +632,32 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
                     height: 1.4,
                   ),
                 ),
+
+                // Yesterday mini macro pills when it's a new day (0 kcal logged today)
+                if (consumed == 0 &&
+                    _yesterdayStats != null &&
+                    ((_yesterdayStats!['mealCount'] as num? ?? 0) > 0 ||
+                        (_yesterdayStats!['calories'] as num? ?? 0) > 0)) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _buildMacroBadge(
+                        '🔥',
+                        '${(_yesterdayStats!['calories'] as num? ?? 0).round()} kcal',
+                      ),
+                      _buildMacroBadge(
+                        '🥩',
+                        '${(_yesterdayStats!['protein'] as num? ?? 0).round()}g prot',
+                      ),
+                      _buildMacroBadge(
+                        '🍽️',
+                        '${(_yesterdayStats!['mealCount'] as num? ?? 0).toInt()} meals',
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
