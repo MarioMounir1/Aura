@@ -262,6 +262,7 @@ export async function getWeeklyInsightsHandler(
       where: { id: userId },
       select: {
         dailyCalorieGoal: true,
+        proteinGoal: true,
         weightKg: true,
         heightCm: true,
         age: true,
