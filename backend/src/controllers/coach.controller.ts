@@ -75,13 +75,18 @@ export async function getDailyBriefingHandler(
               ? Math.max(80, Math.min(250, Math.max(Math.round(user.weightKg * 2.0), Math.round((calorieTarget * 0.25) / 4))))
               : (user?.proteinGoal ?? 150)));
 
-    // 2. Fetch today's nutrition logs
+    // 2. Fetch today's & yesterday's nutrition logs
     const todayStart = new Date();
     todayStart.setUTCHours(0, 0, 0, 0);
     const todayEnd = new Date();
     todayEnd.setUTCHours(23, 59, 59, 999);
 
-    const [mealLogs, foodLogs] = await Promise.all([
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
+    const yesterdayEnd = new Date(todayEnd);
+    yesterdayEnd.setUTCDate(yesterdayEnd.getUTCDate() - 1);
+
+    const [mealLogs, foodLogs, yesterdayMealLogs, yesterdayFoodLogs] = await Promise.all([
       prisma.mealLog.findMany({
         where: {
           userId,
@@ -96,6 +101,22 @@ export async function getDailyBriefingHandler(
         },
         include: {
           foodItem: { select: { calories: true, protein: true } },
+        },
+      }),
+      prisma.mealLog.findMany({
+        where: {
+          userId,
+          createdAt: { gte: yesterdayStart, lte: yesterdayEnd },
+        },
+        select: { calories: true, protein: true, carbs: true, fats: true },
+      }),
+      prisma.foodLog.findMany({
+        where: {
+          userId,
+          loggedAt: { gte: yesterdayStart, lte: yesterdayEnd },
+        },
+        include: {
+          foodItem: { select: { calories: true, protein: true, carbs: true, fats: true } },
         },
       }),
     ]);
@@ -120,6 +141,38 @@ export async function getDailyBriefingHandler(
     if (!isNaN(qProteinConsumed) && qProteinConsumed > proteinConsumedToday) {
       proteinConsumedToday = qProteinConsumed;
     }
+
+    // Aggregate yesterday's totals
+    let yCalories = 0;
+    let yProtein = 0;
+    let yCarbs = 0;
+    let yFats = 0;
+
+    yesterdayMealLogs.forEach((m) => {
+      yCalories += m.calories ?? 0;
+      yProtein += m.protein ?? 0;
+      yCarbs += m.carbs ?? 0;
+      yFats += m.fats ?? 0;
+    });
+
+    yesterdayFoodLogs.forEach((f) => {
+      const servings = f.servings ?? 1;
+      yCalories += Math.round((f.foodItem?.calories ?? 0) * servings);
+      yProtein += Math.round((f.foodItem?.protein ?? 0) * servings);
+      yCarbs += Math.round((f.foodItem?.carbs ?? 0) * servings);
+      yFats += Math.round((f.foodItem?.fats ?? 0) * servings);
+    });
+
+    const yesterdayMealCount = yesterdayMealLogs.length + yesterdayFoodLogs.length;
+    const yesterdayStats = {
+      calories: Math.round(yCalories),
+      protein: Math.round(yProtein),
+      carbs: Math.round(yCarbs),
+      fats: Math.round(yFats),
+      mealCount: yesterdayMealCount,
+      calorieTarget,
+      proteinTarget,
+    };
 
     // 3. Calculate active logging streak (consecutive active days)
     const recentSessions = await prisma.workoutSession.findMany({
@@ -149,10 +202,12 @@ export async function getDailyBriefingHandler(
       proteinConsumedToday: Math.round(proteinConsumedToday),
       streakDays,
       weightTrend: user?.goal ? `${user.goal} Phase` : "Healthy Lifestyle",
+      yesterday: yesterdayStats,
     });
 
     const resultData = {
       ...briefing,
+      yesterday: yesterdayStats,
       metrics: {
         calorieTarget,
         caloriesConsumedToday: Math.round(caloriesConsumedToday),
@@ -228,15 +283,22 @@ export async function getWeeklyInsightsHandler(
       calorieTarget = Math.round(Math.min(5000, Math.max(1200, bmr * mult + adj)));
     }
 
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setUTCDate(yesterdayStart.getUTCDate() - 1);
+    const yesterdayEnd = new Date(todayStart);
+    yesterdayEnd.setUTCMilliseconds(-1);
+
     // 1. Fetch 7-day nutrition logs & activity
     const [mealLogs, foodLogs, completedWorkouts, weightLogs] = await Promise.all([
       prisma.mealLog.findMany({
         where: { userId, createdAt: { gte: sevenDaysAgo } },
-        select: { calories: true, createdAt: true },
+        select: { calories: true, protein: true, carbs: true, fats: true, createdAt: true },
       }),
       prisma.foodLog.findMany({
         where: { userId, loggedAt: { gte: sevenDaysAgo } },
-        include: { foodItem: { select: { calories: true } } },
+        include: { foodItem: { select: { calories: true, protein: true, carbs: true, fats: true } } },
       }),
       prisma.workoutSession.findMany({
         where: { userId, endedAt: { not: null, gte: sevenDaysAgo } },
@@ -252,16 +314,50 @@ export async function getWeeklyInsightsHandler(
     const foodDaysSet = new Set<string>();
     let totalCaloriesLogged = 0;
 
+    let yCals = 0;
+    let yProt = 0;
+    let yCarb = 0;
+    let yFat = 0;
+    let yCount = 0;
+
     mealLogs.forEach((m) => {
       totalCaloriesLogged += m.calories ?? 0;
       foodDaysSet.add(m.createdAt.toISOString().slice(0, 10));
+
+      if (m.createdAt >= yesterdayStart && m.createdAt <= yesterdayEnd) {
+        yCals += m.calories ?? 0;
+        yProt += m.protein ?? 0;
+        yCarb += m.carbs ?? 0;
+        yFat += m.fats ?? 0;
+        yCount++;
+      }
     });
 
     foodLogs.forEach((f) => {
       const servings = f.servings ?? 1;
-      totalCaloriesLogged += Math.round((f.foodItem?.calories ?? 0) * servings);
+      const c = Math.round((f.foodItem?.calories ?? 0) * servings);
+      totalCaloriesLogged += c;
       foodDaysSet.add(f.loggedAt.toISOString().slice(0, 10));
+
+      if (f.loggedAt >= yesterdayStart && f.loggedAt <= yesterdayEnd) {
+        yCals += c;
+        yProt += Math.round((f.foodItem?.protein ?? 0) * servings);
+        yCarb += Math.round((f.foodItem?.carbs ?? 0) * servings);
+        yFat += Math.round((f.foodItem?.fats ?? 0) * servings);
+        yCount++;
+      }
     });
+
+    const proteinTarget = user?.proteinGoal ?? 150;
+    const yesterdayStats = {
+      calories: Math.round(yCals),
+      protein: Math.round(yProt),
+      carbs: Math.round(yCarb),
+      fats: Math.round(yFat),
+      mealCount: yCount,
+      calorieTarget,
+      proteinTarget,
+    };
 
     // Active days include days where user logged food, finished a workout, or logged weight
     const activeDaysSet = new Set<string>(foodDaysSet);
@@ -297,10 +393,12 @@ export async function getWeeklyInsightsHandler(
       targetWorkouts,
       weightDeltaKg,
       daysLoggedCount: activeDaysSet.size,
+      yesterday: yesterdayStats,
     });
 
     const resultData = {
       ...report,
+      yesterday: yesterdayStats,
       stats: {
         totalCaloriesLogged: Math.round(totalCaloriesLogged),
         avgDailyCalories,
