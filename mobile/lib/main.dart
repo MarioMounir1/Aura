@@ -311,14 +311,13 @@ class TeneenApp extends StatelessWidget {
               ],
               builder: (context, child) {
                 final mediaQueryData = MediaQuery.of(context);
-                // Clamp text scaler to standard bounds so UI doesn't blow up or overflow on devices with large system fonts
-                final clampedTextScaler = mediaQueryData.textScaler.clamp(
-                  minScaleFactor: 0.85,
-                  maxScaleFactor: 1.05,
-                );
+                // Zoom out the app scale (~8%) to comfortably fit modern aspect ratios without crowding or overflowing
+                final baseScale = mediaQueryData.textScaler.scale(10.0) / 10.0;
+                final zoomedScale = (baseScale * 0.92).clamp(0.80, 0.95);
+                final zoomedTextScaler = TextScaler.linear(zoomedScale);
                 return MediaQuery(
                   data: mediaQueryData.copyWith(
-                    textScaler: clampedTextScaler,
+                    textScaler: zoomedTextScaler,
                   ),
                   child: Directionality(
                     textDirection: TextDirection.ltr,
