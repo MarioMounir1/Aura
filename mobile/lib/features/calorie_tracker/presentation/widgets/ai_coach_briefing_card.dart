@@ -277,7 +277,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
           await prefs.setString('cached_coach_headline', 'Weekly Insights');
         }
 
-        final isYesterdayMessage = (h.contains('Yesterday')) || (f != null && f.contains('Yesterday'));
+        final isYesterdayMessage = h.contains('Yesterday') || (f != null && f.contains('Yesterday'));
 
         if (!isYesterdayMessage) {
           // If cached message contains a stale calorie or protein figure, regenerate locally
@@ -298,7 +298,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         }
 
         setState(() {
-          _applyLocal(h, m, f ?? _focusArea);
+          _applyLocal(h!, m, f ?? _focusArea);
         });
       }
     } catch (_) {}
