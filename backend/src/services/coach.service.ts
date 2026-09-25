@@ -757,6 +757,16 @@ Respond ONLY with a valid JSON object matching this schema:
 
 // ── 15. Daily Ecosystem Holistic Briefing ────────────────────────
 
+export interface YesterdayStats {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  mealCount: number;
+  calorieTarget?: number;
+  proteinTarget?: number;
+}
+
 export interface DailyBriefingInput {
   userName?: string;
   calorieTarget: number;
@@ -765,12 +775,14 @@ export interface DailyBriefingInput {
   proteinConsumedToday: number;
   streakDays: number;
   weightTrend?: string;
+  yesterday?: YesterdayStats;
 }
 
 export interface DailyBriefingResult {
   headline: string;
   message: string;
   focusArea: string;
+  yesterday?: YesterdayStats;
 }
 
 export async function generateDailyEcosystemBriefing(
@@ -785,8 +797,9 @@ export async function generateDailyEcosystemBriefing(
   if (percentCals >= 90 && percentCals <= 110) {
     return {
       headline: "Daily Goal Crushed! 🏆",
-      message: `You've logged ${input.caloriesConsumedToday} of ${input.calorieTarget} kcal and ${input.proteinConsumedToday}g of ${input.proteinTarget}g protein. Top-tier consistency today!`,
+      message: `You've logged ${input.caloriesConsumedToday.toLocaleString()} of ${input.calorieTarget.toLocaleString()} kcal and ${input.proteinConsumedToday}g of ${input.proteinTarget}g protein. Top-tier consistency today!`,
       focusArea: "Goal Achieved",
+      yesterday: input.yesterday,
     };
   }
 
@@ -794,34 +807,56 @@ export async function generateDailyEcosystemBriefing(
   if (input.streakDays >= 3 && input.caloriesConsumedToday > 0) {
     return {
       headline: `${input.streakDays}-Day Streak Strong ⚡`,
-      message: `You're ${percentCals}% toward your daily target with ${remainingCals} kcal remaining. Maintain this ${input.streakDays}-day momentum!`,
+      message: `You're ${percentCals}% toward your daily target with ${remainingCals.toLocaleString()} kcal remaining. Maintain this ${input.streakDays}-day momentum!`,
       focusArea: "Consistency",
+      yesterday: input.yesterday,
     };
   }
 
   // 3. Active logging in progress during the day
   if (input.caloriesConsumedToday > 0) {
     return {
-      headline: `${remainingCals} kcal Remaining 🎯`,
-      message: `You've logged ${input.caloriesConsumedToday} of ${input.calorieTarget} kcal and ${input.proteinConsumedToday}g protein. Keep pacing your meals to hit your target!`,
+      headline: `${remainingCals.toLocaleString()} kcal Remaining 🎯`,
+      message: `You've logged ${input.caloriesConsumedToday.toLocaleString()} of ${input.calorieTarget.toLocaleString()} kcal and ${input.proteinConsumedToday}g protein. Keep pacing your meals to hit your target!`,
       focusArea: "Daily Progress",
+      yesterday: input.yesterday,
     };
   }
 
-  // 4. Start of day with active streak
+  // 4. Start of day / fresh start: Highlight yesterday's recap if logged
+  if (input.yesterday && (input.yesterday.mealCount > 0 || input.yesterday.calories > 0)) {
+    const yCals = Math.round(input.yesterday.calories);
+    const yProt = Math.round(input.yesterday.protein);
+    const yMeals = input.yesterday.mealCount;
+    const mealWord = yMeals === 1 ? "meal" : "meals";
+
+    const headline = `Yesterday: ${yCals.toLocaleString()} kcal & ${yProt}g Protein 🎯`;
+    const message = `You logged ${yMeals} ${mealWord} yesterday (${yCals.toLocaleString()} of ${input.calorieTarget.toLocaleString()} kcal, ${yProt}g protein). Today is a fresh slate—let's hit your ${input.calorieTarget.toLocaleString()} kcal target!`;
+
+    return {
+      headline,
+      message,
+      focusArea: "Yesterday's Recap",
+      yesterday: input.yesterday,
+    };
+  }
+
+  // 5. Start of day with active streak
   if (input.streakDays >= 3) {
     return {
       headline: `${input.streakDays}-Day Streak Active ⚡`,
-      message: `Keep your ${input.streakDays}-day consistency alive! Your target is ${input.calorieTarget} kcal and ${input.proteinTarget}g protein today.`,
+      message: `Keep your ${input.streakDays}-day consistency alive! Your target is ${input.calorieTarget.toLocaleString()} kcal and ${input.proteinTarget}g protein today.`,
       focusArea: "Consistency",
+      yesterday: input.yesterday,
     };
   }
 
-  // 5. Start of day / fresh start
+  // 6. Start of day / fresh start
   return {
     headline: "Weekly Insights",
-    message: `Your daily target is ${input.calorieTarget} kcal with ${input.proteinTarget}g protein. Log your first meal to kick off today's progress!`,
+    message: `Your daily target is ${input.calorieTarget.toLocaleString()} kcal with ${input.proteinTarget}g protein. Log your first meal to kick off today's progress!`,
     focusArea: "Daily Target",
+    yesterday: input.yesterday,
   };
 }
 
@@ -835,6 +870,7 @@ export interface WeeklyInsightsInput {
   targetWorkouts?: number;
   weightDeltaKg?: number;
   daysLoggedCount: number;
+  yesterday?: YesterdayStats;
 }
 
 export interface WeeklyInsightsResult {
@@ -843,6 +879,7 @@ export interface WeeklyInsightsResult {
   summary: string;
   keyWin: string;
   nextWeekFocus: string;
+  yesterday?: YesterdayStats;
 }
 
 export async function generateWeeklyInsightsReport(
@@ -865,6 +902,7 @@ export async function generateWeeklyInsightsReport(
       summary: "Log your daily meals and workout sessions to track consistency and hit your goals.",
       keyWin: "Dashboard ready to record your progress",
       nextWeekFocus: "Log your first meal and workout today",
+      yesterday: input.yesterday,
     };
   }
 
@@ -875,6 +913,7 @@ export async function generateWeeklyInsightsReport(
       summary: `You logged ${input.daysLoggedCount} of 7 days and crushed ${input.totalWorkouts} workout${input.totalWorkouts > 1 ? "s" : ""}${input.avgDailyCalories > 0 ? ` with a ${input.avgDailyCalories} kcal daily average` : ""}.`,
       keyWin: `${input.totalWorkouts} workout session${input.totalWorkouts > 1 ? "s" : ""} completed`,
       nextWeekFocus: "Maintain this top-tier training and nutrition rhythm",
+      yesterday: input.yesterday,
     };
   }
 
@@ -919,5 +958,6 @@ export async function generateWeeklyInsightsReport(
     summary,
     keyWin,
     nextWeekFocus,
+    yesterday: input.yesterday,
   };
 }
