@@ -186,6 +186,45 @@ class WeekDayDetail {
         isFuture:     j['isFuture'] as bool? ?? false,
         isToday:      j['isToday'] as bool? ?? false,
       );
+
+  WeekDayDetail copyWith({
+    String? dayName,
+    String? dateStr,
+    String? dayType,
+    bool? isRest,
+    bool? isSkipped,
+    bool? isOverridden,
+    bool? isCompleted,
+    bool? isMissed,
+    bool? isFuture,
+    bool? isToday,
+  }) {
+    return WeekDayDetail(
+      dayName: dayName ?? this.dayName,
+      dateStr: dateStr ?? this.dateStr,
+      dayType: dayType ?? this.dayType,
+      isRest: isRest ?? this.isRest,
+      isSkipped: isSkipped ?? this.isSkipped,
+      isOverridden: isOverridden ?? this.isOverridden,
+      isCompleted: isCompleted ?? this.isCompleted,
+      isMissed: isMissed ?? this.isMissed,
+      isFuture: isFuture ?? this.isFuture,
+      isToday: isToday ?? this.isToday,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'dayName': dayName,
+        'dateStr': dateStr,
+        'dayType': dayType,
+        'isRest': isRest,
+        'isSkipped': isSkipped,
+        'isOverridden': isOverridden,
+        'isCompleted': isCompleted,
+        'isMissed': isMissed,
+        'isFuture': isFuture,
+        'isToday': isToday,
+      };
 }
 
 // ═══════════════════════════════════════════════════════════════
