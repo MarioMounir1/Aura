@@ -15,7 +15,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/network/api_client.dart';
 
 class WeeklyInsightsSheet extends StatefulWidget {
-  const WeeklyInsightsSheet({super.key});
+  final Map<String, dynamic>? yesterdayData;
+  const WeeklyInsightsSheet({super.key, this.yesterdayData});
 
   @override
   State<WeeklyInsightsSheet> createState() => _WeeklyInsightsSheetState();
@@ -35,12 +36,97 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
   int _calorieTarget = 2000;
   int _daysLogged = 0;
   double? _weightDelta;
+  Map<String, dynamic>? _yesterdayStats;
 
   @override
   void initState() {
     super.initState();
+    if (widget.yesterdayData != null) {
+      _yesterdayStats = widget.yesterdayData;
+    }
     _loadFromCache();
     _fetchWeeklyInsights();
+  }
+
+  void _applyInsightsData(Map<String, dynamic> root) {
+    final stats = root['stats'] as Map<String, dynamic>? ?? {};
+
+    int workouts = (stats['totalWorkouts'] as num?)?.toInt() ?? 0;
+    int days = (stats['daysLoggedCount'] as num?)?.toInt() ?? 0;
+    int avgCals = (stats['avgDailyCalories'] as num?)?.toInt() ?? 0;
+    int calGoal = (stats['calorieTarget'] as num?)?.toInt() ?? 2000;
+    double? wDelta = (stats['weightDeltaKg'] as num?)?.toDouble();
+
+    // Workouts count as active days
+    if (workouts > 0 && days == 0) {
+      days = workouts;
+    }
+
+    int score = (root['consistencyScore'] as num?)?.toInt() ?? 0;
+    if (score == 0 && (workouts > 0 || days > 0)) {
+      final workoutFactor = (workouts / 5.0).clamp(0.0, 1.0);
+      final logFactor = (days / 7.0).clamp(0.0, 1.0);
+      score = ((workoutFactor * 0.5 + logFactor * 0.5) * 100).round().clamp(20, 100);
+    }
+
+    String headline = root['headline'] as String? ?? '';
+    if (headline.isEmpty || headline.contains('Progress Overview') || (headline.contains('Building') && workouts > 0)) {
+      headline = workouts > 0 ? 'Workout Momentum Rolling! 🏋️' : 'Building Weekly Momentum 📈';
+    }
+
+    String summary = root['summary'] as String? ?? '';
+    if (summary.isEmpty || summary.contains('0 days') || summary.contains('1 workouts')) {
+      if (workouts > 0 && avgCals == 0) {
+        summary = 'You crushed $workouts workout session${workouts > 1 ? "s" : ""} this week! Remember to log your meals to track nutrition alongside your training.';
+      } else if (workouts > 0) {
+        summary = 'You logged $days active day${days > 1 ? "s" : ""} this week with $workouts workout session${workouts > 1 ? "s" : ""} completed.';
+      } else if (days > 0) {
+        summary = 'You logged $days active day${days > 1 ? "s" : ""} this week with a $avgCals kcal daily average.';
+      } else {
+        summary = 'Log your daily meals and workout sessions to track consistency and hit your goals.';
+      }
+    }
+
+    String keyWin = root['keyWin'] as String? ?? '';
+    if (keyWin.isEmpty || keyWin.contains('0 active')) {
+      if (workouts > 0) {
+        keyWin = '$workouts workout session${workouts > 1 ? "s" : ""} crushed';
+      } else if (days > 0) {
+        keyWin = '$days active tracking day${days > 1 ? "s" : ""}';
+      } else {
+        keyWin = 'Dashboard ready to record your progress';
+      }
+    }
+
+    String nextFocus = root['nextWeekFocus'] as String? ?? '';
+    if (nextFocus.isEmpty || (workouts > 0 && avgCals == 0 && nextFocus.contains('Aim for 2'))) {
+      if (workouts > 0 && avgCals == 0) {
+        nextFocus = 'Log your meals today to fuel your recovery and hit your $calGoal kcal target';
+      } else {
+        nextFocus = 'Aim for ${(days + 1).clamp(3, 7)} active tracking days next week';
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _consistencyScore = score;
+        _headline = headline;
+        _summary = summary;
+        _keyWin = keyWin;
+        _nextWeekFocus = nextFocus;
+        _totalWorkouts = workouts;
+        _avgDailyCalories = avgCals;
+        _calorieTarget = calGoal;
+        _daysLogged = days;
+        _weightDelta = wDelta;
+        _isLoading = false;
+      });
+    }
+
+    final yesterday = root['yesterday'] as Map<String, dynamic>?;
+    if (yesterday != null) {
+      _yesterdayStats = yesterday;
+    }
   }
 
   Future<void> _loadFromCache() async {
@@ -49,22 +135,13 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
       final cached = prefs.getString(_cacheKey);
       if (cached != null) {
         final root = jsonDecode(cached) as Map<String, dynamic>;
-        final stats = root['stats'] as Map<String, dynamic>? ?? {};
-        if (mounted) {
-          setState(() {
-            _consistencyScore = (root['consistencyScore'] as num?)?.toInt() ?? 0;
-            _headline = root['headline'] ?? 'Weekly Progress Overview';
-            _summary = root['summary'] ?? '';
-            _keyWin = root['keyWin'] ?? '';
-            _nextWeekFocus = root['nextWeekFocus'] ?? '';
-            _totalWorkouts = (stats['totalWorkouts'] as num?)?.toInt() ?? 0;
-            _avgDailyCalories = (stats['avgDailyCalories'] as num?)?.toInt() ?? 0;
-            _calorieTarget = (stats['calorieTarget'] as num?)?.toInt() ?? 2000;
-            _daysLogged = (stats['daysLoggedCount'] as num?)?.toInt() ?? 0;
-            _weightDelta = (stats['weightDeltaKg'] as num?)?.toDouble();
-            _isLoading = false;
-          });
-        }
+        _applyInsightsData(root);
+      }
+      final cachedY = prefs.getString('cached_yesterday_stats');
+      if (cachedY != null && _yesterdayStats == null) {
+        try {
+          _yesterdayStats = jsonDecode(cachedY) as Map<String, dynamic>;
+        } catch (_) {}
       }
     } catch (_) {}
   }
@@ -78,22 +155,9 @@ class _WeeklyInsightsSheetState extends State<WeeklyInsightsSheet> {
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final data = response.data['data'] as Map<String, dynamic>;
-        final stats = data['stats'] as Map<String, dynamic>? ?? {};
-
-        if (mounted) {
-          setState(() {
-            _consistencyScore = (data['consistencyScore'] as num?)?.toInt() ?? 0;
-            _headline = data['headline'] ?? 'Weekly Progress Overview';
-            _summary = data['summary'] ?? '';
-            _keyWin = data['keyWin'] ?? '';
-            _nextWeekFocus = data['nextWeekFocus'] ?? '';
-            _totalWorkouts = (stats['totalWorkouts'] as num?)?.toInt() ?? 0;
-            _avgDailyCalories = (stats['avgDailyCalories'] as num?)?.toInt() ?? 0;
-            _calorieTarget = (stats['calorieTarget'] as num?)?.toInt() ?? 2000;
-            _daysLogged = (stats['daysLoggedCount'] as num?)?.toInt() ?? 0;
-            _weightDelta = (stats['weightDeltaKg'] as num?)?.toDouble();
-            _isLoading = false;
-          });
+        _applyInsightsData(data);
+        if (data['yesterday'] is Map<String, dynamic>) {
+          _yesterdayStats = data['yesterday'] as Map<String, dynamic>;
         }
 
         try {
@@ -694,6 +758,14 @@ https://aura-fit.com''';
                   ),
                   const SizedBox(height: 18),
 
+                  // Yesterday's Performance Card (if logged data exists)
+                  if (_yesterdayStats != null &&
+                      ((_yesterdayStats!['mealCount'] as num? ?? 0) > 0 ||
+                          (_yesterdayStats!['calories'] as num? ?? 0) > 0)) ...[
+                    _buildYesterdayPerformanceCard(),
+                    const SizedBox(height: 16),
+                  ],
+
                   // Headline Banner
                   Container(
                     width: double.infinity,
@@ -767,7 +839,7 @@ https://aura-fit.com''';
                       Expanded(
                         child: _buildMetricCard(
                           title: 'Avg Daily Cals',
-                          value: '$_avgDailyCalories',
+                          value: _avgDailyCalories > 0 ? '$_avgDailyCalories' : '--',
                           subtitle: 'goal: $_calorieTarget kcal',
                           icon: Icons.local_fire_department_rounded,
                         ),
@@ -917,6 +989,233 @@ https://aura-fit.com''';
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildYesterdayPerformanceCard() {
+    if (_yesterdayStats == null) return const SizedBox.shrink();
+
+    final cals = (_yesterdayStats!['calories'] as num? ?? 0).round();
+    final prot = (_yesterdayStats!['protein'] as num? ?? 0).round();
+    final carbs = (_yesterdayStats!['carbs'] as num? ?? 0).round();
+    final fats = (_yesterdayStats!['fats'] as num? ?? 0).round();
+    final meals = (_yesterdayStats!['mealCount'] as num? ?? 0).toInt();
+    final calGoal = (_yesterdayStats!['calorieTarget'] as num? ?? _calorieTarget).toInt();
+    final protGoal = (_yesterdayStats!['proteinTarget'] as num? ?? 150).toInt();
+
+    final pct = calGoal > 0 ? ((cals / calGoal) * 100).round().clamp(0, 150) : 0;
+    final progress = calGoal > 0 ? (cals / calGoal).clamp(0.0, 1.0) : 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFD6EAE0), width: 1.2),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x081E3A2B),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE8F4EC),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.history_rounded,
+                      color: Color(0xFF235A42),
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Yesterday at a Glance',
+                        style: GoogleFonts.outfit(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E3A2B),
+                        ),
+                      ),
+                      Text(
+                        'Closed Daily Log',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF5A7060),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: pct >= 90 ? const Color(0xFFE8F4EC) : const Color(0xFFF4F7F5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: pct >= 90 ? const Color(0xFFCBE3D1) : const Color(0xFFE2EBE5),
+                    width: 0.8,
+                  ),
+                ),
+                child: Text(
+                  pct >= 90 && pct <= 110 ? 'Goal Hit 🏆' : '$pct% of Goal',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: pct >= 90 ? const Color(0xFF235A42) : const Color(0xFF5A7060),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Calorie Bar Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Calories Consumed',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF334D3D),
+                ),
+              ),
+              Text(
+                '$cals / $calGoal kcal',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1E3A2B),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: const Color(0xFFEDF5F0),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF235A42)),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 4-Macro Grid
+          Row(
+            children: [
+              Expanded(
+                child: _buildYesterdayMiniStat(
+                  label: 'Protein',
+                  value: '${prot}g',
+                  target: protGoal > 0 ? '/${protGoal}g' : '',
+                  color: const Color(0xFF235A42),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildYesterdayMiniStat(
+                  label: 'Carbs',
+                  value: '${carbs}g',
+                  target: '',
+                  color: const Color(0xFFC07020),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildYesterdayMiniStat(
+                  label: 'Fats',
+                  value: '${fats}g',
+                  target: '',
+                  color: const Color(0xFF6B7280),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildYesterdayMiniStat(
+                  label: 'Meals',
+                  value: '$meals',
+                  target: ' logged',
+                  color: const Color(0xFF1E3A2B),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYesterdayMiniStat({
+    required String label,
+    required String value,
+    required String target,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FAF8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2EEE6), width: 0.8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF5A7060),
+            ),
+          ),
+          const SizedBox(height: 3),
+          RichText(
+            text: TextSpan(
+              text: value,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+              children: [
+                if (target.isNotEmpty)
+                  TextSpan(
+                    text: target,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF8A9E90),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
