@@ -19,6 +19,7 @@ import { logWater, getTodayWater, deleteWaterLog } from "../controllers/water.co
 import { logWeight, getWeightHistory, deleteWeightLog } from "../controllers/weight.controller";
 import { getTodayMealPlan, getWeekMealPlan, generateMealPlan, markAsEaten } from "../controllers/meal-plan.controller";
 import { setupWorkoutRoutine, getWorkoutRoutine, startSession, addExercise, logSet, finishSession, getAvailableExercises, getExerciseAlternatives, swapSessionExercise, overrideSessionType, recommendWorkoutRoutine, interpretWorkoutSessionRequest, getWeeklyRecap, getExerciseFormGuide } from "../controllers/workout.controller";
+import { registerDeviceToken, unregisterDeviceToken, getNotificationPreferences, updateNotificationPreferences } from "../controllers/notification.controller";
 import { requireAuth } from "../middleware/auth.middleware";
 import { analyzeMealLimiter, authLimiter, barcodeLimiter, aiCoachLimiter } from "../middleware/rateLimit.middleware";
 
@@ -476,5 +477,35 @@ router.get("/workouts/weekly-recap", requireAuth, getWeeklyRecap);
  * @query   days (number, 3-6)
  */
 router.get("/workouts/recommend", requireAuth, recommendWorkoutRoutine);
+
+// ── Notification Routes ───────────────────────────────────
+
+/**
+ * @route   POST /api/v1/notifications/register-token
+ * @desc    Register or update an FCM device token for push notifications
+ * @access  Private (JWT required)
+ */
+router.post("/notifications/register-token", requireAuth, registerDeviceToken);
+
+/**
+ * @route   POST /api/v1/notifications/unregister-token
+ * @desc    Unregister an FCM device token on logout
+ * @access  Private (JWT required)
+ */
+router.post("/notifications/unregister-token", requireAuth, unregisterDeviceToken);
+
+/**
+ * @route   GET /api/v1/notifications/preferences
+ * @desc    Get user notification preferences
+ * @access  Private (JWT required)
+ */
+router.get("/notifications/preferences", requireAuth, getNotificationPreferences);
+
+/**
+ * @route   PATCH /api/v1/notifications/preferences
+ * @desc    Update user notification preferences
+ * @access  Private (JWT required)
+ */
+router.patch("/notifications/preferences", requireAuth, updateNotificationPreferences);
 
 export default router;
