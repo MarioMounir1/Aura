@@ -14,6 +14,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 
 import 'l10n/app_localizations.dart';
+import 'core/services/notification_service.dart';
 import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/constants.dart';
@@ -54,6 +55,7 @@ import 'features/calorie_tracker/presentation/bloc/meal_plan_bloc.dart';
 import 'features/calorie_tracker/domain/repositories/workout_repository.dart';
 import 'features/calorie_tracker/data/repositories/workout_repository_impl.dart';
 import 'features/calorie_tracker/presentation/bloc/workout_bloc.dart';
+import 'features/calorie_tracker/presentation/workout_screen.dart';
 import 'features/calorie_tracker/presentation/bloc/dashboard_event.dart';
 import 'features/calorie_tracker/presentation/bloc/workout_event.dart';
 import 'features/calorie_tracker/presentation/bloc/calorie_tracker_event.dart';
@@ -87,11 +89,26 @@ class LanguageCubit extends Cubit<Locale> {
 }
 // ── Entry Point ───────────────────────────────────────────────
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ── Firebase Initialization ───────────────────────────────────
   await Firebase.initializeApp();
+
+  // ── Push Notifications & Local Alerts ─────────────────────────
+  try {
+    await NotificationService().initialize(
+      onRouteNavigation: (route) {
+        if (route.isNotEmpty) {
+          rootNavigatorKey.currentState?.pushNamed(route);
+        }
+      },
+    );
+  } catch (e) {
+    debugPrint('NotificationService init error: $e');
+  }
 
   // Route all Flutter framework errors to Crashlytics
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
@@ -287,6 +304,7 @@ class TeneenApp extends StatelessWidget {
         child: BlocBuilder<ThemeCubit, ThemeMode>(
           builder: (context, themeMode) {
             return MaterialApp(
+              navigatorKey: rootNavigatorKey,
               title:                   'Aura',
               debugShowCheckedModeBanner: false,
               theme:                   AppTheme.lightTheme,
@@ -346,6 +364,8 @@ class TeneenApp extends StatelessWidget {
                 '/weight/progress': (_) => const WeightProgressScreen(),
                 '/meals/ai-suggestion': (_) => const AiSuggestionScreen(),
                 '/nutrition/progress': (_) => const ProgressSummaryScreen(),
+                '/workout': (_) => const WorkoutScreen(),
+                '/meals':   (_) => const DashboardTabWrapper(),
               },
             );
           },
