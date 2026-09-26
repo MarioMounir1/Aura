@@ -61,7 +61,26 @@ class _ActiveSetDraft {
     this.isCompleted = false,
     this.workoutExerciseId,
   });
+
+  Map<String, dynamic> toJson() => {
+    'setIndex': setIndex,
+    'label': label,
+    'weight': weight,
+    'reps': reps,
+    'isCompleted': isCompleted,
+    if (workoutExerciseId != null) 'workoutExerciseId': workoutExerciseId,
+  };
+
+  factory _ActiveSetDraft.fromJson(Map<String, dynamic> json) => _ActiveSetDraft(
+    setIndex: json['setIndex'] as int? ?? 1,
+    label: json['label'] as String? ?? 'Working Set',
+    weight: (json['weight'] as num?)?.toDouble() ?? 50.0,
+    reps: json['reps'] as int? ?? 10,
+    isCompleted: json['isCompleted'] as bool? ?? false,
+    workoutExerciseId: json['workoutExerciseId'] as String?,
+  );
 }
+
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -76,7 +95,7 @@ class WorkoutScreen extends StatefulWidget {
 }
 
 class _WorkoutScreenState extends State<WorkoutScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
 
   // ── State ──────────────────────────────────────────────────
   WorkoutHubState _state = WorkoutHubState.loading;
@@ -101,8 +120,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   int _activeExerciseIndex = 0;
   Timer? _sessionTimer;
   int _sessionElapsedSeconds = 0;
+  int? _sessionStartTimeMs;
+  String? _activeSessionId;
   Timer? _restTimer;
   int _restSecondsRemaining = 0;
+  int? _restEndTimeMs;
   int _totalRestSeconds = 90;
   final Map<int, List<_ActiveSetDraft>> _activeExerciseSets = {};
 
@@ -111,6 +133,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _dio = ApiClient().dio;
     _loadCachedRoutine().then((_) {
       _loadRoutine(silent: true);
@@ -119,16 +142,157 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sessionTimer?.cancel();
     _restTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      if (_state == WorkoutHubState.activeWorkout) {
+        _persistActiveWorkoutState();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      if (_state == WorkoutHubState.activeWorkout && _sessionStartTimeMs != null) {
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        setState(() {
+          _sessionElapsedSeconds = ((nowMs - _sessionStartTimeMs!) / 1000).floor().clamp(0, 86400 * 2);
+          if (_restEndTimeMs != null) {
+            final remaining = ((_restEndTimeMs! - nowMs) / 1000).ceil();
+            _restSecondsRemaining = remaining > 0 ? remaining : 0;
+          }
+        });
+        _startSessionTimer();
+        if (_restSecondsRemaining > 0 && _restEndTimeMs != null) {
+          _startRestTimerCountdownFromEpoch(_restEndTimeMs!);
+        }
+      }
+    }
   }
 
   static const String _cachedRoutineKey = 'cached_workout_routine_payload';
   static const String _completedDatesKey = 'completed_workout_dates_v1';
   static const String _workoutSummaryPrefix = 'workout_summary_';
 
+  // Active workout persistence keys (ensures session survives backgrounding & app kills)
+  static const String _activeWorkoutIsActiveKey = 'active_workout_is_active';
+  static const String _activeWorkoutStartTimeKey = 'active_workout_start_epoch_ms';
+  static const String _activeWorkoutExerciseIndexKey = 'active_workout_exercise_index';
+  static const String _activeWorkoutSetsDataKey = 'active_workout_sets_data_json';
+  static const String _activeWorkoutSessionIdKey = 'active_workout_session_id';
+  static const String _activeWorkoutRestEndKey = 'active_workout_rest_end_epoch_ms';
+  static const String _activeWorkoutRestTotalKey = 'active_workout_rest_total_seconds';
+
   final Map<String, Map<String, dynamic>> _savedSessionSummaries = {};
+
+  Future<void> _persistActiveWorkoutState() async {
+    if (_state != WorkoutHubState.activeWorkout) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_activeWorkoutIsActiveKey, true);
+      if (_sessionStartTimeMs != null) {
+        await prefs.setInt(_activeWorkoutStartTimeKey, _sessionStartTimeMs!);
+      }
+      await prefs.setInt(_activeWorkoutExerciseIndexKey, _activeExerciseIndex);
+      if (_activeSessionId != null) {
+        await prefs.setString(_activeWorkoutSessionIdKey, _activeSessionId!);
+      }
+      if (_restSecondsRemaining > 0 && _restEndTimeMs != null) {
+        await prefs.setInt(_activeWorkoutRestEndKey, _restEndTimeMs!);
+        await prefs.setInt(_activeWorkoutRestTotalKey, _totalRestSeconds);
+      } else {
+        await prefs.remove(_activeWorkoutRestEndKey);
+        await prefs.remove(_activeWorkoutRestTotalKey);
+      }
+
+      final Map<String, dynamic> setsMap = {};
+      _activeExerciseSets.forEach((key, list) {
+        setsMap[key.toString()] = list.map((s) => s.toJson()).toList();
+      });
+      await prefs.setString(_activeWorkoutSetsDataKey, jsonEncode(setsMap));
+    } catch (_) {}
+  }
+
+  Future<void> _clearActiveWorkoutPersistedState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_activeWorkoutIsActiveKey);
+      await prefs.remove(_activeWorkoutStartTimeKey);
+      await prefs.remove(_activeWorkoutExerciseIndexKey);
+      await prefs.remove(_activeWorkoutSetsDataKey);
+      await prefs.remove(_activeWorkoutSessionIdKey);
+      await prefs.remove(_activeWorkoutRestEndKey);
+      await prefs.remove(_activeWorkoutRestTotalKey);
+    } catch (_) {}
+  }
+
+  Future<bool> _restoreActiveWorkoutState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isActive = prefs.getBool(_activeWorkoutIsActiveKey) ?? false;
+      if (!isActive) return false;
+
+      final startMs = prefs.getInt(_activeWorkoutStartTimeKey);
+      if (startMs == null) return false;
+
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      // Stale guard: discard only if older than 20 hours to prevent abandoned past sessions from lingering
+      if (nowMs - startMs > 20 * 60 * 60 * 1000) {
+        await _clearActiveWorkoutPersistedState();
+        return false;
+      }
+
+      _sessionStartTimeMs = startMs;
+      _sessionElapsedSeconds = ((nowMs - startMs) / 1000).floor().clamp(0, 86400 * 2);
+      _activeExerciseIndex = prefs.getInt(_activeWorkoutExerciseIndexKey) ?? 0;
+      _activeSessionId = prefs.getString(_activeWorkoutSessionIdKey);
+
+      final rawSetsJson = prefs.getString(_activeWorkoutSetsDataKey);
+      if (rawSetsJson != null && rawSetsJson.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(rawSetsJson) as Map<String, dynamic>;
+          _activeExerciseSets.clear();
+          decoded.forEach((key, value) {
+            final idx = int.tryParse(key);
+            if (idx != null && value is List) {
+              _activeExerciseSets[idx] = value
+                  .whereType<Map<String, dynamic>>()
+                  .map((item) => _ActiveSetDraft.fromJson(item))
+                  .toList();
+            }
+          });
+        } catch (_) {}
+      }
+
+      final restEndMs = prefs.getInt(_activeWorkoutRestEndKey);
+      final restTotal = prefs.getInt(_activeWorkoutRestTotalKey) ?? 90;
+      if (restEndMs != null && restEndMs > nowMs) {
+        final remaining = ((restEndMs - nowMs) / 1000).ceil();
+        _restEndTimeMs = restEndMs;
+        _totalRestSeconds = restTotal;
+        _restSecondsRemaining = remaining;
+        _startRestTimerCountdownFromEpoch(restEndMs);
+      } else {
+        _restSecondsRemaining = 0;
+        _restEndTimeMs = null;
+      }
+
+      _startSessionTimer();
+
+      if (mounted) {
+        setState(() {
+          _state = WorkoutHubState.activeWorkout;
+        });
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<void> _loadCachedRoutine() async {
     try {
@@ -164,12 +328,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         await prefs.setStringList(_completedDatesKey, completedDates);
       }
 
-      // 3. Load cached routine payload
+      // 3. Restore any in-progress active workout before applying cached routine
+      final hasActiveWorkout = await _restoreActiveWorkoutState();
+
+      // 4. Load cached routine payload
       final cachedStr = prefs.getString(_cachedRoutineKey);
       if (cachedStr != null && cachedStr.isNotEmpty) {
         final decoded = jsonDecode(cachedStr) as Map<String, dynamic>;
         if (mounted) {
-          _applyRoutineData(decoded);
+          _applyRoutineData(decoded, preserveActiveState: hasActiveWorkout);
         }
       }
     } catch (_) {
@@ -199,7 +366,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
   }
 
-  void _applyRoutineData(Map<String, dynamic> rootData) {
+  void _applyRoutineData(Map<String, dynamic> rootData, {bool preserveActiveState = false}) {
     final data = rootData['routine'] as Map<String, dynamic>?;
     final sessionData = rootData['currentSession'] as Map<String, dynamic>?;
     final swapNote = rootData['swapSuggestionNote'] as String?;
@@ -332,7 +499,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       _currentSession = sessionData != null
           ? CurrentSession.fromJson(sessionData)
           : null;
-      _state = WorkoutHubState.ready;
+      if (!preserveActiveState && _state != WorkoutHubState.activeWorkout) {
+        _state = WorkoutHubState.ready;
+      }
       _isRefreshingInPlace = false;
     });
   }
@@ -349,7 +518,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       final data = rootData?['routine'] as Map<String, dynamic>?;
       if (data != null && rootData != null) {
         // Backend returned a saved routine
-        _applyRoutineData(rootData);
+        _applyRoutineData(rootData, preserveActiveState: _state == WorkoutHubState.activeWorkout);
         _saveCachedRoutine(rootData);
       } else {
         if (!mounted) return;
@@ -358,8 +527,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         if (!hasCache) {
           setState(() {
             _isRefreshingInPlace = false;
-            _state = WorkoutHubState.unconfigured;
-            _activeRoutine = null;
+            if (_state != WorkoutHubState.activeWorkout) {
+              _state = WorkoutHubState.unconfigured;
+              _activeRoutine = null;
+            }
           });
         } else {
           setState(() => _isRefreshingInPlace = false);
@@ -369,7 +540,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       if (!mounted) return;
       setState(() {
         _isRefreshingInPlace = false;
-        if (_activeRoutine == null) {
+        if (_state != WorkoutHubState.activeWorkout && _activeRoutine == null) {
           _state = WorkoutHubState.unconfigured;
           _activeRoutine = null;
           if (e.response?.statusCode != 404 && e.response?.statusCode != 401) {
@@ -381,7 +552,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       if (!mounted) return;
       setState(() {
         _isRefreshingInPlace = false;
-        if (_activeRoutine == null) {
+        if (_state != WorkoutHubState.activeWorkout && _activeRoutine == null) {
           _state = WorkoutHubState.unconfigured;
           _activeRoutine = null;
         }
@@ -467,12 +638,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
 
     _activeExerciseIndex = 0;
+    _sessionStartTimeMs = DateTime.now().millisecondsSinceEpoch;
     _sessionElapsedSeconds = 0;
-    _sessionTimer?.cancel();
-    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() => _sessionElapsedSeconds++);
-    });
+    _startSessionTimer();
 
     final workoutState = context.read<WorkoutBloc>().state;
     if (workoutState is! WorkoutSessionActive) {
@@ -485,11 +653,33 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() {
       _state = WorkoutHubState.activeWorkout;
     });
+
+    _persistActiveWorkoutState();
+  }
+
+  void _startSessionTimer() {
+    _sessionTimer?.cancel();
+    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      if (_sessionStartTimeMs != null) {
+        final nowMs = DateTime.now().millisecondsSinceEpoch;
+        final elapsed = ((nowMs - _sessionStartTimeMs!) / 1000).floor().clamp(0, 86400 * 2);
+        if (elapsed != _sessionElapsedSeconds) {
+          setState(() => _sessionElapsedSeconds = elapsed);
+        }
+      } else {
+        setState(() => _sessionElapsedSeconds++);
+      }
+    });
   }
 
   Future<void> _finishWorkout() async {
+    final currentSessionId = _activeSessionId;
     _sessionTimer?.cancel();
     _restTimer?.cancel();
+    await _clearActiveWorkoutPersistedState();
+    _sessionStartTimeMs = null;
+    _activeSessionId = null;
 
     final now = DateTime.now();
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
@@ -550,6 +740,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     await _persistWorkoutSummary(todayStr, summaryData);
 
+    if (currentSessionId != null && currentSessionId.isNotEmpty) {
+      try {
+        await _dio.post('/workouts/session/$currentSessionId/finish', data: {'notes': 'Great workout!'});
+      } catch (_) {}
+    }
+
     final dayIdx = now.weekday - 1;
     if (dayIdx >= 0 && dayIdx < _completedDaysThisWeek.length) {
       _completedDaysThisWeek[dayIdx] = true;
@@ -592,20 +788,32 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   void _startRestTimer([int seconds = 90]) {
     _restTimer?.cancel();
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
     setState(() {
       _totalRestSeconds = seconds;
       _restSecondsRemaining = seconds;
+      _restEndTimeMs = nowMs + (seconds * 1000);
     });
+    _startRestTimerCountdownFromEpoch(_restEndTimeMs!);
+    _persistActiveWorkoutState();
+  }
+
+  void _startRestTimerCountdownFromEpoch(int endEpochMs) {
+    _restTimer?.cancel();
     _restTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) {
         t.cancel();
         return;
       }
-      if (_restSecondsRemaining <= 1) {
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final remaining = ((endEpochMs - nowMs) / 1000).ceil();
+      if (remaining <= 0) {
         t.cancel();
         setState(() {
           _restSecondsRemaining = 0;
+          _restEndTimeMs = null;
         });
+        _persistActiveWorkoutState();
         final sets = _activeExerciseSets[_activeExerciseIndex];
         int nextSetNum = 1;
         if (sets != null) {
@@ -615,7 +823,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         NotificationService().showInWorkoutRestNotification(nextSetNumber: nextSetNum);
       } else {
         setState(() {
-          _restSecondsRemaining--;
+          _restSecondsRemaining = remaining;
         });
       }
     });
@@ -627,17 +835,26 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       if (_restSecondsRemaining > _totalRestSeconds) {
         _totalRestSeconds = _restSecondsRemaining;
       }
+      if (_restSecondsRemaining > 0) {
+        _restEndTimeMs = DateTime.now().millisecondsSinceEpoch + (_restSecondsRemaining * 1000);
+      } else {
+        _restEndTimeMs = null;
+        _restTimer?.cancel();
+      }
     });
-    if (_restSecondsRemaining == 0) {
-      _restTimer?.cancel();
+    if (_restEndTimeMs != null) {
+      _startRestTimerCountdownFromEpoch(_restEndTimeMs!);
     }
+    _persistActiveWorkoutState();
   }
 
   void _skipRestTimer() {
     _restTimer?.cancel();
     setState(() {
       _restSecondsRemaining = 0;
+      _restEndTimeMs = null;
     });
+    _persistActiveWorkoutState();
   }
 
   void _toggleSetCompleted(int exIndex, int setIndex) {
@@ -650,6 +867,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() {
       setDraft.isCompleted = !setDraft.isCompleted;
     });
+
+    _persistActiveWorkoutState();
 
     if (setDraft.isCompleted) {
       final exercises = _getEffectiveExercises();
@@ -674,6 +893,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() {
       sets[setIndex].weight = (sets[setIndex].weight + delta).clamp(0.0, 999.0);
     });
+    _persistActiveWorkoutState();
   }
 
   void _updateSetReps(int exIndex, int setIndex, int delta) {
@@ -683,6 +903,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() {
       sets[setIndex].reps = (sets[setIndex].reps + delta).clamp(1, 999);
     });
+    _persistActiveWorkoutState();
   }
 
   void _addSet(int exIndex) {
@@ -699,6 +920,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         workoutExerciseId: lastSet?.workoutExerciseId,
       ));
     });
+    _persistActiveWorkoutState();
   }
 
   void _removeSet(int exIndex) {
@@ -707,6 +929,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() {
       setsList.removeLast();
     });
+    _persistActiveWorkoutState();
   }
 
   void _saveAndNextExercise(int totalExercises) {
@@ -736,6 +959,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       setState(() {
         _activeExerciseIndex++;
       });
+      _persistActiveWorkoutState();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -854,6 +1078,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     setState(() {
                       sets[setIndex].weight = parsed;
                     });
+                    _persistActiveWorkoutState();
                   }
                   Navigator.pop(ctx);
                 },
@@ -957,6 +1182,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     setState(() {
                       sets[setIndex].reps = parsed;
                     });
+                    _persistActiveWorkoutState();
                   }
                   Navigator.pop(ctx);
                 },
@@ -995,10 +1221,14 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
               _sessionTimer?.cancel();
               _restTimer?.cancel();
+              await _clearActiveWorkoutPersistedState();
+              _sessionStartTimeMs = null;
+              _activeSessionId = null;
+              _activeExerciseSets.clear();
               setState(() {
                 _state = WorkoutHubState.ready;
                 _restSecondsRemaining = 0;
@@ -1141,6 +1371,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             child: InkWell(
               onTap: () {
                 setState(() => _activeExerciseIndex = idx);
+                _persistActiveWorkoutState();
               },
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
@@ -2075,6 +2306,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   onTap: () {
                     Navigator.pop(ctx);
                     setState(() => _activeExerciseIndex = idx);
+                    _persistActiveWorkoutState();
                   },
                 ),
               );
@@ -2258,6 +2490,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         BlocListener<WorkoutBloc, WorkoutState>(
           listener: (context, workoutState) {
             if (workoutState is WorkoutSessionActive) {
+              _activeSessionId = workoutState.sessionId;
               for (int i = 0; i < workoutState.currentLogs.length; i++) {
                 final log = workoutState.currentLogs[i];
                 if (_activeExerciseSets.containsKey(i) && log.sets.isNotEmpty) {
@@ -2269,6 +2502,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                   }
                 }
               }
+              _persistActiveWorkoutState();
             } else if (workoutState is WorkoutError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -2297,9 +2531,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
-  void _exitWorkoutWithoutFinishing() {
+  void _exitWorkoutWithoutFinishing() async {
     _sessionTimer?.cancel();
     _restTimer?.cancel();
+    await _clearActiveWorkoutPersistedState();
+    _sessionStartTimeMs = null;
+    _activeSessionId = null;
+    _activeExerciseSets.clear();
     setState(() {
       _state = WorkoutHubState.ready;
       _restSecondsRemaining = 0;
