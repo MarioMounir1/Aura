@@ -35,6 +35,8 @@ import '../../../../core/theme/app_colors.dart';
 import 'bloc/workout_state.dart';
 
 import 'workout_plan_wizard.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../data/services/exercise_media_service.dart';
 
 // ── State Machine ─────────────────────────────────────────────
 enum WorkoutHubState { unconfigured, loading, ready, activeWorkout }
@@ -1286,26 +1288,66 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           ),
           const SizedBox(height: 8),
 
-          // Exercise Title
-          Text(
-            ex.name,
-            style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF1C2B1E),
-              letterSpacing: -0.3,
-            ),
-          ),
-          const SizedBox(height: 3),
-
-          // Last week performance badge or coach note
-          Text(
-            prText ?? (ex.targetSets > 0 ? '${ex.targetSets} Working Sets' : '3 Sets'),
-            style: GoogleFonts.inter(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF5A6E5D),
-            ),
+          // Exercise Row with Media Thumbnail
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () => _onExerciseTileTap(ex.name, '${ex.targetSets} Sets', isArabic),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F6F2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFDDE6DF)),
+                    ),
+                    child: CachedNetworkImage(
+                      imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name, overrideUrl: ex.thumbnailUrl ?? ex.mediaUrl) ?? '',
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF235A42)),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 24),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ex.name,
+                      style: GoogleFonts.inter(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF1C2B1E),
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      prText ?? (ex.targetSets > 0 ? '${ex.targetSets} Working Sets' : '3 Sets'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF5A6E5D),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 12),
@@ -6035,6 +6077,87 @@ void _showAIExerciseGuideModal(BuildContext context, String title, String target
             ],
           ),
           const SizedBox(height: 18),
+          // Animated GIF Demonstration Banner
+          Builder(
+            builder: (ctx) {
+              final gifUrl = ExerciseMediaService.getGifUrl(title);
+              if (gifUrl == null) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7FAF8),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE2EBE4)),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CachedNetworkImage(
+                          imageUrl: gifUrl,
+                          fit: BoxFit.contain,
+                          placeholder: (c, u) => const Center(
+                            child: SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Color(0xFF235A42),
+                              ),
+                            ),
+                          ),
+                          errorWidget: (c, u, e) => Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.fitness_center_rounded, color: Color(0xFF8A9C8D), size: 36),
+                                const SizedBox(height: 6),
+                                Text(
+                                  isArabic ? 'عرض الحركة' : 'Demonstration',
+                                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF8A9C8D)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1C2B1E).withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.play_circle_filled_rounded, color: Colors.white, size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'FORM DEMO',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -6300,6 +6423,33 @@ class _ExerciseTimelineTile extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F6F2),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2EBE4)),
+                            ),
+                            child: CachedNetworkImage(
+                              imageUrl: ExerciseMediaService.getThumbnailUrl(title) ?? '',
+                              fit: BoxFit.cover,
+                              placeholder: (ctx, url) => const Center(
+                                child: SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 1.8, color: Color(0xFF235A42)),
+                                ),
+                              ),
+                              errorWidget: (ctx, url, err) => const Center(
+                                child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 20),
+                              ),
+                            ),
+                          ),
+                        ),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
