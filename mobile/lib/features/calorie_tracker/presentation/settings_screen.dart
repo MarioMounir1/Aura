@@ -15,6 +15,7 @@ import '../../profile/presentation/bloc/profile_state.dart';
 import '../../auth/presentation/bloc/auth_bloc.dart';
 import '../../auth/presentation/bloc/auth_event.dart';
 import '../../premium/data/services/purchase_service.dart';
+import '../../../core/services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -41,14 +42,99 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _hasUnsavedChanges = false;
   bool _isPersonalInfoExpanded = false;
 
+  // Push Notification Preferences
+  bool _isLoadingNotificationPrefs = false;
+  bool _notifyWorkoutReminders = true;
+  bool _notifyMealReminders = true;
+  bool _notifyHydrationReminders = true;
+  bool _notifyStreakProtection = true;
+  bool _notifyWeeklyRecap = true;
+  bool _notifyAiCoachInsights = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<ProfileBloc>().add(LoadProfile());
+        _loadNotificationPreferences();
       }
     });
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    setState(() => _isLoadingNotificationPrefs = true);
+    final prefs = await NotificationService().getPreferences();
+    if (mounted && prefs != null) {
+      setState(() {
+        _notifyWorkoutReminders = prefs['notifyWorkoutReminders'] ?? true;
+        _notifyMealReminders = prefs['notifyMealReminders'] ?? true;
+        _notifyHydrationReminders = prefs['notifyHydrationReminders'] ?? true;
+        _notifyStreakProtection = prefs['notifyStreakProtection'] ?? true;
+        _notifyWeeklyRecap = prefs['notifyWeeklyRecap'] ?? true;
+        _notifyAiCoachInsights = prefs['notifyAiCoachInsights'] ?? true;
+        _isLoadingNotificationPrefs = false;
+      });
+    } else if (mounted) {
+      setState(() => _isLoadingNotificationPrefs = false);
+    }
+  }
+
+  Future<void> _updateNotificationPreference(String key, bool value) async {
+    setState(() {
+      switch (key) {
+        case 'notifyWorkoutReminders':
+          _notifyWorkoutReminders = value;
+          break;
+        case 'notifyMealReminders':
+          _notifyMealReminders = value;
+          break;
+        case 'notifyHydrationReminders':
+          _notifyHydrationReminders = value;
+          break;
+        case 'notifyStreakProtection':
+          _notifyStreakProtection = value;
+          break;
+        case 'notifyWeeklyRecap':
+          _notifyWeeklyRecap = value;
+          break;
+        case 'notifyAiCoachInsights':
+          _notifyAiCoachInsights = value;
+          break;
+      }
+    });
+
+    final success = await NotificationService().updatePreferences({key: value});
+    if (!success && mounted) {
+      setState(() {
+        switch (key) {
+          case 'notifyWorkoutReminders':
+            _notifyWorkoutReminders = !value;
+            break;
+          case 'notifyMealReminders':
+            _notifyMealReminders = !value;
+            break;
+          case 'notifyHydrationReminders':
+            _notifyHydrationReminders = !value;
+            break;
+          case 'notifyStreakProtection':
+            _notifyStreakProtection = !value;
+            break;
+          case 'notifyWeeklyRecap':
+            _notifyWeeklyRecap = !value;
+            break;
+          case 'notifyAiCoachInsights':
+            _notifyAiCoachInsights = !value;
+            break;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update notification setting.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -259,7 +345,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildPreferencesGroup(context, isArabic),
                 const SizedBox(height: 22),
 
-                // ── 7. Account Actions Section ────────────────────────────
+                // ── 7. Push Notifications Section ─────────────────────────
+                _buildSectionTitle(context, isArabic ? 'الإشعارات' : 'NOTIFICATIONS'),
+                const SizedBox(height: 10),
+                _buildNotificationPreferencesGroup(context, isArabic),
+                const SizedBox(height: 22),
+
+                // ── 8. Account Actions Section ────────────────────────────
                 _buildSectionTitle(context, isArabic ? 'الحساب' : 'ACCOUNT ACTIONS'),
                 const SizedBox(height: 10),
                 _buildAccountActionsGroup(context, l10n),
@@ -1063,6 +1155,214 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ── Push Notifications Group ──────────────────────────────────────
+  Widget _buildNotificationPreferencesGroup(BuildContext context, bool isArabic) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFE2EBE4), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF5EE),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.notifications_active_rounded, color: Color(0xFF235A42), size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isArabic ? 'إشعارات الدفع' : 'Push Notifications',
+                      style: GoogleFonts.outfit(
+                        textStyle: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1C2B1E),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      isArabic
+                          ? 'تخصيص التنبيهات اليومية ونصائح الذكاء الاصطناعي'
+                          : 'Customize daily alerts & AI coaching cues',
+                      style: GoogleFonts.inter(
+                        textStyle: theme.textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF7A8B7B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_isLoadingNotificationPrefs)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF235A42)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFEBF1ED)),
+          _buildNotificationSwitchRow(
+            context: context,
+            icon: Icons.fitness_center_rounded,
+            title: isArabic ? 'تذكير التمارين والراحة' : 'Workout & Rest Reminders',
+            subtitle: isArabic
+                ? 'تنبيهات التدريب اليومية ومؤقت الراحة بين المجموعات'
+                : 'Daily workout prompts & in-workout rest timers',
+            value: _notifyWorkoutReminders,
+            onChanged: (val) => _updateNotificationPreference('notifyWorkoutReminders', val),
+          ),
+          const Divider(height: 1, color: Color(0xFFEBF1ED)),
+          _buildNotificationSwitchRow(
+            context: context,
+            icon: Icons.restaurant_rounded,
+            title: isArabic ? 'الوجبات والمغذيات الكبرى' : 'Meals & Nutrition Prompts',
+            subtitle: isArabic
+                ? 'تذكير الغداء وفحص عجز السعرات والبروتين مساءً'
+                : 'Lunch logging & evening macro deficit closing checks',
+            value: _notifyMealReminders,
+            onChanged: (val) => _updateNotificationPreference('notifyMealReminders', val),
+          ),
+          const Divider(height: 1, color: Color(0xFFEBF1ED)),
+          _buildNotificationSwitchRow(
+            context: context,
+            icon: Icons.water_drop_rounded,
+            title: isArabic ? 'تذكير الترطيب اليومي' : 'Daily Hydration Touch',
+            subtitle: isArabic
+                ? 'تلميحة صحية خفيفة بعد الظهر للحفاظ على نشاطك'
+                : 'A friendly 2:30 PM reminder to stay hydrated and refreshed',
+            value: _notifyHydrationReminders,
+            onChanged: (val) => _updateNotificationPreference('notifyHydrationReminders', val),
+          ),
+          const Divider(height: 1, color: Color(0xFFEBF1ED)),
+          _buildNotificationSwitchRow(
+            context: context,
+            icon: Icons.local_fire_department_rounded,
+            title: isArabic ? 'حماية الحماس والاستمرار' : 'Streak Protection',
+            subtitle: isArabic
+                ? 'تنبيه مسائي قبل انتهاء اليوم لحفظ سلسلة إنجازك'
+                : 'Evening alert at 8:30 PM so you never lose your logging streak',
+            value: _notifyStreakProtection,
+            onChanged: (val) => _updateNotificationPreference('notifyStreakProtection', val),
+          ),
+          const Divider(height: 1, color: Color(0xFFEBF1ED)),
+          _buildNotificationSwitchRow(
+            context: context,
+            icon: Icons.psychology_rounded,
+            title: isArabic ? 'توجيهات مدرب الذكاء الاصطناعي' : 'AI Coach & Fatigue Alerts',
+            subtitle: isArabic
+                ? 'كشف ثبات الوزن والإفراط في التدريب ونصائح الاستشفاء'
+                : 'Plateau breaker cues & overtraining fatigue warnings',
+            value: _notifyAiCoachInsights,
+            onChanged: (val) => _updateNotificationPreference('notifyAiCoachInsights', val),
+          ),
+          const Divider(height: 1, color: Color(0xFFEBF1ED)),
+          _buildNotificationSwitchRow(
+            context: context,
+            icon: Icons.insights_rounded,
+            title: isArabic ? 'ملخص التقدم الأسبوعي' : 'Weekly Progress Recap',
+            subtitle: isArabic
+                ? 'تقرير شامل مساء الأحد بالتمارين والسعرات والالتزام'
+                : 'Sunday 7:00 PM summary of weekly workouts & macros',
+            value: _notifyWeeklyRecap,
+            onChanged: (val) => _updateNotificationPreference('notifyWeeklyRecap', val),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationSwitchRow({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF1F6F2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: const Color(0xFF386B52), size: 16),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    textStyle: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1C2B1E),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    textStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF7A8B7B),
+                      fontSize: 11.5,
+                      height: 1.25,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Transform.scale(
+            scale: 0.82,
+            child: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              activeThumbColor: const Color(0xFF235A42),
+              activeTrackColor: const Color(0xFFB5DBC3),
+              inactiveThumbColor: const Color(0xFF9E9E9E),
+              inactiveTrackColor: const Color(0xFFE2EBE4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Group 3: Account Actions (Logout) ────────────────────────────
   Widget _buildAccountActionsGroup(BuildContext context, AppLocalizations l10n) {
     final theme = Theme.of(context);
@@ -1239,6 +1539,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(ctx);
+                NotificationService().unregisterToken();
                 context.read<AuthBloc>().add(LogoutRequested());
                 Navigator.of(context).popUntil((route) => route.isFirst);
               },
