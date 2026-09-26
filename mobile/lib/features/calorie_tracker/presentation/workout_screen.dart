@@ -144,50 +144,22 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         }
       }
 
-      // 2. Automatic recovery/seed for yesterday's tested workout if not already stored
-      final yesterday = DateTime.now().subtract(const Duration(days: 1));
-      final yesterdayStr = DateFormat('yyyy-MM-dd').format(yesterday);
-      if (!completedDates.contains(yesterdayStr) && !_savedSessionSummaries.containsKey(yesterdayStr)) {
-        final yesterdaySummary = {
-          'dateStr': yesterdayStr,
-          'dayName': DateFormat('EEEE').format(yesterday),
-          'routineName': 'Upper Session',
-          'totalSetsCompleted': 15,
-          'totalRepsCompleted': 138,
-          'totalVolumeKg': 3780.0,
-          'estCalories': 450,
-          'exercises': [
-            {
-              'name': 'Barbell Bench Press',
-              'muscle': 'Chest · Triceps',
-              'sets': ['80 kg × 8', '80 kg × 8', '80 kg × 8'],
-            },
-            {
-              'name': 'Barbell Row',
-              'muscle': 'Back',
-              'sets': ['70 kg × 8', '70 kg × 8', '70 kg × 8'],
-            },
-            {
-              'name': 'Incline Dumbbell Press',
-              'muscle': 'Upper Chest',
-              'sets': ['28 kg × 10', '28 kg × 10', '28 kg × 10'],
-            },
-            {
-              'name': 'Lat Pulldown',
-              'muscle': 'Back · Lats',
-              'sets': ['60 kg × 10', '60 kg × 10', '60 kg × 10'],
-            },
-            {
-              'name': 'Dumbbell Lateral Raise',
-              'muscle': 'Shoulders',
-              'sets': ['12 kg × 15', '12 kg × 15', '12 kg × 15'],
-            },
-          ],
-          'completedAt': yesterday.toIso8601String(),
-        };
-        _savedSessionSummaries[yesterdayStr] = yesterdaySummary;
-        completedDates.add(yesterdayStr);
-        await prefs.setString('$_workoutSummaryPrefix$yesterdayStr', jsonEncode(yesterdaySummary));
+      // 2. Clean up any previously mock-seeded summaries so unstarted workouts are never logged
+      final mockKeysToRemove = <String>[];
+      for (final entry in _savedSessionSummaries.entries) {
+        final s = entry.value;
+        if (s['routineName'] == 'Upper Session' &&
+            s['totalRepsCompleted'] == 138 &&
+            s['totalVolumeKg'] == 3780.0) {
+          mockKeysToRemove.add(entry.key);
+        }
+      }
+      for (final k in mockKeysToRemove) {
+        _savedSessionSummaries.remove(k);
+        completedDates.remove(k);
+        await prefs.remove('$_workoutSummaryPrefix$k');
+      }
+      if (mockKeysToRemove.isNotEmpty) {
         await prefs.setStringList(_completedDatesKey, completedDates);
       }
 
@@ -244,15 +216,42 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         List.filled(7, false);
 
     final rawWeekDetails = data['weekScheduleDetails'] as List<dynamic>?;
-    final weekDetails = rawWeekDetails != null
-        ? rawWeekDetails.map((e) => WeekDayDetail.fromJson(e as Map<String, dynamic>)).toList()
-        : <WeekDayDetail>[];
-
-    // ── Merge locally persisted completed workouts ──────────────────
     final now = DateTime.now();
     final todayIndex = now.weekday - 1; // Mon = 0, Sun = 6
     final monday = now.subtract(Duration(days: todayIndex));
+    const dayNamesShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+    final List<String> scheduleDays = (data['weekSchedule'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (found.isNotEmpty ? found.first.breakdown : <String>[]);
+
+    final List<WeekDayDetail> weekDetails = (rawWeekDetails != null && rawWeekDetails.isNotEmpty)
+        ? rawWeekDetails.map((e) => WeekDayDetail.fromJson(e as Map<String, dynamic>)).toList()
+        : List.generate(7, (i) {
+            final dayDate = monday.add(Duration(days: i));
+            final dayDateStr = DateFormat('yyyy-MM-dd').format(dayDate);
+            final dType = i < scheduleDays.length ? scheduleDays[i] : 'Rest';
+            final isRest = dType.toLowerCase().contains('rest');
+            final isToday = i == todayIndex;
+            final isPast = i < todayIndex;
+            final isCompleted = _savedSessionSummaries.containsKey(dayDateStr) ||
+                (i < completedList.length && completedList[i]);
+            return WeekDayDetail(
+              dayName: dayNamesShort[i],
+              dateStr: dayDateStr,
+              dayType: dType,
+              isRest: isRest,
+              isSkipped: false,
+              isOverridden: false,
+              isCompleted: isCompleted,
+              isMissed: isPast && !isCompleted && !isRest,
+              isFuture: i > todayIndex,
+              isToday: isToday,
+            );
+          });
+
+    // ── Merge locally persisted completed workouts ──────────────────
     for (int i = 0; i < 7; i++) {
       final dayDate = monday.add(Duration(days: i));
       final dayDateStr = DateFormat('yyyy-MM-dd').format(dayDate);
@@ -3521,55 +3520,63 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     double totalVolumeKg = 0;
     int estCalories = 0;
     List<Map<String, dynamic>> loggedExercisesSummary = [];
-    String sessionTitle = _currentSession?.todayDayName ?? _activeRoutine?.name ?? 'Training Session';
+    String sessionTitle;
+    final savedSummary = _savedSessionSummaries[detail.dateStr];
+    if (savedSummary != null && (savedSummary['routineName'] as String?)?.isNotEmpty == true) {
+      sessionTitle = savedSummary['routineName'] as String;
+    } else if (detail.dayType.isNotEmpty &&
+        detail.dayType != 'Completed' &&
+        detail.dayType != 'Scheduled' &&
+        detail.dayType != 'Today') {
+      sessionTitle = detail.dayType;
+    } else if (detail.isToday && _currentSession?.todayDayName != null) {
+      sessionTitle = _currentSession!.todayDayName;
+    } else {
+      final idx = DateTime.tryParse(detail.dateStr) != null
+          ? (DateTime.parse(detail.dateStr).weekday - 1)
+          : -1;
+      final sched = _activeRoutine?.breakdown ?? [];
+      if (idx >= 0 && idx < sched.length) {
+        sessionTitle = sched[idx];
+      } else {
+        sessionTitle = _activeRoutine?.name ?? 'Training Session';
+      }
+    }
 
     // 1. Check if we have a persisted summary for this exact date
-    final savedSummary = _savedSessionSummaries[detail.dateStr];
     if (savedSummary != null) {
       totalSetsCompleted = (savedSummary['totalSetsCompleted'] as num?)?.toInt() ?? 0;
       totalRepsCompleted = (savedSummary['totalRepsCompleted'] as num?)?.toInt() ?? 0;
       totalVolumeKg = (savedSummary['totalVolumeKg'] as num?)?.toDouble() ?? 0.0;
       estCalories = (savedSummary['estCalories'] as num?)?.toInt() ?? (totalVolumeKg * 0.14).clamp(120, 650).round();
-      sessionTitle = savedSummary['routineName'] as String? ?? sessionTitle;
       final rawExs = savedSummary['exercises'] as List<dynamic>?;
       if (rawExs != null) {
         loggedExercisesSummary = rawExs.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
-    } else {
-      // 2. Active sets or routine-based exercises
+    } else if (detail.isToday) {
+      // 2. Active sets for today's workout if user is in-session
       final exercises = _getEffectiveExercises();
       for (int eIdx = 0; eIdx < exercises.length; eIdx++) {
         final ex = exercises[eIdx];
         final sets = _activeExerciseSets[eIdx];
         final List<String> setDetails = [];
 
-        if (sets != null && sets.isNotEmpty && (detail.isToday || isCompleted)) {
+        if (sets != null && sets.isNotEmpty) {
           for (final s in sets) {
-            if (s.isCompleted || isCompleted) {
+            if (s.isCompleted) {
               totalSetsCompleted++;
               totalRepsCompleted += s.reps;
               totalVolumeKg += (s.weight * s.reps);
               setDetails.add('${s.weight % 1 == 0 ? s.weight.toInt() : s.weight} kg × ${s.reps}');
             }
           }
-        } else if (isCompleted) {
-          final w = ex.lastWeekWeight ?? 50.0;
-          final r = ex.lastWeekReps ?? 10;
-          totalSetsCompleted += ex.targetSets;
-          totalRepsCompleted += (r * ex.targetSets);
-          totalVolumeKg += (w * r * ex.targetSets);
-          for (int s = 1; s <= ex.targetSets; s++) {
-            setDetails.add('${w % 1 == 0 ? w.toInt() : w} kg × $r');
-          }
         }
 
-        if (setDetails.isNotEmpty || isCompleted) {
+        if (setDetails.isNotEmpty) {
           loggedExercisesSummary.add({
             'name': ex.name,
             'muscle': ex.muscleGroup,
-            'sets': setDetails.isNotEmpty
-                ? setDetails
-                : List.generate(ex.targetSets, (i) => 'Target: 50 kg × 10'),
+            'sets': setDetails,
           });
         }
       }
@@ -3694,128 +3701,130 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 const SizedBox(height: 18),
 
                 // Exercises Logged Breakdown
-                Text(
-                  isArabic ? 'التمارين المنجزة' : 'EXERCISES TRAINED',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF7A8B7B),
-                    letterSpacing: 0.6,
+                if (loggedExercisesSummary.isNotEmpty) ...[
+                  Text(
+                    isArabic ? 'التمارين المنجزة' : 'EXERCISES TRAINED',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF7A8B7B),
+                      letterSpacing: 0.6,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                Flexible(
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: loggedExercisesSummary.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, idx) {
-                      final exData = loggedExercisesSummary[idx];
-                      final name = exData['name']?.toString() ?? 'Exercise';
-                      final muscle = exData['muscle']?.toString() ?? '';
-                      final rawSets = exData['sets'];
-                      final List<String> sets = rawSets is List
-                          ? rawSets.map((s) => s.toString()).toList()
-                          : <String>[];
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: loggedExercisesSummary.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, idx) {
+                        final exData = loggedExercisesSummary[idx];
+                        final name = exData['name']?.toString() ?? 'Exercise';
+                        final muscle = exData['muscle']?.toString() ?? '';
+                        final rawSets = exData['sets'];
+                        final List<String> sets = rawSets is List
+                            ? rawSets.map((s) => s.toString()).toList()
+                            : <String>[];
 
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF7FAF8),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    width: 36,
-                                    height: 36,
-                                    margin: const EdgeInsets.only(right: 10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF1F6F2),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFDDE6DF)),
-                                    ),
-                                    child: CachedNetworkImage(
-                                      imageUrl: ExerciseMediaService.getThumbnailUrl(name) ?? '',
-                                      fit: BoxFit.cover,
-                                      placeholder: (c, u) => const Center(
-                                        child: SizedBox(
-                                          width: 12,
-                                          height: 12,
-                                          child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF235A42)),
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7FAF8),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      margin: const EdgeInsets.only(right: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF1F6F2),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFDDE6DF)),
+                                      ),
+                                      child: CachedNetworkImage(
+                                        imageUrl: ExerciseMediaService.getThumbnailUrl(name) ?? '',
+                                        fit: BoxFit.cover,
+                                        placeholder: (c, u) => const Center(
+                                          child: SizedBox(
+                                            width: 12,
+                                            height: 12,
+                                            child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF235A42)),
+                                          ),
+                                        ),
+                                        errorWidget: (c, u, e) => const Center(
+                                          child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 18),
                                         ),
                                       ),
-                                      errorWidget: (c, u, e) => const Center(
-                                        child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 18),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1C2B1E),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Expanded(
-                                  child: Text(
-                                    name,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF1C2B1E),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEAF5EE),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      muscle.toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF235A42),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEAF5EE),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    muscle.toUpperCase(),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w800,
-                                      color: const Color(0xFF235A42),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: List.generate(sets.length, (sIdx) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: List.generate(sets.length, (sIdx) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
-                                  ),
-                                  child: Text(
-                                    'S${sIdx + 1}: ${sets[sIdx]}',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF235A42),
+                                    child: Text(
+                                      'S${sIdx + 1}: ${sets[sIdx]}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF235A42),
+                                      ),
                                     ),
-                                  ),
-                                );
-                              }),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                                  );
+                                }),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
+                  const SizedBox(height: 14),
+                ],
 
                 // AI Coach Insight Card
                 Container(
@@ -5658,6 +5667,7 @@ class WeeklyCalendarRow extends StatelessWidget {
             (i < weekScheduleDetails.length && weekScheduleDetails[i].isCompleted);
         final bool isToday = (i == todayIndex);
 
+        final bool isFallbackRest = (i == 5 || i == 6);
         final detail = (i < weekScheduleDetails.length && weekScheduleDetails[i].dayName.isNotEmpty)
             ? weekScheduleDetails[i].copyWith(
                 isCompleted: isCompleted,
@@ -5668,8 +5678,8 @@ class WeeklyCalendarRow extends StatelessWidget {
                 dateStr: DateFormat('yyyy-MM-dd').format(
                   DateTime.now().subtract(Duration(days: todayIndex)).add(Duration(days: i)),
                 ),
-                dayType: isCompleted ? 'Completed' : (isToday ? 'Today' : 'Scheduled'),
-                isRest: false,
+                dayType: isCompleted ? 'Completed' : (isFallbackRest ? 'Rest' : (isToday ? 'Today' : 'Scheduled')),
+                isRest: isFallbackRest,
                 isSkipped: false,
                 isOverridden: false,
                 isCompleted: isCompleted,
