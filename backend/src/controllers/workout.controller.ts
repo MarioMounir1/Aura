@@ -21,6 +21,7 @@ interface SessionExercise {
   targetSets: number;
   muscleGroup: string;
   videoUrl?: string | null;
+  mediaUrl?: string | null;
   thumbnailUrl?: string | null;
   instructions?: string | null;
   tips?: string | null;
@@ -524,6 +525,8 @@ async function fetchSessionData(
         targetSets: ex.targetSets,
         muscleGroup: ex.muscleGroup,
         id: dbEx.id,
+        mediaUrl: dbEx.mediaUrl,
+        thumbnailUrl: dbEx.thumbnailUrl,
         lastWeekWeight: lastPerf ? lastPerf.weight : null,
         lastWeekReps: lastPerf ? lastPerf.reps : null,
         isPlateaued: trend.isPlateaued,
@@ -935,7 +938,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
 export async function getAvailableExercises(req: Request, res: Response): Promise<void> {
   try {
     const exercises = await prisma.exercise.findMany({
-      select: { id: true, name: true, muscleGroup: true },
+      select: { id: true, name: true, muscleGroup: true, mediaUrl: true, mediaType: true, thumbnailUrl: true },
       orderBy: { name: 'asc' },
     });
     res.status(200).json({ success: true, data: exercises });
