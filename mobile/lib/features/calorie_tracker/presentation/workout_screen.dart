@@ -1305,7 +1305,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       border: Border.all(color: const Color(0xFFDDE6DF)),
                     ),
                     child: CachedNetworkImage(
-                      imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name, overrideUrl: ex.thumbnailUrl ?? ex.mediaUrl) ?? '',
+                      imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name) ?? '',
                       fit: BoxFit.cover,
                       placeholder: (context, url) => const Center(
                         child: SizedBox(
