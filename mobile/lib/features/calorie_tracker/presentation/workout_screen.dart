@@ -2329,7 +2329,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _showRoutineDetailsModal(bool isArabic) {
-    final weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final weekDays = isArabic
+        ? const ['إث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح']
+        : const ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'];
     // Map breakdown items to theme-aligned colors
     final splitColors = {
       'Push': const Color(0xFF235A42),   // primary green
@@ -4635,7 +4637,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   Widget _buildWeeklyCalendar(bool isArabic) {
     final theme = context.auraTheme;
-    const weekDayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final weekDayLabels = isArabic
+        ? const ['إث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح']
+        : const ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'];
     final todayIndex = DateTime.now().weekday - 1;
 
     return Row(
@@ -5895,7 +5899,9 @@ class WeeklyCalendarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const weekDayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final weekDayLabels = isArabic
+        ? const ['إث', 'ثل', 'أر', 'خم', 'جم', 'سب', 'أح']
+        : const ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su'];
     const weekDayFullNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     final todayIndex = DateTime.now().weekday - 1;
 
