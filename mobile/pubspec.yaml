@@ -29,6 +29,7 @@ dependencies:
   firebase_storage: ^12.3.6
   firebase_crashlytics: ^4.2.0
   firebase_analytics: ^11.3.6
+  firebase_messaging: ^15.2.0
 
   # Networking
   dio: ^5.7.0
@@ -69,6 +70,7 @@ dependencies:
   url_launcher: ^6.3.0
   purchases_flutter: ^10.4.2
   purchases_ui_flutter: ^10.4.2
+  flutter_local_notifications: ^18.0.1
 
   # Ads & Monetization (Free Tier)
   google_mobile_ads: ^5.2.0
