@@ -18,12 +18,16 @@ class Exercise {
   final String name;
   final String muscleGroup;
   final String? mechanic;
+  final String? mediaUrl;
+  final String? thumbnailUrl;
   
   const Exercise({
     required this.id,
     required this.name,
     required this.muscleGroup,
     this.mechanic,
+    this.mediaUrl,
+    this.thumbnailUrl,
   });
 
   factory Exercise.fromJson(Map<String, dynamic> j) => Exercise(
@@ -31,6 +35,8 @@ class Exercise {
     name:        j['name'] as String? ?? 'Exercise',
     muscleGroup: j['muscleGroup'] as String? ?? '',
     mechanic:    j['mechanic'] as String?,
+    mediaUrl:    j['mediaUrl'] as String?,
+    thumbnailUrl: j['thumbnailUrl'] as String?,
   );
 }
 
@@ -48,6 +54,8 @@ class SessionExercise {
   final int? lastWeekReps;
   final bool isPlateaued;
   final String? coachNote;
+  final String? mediaUrl;
+  final String? thumbnailUrl;
 
   const SessionExercise({
     this.id,
@@ -59,6 +67,8 @@ class SessionExercise {
     this.lastWeekReps,
     this.isPlateaued = false,
     this.coachNote,
+    this.mediaUrl,
+    this.thumbnailUrl,
   });
 
   factory SessionExercise.fromJson(Map<String, dynamic> j) => SessionExercise(
@@ -71,6 +81,8 @@ class SessionExercise {
         lastWeekReps:   (j['lastWeekReps'] as num?)?.toInt(),
         isPlateaued:    j['isPlateaued'] as bool? ?? false,
         coachNote:      j['coachNote'] as String?,
+        mediaUrl:       j['mediaUrl'] as String?,
+        thumbnailUrl:   j['thumbnailUrl'] as String?,
       );
 }
 
