@@ -435,17 +435,11 @@ async function fetchSessionData(
     const targetDate = new Date(targetDateStr + "T00:00:00Z");
     const configDateStr = configuredAt.toISOString().split("T")[0];
     const configDate = new Date(configDateStr + "T00:00:00Z");
-    let diffDays = Math.max(0, Math.floor((targetDate.getTime() - configDate.getTime()) / 86400000));
-    if (isTodayCompleted) {
-      diffDays += 1;
-    }
+    const diffDays = Math.max(0, Math.floor((targetDate.getTime() - configDate.getTime()) / 86400000));
     todayDayName = days[diffDays % days.length] ?? "Rest";
   } else {
     const targetDate = new Date(targetDateStr + "T00:00:00Z");
-    let todayIndex = (targetDate.getDay() + 6) % 7;
-    if (isTodayCompleted) {
-      todayIndex += 1;
-    }
+    const todayIndex = (targetDate.getUTCDay() + 6) % 7;
     todayDayName = days[todayIndex % days.length] ?? "Rest";
   }
 
@@ -743,18 +737,17 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
         allSessions.map((s) => new Date(s.startedAt).toISOString().split('T')[0])
       );
       
-      let checkDate = new Date();
-      checkDate.setHours(0, 0, 0, 0);
+      let checkDate = new Date(targetDateStr + "T12:00:00Z");
       let checkStr = checkDate.toISOString().split('T')[0];
 
       if (!sessionDates.has(checkStr)) {
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDate = new Date(checkDate.getTime() - 86400000);
         checkStr = checkDate.toISOString().split('T')[0];
       }
 
       while (sessionDates.has(checkStr)) {
         streakDays++;
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDate = new Date(checkDate.getTime() - 86400000);
         checkStr = checkDate.toISOString().split('T')[0];
       }
     }
@@ -762,17 +755,15 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
     const currentSession = await buildCurrentSession(userId, splitType, splitName, targetDateStr, user.workoutConfiguredAt, streakDays, true);
 
     // Compute real weekly completion from DB (ONLY completed sessions with endedAt != null)
-    const now = new Date(targetDateStr + "T12:00:00Z");
-    const startOfWeek = new Date(now);
-    const dayOfWeek = (now.getDay() + 6) % 7; // Mon = 0, Sun = 6
-    startOfWeek.setDate(now.getDate() - dayOfWeek);
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
+    // Pure UTC calculation so local timezone offset (e.g. GMT+3) does not shift dates backward
+    const [y, m, dNum] = targetDateStr.split("-").map(Number);
+    const nowUtc = new Date(Date.UTC(y, m - 1, dNum, 12, 0, 0));
+    const dayOfWeek = (nowUtc.getUTCDay() + 6) % 7; // Mon = 0, Sun = 6
+    const startOfWeek = new Date(Date.UTC(y, m - 1, dNum - dayOfWeek, 0, 0, 0));
+    const endOfWeek = new Date(Date.UTC(y, m - 1, dNum - dayOfWeek + 7, 0, 0, 0));
 
     const startOfWeekStr = startOfWeek.toISOString().split("T")[0];
-    const endOfWeekMinus1Str = new Date(endOfWeek.getTime() - 86400000).toISOString().split("T")[0];
+    const endOfWeekMinus1Str = new Date(Date.UTC(y, m - 1, dNum - dayOfWeek + 6, 0, 0, 0)).toISOString().split("T")[0];
 
     const [thisWeekSessions, weekOverrides] = await Promise.all([
       prisma.workoutSession.findMany({
@@ -823,8 +814,7 @@ export async function getWorkoutRoutine(req: Request, res: Response): Promise<vo
       : targetDateStr;  // treat "configured right now" as the safe default
 
     const weekScheduleDetails = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(startOfWeek);
-      d.setDate(startOfWeek.getDate() + i);
+      const d = new Date(Date.UTC(y, m - 1, (dNum - dayOfWeek) + i, 0, 0, 0));
       const dateStr = d.toISOString().split("T")[0];
 
       const overrideType = overrideMap.get(dateStr);
@@ -1901,14 +1891,12 @@ export async function getWeeklyRecap(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    const dayOfWeek = (now.getDay() + 6) % 7;
-    startOfWeek.setDate(now.getDate() - dayOfWeek);
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const [ry, rm, rd] = todayStr.split("-").map(Number);
+    const recapNow = new Date(Date.UTC(ry, rm - 1, rd, 12, 0, 0));
+    const dayOfWeek = (recapNow.getUTCDay() + 6) % 7;
+    const startOfWeek = new Date(Date.UTC(ry, rm - 1, rd - dayOfWeek, 0, 0, 0));
+    const endOfWeek = new Date(Date.UTC(ry, rm - 1, rd - dayOfWeek + 7, 0, 0, 0));
 
     const sessions = await prisma.workoutSession.findMany({
       where: {
@@ -1972,16 +1960,15 @@ export async function getWeeklyRecap(req: Request, res: Response): Promise<void>
 
     if (allSessions.length > 0) {
       const sessionDates = new Set(allSessions.map((s) => new Date(s.startedAt).toISOString().split("T")[0]));
-      let checkDate = new Date();
-      checkDate.setHours(0, 0, 0, 0);
+      let checkDate = new Date(Date.UTC(ry, rm - 1, rd, 12, 0, 0));
       let checkStr = checkDate.toISOString().split("T")[0];
       if (!sessionDates.has(checkStr)) {
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDate = new Date(checkDate.getTime() - 86400000);
         checkStr = checkDate.toISOString().split("T")[0];
       }
       while (sessionDates.has(checkStr)) {
         streakDays++;
-        checkDate.setDate(checkDate.getDate() - 1);
+        checkDate = new Date(checkDate.getTime() - 86400000);
         checkStr = checkDate.toISOString().split("T")[0];
       }
     }
