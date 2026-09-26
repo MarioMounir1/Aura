@@ -14,6 +14,7 @@ import v1Router from './routes/v1.routes';
 import { errorHandler } from "./middleware/validation";
 import prisma from "./services/prisma.service";
 import { execSync } from "child_process";
+import { startNotificationScheduler } from "./services/notification-scheduler.service";
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -223,6 +224,9 @@ if (process.env.NODE_ENV !== "test") {
     console.log(`   Analyze:  POST /api/v1/meals/analyze`);
     console.log(`   History:  GET  /api/v1/meals/history`);
     console.log(`🔧  Legacy API: none`);
+
+    // ── Start Automated Push Notification Scheduler ─────────
+    startNotificationScheduler();
   });
 }
 
