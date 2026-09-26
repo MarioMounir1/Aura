@@ -226,12 +226,49 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             .toList() ??
         (found.isNotEmpty ? found.first.breakdown : <String>[]);
 
+    final todaySessionObj = sessionData != null ? CurrentSession.fromJson(sessionData) : null;
     final List<WeekDayDetail> weekDetails = (rawWeekDetails != null && rawWeekDetails.isNotEmpty)
-        ? rawWeekDetails.map((e) => WeekDayDetail.fromJson(e as Map<String, dynamic>)).toList()
+        ? List.generate(7, (i) {
+            final dayDate = monday.add(Duration(days: i));
+            final dayDateStr = DateFormat('yyyy-MM-dd').format(dayDate);
+            final base = i < rawWeekDetails.length
+                ? WeekDayDetail.fromJson(rawWeekDetails[i] as Map<String, dynamic>)
+                : null;
+            final isToday = i == todayIndex;
+            final isPast = i < todayIndex;
+            final isCompleted = _savedSessionSummaries.containsKey(dayDateStr) ||
+                (i < completedList.length && completedList[i]) ||
+                (base?.isCompleted ?? false);
+            final isRest = base?.isRest ?? false;
+            final dayType = (isToday && todaySessionObj?.todayDayName != null && todaySessionObj!.todayDayName.isNotEmpty)
+                ? todaySessionObj.todayDayName
+                : (base?.dayType ?? (i < scheduleDays.length ? scheduleDays[i] : 'Rest'));
+
+            return (base ?? WeekDayDetail(
+              dayName: dayNamesShort[i],
+              dateStr: dayDateStr,
+              dayType: dayType,
+              isRest: isRest,
+              isSkipped: false,
+              isOverridden: false,
+              isCompleted: isCompleted,
+              isMissed: isPast && !isCompleted && !isRest,
+              isFuture: i > todayIndex,
+              isToday: isToday,
+            )).copyWith(
+              dayName: dayNamesShort[i],
+              dateStr: dayDateStr,
+              dayType: dayType,
+              isToday: isToday,
+              isCompleted: isCompleted,
+            );
+          })
         : List.generate(7, (i) {
             final dayDate = monday.add(Duration(days: i));
             final dayDateStr = DateFormat('yyyy-MM-dd').format(dayDate);
-            final dType = i < scheduleDays.length ? scheduleDays[i] : 'Rest';
+            final dType = (i == todayIndex && todaySessionObj?.todayDayName != null && todaySessionObj!.todayDayName.isNotEmpty)
+                ? todaySessionObj.todayDayName
+                : (i < scheduleDays.length ? scheduleDays[i] : 'Rest');
             final isRest = dType.toLowerCase().contains('rest');
             final isToday = i == todayIndex;
             final isPast = i < todayIndex;
@@ -3220,6 +3257,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                         weekScheduleDetails: _weekScheduleDetails,
                         completedDaysThisWeek: _completedDaysThisWeek,
                         isArabic: isArabic,
+                        todaySessionName: _currentSession?.todayDayName,
                         onDayTap: (detail) {
                           _showDayDetailSheet(detail, isArabic);
                         },
@@ -3524,13 +3562,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     final savedSummary = _savedSessionSummaries[detail.dateStr];
     if (savedSummary != null && (savedSummary['routineName'] as String?)?.isNotEmpty == true) {
       sessionTitle = savedSummary['routineName'] as String;
+    } else if (detail.isToday && _currentSession?.todayDayName != null && _currentSession!.todayDayName.isNotEmpty) {
+      sessionTitle = _currentSession!.todayDayName;
     } else if (detail.dayType.isNotEmpty &&
         detail.dayType != 'Completed' &&
         detail.dayType != 'Scheduled' &&
         detail.dayType != 'Today') {
       sessionTitle = detail.dayType;
-    } else if (detail.isToday && _currentSession?.todayDayName != null) {
-      sessionTitle = _currentSession!.todayDayName;
     } else {
       final idx = DateTime.tryParse(detail.dateStr) != null
           ? (DateTime.parse(detail.dateStr).weekday - 1)
@@ -3623,7 +3661,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${detail.dayName}, ${DateTime.tryParse(detail.dateStr) != null ? DateFormat('MMM d').format(DateTime.parse(detail.dateStr)) : detail.dateStr}',
+                          detail.isToday
+                              ? DateFormat('EEE, MMM d').format(DateTime.now())
+                              : '${detail.dayName}, ${DateTime.tryParse(detail.dateStr) != null ? DateFormat('MMM d').format(DateTime.parse(detail.dateStr)) : detail.dateStr}',
                           style: GoogleFonts.inter(
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
@@ -3893,6 +3933,160 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     ],
                   ),
                 ),
+              ] else if (detail.isToday) ...[
+                // Today's Ready Session UI
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF235A42).withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF235A42),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isArabic ? 'جلسة اليوم جاهزة للانطلاق' : "Today's Session is Ready",
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1C2B1E),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isArabic
+                                  ? 'تم إعداد خطة التمارين ومجموعات التدريب. ابدأ تمرينك الآن!'
+                                  : 'Target exercises and progression goals are loaded. Let\'s get to work!',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: const Color(0xFF5A6E5D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // Planned Exercises List
+                if (_getEffectiveExercises().isNotEmpty) ...[
+                  Text(
+                    isArabic ? 'التمارين المخططة لليوم' : 'PLANNED EXERCISES',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF7A8B7B),
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _getEffectiveExercises().length.clamp(0, 5),
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, idx) {
+                        final ex = _getEffectiveExercises()[idx];
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7FAF8),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
+                          ),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  margin: const EdgeInsets.only(right: 10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F6F2),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: const Color(0xFFDDE6DF)),
+                                  ),
+                                  child: CachedNetworkImage(
+                                    imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name) ?? '',
+                                    fit: BoxFit.cover,
+                                    placeholder: (c, u) => const Center(
+                                      child: SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF235A42)),
+                                      ),
+                                    ),
+                                    errorWidget: (c, u, e) => const Center(
+                                      child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 18),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      ex.name,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1C2B1E),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      isArabic ? '${ex.targetSets} مجموعات مستهدفة' : '${ex.targetSets} target sets',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF5A6E5D),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEAF5EE),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  ex.muscleGroup.toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: const Color(0xFF235A42),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
               ] else ...[
                 // Scheduled Upcoming Day UI
                 Container(
@@ -3937,24 +4131,60 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
               const SizedBox(height: 20),
 
-              // Dismiss / Close Button
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF235A42),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: Text(
-                    isArabic ? 'إغلاق' : 'Close Summary',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+              // Action Buttons
+              if (detail.isToday && !isCompleted && !isRest) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _startWorkout();
+                    },
+                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                    label: Text(
+                      isArabic ? 'ابدأ جلسة التمرين الآن' : 'Start Workout Session',
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF235A42),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 40,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(
+                      isArabic ? 'إغلاق' : 'Close',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF5A6E5D)),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF235A42),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text(
+                      isCompleted ? (isArabic ? 'إغلاق' : 'Close Summary') : (isArabic ? 'إغلاق' : 'Close'),
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -4421,7 +4651,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         return GestureDetector(
           onTap: () {
             if (detail != null) {
-              _showDayDetailSheet(detail.copyWith(isCompleted: isCompleted, isToday: isToday), isArabic);
+              final effectiveDetail = isToday
+                  ? detail.copyWith(
+                      isCompleted: isCompleted,
+                      isToday: true,
+                      dateStr: DateFormat('yyyy-MM-dd').format(DateTime.now()),
+                      dayType: _currentSession?.todayDayName ?? detail.dayType,
+                    )
+                  : detail.copyWith(isCompleted: isCompleted, isToday: false);
+              _showDayDetailSheet(effectiveDetail, isArabic);
             }
           },
           behavior: HitTestBehavior.opaque,
@@ -5643,6 +5881,7 @@ class WeeklyCalendarRow extends StatelessWidget {
   final List<WeekDayDetail> weekScheduleDetails;
   final List<bool> completedDaysThisWeek;
   final bool isArabic;
+  final String? todaySessionName;
   final void Function(WeekDayDetail detail) onDayTap;
 
   const WeeklyCalendarRow({
@@ -5650,6 +5889,7 @@ class WeeklyCalendarRow extends StatelessWidget {
     required this.weekScheduleDetails,
     required this.completedDaysThisWeek,
     required this.isArabic,
+    this.todaySessionName,
     required this.onDayTap,
   });
 
@@ -5668,17 +5908,21 @@ class WeeklyCalendarRow extends StatelessWidget {
         final bool isToday = (i == todayIndex);
 
         final bool isFallbackRest = (i == 5 || i == 6);
+        final dayDate = DateTime.now().subtract(Duration(days: todayIndex)).add(Duration(days: i));
+        final dayDateStr = DateFormat('yyyy-MM-dd').format(dayDate);
         final detail = (i < weekScheduleDetails.length && weekScheduleDetails[i].dayName.isNotEmpty)
             ? weekScheduleDetails[i].copyWith(
                 isCompleted: isCompleted,
                 isToday: isToday,
+                dateStr: dayDateStr,
+                dayType: (isToday && todaySessionName != null && todaySessionName!.isNotEmpty)
+                    ? todaySessionName!
+                    : null,
               )
             : WeekDayDetail(
                 dayName: weekDayFullNames[i],
-                dateStr: DateFormat('yyyy-MM-dd').format(
-                  DateTime.now().subtract(Duration(days: todayIndex)).add(Duration(days: i)),
-                ),
-                dayType: isCompleted ? 'Completed' : (isFallbackRest ? 'Rest' : (isToday ? 'Today' : 'Scheduled')),
+                dateStr: dayDateStr,
+                dayType: isCompleted ? 'Completed' : (isFallbackRest ? 'Rest' : (isToday ? (todaySessionName ?? 'Today') : 'Scheduled')),
                 isRest: isFallbackRest,
                 isSkipped: false,
                 isOverridden: false,
