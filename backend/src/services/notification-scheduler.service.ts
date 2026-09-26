@@ -13,6 +13,7 @@ import {
   sendStreakGuardianNotification,
   sendSundayRecapNotification,
   sendOvertrainingAlertNotification,
+  sendMacroRebalanceNotification,
 } from "./notification.service";
 
 // In-memory daily deduplication cache: "userId:type:YYYY-MM-DD"
@@ -27,6 +28,16 @@ function checkDailyPurge(): void {
     dispatchedAlertsToday.clear();
     lastPurgeDate = today;
   }
+}
+
+function getUserDailyPushCount(userId: string, dateStr: string): number {
+  let count = 0;
+  for (const item of dispatchedAlertsToday) {
+    if (item.startsWith(`${userId}:`) && item.endsWith(`:${dateStr}`)) {
+      count++;
+    }
+  }
+  return count;
 }
 
 /**
@@ -119,6 +130,16 @@ export async function evaluateScheduledNotifications(): Promise<void> {
       const tz = user.timezone || "Africa/Cairo";
       const { localDateStr, hour, minute, dayOfWeek } = getLocalTimeInfo(tz);
 
+      // ── Anti-Spam: Quiet Hours (10:00 PM to 7:30 AM local time) ──
+      if (hour >= 22 || hour < 7 || (hour === 7 && minute < 30)) {
+        continue;
+      }
+
+      // ── Anti-Spam: Daily Cap (Max 3 server pushes per 24h cycle) ──
+      if (getUserDailyPushCount(user.id, localDateStr) >= 3) {
+        continue;
+      }
+
       // Parse preferred workout time (default 09:00)
       const [prefHour, prefMin] = (user.preferredWorkoutTime || "09:00")
         .split(":")
@@ -156,6 +177,29 @@ export async function evaluateScheduledNotifications(): Promise<void> {
         }
       }
 
+      // ── 1B. Rest Day Recovery Protocol (9:30 AM) ────────────
+      if (
+        user.notifyWorkoutReminders &&
+        hour === 9 &&
+        minute >= 30 &&
+        minute < 60
+      ) {
+        const key = `${user.id}:rest_day:${localDateStr}`;
+        if (!dispatchedAlertsToday.has(key)) {
+          const dayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+          const currentDayName = dayNames[dayOfWeek];
+          const scheduledDays = Array.isArray(user.workoutDays)
+            ? user.workoutDays.map((d: any) => String(d).toLowerCase())
+            : [];
+
+          const isRestDay = scheduledDays.length > 0 && !scheduledDays.includes(currentDayName);
+          if (isRestDay) {
+            dispatchedAlertsToday.add(key);
+            await sendRestDayNotification(user.id);
+          }
+        }
+      }
+
       // ── 2. Lunch Fuel Check (1:30 PM - 2:00 PM) ─────────────
       if (user.notifyMealReminders && hour === 13 && minute >= 30) {
         const key = `${user.id}:lunch_prompt:${localDateStr}`;
@@ -182,6 +226,36 @@ export async function evaluateScheduledNotifications(): Promise<void> {
         if (!dispatchedAlertsToday.has(key)) {
           dispatchedAlertsToday.add(key);
           await sendHydrationTouchNotification(user.id);
+        }
+      }
+
+      // ── 3B. AI Macro Rebalance Tip (6:30 PM) ────────────────
+      if (user.notifyAiCoachInsights && hour === 18 && minute >= 30) {
+        const key = `${user.id}:macro_rebalance:${localDateStr}`;
+        if (!dispatchedAlertsToday.has(key)) {
+          const meals = await prisma.mealLog.findMany({
+            where: {
+              userId: user.id,
+              loggedAt: { gte: todayStart, lte: todayEnd },
+            },
+            select: { calories: true, protein: true },
+          });
+
+          const totalCalories = meals.reduce((sum, m) => sum + (m.calories || 0), 0);
+          const totalProtein = meals.reduce((sum, m) => sum + (m.protein || 0), 0);
+
+          const fullUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { dailyCalorieGoal: true },
+          });
+          const calGoal = fullUser?.dailyCalorieGoal || 2000;
+          const protGoal = user.proteinGoal || 130;
+
+          if (totalCalories >= calGoal * 0.6 && totalProtein < protGoal * 0.45) {
+            dispatchedAlertsToday.add(key);
+            const deficit = Math.max(0, protGoal - totalProtein);
+            await sendMacroRebalanceNotification(user.id, deficit);
+          }
         }
       }
 
