@@ -11,6 +11,7 @@ import 'bloc/dashboard_event.dart';
 import 'meals_dashboard_screen.dart';
 import 'workout_screen.dart';
 import 'settings_screen.dart';
+import '../../../core/services/notification_service.dart';
 
 class DashboardTabWrapper extends StatefulWidget {
   const DashboardTabWrapper({super.key});
@@ -67,14 +68,29 @@ class _DashboardTabWrapperState extends State<DashboardTabWrapper> {
 }
 
 class HomeShellScreen extends StatefulWidget {
-  const HomeShellScreen({super.key});
+  final int initialIndex;
+  const HomeShellScreen({super.key, this.initialIndex = 0});
 
   @override
   State<HomeShellScreen> createState() => _HomeShellScreenState();
 }
 
 class _HomeShellScreenState extends State<HomeShellScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Gently prompt for push notification permissions & sync device token with backend
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          NotificationService().requestPermissions();
+        }
+      });
+    });
+  }
 
   final List<Widget> _screens = const [
     DashboardTabWrapper(),
