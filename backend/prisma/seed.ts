@@ -245,20 +245,77 @@ async function main() {
 
   // ── Seed Gym Exercises ────────────────────────────────────────────────────
   console.log("\n🏋️   Seeding Gym Exercises...");
+  const yuhonasBase = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
+  const gifsBase = "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos";
+
+  const mediaMap: Record<string, { gif: string; thumb: string }> = {
+    "Barbell Bench Press": { gif: `${gifsBase}/0025-EIeI8Vf.gif`, thumb: `${yuhonasBase}/Barbell_Bench_Press_-_Medium_Grip/0.jpg` },
+    "Incline Dumbbell Press": { gif: `${gifsBase}/0314-8xW140L.gif`, thumb: `${yuhonasBase}/Incline_Dumbbell_Press/0.jpg` },
+    "Dumbbell Bench Press": { gif: `${gifsBase}/0289-5G78wYq.gif`, thumb: `${yuhonasBase}/Dumbbell_Bench_Press/0.jpg` },
+    "Cable Flyes": { gif: `${gifsBase}/0160-v2Yw7Yw.gif`, thumb: `${yuhonasBase}/Cable_Crossover/0.jpg` },
+    "Push-Ups": { gif: `${gifsBase}/0662-fK8rV41.gif`, thumb: `${yuhonasBase}/Pushups/0.jpg` },
+    "Dips": { gif: `${gifsBase}/0251-Zl0X24n.gif`, thumb: `${yuhonasBase}/Dips_-_Chest_Version/0.jpg` },
+    "Pull-Ups": { gif: `${gifsBase}/0652-lBDjFxJ.gif`, thumb: `${yuhonasBase}/Pullups/0.jpg` },
+    "Weighted Pull-Ups": { gif: `${gifsBase}/0652-lBDjFxJ.gif`, thumb: `${yuhonasBase}/Pullups/0.jpg` },
+    "Barbell Row": { gif: `${gifsBase}/0027-t7yqV4G.gif`, thumb: `${yuhonasBase}/Bent_Over_Barbell_Row/0.jpg` },
+    "Dumbbell Row": { gif: `${gifsBase}/0292-6gX145w.gif`, thumb: `${yuhonasBase}/One-Arm_Dumbbell_Row/0.jpg` },
+    "Cable Row": { gif: `${gifsBase}/0237-7xW9P2L.gif`, thumb: `${yuhonasBase}/Seated_Cable_Rows/0.jpg` },
+    "Lat Pulldown": { gif: `${gifsBase}/0150-Zq4o9Wq.gif`, thumb: `${yuhonasBase}/Wide-Grip_Lat_Pulldown/0.jpg` },
+    "Deadlift": { gif: `${gifsBase}/0032-ila4NZS.gif`, thumb: `${yuhonasBase}/Barbell_Deadlift/0.jpg` },
+    "Overhead Press": { gif: `${gifsBase}/0091-k7YgV6D.gif`, thumb: `${yuhonasBase}/Standing_Military_Press/0.jpg` },
+    "Arnold Press": { gif: `${gifsBase}/0011-NlX4X4w.gif`, thumb: `${yuhonasBase}/Arnold_Dumbbell_Press/0.jpg` },
+    "Cable Lateral Raises": { gif: `${gifsBase}/0179-8dE8J5V.gif`, thumb: `${yuhonasBase}/Side_Lateral_Raise/0.jpg` },
+    "Face Pulls": { gif: `${gifsBase}/0164-3xW9q1G.gif`, thumb: `${yuhonasBase}/Face_Pull/0.jpg` },
+    "Rear Delt Flyes": { gif: `${gifsBase}/0164-3xW9q1G.gif`, thumb: `${yuhonasBase}/Face_Pull/0.jpg` },
+    "Upright Row": { gif: `${gifsBase}/0115-4kL9w2m.gif`, thumb: `${yuhonasBase}/Upright_Barbell_Row/0.jpg` },
+    "Barbell Curl": { gif: `${gifsBase}/0031-6jW8P2L.gif`, thumb: `${yuhonasBase}/Barbell_Curl/0.jpg` },
+    "Incline Dumbbell Curl": { gif: `${gifsBase}/0315-7kL8P2M.gif`, thumb: `${yuhonasBase}/Incline_Dumbbell_Curl/0.jpg` },
+    "Hammer Curl": { gif: `${gifsBase}/0313-2kL8P3M.gif`, thumb: `${yuhonasBase}/Hammer_Curls/0.jpg` },
+    "Cable Curl": { gif: `${gifsBase}/0154-1kL9P3W.gif`, thumb: `${yuhonasBase}/Cable_Preacher_Curl/0.jpg` },
+    "Tricep Pushdown": { gif: `${gifsBase}/0241-eL7k2qM.gif`, thumb: `${yuhonasBase}/Triceps_Pushdown/0.jpg` },
+    "Skull Crushers": { gif: `${gifsBase}/0055-6pL9K4W.gif`, thumb: `${yuhonasBase}/Decline_EZ_Bar_Triceps_Extension/0.jpg` },
+    "Close-Grip Bench": { gif: `${gifsBase}/0030-9xW140L.gif`, thumb: `${yuhonasBase}/Close-Grip_Barbell_Bench_Press/0.jpg` },
+    "Back Squat": { gif: `${gifsBase}/0043-qXTaZnJ.gif`, thumb: `${yuhonasBase}/Barbell_Full_Squat/0.jpg` },
+    "Front Squat": { gif: `${gifsBase}/0042-4xW140L.gif`, thumb: `${yuhonasBase}/Front_Barbell_Squat/0.jpg` },
+    "Hack Squats": { gif: `${gifsBase}/0740-9xW140L.gif`, thumb: `${yuhonasBase}/Hack_Squat/0.jpg` },
+    "Goblet Squat": { gif: `${gifsBase}/0311-5xW140L.gif`, thumb: `${yuhonasBase}/Goblet_Squat/0.jpg` },
+    "Leg Press": { gif: `${gifsBase}/0739-1j5F540.gif`, thumb: `${yuhonasBase}/Leg_Press/0.jpg` },
+    "Lunges": { gif: `${gifsBase}/0335-8xW140L.gif`, thumb: `${yuhonasBase}/Dumbbell_Lunges/0.jpg` },
+    "Romanian Deadlifts": { gif: `${gifsBase}/0085-f5V6nBv.gif`, thumb: `${yuhonasBase}/Romanian_Deadlift/0.jpg` },
+    "Leg Curl": { gif: `${gifsBase}/0599-4jW9K1L.gif`, thumb: `${yuhonasBase}/Lying_Leg_Curls/0.jpg` },
+    "Standing Calf Raises": { gif: `${gifsBase}/0816-5jW8K9P.gif`, thumb: `${yuhonasBase}/Standing_Calf_Raises/0.jpg` },
+    "Seated Calf Raises": { gif: `${gifsBase}/0817-6jW8K9P.gif`, thumb: `${yuhonasBase}/Seated_Calf_Raise/0.jpg` },
+    "Cable Crunch": { gif: `${gifsBase}/0175-9jW4K2M.gif`, thumb: `${yuhonasBase}/Cable_Crunch/0.jpg` },
+    "Smith Squats": { gif: `${gifsBase}/0741-9xW140L.gif`, thumb: `${yuhonasBase}/Smith_Machine_Squat/0.jpg` },
+    "Stiff-Leg Deadlift": { gif: `${gifsBase}/0085-f5V6nBv.gif`, thumb: `${yuhonasBase}/Stiff-Legged_Barbell_Deadlift/0.jpg` },
+    "Dumbbell Shoulder Press": { gif: `${gifsBase}/0329-8xW140L.gif`, thumb: `${yuhonasBase}/Dumbbell_Shoulder_Press/0.jpg` },
+  };
+
   let exCount = 0;
   for (const ex of gymExercises) {
+    const media = mediaMap[ex.name] || {
+      gif: `${yuhonasBase}/${ex.name.trim().replace(/\s+/g, "_")}/0.jpg`,
+      thumb: `${yuhonasBase}/${ex.name.trim().replace(/\s+/g, "_")}/0.jpg`,
+    };
+
     await prisma.exercise.upsert({
       where:  { id: `seed-ex-${ex.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}` },
       update: {
         name: ex.name,
         muscleGroup: ex.muscleGroup,
         tips: ex.mechanic,
+        mediaUrl: media.gif,
+        mediaType: "gif",
+        thumbnailUrl: media.thumb,
       },
       create: {
         id: `seed-ex-${ex.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}`,
         name: ex.name,
         muscleGroup: ex.muscleGroup,
         tips: ex.mechanic,
+        mediaUrl: media.gif,
+        mediaType: "gif",
+        thumbnailUrl: media.thumb,
       },
     });
     exCount++;
