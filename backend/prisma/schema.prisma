@@ -109,6 +109,16 @@ model User {
   isPremium        Boolean     @default(false)
   isActive         Boolean     @default(true)
 
+  // Notification Preferences
+  notifyWorkoutReminders   Boolean  @default(true)
+  notifyMealReminders      Boolean  @default(true)
+  notifyHydrationReminders Boolean  @default(true)
+  notifyStreakProtection   Boolean  @default(true)
+  notifyWeeklyRecap        Boolean  @default(true)
+  notifyAiCoachInsights    Boolean  @default(true)
+  preferredWorkoutTime     String   @default("09:00")
+  timezone                 String   @default("Africa/Cairo")
+
   // Relations
   mealLogs         MealLog[]
   foodLogs         FoodLog[]
@@ -118,11 +128,29 @@ model User {
   aiUsageLogs      AiUsageLog[]
   workoutSessions  WorkoutSession[]
   sessionOverrides SessionOverride[]
+  deviceTokens     DeviceToken[]
 
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
   @@index([email])
+}
+
+// -- Device Token (Push Notifications) -----------------------
+
+model DeviceToken {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   String   // android | ios | web
+  timezone   String?
+  appVersion String?
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // -- Meal Log (AI-analyzed restaurant meals) -----------------
