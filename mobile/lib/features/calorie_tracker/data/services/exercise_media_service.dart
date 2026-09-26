@@ -23,8 +23,6 @@ class ExerciseMediaService {
       'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises';
   static const String _gifsBase =
       'https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos';
-  static const String _thumbsBase =
-      'https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/images';
 
   /// Pre-mapped high-precision exercise animations and thumbnails
   static final Map<String, ExerciseMediaInfo> _catalog = {
