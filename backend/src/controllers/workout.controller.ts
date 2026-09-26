@@ -11,6 +11,7 @@ import { z } from "zod";
 import prisma from "../services/prisma.service";
 import { WorkoutService } from "../services/workout.service";
 import { generateWorkoutCoachNote, generateExerciseCoachNote, generateRoutineRecommendationNote, generateSwapSuggestionNote, generateWorkoutSummaryNote, generateOvertrainingNote, interpretSessionRequest, generateWeeklyRecapNote, generateExerciseAlternatives, generateSessionRecommendations, generateExerciseFormGuide } from "../services/coach.service";
+import { sendPostWorkoutReplenishNotification, sendPlateauAlertNotification } from "../services/notification.service";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -1062,6 +1063,55 @@ export async function finishSession(req: Request, res: Response): Promise<void> 
       totalSetsCompleted,
       prsAchieved,
     });
+
+    // ── Dispatch Push Notifications (Post-Workout Replenishment & Plateau Alerts) ──
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { notifyWorkoutReminders: true, notifyAiCoachInsights: true },
+      });
+
+      // Calculate total volume lifted
+      let totalVolumeKg = 0;
+      if (fullSession) {
+        for (const we of fullSession.exercises) {
+          for (const s of we.sets) {
+            if (s.isCompleted && s.weightKg && s.reps) {
+              totalVolumeKg += s.weightKg * s.reps;
+            }
+          }
+        }
+      }
+
+      // 1. Post-workout replenishment alert (15 minutes later)
+      if (user?.notifyWorkoutReminders && totalSetsCompleted > 0) {
+        setTimeout(() => {
+          sendPostWorkoutReplenishNotification(
+            session.userId,
+            totalVolumeKg,
+            totalSetsCompleted
+          ).catch((err) => console.error("⚠️ Failed to dispatch post-workout notification:", err));
+        }, 15 * 60 * 1000);
+      }
+
+      // 2. Plateau breaker alert (if stalled for 3 sessions)
+      if (user?.notifyAiCoachInsights && fullSession) {
+        for (const we of fullSession.exercises) {
+          const trend = await getRecentPerformanceTrend(fullSession.userId, we.exerciseId);
+          if (trend.isPlateaued && trend.history.length >= 3) {
+            const stalledWeight = trend.history[0].weight;
+            sendPlateauAlertNotification(
+              fullSession.userId,
+              we.exercise.name,
+              stalledWeight
+            ).catch((err) => console.error("⚠️ Failed to dispatch plateau alert:", err));
+            break; // Send for one key exercise per session to avoid notification spam
+          }
+        }
+      }
+    } catch (pushErr) {
+      console.error("⚠️ [Workout] Push notification dispatch error:", pushErr);
+    }
 
     res.status(200).json({
       success: true,
