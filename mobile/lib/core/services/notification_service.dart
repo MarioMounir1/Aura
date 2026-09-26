@@ -202,6 +202,47 @@ class NotificationService {
     }
   }
 
+  /// Unregister device token from backend on logout
+  Future<void> unregisterToken() async {
+    if (_fcmToken == null || _fcmToken!.isEmpty) return;
+    try {
+      final dio = ApiClient().dio;
+      await dio.post(
+        '/notifications/unregister-token',
+        data: {'token': _fcmToken},
+      );
+      debugPrint('✅ [NotificationService] Device token unregistered from backend.');
+    } catch (e) {
+      debugPrint('ℹ️ [NotificationService] Unregister token skipped: $e');
+    }
+  }
+
+  /// Fetch notification preferences for current user
+  Future<Map<String, dynamic>?> getPreferences() async {
+    try {
+      final dio = ApiClient().dio;
+      final res = await dio.get('/notifications/preferences');
+      if (res.data != null && res.data['data'] != null) {
+        return Map<String, dynamic>.from(res.data['data'] as Map);
+      }
+    } catch (e) {
+      debugPrint('⚠️ [NotificationService] Failed to load preferences: $e');
+    }
+    return null;
+  }
+
+  /// Update notification preferences for current user
+  Future<bool> updatePreferences(Map<String, dynamic> preferences) async {
+    try {
+      final dio = ApiClient().dio;
+      final res = await dio.patch('/notifications/preferences', data: preferences);
+      return res.statusCode == 200;
+    } catch (e) {
+      debugPrint('⚠️ [NotificationService] Failed to update preferences: $e');
+      return false;
+    }
+  }
+
   /// In-workout local rest interval notification (triggers when user backgrounds app)
   Future<void> showInWorkoutRestNotification({required int nextSetNumber}) async {
     try {
