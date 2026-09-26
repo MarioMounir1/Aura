@@ -32,6 +32,7 @@ import '../data/models/workout_models.dart';
 import 'bloc/workout_bloc.dart';
 import 'bloc/workout_event.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/notification_service.dart';
 import 'bloc/workout_state.dart';
 
 import 'workout_plan_wizard.dart';
@@ -605,6 +606,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         setState(() {
           _restSecondsRemaining = 0;
         });
+        final sets = _activeExerciseSets[_activeExerciseIndex];
+        int nextSetNum = 1;
+        if (sets != null) {
+          final nextIncomplete = sets.indexWhere((s) => !s.isCompleted);
+          nextSetNum = nextIncomplete != -1 ? (nextIncomplete + 1) : sets.length;
+        }
+        NotificationService().showInWorkoutRestNotification(nextSetNumber: nextSetNum);
       } else {
         setState(() {
           _restSecondsRemaining--;
@@ -1219,6 +1227,26 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF1C2B1E),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: const Color(0xFFD3E4D7), width: 0.8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('💧', style: TextStyle(fontSize: 10)),
+                const SizedBox(width: 3),
+                Text(
+                  'Sip water',
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF235A42)),
+                ),
+              ],
             ),
           ),
           const Spacer(),
