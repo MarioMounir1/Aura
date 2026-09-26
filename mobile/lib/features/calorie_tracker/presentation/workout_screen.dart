@@ -3713,9 +3713,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (context, idx) {
                       final exData = loggedExercisesSummary[idx];
-                      final name = exData['name'] as String;
-                      final muscle = exData['muscle'] as String;
-                      final sets = exData['sets'] as List<String>;
+                      final name = exData['name']?.toString() ?? 'Exercise';
+                      final muscle = exData['muscle']?.toString() ?? '';
+                      final rawSets = exData['sets'];
+                      final List<String> sets = rawSets is List
+                          ? rawSets.map((s) => s.toString()).toList()
+                          : <String>[];
 
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -3728,14 +3731,42 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF1C2B1E),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    width: 36,
+                                    height: 36,
+                                    margin: const EdgeInsets.only(right: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F6F2),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFDDE6DF)),
+                                    ),
+                                    child: CachedNetworkImage(
+                                      imageUrl: ExerciseMediaService.getThumbnailUrl(name) ?? '',
+                                      fit: BoxFit.cover,
+                                      placeholder: (c, u) => const Center(
+                                        child: SizedBox(
+                                          width: 12,
+                                          height: 12,
+                                          child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF235A42)),
+                                        ),
+                                      ),
+                                      errorWidget: (c, u, e) => const Center(
+                                        child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 18),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1C2B1E),
+                                    ),
                                   ),
                                 ),
                                 Container(
@@ -3755,7 +3786,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             Wrap(
                               spacing: 6,
                               runSpacing: 4,
