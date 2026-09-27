@@ -34,22 +34,24 @@ export const BATCH_LIMITS = {
 
 export const AI_SCAN_QUOTA = {
   freeLimit: 2,
-  premiumLimit: 10,
+  premiumLimit: 9999,
   free: {
     camera: 2,
     gallery: 2,
     barcode: 2,
+    voice: 2,
   },
   premium: {
-    camera: 10,
-    gallery: 10,
-    barcode: 10,
+    camera: 9999,
+    gallery: 9999,
+    barcode: 9999,
+    voice: 9999,
   },
 };
 
-export function getScanLimit(scanType: "camera" | "gallery" | "barcode" | string, isPremium: boolean): number {
+export function getScanLimit(scanType: "camera" | "gallery" | "barcode" | "voice" | string, isPremium: boolean): number {
   const tier = isPremium ? AI_SCAN_QUOTA.premium : AI_SCAN_QUOTA.free;
-  return (tier as Record<string, number>)[scanType] ?? (isPremium ? 10 : 2);
+  return (tier as Record<string, number>)[scanType] ?? (isPremium ? 9999 : 2);
 }
 
 export function getAiScanLimit(isPremium: boolean): number {
@@ -58,16 +60,16 @@ export function getAiScanLimit(isPremium: boolean): number {
 
 
 export function resolveGeminiModelName(modelSetting?: string): string {
-  const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-3.6-flash").trim();
+  const raw = (modelSetting ?? process.env.GEMINI_MODEL ?? "gemini-3.5-flash").trim();
   if (!raw || raw.startsWith("models/")) {
-    return "gemini-3.6-flash";
+    return "gemini-3.5-flash";
   }
   return raw;
 }
 
 export const GEMINI_CONFIG = {
   get model(): string {
-    return resolveGeminiModelName(process.env.GEMINI_MODEL ?? "gemini-3.6-flash");
+    return resolveGeminiModelName(process.env.GEMINI_MODEL ?? "gemini-3.5-flash");
   },
   temperature: 0.1,
   topP: 0.95,
