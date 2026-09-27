@@ -3484,10 +3484,17 @@ class _SmartScannerSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.auraTheme;
+    final bool isPremium = quota?.isPremium ?? false;
     final int cameraUsage = quota?.cameraUsage ?? 0;
     final int cameraLimit = quota?.cameraLimit ?? 2;
     final int galleryUsage = quota?.galleryUsage ?? 0;
     final int galleryLimit = quota?.galleryLimit ?? 2;
+    final int barcodeUsage = quota?.barcodeUsage ?? 0;
+    final int barcodeLimit = quota?.barcodeLimit ?? 2;
+
+    final cameraSubtitle = isPremium ? 'Camera · Unlimited' : 'Camera · $cameraUsage/$cameraLimit today';
+    final gallerySubtitle = isPremium ? 'Gallery · Unlimited' : 'Gallery · $galleryUsage/$galleryLimit today';
+    final barcodeSubtitle = isPremium ? 'Instant nutrition · Unlimited' : 'Barcode · $barcodeUsage/$barcodeLimit today';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3533,7 +3540,7 @@ class _SmartScannerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Camera · $cameraUsage/$cameraLimit today',
+                          cameraSubtitle,
                           style: GoogleFonts.inter(
                             fontSize: 10.5,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -3584,7 +3591,7 @@ class _SmartScannerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Gallery · $galleryUsage/$galleryLimit today',
+                          gallerySubtitle,
                           style: GoogleFonts.inter(
                             fontSize: 10.5,
                             color: Colors.white.withValues(alpha: 0.75),
@@ -3640,7 +3647,7 @@ class _SmartScannerSection extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Instant nutrition · Unlimited',
+                          barcodeSubtitle,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.75),
