@@ -8,6 +8,7 @@ import { Request, Response } from "express";
 import { z } from "zod";
 import { processUpload } from "../middleware/upload.middleware";
 import { analyzeMeal } from "../services/ai.service";
+import { getScanLimit } from "../config";
 import prisma from "../services/prisma.service";
 import redis, { isRedisReady } from "../services/redis.service";
 
@@ -411,6 +412,37 @@ export async function voiceLogMealHandler(
   }
 
   const { transcript, mealType } = parsed.data;
+  const isPremium = req.user?.isPremium ?? false;
+
+  // ── Step 0: Check Voice Quota ─────────────────────────────
+  try {
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    const usageCount = await prisma.aiUsageLog.count({
+      where: {
+        userId,
+        scanType: "voice",
+        date: { gte: todayStart, lte: todayEnd },
+      },
+    });
+
+    const limit = getScanLimit("voice", isPremium);
+    if (usageCount >= limit) {
+      res.status(isPremium ? 429 : 402).json({
+        success: false,
+        error: isPremium
+          ? `Daily voice logging limit reached (${limit}/day). Logs reset at midnight UTC.`
+          : `Daily free voice logging limit reached (${limit}/day). Upgrade to Premium for unlimited voice logging!`,
+        code: "QUOTA_EXCEEDED",
+      });
+      return;
+    }
+  } catch (err: unknown) {
+    console.error("❌ [VoiceLog] Quota check failed:", err);
+  }
 
   try {
     console.log(`🎙️ [VoiceLog] Analyzing spoken meal: "${transcript}"`);
@@ -436,6 +468,14 @@ export async function voiceLogMealHandler(
       },
       select: { id: true, createdAt: true },
     });
+
+    try {
+      await prisma.aiUsageLog.create({
+        data: { userId, scanType: "voice", date: new Date() },
+      });
+    } catch (logErr) {
+      console.warn("⚠️  [VoiceLog] Failed to record aiUsageLog:", logErr);
+    }
 
     console.log(`✅ [VoiceLog] Logged: "${aiResult.mealName}" (${aiResult.calories} kcal)`);
 
