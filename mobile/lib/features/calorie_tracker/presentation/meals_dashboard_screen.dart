@@ -508,12 +508,16 @@ class _MealsDashboardState extends State<MealsDashboard> {
         ? quota.cameraLimit
         : scanType == 'gallery'
             ? quota.galleryLimit
-            : quota.barcodeLimit;
+            : scanType == 'barcode'
+                ? quota.barcodeLimit
+                : quota.voiceLimit;
     final typeLabel = scanType == 'camera'
         ? 'camera'
         : scanType == 'gallery'
             ? 'gallery'
-            : 'barcode';
+            : scanType == 'barcode'
+                ? 'barcode'
+                : 'voice logging';
 
     showDialog(
       context: context,
@@ -526,8 +530,8 @@ class _MealsDashboardState extends State<MealsDashboard> {
         ),
         content: Text(
           isPremium 
-            ? 'You have reached your daily limit of $limit $typeLabel scans. Your scans will reset tomorrow at midnight UTC.' 
-            : 'You have used all $limit of your free $typeLabel scans for today. Upgrade to Premium for 10 daily scans of every type!',
+            ? 'You have reached your daily limit for $typeLabel. Your quota will reset tomorrow at midnight UTC.' 
+            : 'You have used all $limit of your free $typeLabel for today. Upgrade to Premium for unlimited scans and voice meal logging!',
           style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.4),
         ),
         actions: [
