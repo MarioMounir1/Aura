@@ -299,12 +299,14 @@ export async function getAiUsageHandler(req: Request, res: Response): Promise<vo
       camera: 0,
       gallery: 0,
       barcode: 0,
+      voice: 0,
     };
 
     logs.forEach(log => {
       if (log.scanType === 'camera') usage.camera = log._count.id;
       if (log.scanType === 'gallery') usage.gallery = log._count.id;
       if (log.scanType === 'barcode') usage.barcode = log._count.id;
+      if (log.scanType === 'voice') usage.voice = log._count.id;
     });
 
     const isPremium = req.user?.isPremium ?? false;
@@ -317,6 +319,7 @@ export async function getAiUsageHandler(req: Request, res: Response): Promise<vo
           camera: getScanLimit("camera", isPremium),
           gallery: getScanLimit("gallery", isPremium),
           barcode: getScanLimit("barcode", isPremium),
+          voice: getScanLimit("voice", isPremium),
         },
         isPremium
       }
