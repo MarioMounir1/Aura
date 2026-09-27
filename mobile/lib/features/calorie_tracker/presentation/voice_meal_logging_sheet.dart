@@ -186,6 +186,18 @@ class _VoiceMealLoggingSheetState extends State<VoiceMealLoggingSheet>
       }
     } catch (e) {
       if (!mounted) return;
+      final errStr = e.toString().toLowerCase();
+      final isQuota = (e is DioException && (e.response?.statusCode == 402 || e.response?.statusCode == 429)) ||
+          errStr.contains('quota') ||
+          errStr.contains('limit') ||
+          errStr.contains('upgrade');
+
+      if (isQuota) {
+        Navigator.of(context).pop();
+        PurchaseService.instance.presentPaywall(context);
+        return;
+      }
+
       final cleanMsg = AppErrorHandler.getUserMessage(e, 'Could not analyze voice meal.');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
