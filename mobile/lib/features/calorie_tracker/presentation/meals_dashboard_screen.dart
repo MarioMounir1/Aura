@@ -1172,6 +1172,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
   }
 
   Future<void> _startVoiceLog() async {
+    if (_quota != null && _quota!.isVoiceExceeded) {
+      _showUpgradeDialog('voice', _quota!);
+      return;
+    }
+
     final result = await showModalBottomSheet<MealEntry>(
       context: context,
       isScrollControlled: true,
