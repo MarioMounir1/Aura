@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../../../core/error/error_handler.dart';
 import '../../../../core/utils/constants.dart';
+import '../../premium/data/services/purchase_service.dart';
 import 'meals_dashboard_screen.dart' show MealEntry;
 
 class VoiceMealLoggingSheet extends StatefulWidget {
