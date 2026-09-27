@@ -213,7 +213,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Get 10 AI scans per day, unlimited AI Workout Coach Chat & an ad-free experience.',
+                      'Unlimited AI scans, Voice meal logging, AI Coach Chat & 100% ad-free.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF5A6E5D),
                         fontSize: 13.5,
@@ -226,22 +226,29 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     _buildFeatureItem(
                       icon: Icons.auto_awesome_rounded,
                       iconColor: const Color(0xFF235A42),
-                      title: '10 AI Meal Scans Daily',
-                      subtitle: '10 scans/day (2/day on free tier).',
+                      title: 'Unlimited AI Meal Scans',
+                      subtitle: 'Snap photos or upload screenshots anytime without limits.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureItem(
+                      icon: Icons.mic_rounded,
+                      iconColor: const Color(0xFF235A42),
+                      title: 'Unlimited Voice Meal Logging',
+                      subtitle: 'Speak your meal naturally for instant macro calculation.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureItem(
+                      icon: Icons.qr_code_scanner_rounded,
+                      iconColor: const Color(0xFF235A42),
+                      title: 'Unlimited Barcode Scanning',
+                      subtitle: 'Instant nutritional facts for packaged foods.',
                     ),
                     const SizedBox(height: 12),
                     _buildFeatureItem(
                       icon: Icons.chat_bubble_outline_rounded,
                       iconColor: const Color(0xFF235A42),
-                      title: 'Unlimited AI Workout Coach Chat',
-                      subtitle: 'Interactive AI coach & training plan builder.',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildFeatureItem(
-                      icon: Icons.block_rounded,
-                      iconColor: const Color(0xFF235A42),
-                      title: '100% Ad-Free Experience',
-                      subtitle: 'Zero banner or popup ads.',
+                      title: 'AI Workout Coach & Ad-Free',
+                      subtitle: 'Personalized fitness advice and completely ad-free.',
                     ),
                     const SizedBox(height: 24),
                     // Plan Selection Section
