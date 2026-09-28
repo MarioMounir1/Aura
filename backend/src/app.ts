@@ -7,6 +7,33 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import dns from 'dns';
+try {
+  dns.setDefaultResultOrder?.('ipv4first');
+  const originalLookup = dns.lookup;
+  dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+  (dns as any).lookup = function (hostname: string, options: any, callback: any) {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    originalLookup(hostname, options, (err: any, address: any, family: any) => {
+      if (err && (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN')) {
+        dns.resolve4(hostname, (rErr, addresses) => {
+          if (!rErr && addresses && addresses.length > 0) {
+            return callback(null, addresses[0], 4);
+          }
+          callback(err, address, family);
+        });
+      } else {
+        callback(err, address, family);
+      }
+    });
+  };
+} catch (dnsErr) {
+  console.warn('⚠️ [DNS] Could not initialize DNS fallback:', dnsErr);
+}
+
 import path from 'path';
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
