@@ -216,6 +216,17 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
       return;
     }
 
+    const isBusy = msg.includes("503") || msg.toLowerCase().includes("demand") || msg.toLowerCase().includes("busy") || msg.toLowerCase().includes("unavailable");
+    if (isBusy) {
+      res.status(503).json({
+        success: false,
+        source: "local_llama_inference",
+        error: "AI scanning service is currently experiencing high demand. Please try again in a few moments.",
+        code: "SERVICE_BUSY",
+      });
+      return;
+    }
+
     res.status(500).json({
       success: false,
       source: "local_llama_inference",
