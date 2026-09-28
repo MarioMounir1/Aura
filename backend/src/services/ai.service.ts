@@ -231,7 +231,6 @@ async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResul
 
   const generationConfig = {
     responseMimeType: "application/json",
-    responseSchema: RESPONSE_SCHEMA as any,
     temperature: 0.1,
     topP: 0.8,
     topK: 40,
