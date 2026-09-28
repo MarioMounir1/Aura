@@ -11,7 +11,10 @@ import {
 } from "@google/generative-ai";
 import { resolveGeminiModelName } from "../config";
 
-const apiKey = process.env.GEMINI_API_KEY ?? "";
+const apiKey = process.env.GEMINI_API_KEY?.trim() ?? "";
+if (!apiKey) {
+  console.warn("⚠️ [Gemini] GEMINI_API_KEY is not defined in environment variables.");
+}
 const genAI = new GoogleGenerativeAI(apiKey);
 
 // ── Response Types ─────────────────────────────────────────
@@ -214,12 +217,17 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Prom
 // ── Google Gemini Implementation ───────────────────────────
 
 async function analyzeWithGemini(input: AnalyzeInput): Promise<MealAnalysisResult> {
-  // Prioritize fast, high-availability models: 3.5-flash-lite (~2-3s) and 3.5-flash
-  const candidateModels = [
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3-flash-preview",
-  ];
+  const activeModel = resolveGeminiModelName();
+  const candidateModels = Array.from(
+    new Set([
+      activeModel,
+      "gemini-3.6-flash",
+      "gemini-3.8-flash",
+      "gemini-3.7-flash",
+      "gemini-3.5-flash",
+      "gemini-flash-latest",
+    ])
+  );
 
   const generationConfig = {
     responseMimeType: "application/json",
@@ -282,6 +290,8 @@ Analyze the nutritional content of this meal. It may be from any restaurant, cui
     } catch (err: unknown) {
       lastError = err instanceof Error ? err : new Error(String(err));
       console.warn(`⚠️ Gemini API call with ${currentModel} failed (${lastError.message}). Trying next candidate model...`);
+      // Brief pause to allow transient rate or load spikes to settle
+      await new Promise((resolve) => setTimeout(resolve, 800));
     }
   }
 
@@ -295,7 +305,13 @@ Analyze the nutritional content of this meal. It may be from any restaurant, cui
   console.log("🔍 [Gemini raw response]:", responseText);
   let parsed: any;
   try {
-    parsed = JSON.parse(responseText);
+    const clean = responseText
+      .replace(/```(?:json)?/gi, "")
+      .replace(/```/g, "")
+      .trim();
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    const jsonStr = jsonMatch ? jsonMatch[0] : clean;
+    parsed = JSON.parse(jsonStr);
   } catch {
     if (input.type === "text") {
       return fallbackTextEstimate(input);
@@ -335,7 +351,7 @@ export interface TextNutritionEstimate {
  */
 export async function estimateNutritionFromName(foodName: string): Promise<TextNutritionEstimate> {
   try {
-    const rawModel = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+    const rawModel = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
     const modelName = resolveGeminiModelName(rawModel);
     const model = genAI.getGenerativeModel({ model: modelName });
     const prompt = `Estimate the nutritional content per 100g serving for the food or dish named: "${foodName}".
