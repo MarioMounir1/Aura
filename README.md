@@ -21,9 +21,9 @@
 
 ---
 
-## 📖 Executive Summary
+## 📖 Overview
 
-**Aura** is an elite, full-stack nutrition and fitness platform designed to make daily calorie, macro, and workout tracking effortless. Combining the analytical accuracy of **Google Gemini 2.0 Flash** with the privacy and offline freedom of **on-device Ollama Vision**, Aura recognizes complex meals (including deep knowledge of Middle Eastern & Egyptian cuisine), reads product barcodes, transcribes voice meal logs, and builds periodized workout splits tailored to any phone display.
+**Aura** is a state-of-the-art, full-stack nutrition and fitness platform designed to make daily calorie, macro, and workout tracking effortless, precise, and personalized. Combining the analytical intelligence of **Google Gemini 2.0 Flash** with the privacy and offline reliability of **on-device Ollama Vision**, Aura recognizes complex meals (with rich regional & Egyptian cuisine understanding), scans product barcodes, transcribes voice meal logs, tracks hydration, and builds adaptive workout splits tailored to any schedule.
 
 ---
 
@@ -41,20 +41,20 @@
                                     │     (Local Multipart)   │
                                     │     POST /scan-local    │
                                     ▼            ▼            │
-              ┌───────────────────────────────────────────────┴─────┐
-              │           Express API Gateway v2 (/api/v1)          │
-              │   (JWT Auth · Social OAuth · Rate Limiting · Log)   │
-              └──────┬───────────────────┬────────────────────┬─────┘
-                     │                   │                    │
-               (Prisma ORM)       (Cloud API Call)    (Local API Call)
-                     │                   │                    │
-                     ▼                   ▼                    ▼
-            ┌──────────────────┐┌──────────────────┐┌──────────────────┐
-            │    PostgreSQL    ││  Google Gemini / ││   Local Ollama   │
-            │  (Users, Meals,  ││ Open Food Facts  ││ (llava / llama3) │
-            │  Water, Weight,  │└──────────────────┘└──────────────────┘
-            │  Workouts, Plans)│
-            └──────────────────┘
+               ┌───────────────────────────────────────────────┴─────┐
+               │           Express API Gateway v2 (/api/v1)          │
+               │   (JWT Auth · Social OAuth · Rate Limiting · Log)   │
+               └──────┬───────────────────┬────────────────────┬─────┘
+                      │                   │                    │
+                (Prisma ORM)       (Cloud API Call)    (Local API Call)
+                      │                   │                    │
+                      ▼                   ▼                    ▼
+             ┌──────────────────┐┌──────────────────┐┌──────────────────┐
+             │    PostgreSQL    ││  Google Gemini / ││   Local Ollama   │
+             │  (Users, Meals,  ││ Open Food Facts  ││ (llava / llama3) │
+             │  Water, Weight,  │└──────────────────┘└──────────────────┘
+             │  Workouts, Plans)│
+             └──────────────────┘
 ```
 
 ---
@@ -62,10 +62,10 @@
 ## ✨ Key Features & Capabilities
 
 ### 🥗 1. Dual-Engine Nutrition Intelligence
-- **Cloud Gemini 2.0 Flash**: Snap or type any meal. Delivers rapid itemized ingredient breakdowns, gram estimation, and macro decomposition. Includes strict non-food detection (guards against selfies, objects, and animals).
+- **Cloud Gemini 2.0 Flash**: Snap or type any meal. Delivers rapid itemized ingredient breakdowns, gram estimation, and macro decomposition. Includes strict non-food detection (guards against selfies, non-food objects, and pets).
 - **Egyptian & Regional Food Database**: Specially tuned for regional recipes (Koshary, Hawawshi, Molokhia, Shawarma, Ful, Taameya) alongside standard international items.
 - **Local On-Device Ollama Inference**: Private offline photo scanning via Ollama (`llava`, `llama3.2-vision`) with automated fallbacks.
-- **Smart Barcode Scanner**: High-speed real-time camera scanning with torch toggle and camera flip, querying **Open Food Facts** with persistent caching and offline AI estimate fallbacks.
+- **Smart Barcode Scanner**: High-speed real-time camera scanning (`mobile_scanner`) with torch toggle and camera flip, querying **Open Food Facts** with persistent caching and offline AI estimate fallbacks.
 - **Microphone Voice Meal Logging**: Instant Arabic and English voice transcription (`speech_to_text`) that feeds directly into the AI nutrition analyzer.
 
 ### 🏋️ 2. Adaptive Workout Hub & Plan Builder
@@ -81,7 +81,7 @@
 
 ### 💧 3. Hydration & Weight Analytics
 - **Water Tracker**: Quick-log buttons (+250ml, +500ml) with custom bottle sizes, daily target progress, and hourly hydration breakdown.
-- **Body Weight Tracker**: Weight history graphs, delta calculations, target timeline projection, and 7/30/90/365-day moving averages.
+- **Body Weight Tracker**: Weight history graphs (`fl_chart`), delta calculations, target timeline projection, and 7/30/90/365-day moving averages.
 
 ### 🔐 4. Enterprise Security & Offline Durability
 - **Triple-Method Authentication**: Secure Email/Password, **Sign in with Google**, and **Sign in with Apple** (iOS).
@@ -116,7 +116,7 @@ Aura/
 │   │   │   ├── local-llama.controller.ts # Local Ollama vision endpoints
 │   │   │   ├── barcode.controller.ts     # Open Food Facts integration
 │   │   │   ├── workout.controller.ts     # Routine, session & workout engine
-│   │   │   ├── coach.service.ts          # AI coaching with 6s fail-safe race
+│   │   │   ├── coach.service.ts          # AI coaching with fail-safe race
 │   │   │   ├── water.controller.ts       # Hydration tracking
 │   │   │   └── weight.controller.ts      # Weight logs & trends
 │   │   └── middleware/                   # JWT auth, rate limits, validators
