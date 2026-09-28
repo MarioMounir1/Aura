@@ -3342,7 +3342,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               // 2. Active Routine Banner
               _WorkoutActiveSummaryBanner(
                 routineName: _activeRoutine?.name ?? 'Upper / Lower Split',
-                focusArea: _currentSession?.todayDayName ?? 'Lower (Volume)',
+                focusArea: _currentSession?.isSkipped == true
+                    ? (isArabic ? 'متخطى (راحة)' : 'Skipped (Rest)')
+                    : (_currentSession?.todayDayName ?? 'Lower (Volume)'),
                 exerciseCount: exercises.isNotEmpty ? exercises.length : 4,
                 completedDays: _completedDaysThisWeek,
                 targetDays: (_activeRoutine != null && _activeRoutine!.breakdown.isNotEmpty)
@@ -3471,38 +3473,54 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               ),
               const SizedBox(height: 10),
 
-              // 5b. Skip Session button
+              // 5b. Swap or Skip Session button
               Center(
-                child: GestureDetector(
-                  onTap: () => _showSkipConfirmationSheet(isArabic),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF8EE),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFFFD166).withOpacity(0.5),
-                        width: 1.2,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showSwapSessionSheet(isArabic),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _currentSession?.isSkipped == true
+                            ? const Color(0xFFFFF8EE)
+                            : const Color(0xFFEAF5EE),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _currentSession?.isSkipped == true
+                              ? const Color(0xFFD97706).withOpacity(0.5)
+                              : const Color(0xFF235A42).withOpacity(0.18),
+                          width: 1.0,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.skip_next_rounded,
-                          size: 15,
-                          color: Color(0xFFB07200),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isArabic ? 'تخطي جلسة اليوم' : 'Skip today\'s session',
-                          style: GoogleFonts.inter(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFFB07200),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _currentSession?.isSkipped == true
+                                ? Icons.do_not_disturb_on_rounded
+                                : Icons.swap_horiz_rounded,
+                            size: 15,
+                            color: _currentSession?.isSkipped == true
+                                ? const Color(0xFFD97706)
+                                : const Color(0xFF235A42),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          Text(
+                            _currentSession?.isSkipped == true
+                                ? (isArabic ? 'اليوم متخطى · تغيير أو استئناف' : 'Today skipped · Change or resume')
+                                : (isArabic ? 'تبديل أو تخطي جلسة اليوم' : 'Swap or skip today\'s session'),
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _currentSession?.isSkipped == true
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFF235A42),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -3564,6 +3582,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                         completedDaysThisWeek: _completedDaysThisWeek,
                         isArabic: isArabic,
                         todaySessionName: _currentSession?.todayDayName,
+                        isTodaySkipped: _currentSession?.isSkipped == true,
                         onDayTap: (detail) {
                           _showDayDetailSheet(detail, isArabic);
                         },
@@ -3665,144 +3684,6 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
   }
 
-  void _showSkipConfirmationSheet(bool isArabic) {
-    final todayName = _currentSession?.todayDayName ?? 'Today\'s Session';
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetCtx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFFFFFBF2),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            24, 20, 24,
-            24 + MediaQuery.of(sheetCtx).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0C97A),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Icon + Title
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3DC),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: const Color(0xFFFFD166).withOpacity(0.5),
-                        width: 1.2,
-                      ),
-                    ),
-                    child: const Center(
-                      child: Text('⏭️', style: TextStyle(fontSize: 20)),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isArabic ? 'تخطي الجلسة؟' : 'Skip this session?',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF1C2B1E),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isArabic
-                              ? 'تمرين اليوم: $todayName'
-                              : 'Today: $todayName',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF6B7C6E),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Option 1 — Skip & Rest
-              _SkipOptionTile(
-                emoji: '😴',
-                title: isArabic ? 'تخطي والراحة اليوم' : 'Skip & Rest today',
-                subtitle: isArabic
-                    ? 'احسب هذا اليوم كراحة مقصودة'
-                    : 'Count this as an intentional rest day',
-                accentColor: const Color(0xFFFFD166),
-                onTap: () => _overrideSession('skip', popContext: sheetCtx),
-              ),
-              const SizedBox(height: 10),
-
-              // Option 2 — Swap to another session
-              _SkipOptionTile(
-                emoji: '🔄',
-                title: isArabic ? 'استبدل بيوم آخر' : 'Swap to another day',
-                subtitle: isArabic
-                    ? 'اختر نوع تمرين مختلف لليوم'
-                    : 'Train a different muscle group today',
-                accentColor: const Color(0xFF4ECDC4),
-                onTap: () {
-                  Navigator.of(sheetCtx).pop();
-                  _showSwapSessionSheet(isArabic);
-                },
-              ),
-              const SizedBox(height: 18),
-
-              // Cancel
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: TextButton(
-                  onPressed: () => Navigator.of(sheetCtx).pop(),
-                  style: TextButton.styleFrom(
-                    backgroundColor: const Color(0xFFF0F4F1),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Text(
-                    isArabic ? 'إلغاء' : 'Cancel',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF5A6E5D),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   void _showSwapSessionSheet(bool isArabic) {
     final rawBreakdown = _activeRoutine?.breakdown ?? [];
     final uniqueTypes = <String>[];
@@ -3823,51 +3704,93 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       builder: (ctx) {
         return Container(
           decoration: const BoxDecoration(
-            color: _C.bg,
+            color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.fromLTRB(
+            20, 0, 20,
+            24 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Drag handle
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD3E4D7),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    isArabic ? 'تغيير تمرين اليوم' : "Swap Today's Session",
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: _C.textPri,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF5EE),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.swap_horiz_rounded,
+                      color: Color(0xFF235A42),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isArabic ? 'تغيير أو تخطي تمرين اليوم' : "Swap Today's Session",
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF1E3A2B),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isArabic
+                              ? 'اختر نوع التمرين لليوم بدون تغيير الجدول الأساسي'
+                              : 'Override today\'s target session without modifying your overall routine split.',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: const Color(0xFF6B7C6E),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: _C.textMut),
-                    onPressed: () => Navigator.pop(ctx),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    icon: const Icon(Icons.close_rounded, size: 20, color: Color(0xFF8A9E8E)),
+                    splashRadius: 20,
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                isArabic
-                    ? 'اختر نوع التمرين لليوم بدون تغيير الجدول الأساسي'
-                    : 'Override today\'s target session without modifying your overall routine split.',
-                style: GoogleFonts.inter(fontSize: 12, color: _C.textMut),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               if (_swapSuggestionNote != null && _swapSuggestionNote!.trim().isNotEmpty) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _C.cyan.withValues(alpha: 0.08),
+                    color: const Color(0xFFEAF5EE),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: _C.cyan.withValues(alpha: 0.25), width: 1),
+                    border: Border.all(color: const Color(0xFF235A42).withOpacity(0.2), width: 1),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.psychology_rounded, color: _C.cyan, size: 18),
+                      const Icon(Icons.psychology_rounded, color: Color(0xFF235A42), size: 18),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -3875,7 +3798,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                           style: GoogleFonts.inter(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w600,
-                            color: _C.textPri,
+                            color: const Color(0xFF1E3A2B),
                           ),
                         ),
                       ),
@@ -3885,6 +3808,17 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 const SizedBox(height: 16),
               ],
 
+              Text(
+                isArabic ? 'الجلسات المتاحة' : 'AVAILABLE SESSIONS',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF8A9E8E),
+                  letterSpacing: 1.1,
+                ),
+              ),
+              const SizedBox(height: 8),
+
               ...uniqueTypes.map((type) {
                 final isSelected = type == currentType;
                 return Padding(
@@ -3893,13 +3827,13 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     onTap: () => _overrideSession(type),
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                       decoration: BoxDecoration(
-                        color: isSelected ? _C.cyan.withValues(alpha: 0.12) : _C.cardElev,
+                        color: isSelected ? const Color(0xFFEAF5EE) : const Color(0xFFF9FAF9),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isSelected ? _C.cyan : _C.border,
-                          width: isSelected ? 1.5 : 1.0,
+                          color: isSelected ? const Color(0xFF235A42) : const Color(0xFFDCE5DF),
+                          width: isSelected ? 1.8 : 1.0,
                         ),
                       ),
                       child: Row(
@@ -3909,7 +3843,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                             children: [
                               Icon(
                                 type == 'Rest' ? Icons.nightlight_round : Icons.fitness_center_rounded,
-                                color: isSelected ? _C.cyan : _C.textMut,
+                                color: isSelected ? const Color(0xFF235A42) : const Color(0xFF6B7C6E),
                                 size: 18,
                               ),
                               const SizedBox(width: 12),
@@ -3918,13 +3852,34 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                  color: isSelected ? _C.cyan : _C.textPri,
+                                  color: isSelected ? const Color(0xFF235A42) : const Color(0xFF1E3A2B),
                                 ),
                               ),
                             ],
                           ),
                           if (isSelected)
-                            const Icon(Icons.check_circle_rounded, color: _C.cyan, size: 18),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF235A42),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, size: 12, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isArabic ? 'الحالي' : 'ACTIVE',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -3932,47 +3887,77 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 );
               }),
 
-              const SizedBox(height: 8),
-              Divider(color: _C.border, height: 1),
+              const SizedBox(height: 6),
+              const Divider(color: Color(0xFFE2EBE4), height: 1),
               const SizedBox(height: 12),
 
-              InkWell(
-                onTap: () => _overrideSession('skip'),
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: currentType == 'skip' ? _C.amber.withValues(alpha: 0.12) : _C.cardElev,
+              Builder(
+                builder: (context) {
+                  final isSkipped = currentType == 'skip';
+                  return InkWell(
+                    onTap: () => _overrideSession('skip'),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: currentType == 'skip' ? _C.amber : _C.border,
-                      width: currentType == 'skip' ? 1.5 : 1.0,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                      decoration: BoxDecoration(
+                        color: isSkipped ? const Color(0xFFFFF8EE) : const Color(0xFFFFFBF2),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSkipped ? const Color(0xFFD97706) : const Color(0xFFFFD166).withOpacity(0.5),
+                          width: isSkipped ? 1.8 : 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(Icons.do_not_disturb_on_rounded, color: currentType == 'skip' ? _C.amber : _C.amber.withValues(alpha: 0.8), size: 18),
-                          const SizedBox(width: 12),
-                          Text(
-                            isArabic ? 'تخطي تمرين اليوم (راحة إضافية)' : 'Skip Today (Intentionally Rest)',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: currentType == 'skip' ? FontWeight.w800 : FontWeight.w600,
-                              color: currentType == 'skip' ? _C.amber : _C.textPri,
-                            ),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.do_not_disturb_on_rounded,
+                                color: Color(0xFFD97706),
+                                size: 18,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                isArabic ? 'تخطي تمرين اليوم (راحة إضافية)' : 'Skip Today (Intentionally Rest)',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: isSkipped ? FontWeight.w800 : FontWeight.w600,
+                                  color: isSkipped ? const Color(0xFFD97706) : const Color(0xFF1E3A2B),
+                                ),
+                              ),
+                            ],
                           ),
+                          if (isSkipped)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD97706),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, size: 12, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isArabic ? 'متخطى' : 'SKIPPED',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
-                      if (currentType == 'skip')
-                        const Icon(Icons.check_circle_rounded, color: _C.amber, size: 18),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
             ],
           ),
         );
@@ -3982,21 +3967,28 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   void _showDayDetailSheet(WeekDayDetail detail, bool isArabic) {
     final bool isCompleted = detail.isCompleted;
-    final bool isRest = !isCompleted && (detail.isRest || detail.dayType.toLowerCase().contains('rest'));
+    final bool isSkipped = detail.isSkipped || (detail.isToday && _currentSession?.isSkipped == true);
+    final bool isRest = !isCompleted && !isSkipped && (detail.isRest || detail.dayType.toLowerCase().contains('rest'));
 
     final String statusText = isCompleted
         ? (isArabic ? 'مكتمل بنجاح' : 'Workout Completed')
-        : (isRest
-            ? (isArabic ? 'يوم راحة' : 'Rest & Recovery')
-            : (detail.isToday ? (isArabic ? 'اليوم' : 'Today\'s Session') : (isArabic ? 'مجدول' : 'Scheduled')));
+        : (isSkipped
+            ? (isArabic ? 'جلسة متخطاة' : 'Session Skipped')
+            : (isRest
+                ? (isArabic ? 'يوم راحة' : 'Rest & Recovery')
+                : (detail.isToday ? (isArabic ? 'اليوم' : 'Today\'s Session') : (isArabic ? 'مجدول' : 'Scheduled'))));
 
     final Color statusColor = isCompleted
         ? const Color(0xFF235A42)
-        : (isRest ? const Color(0xFF5A6E5D) : const Color(0xFF2563EB));
+        : (isSkipped
+            ? const Color(0xFFD97706)
+            : (isRest ? const Color(0xFF5A6E5D) : const Color(0xFF2563EB)));
 
     final IconData statusIcon = isCompleted
         ? Icons.check_circle_rounded
-        : (isRest ? Icons.nightlight_round : Icons.fitness_center_rounded);
+        : (isSkipped
+            ? Icons.do_not_disturb_on_rounded
+            : (isRest ? Icons.nightlight_round : Icons.fitness_center_rounded));
 
     int totalSetsCompleted = 0;
     int totalRepsCompleted = 0;
@@ -4007,6 +3999,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     final savedSummary = _savedSessionSummaries[detail.dateStr];
     if (savedSummary != null && (savedSummary['routineName'] as String?)?.isNotEmpty == true) {
       sessionTitle = savedSummary['routineName'] as String;
+    } else if (isSkipped) {
+      sessionTitle = isArabic ? 'راحة إضافية (متخطى)' : 'Skipped (Extra Rest)';
     } else if (detail.isToday && _currentSession?.todayDayName != null && _currentSession!.todayDayName.isNotEmpty) {
       sessionTitle = _currentSession!.todayDayName;
     } else if (detail.dayType.isNotEmpty &&
@@ -4378,6 +4372,56 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     ],
                   ),
                 ),
+              ] else if (detail.isToday && isSkipped) ...[
+                // Today's Skipped Session Banner
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8EE),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFFFD166).withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.do_not_disturb_on_rounded, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isArabic ? 'جلسة اليوم متخطاة' : "Today's Session is Skipped",
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1E3A2B),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isArabic
+                                  ? 'تم تحديد هذا اليوم كراحة مقصودة. يمكنك استئناف الجلسة أو استبدالها في أي وقت.'
+                                  : 'Marked as an intentional rest day for recovery. You can resume or swap anytime.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: const Color(0xFF5A6E5D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
               ] else if (detail.isToday) ...[
                 // Today's Ready Session UI
                 Container(
@@ -4577,7 +4621,41 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               const SizedBox(height: 20),
 
               // Action Buttons
-              if (detail.isToday && !isCompleted && !isRest) ...[
+              if (detail.isToday && isSkipped) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _showSwapSessionSheet(isArabic);
+                    },
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+                    label: Text(
+                      isArabic ? 'تغيير أو استئناف الجلسة' : 'Change or Resume Session',
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF235A42),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  height: 40,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(
+                      isArabic ? 'إغلاق' : 'Close',
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF5A6E5D)),
+                    ),
+                  ),
+                ),
+              ] else if (detail.isToday && !isCompleted && !isRest) ...[
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -6273,6 +6351,7 @@ Widget _buildDayCircleWidget({
   required bool isCompleted,
   required bool isToday,
   required bool isRest,
+  bool isSkipped = false,
 }) {
   if (isCompleted) {
     return Container(
@@ -6287,6 +6366,25 @@ Widget _buildDayCircleWidget({
       ),
       child: const Center(
         child: Icon(Icons.check_rounded, color: Colors.white, size: 13),
+      ),
+    );
+  } else if (isSkipped) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EE),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFFD97706),
+          width: isToday ? 2.5 : 1.2,
+        ),
+        boxShadow: isToday ? const [
+          BoxShadow(color: Color(0x25D97706), blurRadius: 8),
+        ] : null,
+      ),
+      child: const Center(
+        child: Icon(Icons.do_not_disturb_on_rounded, color: Color(0xFFD97706), size: 13),
       ),
     );
   } else if (isToday) {
@@ -6329,6 +6427,7 @@ class WeeklyCalendarRow extends StatelessWidget {
   final List<bool> completedDaysThisWeek;
   final bool isArabic;
   final String? todaySessionName;
+  final bool isTodaySkipped;
   final void Function(WeekDayDetail detail) onDayTap;
 
   const WeeklyCalendarRow({
@@ -6337,6 +6436,7 @@ class WeeklyCalendarRow extends StatelessWidget {
     required this.completedDaysThisWeek,
     required this.isArabic,
     this.todaySessionName,
+    this.isTodaySkipped = false,
     required this.onDayTap,
   });
 
@@ -6355,6 +6455,8 @@ class WeeklyCalendarRow extends StatelessWidget {
         final bool isCompleted = (i < completedDaysThisWeek.length && completedDaysThisWeek[i]) ||
             (i < weekScheduleDetails.length && weekScheduleDetails[i].isCompleted);
         final bool isToday = (i == todayIndex);
+        final bool isDaySkipped = (isToday && isTodaySkipped) ||
+            (i < weekScheduleDetails.length && weekScheduleDetails[i].isSkipped);
 
         final bool isFallbackRest = (i == 5 || i == 6);
         final dayDate = DateTime.now().subtract(Duration(days: todayIndex)).add(Duration(days: i));
@@ -6363,6 +6465,7 @@ class WeeklyCalendarRow extends StatelessWidget {
             ? weekScheduleDetails[i].copyWith(
                 isCompleted: isCompleted,
                 isToday: isToday,
+                isSkipped: isDaySkipped,
                 dateStr: dayDateStr,
                 dayType: (isToday && todaySessionName != null && todaySessionName!.isNotEmpty)
                     ? todaySessionName!
@@ -6371,9 +6474,9 @@ class WeeklyCalendarRow extends StatelessWidget {
             : WeekDayDetail(
                 dayName: weekDayFullNames[i],
                 dateStr: dayDateStr,
-                dayType: isCompleted ? 'Completed' : (isFallbackRest ? 'Rest' : (isToday ? (todaySessionName ?? 'Today') : 'Scheduled')),
+                dayType: isCompleted ? 'Completed' : (isDaySkipped ? 'Skipped' : (isFallbackRest ? 'Rest' : (isToday ? (todaySessionName ?? 'Today') : 'Scheduled'))),
                 isRest: isFallbackRest,
-                isSkipped: false,
+                isSkipped: isDaySkipped,
                 isOverridden: false,
                 isCompleted: isCompleted,
                 isMissed: false,
@@ -6381,7 +6484,7 @@ class WeeklyCalendarRow extends StatelessWidget {
                 isToday: isToday,
               );
 
-        final isRest = !isCompleted && (detail.isRest || detail.isSkipped);
+        final isRest = !isCompleted && !isDaySkipped && (detail.isRest || detail.isSkipped);
 
         return GestureDetector(
           onTap: () => onDayTap(detail),
@@ -6391,13 +6494,16 @@ class WeeklyCalendarRow extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 10.5,
                   fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-                  color: isToday ? const Color(0xFF235A42) : const Color(0xFF7A8B7B),
+                  color: isToday
+                      ? (isDaySkipped ? const Color(0xFFD97706) : const Color(0xFF235A42))
+                      : const Color(0xFF7A8B7B),
                 )),
             const SizedBox(height: 6),
             _buildDayCircleWidget(
               isCompleted: isCompleted,
               isToday: isToday,
               isRest: isRest,
+              isSkipped: isDaySkipped,
             ),
           ]),
         );
@@ -7401,81 +7507,6 @@ class _WorkoutQuickActionCard extends StatelessWidget {
                     size: 15,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-
-class _SkipOptionTile extends StatelessWidget {
-  final String emoji;
-  final String title;
-  final String subtitle;
-  final Color accentColor;
-  final VoidCallback onTap;
-
-  const _SkipOptionTile({
-    required this.emoji,
-    required this.title,
-    required this.subtitle,
-    required this.accentColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: accentColor.withOpacity(0.07),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: accentColor.withOpacity(0.35),
-              width: 1.3,
-            ),
-          ),
-          child: Row(
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 22)),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1C2B1E),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF6B7C6E),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 13,
-                color: accentColor.withOpacity(0.7),
               ),
             ],
           ),
