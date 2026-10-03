@@ -698,32 +698,45 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
       if (sets != null && sets.isNotEmpty) {
         for (final s in sets) {
-          totalSets++;
-          totalReps += s.reps;
-          totalVol += (s.weight * s.reps);
-          setDetails.add('${s.weight % 1 == 0 ? s.weight.toInt() : s.weight} kg × ${s.reps}');
-        }
-      } else {
-        final w = ex.lastWeekWeight ?? 50.0;
-        final r = ex.lastWeekReps ?? 10;
-        totalSets += ex.targetSets;
-        totalReps += (r * ex.targetSets);
-        totalVol += (w * r * ex.targetSets);
-        for (int s = 1; s <= ex.targetSets; s++) {
-          setDetails.add('${w % 1 == 0 ? w.toInt() : w} kg × $r');
+          if (s.isCompleted) {
+            totalSets++;
+            totalReps += s.reps;
+            totalVol += (s.weight * s.reps);
+            setDetails.add('${s.weight % 1 == 0 ? s.weight.toInt() : s.weight} kg × ${s.reps}');
+          }
         }
       }
 
-      loggedSummary.add({
-        'name': ex.name,
-        'muscle': ex.muscleGroup,
-        'sets': setDetails.isNotEmpty
-            ? setDetails
-            : List.generate(ex.targetSets, (i) => 'Target: 50 kg × 10'),
-      });
+      // Only record exercises where at least one set was actually logged!
+      if (setDetails.isNotEmpty) {
+        loggedSummary.add({
+          'name': ex.name,
+          'muscle': ex.muscleGroup,
+          'sets': setDetails,
+        });
+      }
     }
 
-    final estCal = (totalVol * 0.14).clamp(120, 650).round();
+    _activeExerciseSets.clear();
+
+    if (loggedSummary.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _state = WorkoutHubState.ready;
+          _restSecondsRemaining = 0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session ended. No sets were logged.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    final estCal = (totalVol * 0.14).clamp(30, 650).round();
     final routineTitle = _currentSession?.todayDayName ?? _activeRoutine?.name ?? 'Training Session';
 
     final summaryData = {
@@ -782,7 +795,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         _state = WorkoutHubState.ready;
         _restSecondsRemaining = 0;
       });
-      _showPostWorkoutSummarySheet('Workout successfully completed and logged!');
+      _showPostWorkoutSummarySheet('Workout successfully completed! Logged $totalSets sets across ${loggedSummary.length} exercise${loggedSummary.length == 1 ? "" : "s"}.');
     }
   }
 
@@ -1196,45 +1209,82 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _exitWorkoutConfirmation() {
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    final exercises = _getEffectiveExercises();
+    int loggedSetsCount = 0;
+    int loggedExercisesCount = 0;
+
+    for (int eIdx = 0; eIdx < exercises.length; eIdx++) {
+      final sets = _activeExerciseSets[eIdx];
+      if (sets != null && sets.any((s) => s.isCompleted)) {
+        loggedExercisesCount++;
+        loggedSetsCount += sets.where((s) => s.isCompleted).length;
+      }
+    }
+
+    final hasLoggedSets = loggedSetsCount > 0;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'End Workout Early?',
+          hasLoggedSets
+              ? (isArabic ? 'إنهاء التمرين وحفظ التقدم؟' : 'Finish Workout & Save?')
+              : (isArabic ? 'إلغاء التمرين؟' : 'Exit Workout?'),
           style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF1C2B1E)),
         ),
         content: Text(
-          'Are you sure you want to stop this workout session? Your logged sets will be retained.',
-          style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF5A6E5D)),
+          hasLoggedSets
+              ? (isArabic
+                  ? 'لقد أكملت $loggedSetsCount مجموعة في $loggedExercisesCount تمارين. هل تريد حفظ التمارين المسجلة وإنهاء الجلسة؟'
+                  : 'You completed $loggedSetsCount set(s) across $loggedExercisesCount exercise(s). Would you like to save your logged exercises and finish?')
+              : (isArabic
+                  ? 'لم تقم بتسجيل أي مجموعات بعد. هل تريد الخروج وإلغاء هذه الجلسة؟'
+                  : 'No sets have been logged yet. Exiting will cancel this session.'),
+          style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF5A6E5D), height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Keep Going', style: GoogleFonts.inter(color: const Color(0xFF235A42), fontWeight: FontWeight.w600)),
+            child: Text(
+              isArabic ? 'متابعة' : 'Keep Going',
+              style: GoogleFonts.inter(color: const Color(0xFF235A42), fontWeight: FontWeight.w600),
+            ),
           ),
+          if (hasLoggedSets)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _exitWorkoutWithoutFinishing();
+              },
+              child: Text(
+                isArabic ? 'تجاهل' : 'Discard',
+                style: GoogleFonts.inter(color: const Color(0xFFEF4444), fontWeight: FontWeight.w600),
+              ),
+            ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
+              backgroundColor: hasLoggedSets ? const Color(0xFF235A42) : const Color(0xFFEF4444),
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () async {
               Navigator.pop(ctx);
-              _sessionTimer?.cancel();
-              _restTimer?.cancel();
-              await _clearActiveWorkoutPersistedState();
-              _sessionStartTimeMs = null;
-              _activeSessionId = null;
-              _activeExerciseSets.clear();
-              setState(() {
-                _state = WorkoutHubState.ready;
-                _restSecondsRemaining = 0;
-              });
+              if (hasLoggedSets) {
+                await _finishWorkout();
+              } else {
+                _exitWorkoutWithoutFinishing();
+              }
             },
-            child: Text('End Session', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            child: Text(
+              hasLoggedSets
+                  ? (isArabic ? 'حفظ وإنهاء' : 'Save & Finish')
+                  : (isArabic ? 'إلغاء الجلسة' : 'Cancel Session'),
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -2185,6 +2235,23 @@ class _WorkoutScreenState extends State<WorkoutScreen>
               ),
             ),
           ),
+          if (!isLastExercise) ...[
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: _exitWorkoutConfirmation,
+                icon: const Icon(Icons.check_circle_outline_rounded, size: 16, color: Color(0xFF5A6E5D)),
+                label: Text(
+                  isArabic ? 'إنهاء التمرين وحفظ التقدم' : 'Finish workout & save progress',
+                  style: GoogleFonts.inter(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF5A6E5D),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -2311,6 +2378,26 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 ),
               );
             }),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _exitWorkoutConfirmation();
+                },
+                icon: const Icon(Icons.flag_rounded, size: 18, color: Color(0xFF235A42)),
+                label: Text(
+                  isArabic ? 'إنهاء التمرين وحفظ التقدم' : 'Finish Workout & Save Progress',
+                  style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFF235A42)),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF235A42), width: 1.2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -2518,13 +2605,22 @@ class _WorkoutScreenState extends State<WorkoutScreen>
           },
         ),
       ],
-      child: Scaffold(
-        backgroundColor: context.auraTheme.background,
-        body: SafeArea(
-          bottom: false,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 350),
-            child: _buildCurrentView(isArabic),
+      child: PopScope(
+        canPop: _state != WorkoutHubState.activeWorkout,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          if (_state == WorkoutHubState.activeWorkout) {
+            _exitWorkoutConfirmation();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: context.auraTheme.background,
+          body: SafeArea(
+            bottom: false,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              child: _buildCurrentView(isArabic),
+            ),
           ),
         ),
       ),
