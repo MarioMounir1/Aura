@@ -2246,17 +2246,35 @@ class _WorkoutScreenState extends State<WorkoutScreen>
             ),
           ),
           if (!isLastExercise) ...[
-            const SizedBox(height: 8),
-            Center(
-              child: TextButton.icon(
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
                 onPressed: _exitWorkoutConfirmation,
-                icon: const Icon(Icons.check_circle_outline_rounded, size: 16, color: Color(0xFF5A6E5D)),
+                icon: const Icon(
+                  Icons.check_circle_rounded,
+                  size: 17,
+                  color: Color(0xFF235A42),
+                ),
                 label: Text(
-                  isArabic ? 'إنهاء التمرين وحفظ التقدم' : 'Finish workout & save progress',
+                  isArabic ? 'إنهاء التمرين وحفظ التقدم' : 'Finish Workout & Save Progress',
                   style: GoogleFonts.inter(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF5A6E5D),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF235A42),
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEAF5EE),
+                  foregroundColor: const Color(0xFF235A42),
+                  side: BorderSide(
+                    color: const Color(0xFF235A42).withValues(alpha: 0.3),
+                    width: 1.2,
+                  ),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
               ),
