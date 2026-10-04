@@ -74,11 +74,17 @@ class _ActiveSetDraft {
   factory _ActiveSetDraft.fromJson(Map<String, dynamic> json) => _ActiveSetDraft(
     setIndex: json['setIndex'] as int? ?? 1,
     label: json['label'] as String? ?? 'Working Set',
-    weight: (json['weight'] as num?)?.toDouble() ?? 50.0,
+    weight: (json['weight'] as num?)?.toDouble() ?? 0.0,
     reps: json['reps'] as int? ?? 10,
     isCompleted: json['isCompleted'] as bool? ?? false,
     workoutExerciseId: json['workoutExerciseId'] as String?,
   );
+}
+
+class _ParsedSet {
+  final double weight;
+  final int reps;
+  const _ParsedSet(this.weight, this.reps);
 }
 
 
@@ -619,9 +625,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     for (int i = 0; i < exercises.length; i++) {
       final ex = exercises[i];
       final setsCount = ex.targetSets > 0 ? ex.targetSets : 3;
-      final defaultWeight = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
+      final isBw = _isBodyweightExercise(ex.name);
+      final defaultWeight = (ex.lastWeekWeight != null && ex.lastWeekWeight! >= 0)
           ? ex.lastWeekWeight!
-          : 50.0;
+          : (isBw ? 0.0 : 50.0);
       final defaultReps = (ex.lastWeekReps != null && ex.lastWeekReps! > 0)
           ? ex.lastWeekReps!
           : 10;
@@ -923,12 +930,15 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     final setsList = _activeExerciseSets[exIndex];
     if (setsList == null) return;
     final lastSet = setsList.isNotEmpty ? setsList.last : null;
+    final exercises = _getEffectiveExercises();
+    final ex = exIndex < exercises.length ? exercises[exIndex] : null;
+    final isBw = ex != null && _isBodyweightExercise(ex.name);
     final newIndex = setsList.length + 1;
     setState(() {
       setsList.add(_ActiveSetDraft(
         setIndex: newIndex,
         label: 'Set $newIndex',
-        weight: lastSet?.weight ?? 50.0,
+        weight: lastSet?.weight ?? (isBw ? 0.0 : 50.0),
         reps: lastSet?.reps ?? 10,
         workoutExerciseId: lastSet?.workoutExerciseId,
       ));
@@ -4061,6 +4071,575 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     );
   }
 
+  bool _isBodyweightExercise(String name) {
+    final lower = name.toLowerCase();
+    return lower.contains('pull-up') ||
+        lower.contains('pull up') ||
+        lower.contains('chin-up') ||
+        lower.contains('chin up') ||
+        lower.contains('push-up') ||
+        lower.contains('push up') ||
+        lower.contains('dip') ||
+        lower.contains('crunch') ||
+        lower.contains('plank') ||
+        lower.contains('leg raise') ||
+        lower.contains('bodyweight') ||
+        lower.contains('calisthenic');
+  }
+
+  _ParsedSet _parseSetDetail(String setStr) {
+    try {
+      final isBw = setStr.toUpperCase().contains('BW');
+      final regex = RegExp(r'(\d+(?:\.\d+)?)\s*(?:kg)?\s*[×x*]\s*(\d+)', caseSensitive: false);
+      final match = regex.firstMatch(setStr);
+      if (match != null) {
+        final w = double.tryParse(match.group(1)!) ?? 0.0;
+        final r = int.tryParse(match.group(2)!) ?? 10;
+        return _ParsedSet(isBw ? 0.0 : w, r);
+      }
+      final repsOnly = RegExp(r'(\d+)\s*(?:reps)?', caseSensitive: false).firstMatch(setStr);
+      if (repsOnly != null) {
+        return _ParsedSet(0.0, int.tryParse(repsOnly.group(1)!) ?? 10);
+      }
+    } catch (_) {}
+    return const _ParsedSet(0.0, 10);
+  }
+
+  String _formatSetDetail(double weight, int reps) {
+    if (weight <= 0) {
+      return '0 kg × $reps';
+    }
+    return '${weight % 1 == 0 ? weight.toInt() : weight} kg × $reps';
+  }
+
+  void _showEditCompletedSetDialog({
+    required BuildContext modalContext,
+    required StateSetter setModalState,
+    required String dateStr,
+    required String exerciseName,
+    required int setIndex,
+    required String currentSetStr,
+    required List<Map<String, dynamic>> loggedExercisesSummary,
+    required int exIdx,
+    required VoidCallback onSaved,
+  }) {
+    final parsed = _parseSetDetail(currentSetStr);
+    final isBw = _isBodyweightExercise(exerciseName);
+    double initialWeight = (isBw && parsed.weight == 50.0) ? 0.0 : parsed.weight;
+    int initialReps = parsed.reps;
+
+    final weightController = TextEditingController(
+      text: initialWeight <= 0 ? '0' : (initialWeight % 1 == 0 ? initialWeight.toInt().toString() : initialWeight.toString()),
+    );
+    final repsController = TextEditingController(text: initialReps.toString());
+
+    showDialog(
+      context: modalContext,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.edit_note_rounded, color: Color(0xFF235A42), size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Set ${setIndex + 1} — $exerciseName',
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
+                      ),
+                      Text(
+                        'Update logged reps & weight',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF5A6E5D)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 10),
+                Text(
+                  'REPS PERFORMED',
+                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF7A8B7B), letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.remove_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = int.tryParse(repsController.text) ?? initialReps;
+                        final newVal = (val - 1).clamp(1, 999);
+                        setDialogState(() => repsController.text = newVal.toString());
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: repsController,
+                        textAlign: TextAlign.center,
+                        keyboardType: TextInputType.number,
+                        style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
+                        decoration: InputDecoration(
+                          suffixText: 'reps',
+                          filled: true,
+                          fillColor: const Color(0xFFF1F6F2),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = int.tryParse(repsController.text) ?? initialReps;
+                        final newVal = (val + 1).clamp(1, 999);
+                        setDialogState(() => repsController.text = newVal.toString());
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'WEIGHT',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: const Color(0xFF7A8B7B), letterSpacing: 0.5),
+                    ),
+                    InkWell(
+                      onTap: () {
+                        setDialogState(() => weightController.text = '0');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEAF5EE),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Bodyweight (0 kg)',
+                          style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w700, color: const Color(0xFF235A42)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.remove_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = double.tryParse(weightController.text) ?? initialWeight;
+                        final newVal = (val - 2.5).clamp(0.0, 999.0);
+                        setDialogState(() {
+                          weightController.text = newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: weightController,
+                        textAlign: TextAlign.center,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
+                        decoration: InputDecoration(
+                          suffixText: 'kg',
+                          filled: true,
+                          fillColor: const Color(0xFFF1F6F2),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFFEAF5EE),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.add_rounded, color: Color(0xFF235A42)),
+                      onPressed: () {
+                        final val = double.tryParse(weightController.text) ?? initialWeight;
+                        final newVal = (val + 2.5).clamp(0.0, 999.0);
+                        setDialogState(() {
+                          weightController.text = newVal % 1 == 0 ? newVal.toInt().toString() : newVal.toString();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel', style: GoogleFonts.inter(color: const Color(0xFF7A8B7B), fontWeight: FontWeight.w600)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF235A42),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                ),
+                onPressed: () {
+                  final newReps = int.tryParse(repsController.text) ?? initialReps;
+                  final newW = double.tryParse(weightController.text) ?? initialWeight;
+                  final updatedSetStr = _formatSetDetail(newW, newReps);
+
+                  final rawSets = loggedExercisesSummary[exIdx]['sets'];
+                  if (rawSets is List && setIndex < rawSets.length) {
+                    rawSets[setIndex] = updatedSetStr;
+                  }
+
+                  Navigator.pop(ctx);
+                  onSaved();
+                },
+                child: Text('Save Changes', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showEditExerciseAllSetsDialog({
+    required BuildContext modalContext,
+    required StateSetter setModalState,
+    required String dateStr,
+    required String exerciseName,
+    required List<Map<String, dynamic>> loggedExercisesSummary,
+    required int exIdx,
+    required VoidCallback onSaved,
+  }) {
+    final rawSets = loggedExercisesSummary[exIdx]['sets'];
+    if (rawSets is! List) return;
+    final List<String> currentSets = rawSets.map((s) => s.toString()).toList();
+    final isBw = _isBodyweightExercise(exerciseName);
+
+    final List<TextEditingController> weightControllers = [];
+    final List<TextEditingController> repsControllers = [];
+
+    for (final s in currentSets) {
+      final parsed = _parseSetDetail(s);
+      final w = (isBw && parsed.weight == 50.0) ? 0.0 : parsed.weight;
+      weightControllers.add(TextEditingController(
+        text: w <= 0 ? '0' : (w % 1 == 0 ? w.toInt().toString() : w.toString()),
+      ));
+      repsControllers.add(TextEditingController(text: parsed.reps.toString()));
+    }
+
+    final bulkRepsController = TextEditingController();
+
+    showDialog(
+      context: modalContext,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.fitness_center_rounded, color: Color(0xFF235A42), size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        exerciseName,
+                        style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF1C2B1E)),
+                      ),
+                      Text(
+                        'Edit reps & weight for all sets',
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF5A6E5D)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7FAF8),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2EBE4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'QUICK APPLY REPS TO ALL SETS',
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF7A8B7B), letterSpacing: 0.5),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: SizedBox(
+                                  height: 40,
+                                  child: TextField(
+                                    controller: bulkRepsController,
+                                    keyboardType: TextInputType.number,
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                                    decoration: InputDecoration(
+                                      hintText: 'e.g. 15 or 20',
+                                      hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF9AA89C)),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD3E4D7))),
+                                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD3E4D7))),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF235A42),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                                onPressed: () {
+                                  final val = int.tryParse(bulkRepsController.text);
+                                  if (val != null && val > 0) {
+                                    setDialogState(() {
+                                      for (final c in repsControllers) {
+                                        c.text = val.toString();
+                                      }
+                                    });
+                                  }
+                                },
+                                child: Text('Apply All', style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
+                          if (isBw) ...[
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () {
+                                setDialogState(() {
+                                  for (final c in weightControllers) {
+                                    c.text = '0';
+                                  }
+                                });
+                              },
+                              child: Text(
+                                'Set all to Bodyweight (0 kg)',
+                                style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w700, color: const Color(0xFF235A42)),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'SETS BREAKDOWN',
+                      style: GoogleFonts.inter(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF7A8B7B), letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    ...List.generate(repsControllers.length, (sIdx) {
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F6F2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2EBE4)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 26,
+                              height: 26,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF235A42),
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'S${sIdx + 1}',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 5,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Weight (kg)', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF7A8B7B))),
+                                  const SizedBox(height: 2),
+                                  SizedBox(
+                                    height: 36,
+                                    child: TextField(
+                                      controller: weightControllers[sIdx],
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800),
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 5,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Reps', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: const Color(0xFF7A8B7B))),
+                                  const SizedBox(height: 2),
+                                  SizedBox(
+                                    height: 36,
+                                    child: TextField(
+                                      controller: repsControllers[sIdx],
+                                      keyboardType: TextInputType.number,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800),
+                                      decoration: InputDecoration(
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (repsControllers.length > 1) ...[
+                              const SizedBox(width: 6),
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline_rounded, color: Color(0xFFB91C1C), size: 20),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    weightControllers.removeAt(sIdx);
+                                    repsControllers.removeAt(sIdx);
+                                  });
+                                },
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          setDialogState(() {
+                            final lastW = weightControllers.isNotEmpty ? weightControllers.last.text : '0';
+                            final lastR = repsControllers.isNotEmpty ? repsControllers.last.text : '10';
+                            weightControllers.add(TextEditingController(text: lastW));
+                            repsControllers.add(TextEditingController(text: lastR));
+                          });
+                        },
+                        icon: const Icon(Icons.add_rounded, size: 16, color: Color(0xFF235A42)),
+                        label: Text('Add Another Set', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF235A42))),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel', style: GoogleFonts.inter(color: const Color(0xFF7A8B7B), fontWeight: FontWeight.w600)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF235A42),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                ),
+                onPressed: () {
+                  final List<String> updatedSetStrings = [];
+                  for (int i = 0; i < repsControllers.length; i++) {
+                    final r = int.tryParse(repsControllers[i].text) ?? 10;
+                    final w = double.tryParse(weightControllers[i].text) ?? 0.0;
+                    updatedSetStrings.add(_formatSetDetail(w, r));
+                  }
+                  loggedExercisesSummary[exIdx]['sets'] = updatedSetStrings;
+                  Navigator.pop(ctx);
+                  onSaved();
+                },
+                child: Text('Save All Sets', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showDayDetailSheet(WeekDayDetail detail, bool isArabic) {
     final bool isCompleted = detail.isCompleted;
     final bool isSkipped = detail.isSkipped || (detail.isToday && _currentSession?.isSkipped == true);
@@ -4161,159 +4740,557 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, -4)),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle Bar
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD3E4D7),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            void recalculateAndPersist() {
+              int newTotalSets = 0;
+              int newTotalReps = 0;
+              double newTotalVol = 0.0;
+              for (final ex in loggedExercisesSummary) {
+                final sList = ex['sets'];
+                if (sList is List) {
+                  for (final s in sList) {
+                    newTotalSets++;
+                    final p = _parseSetDetail(s.toString());
+                    newTotalReps += p.reps;
+                    newTotalVol += (p.weight * p.reps);
+                  }
+                }
+              }
+              final newEstCal = (newTotalVol * 0.14).clamp(30, 650).round();
 
-              // Title Row: Day & Date + Status Badge
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          detail.isToday
-                              ? DateFormat('EEE, MMM d').format(DateTime.now())
-                              : '${detail.dayName}, ${DateTime.tryParse(detail.dateStr) != null ? DateFormat('MMM d').format(DateTime.parse(detail.dateStr)) : detail.dateStr}',
-                          style: GoogleFonts.inter(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF1C2B1E),
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          sessionTitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF5A6E5D),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: isCompleted ? const Color(0xFFEAF5EE) : statusColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isCompleted
-                            ? const Color(0xFF235A42).withValues(alpha: 0.3)
-                            : statusColor.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(statusIcon, color: statusColor, size: 14),
-                        const SizedBox(width: 5),
-                        Text(
-                          statusText,
-                          style: GoogleFonts.inter(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w800,
-                            color: statusColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              totalSetsCompleted = newTotalSets;
+              totalRepsCompleted = newTotalReps;
+              totalVolumeKg = newTotalVol;
+              estCalories = newEstCal;
+
+              final updatedMap = {
+                if (savedSummary != null) ...savedSummary,
+                'totalSetsCompleted': totalSetsCompleted,
+                'totalRepsCompleted': totalRepsCompleted,
+                'totalVolumeKg': totalVolumeKg,
+                'estCalories': estCalories,
+                'exercises': loggedExercisesSummary,
+              };
+
+              _persistWorkoutSummary(detail.dateStr, updatedMap);
+              setModalState(() {});
+              setState(() {});
+            }
+
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(color: Color(0x14000000), blurRadius: 24, offset: Offset(0, -4)),
                 ],
               ),
-
-              const SizedBox(height: 18),
-
-              // If Completed: Show 3 Metric Summary Cards
-              if (isCompleted) ...[
-                Row(
-                  children: [
-                    _buildSummaryStatCard(
-                      icon: Icons.repeat_rounded,
-                      label: isArabic ? 'إجمالي العدّات' : 'Total Reps',
-                      value: '$totalRepsCompleted Reps',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildSummaryStatCard(
-                      icon: Icons.checklist_rounded,
-                      label: isArabic ? 'المجموعات' : 'Sets Completed',
-                      value: '$totalSetsCompleted Sets',
-                    ),
-                    const SizedBox(width: 8),
-                    _buildSummaryStatCard(
-                      icon: Icons.local_fire_department_rounded,
-                      label: isArabic ? 'السعرات' : 'Est. Burn',
-                      value: '~$estCalories kcal',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-
-                // Exercises Logged Breakdown
-                if (loggedExercisesSummary.isNotEmpty) ...[
-                  Text(
-                    isArabic ? 'التمارين المنجزة' : 'EXERCISES TRAINED',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7A8B7B),
-                      letterSpacing: 0.6,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle Bar
+                  Center(
+                    child: Container(
+                      width: 38,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD3E4D7),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: loggedExercisesSummary.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, idx) {
-                        final exData = loggedExercisesSummary[idx];
-                        final name = exData['name']?.toString() ?? 'Exercise';
-                        final muscle = exData['muscle']?.toString() ?? '';
-                        final rawSets = exData['sets'];
-                        final List<String> sets = rawSets is List
-                            ? rawSets.map((s) => s.toString()).toList()
-                            : <String>[];
-
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF7FAF8),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
+                  // Title Row: Day & Date + Status Badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              detail.isToday
+                                  ? DateFormat('EEE, MMM d').format(DateTime.now())
+                                  : '${detail.dayName}, ${DateTime.tryParse(detail.dateStr) != null ? DateFormat('MMM d').format(DateTime.parse(detail.dateStr)) : detail.dateStr}',
+                              style: GoogleFonts.inter(
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1C2B1E),
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              sessionTitle,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF5A6E5D),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isCompleted ? const Color(0xFFEAF5EE) : statusColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isCompleted
+                                ? const Color(0xFF235A42).withValues(alpha: 0.3)
+                                : statusColor.withValues(alpha: 0.3),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(statusIcon, color: statusColor, size: 14),
+                            const SizedBox(width: 5),
+                            Text(
+                              statusText,
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: statusColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  // If Completed: Show 3 Metric Summary Cards
+                  if (isCompleted) ...[
+                    Row(
+                      children: [
+                        _buildSummaryStatCard(
+                          icon: Icons.repeat_rounded,
+                          label: isArabic ? 'إجمالي العدّات' : 'Total Reps',
+                          value: '$totalRepsCompleted Reps',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildSummaryStatCard(
+                          icon: Icons.checklist_rounded,
+                          label: isArabic ? 'المجموعات' : 'Sets Completed',
+                          value: '$totalSetsCompleted Sets',
+                        ),
+                        const SizedBox(width: 8),
+                        _buildSummaryStatCard(
+                          icon: Icons.local_fire_department_rounded,
+                          label: isArabic ? 'السعرات' : 'Est. Burn',
+                          value: '~$estCalories kcal',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Exercises Logged Breakdown
+                    if (loggedExercisesSummary.isNotEmpty) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isArabic ? 'التمارين المنجزة' : 'EXERCISES TRAINED',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF7A8B7B),
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                          Text(
+                            isArabic ? 'اضغط لتعديل العدّات ✏️' : 'Tap set to edit reps ✏️',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF235A42),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      Flexible(
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: loggedExercisesSummary.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, idx) {
+                            final exData = loggedExercisesSummary[idx];
+                            final name = exData['name']?.toString() ?? 'Exercise';
+                            final muscle = exData['muscle']?.toString() ?? '';
+                            final rawSets = exData['sets'];
+                            final List<String> sets = rawSets is List
+                                ? rawSets.map((s) => s.toString()).toList()
+                                : <String>[];
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF7FAF8),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          width: 36,
+                                          height: 36,
+                                          margin: const EdgeInsets.only(right: 10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF1F6F2),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: const Color(0xFFDDE6DF)),
+                                          ),
+                                          child: CachedNetworkImage(
+                                            imageUrl: ExerciseMediaService.getThumbnailUrl(name) ?? '',
+                                            fit: BoxFit.cover,
+                                            placeholder: (c, u) => const Center(
+                                              child: SizedBox(
+                                                width: 12,
+                                                height: 12,
+                                                child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF235A42)),
+                                              ),
+                                            ),
+                                            errorWidget: (c, u, e) => const Center(
+                                              child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 18),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF1C2B1E),
+                                          ),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: () {
+                                          _showEditExerciseAllSetsDialog(
+                                            modalContext: modalCtx,
+                                            setModalState: setModalState,
+                                            dateStr: detail.dateStr,
+                                            exerciseName: name,
+                                            loggedExercisesSummary: loggedExercisesSummary,
+                                            exIdx: idx,
+                                            onSaved: recalculateAndPersist,
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          margin: const EdgeInsets.only(right: 6),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFEAF5EE),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: const Color(0xFFD3E4D7)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.edit_outlined, size: 12, color: Color(0xFF235A42)),
+                                              const SizedBox(width: 3),
+                                              Text(
+                                                isArabic ? 'تعديل' : 'Edit Reps',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFF235A42),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEAF5EE),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          muscle.toUpperCase(),
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: const Color(0xFF235A42),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: List.generate(sets.length, (sIdx) {
+                                      return Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap: () {
+                                            _showEditCompletedSetDialog(
+                                              modalContext: modalCtx,
+                                              setModalState: setModalState,
+                                              dateStr: detail.dateStr,
+                                              exerciseName: name,
+                                              setIndex: sIdx,
+                                              currentSetStr: sets[sIdx],
+                                              loggedExercisesSummary: loggedExercisesSummary,
+                                              exIdx: idx,
+                                              onSaved: recalculateAndPersist,
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xFF235A42).withValues(alpha: 0.3), width: 1),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'S${sIdx + 1}: ${sets[sIdx]}',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(0xFF235A42),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                const Icon(Icons.edit_rounded, size: 10, color: Color(0xFF7A8B7B)),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    // AI Coach Insight Card
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF5EE),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFF235A42).withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              isArabic
+                                  ? 'أداء ممتاز! حققت جميع مجموعات التدريب المخططة بنجاح.'
+                                  : 'Outstanding performance! Full workout logged with excellent volume consistency.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF235A42),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (isRest) ...[
+                    // Rest Day UI
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7FAF8),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2EBE4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Row(
+                              const Icon(Icons.nightlight_round, color: Color(0xFF235A42), size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                isArabic ? 'بروتوكول الاستشفاء' : 'Recovery Protocol',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1C2B1E),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            isArabic
+                                ? 'أيام الراحة أساسية لبناء الألياف العضلية. ركز على النوم 8 ساعات وترطيب الجسم وشرب الماء.'
+                                : 'Rest days are when muscles repair and grow stronger. Focus on 8 hours of sleep, drinking 2.5L+ water, and meeting your protein target.',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              height: 1.45,
+                              color: const Color(0xFF5A6E5D),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else if (detail.isToday && isSkipped) ...[
+                    // Today's Skipped Session Banner
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8EE),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFFD166).withOpacity(0.5)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD97706),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.do_not_disturb_on_rounded, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isArabic ? 'جلسة اليوم متخطاة' : "Today's Session is Skipped",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1E3A2B),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isArabic
+                                      ? 'تم تحديد هذا اليوم كراحة مقصودة. يمكنك استئناف الجلسة أو استبدالها في أي وقت.'
+                                      : 'Marked as an intentional rest day for recovery. You can resume or swap anytime.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: const Color(0xFF5A6E5D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ] else if (detail.isToday) ...[
+                    // Today's Ready Session UI
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF5EE),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF235A42).withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF235A42),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isArabic ? 'جلسة اليوم جاهزة للانطلاق' : "Today's Session is Ready",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF1C2B1E),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isArabic
+                                      ? 'تم إعداد خطة التمارين ومجموعات التدريب. ابدأ تمرينك الآن!'
+                                      : 'Target exercises and progression goals are loaded. Let\'s get to work!',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: const Color(0xFF5A6E5D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Planned Exercises List
+                    if (_getEffectiveExercises().isNotEmpty) ...[
+                      Text(
+                        isArabic ? 'التمارين المخططة لليوم' : 'PLANNED EXERCISES',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF7A8B7B),
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Flexible(
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _getEffectiveExercises().length.clamp(0, 5),
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, idx) {
+                            final ex = _getEffectiveExercises()[idx];
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF7FAF8),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
+                              ),
+                              child: Row(
                                 children: [
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
@@ -4327,7 +5304,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                         border: Border.all(color: const Color(0xFFDDE6DF)),
                                       ),
                                       child: CachedNetworkImage(
-                                        imageUrl: ExerciseMediaService.getThumbnailUrl(name) ?? '',
+                                        imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name) ?? '',
                                         fit: BoxFit.cover,
                                         placeholder: (c, u) => const Center(
                                           child: SizedBox(
@@ -4343,13 +5320,27 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                     ),
                                   ),
                                   Expanded(
-                                    child: Text(
-                                      name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF1C2B1E),
-                                      ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          ex.name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF1C2B1E),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          isArabic ? '${ex.targetSets} مجموعات مستهدفة' : '${ex.targetSets} target sets',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFF5A6E5D),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   Container(
@@ -4359,7 +5350,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      muscle.toUpperCase(),
+                                      ex.muscleGroup.toUpperCase(),
                                       style: GoogleFonts.inter(
                                         fontSize: 9.5,
                                         fontWeight: FontWeight.w800,
@@ -4369,443 +5360,148 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: List.generate(sets.length, (sIdx) {
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: const Color(0xFFD3E4D7), width: 1),
-                                    ),
-                                    child: Text(
-                                      'S${sIdx + 1}: ${sets[sIdx]}',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF235A42),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-
-                // AI Coach Insight Card
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF5EE),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF235A42).withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome_rounded, color: Color(0xFF235A42), size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          isArabic
-                              ? 'أداء ممتاز! حققت جميع مجموعات التدريب المخططة بنجاح.'
-                              : 'Outstanding performance! Full workout logged with excellent volume consistency.',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF235A42),
-                          ),
+                            );
+                          },
                         ),
                       ),
+                      const SizedBox(height: 14),
                     ],
-                  ),
-                ),
-              ] else if (isRest) ...[
-                // Rest Day UI
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7FAF8),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2EBE4)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                  ] else ...[
+                    // Scheduled Upcoming Day UI
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7FAF8),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2EBE4)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.nightlight_round, color: Color(0xFF235A42), size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            isArabic ? 'بروتوكول الاستشفاء' : 'Recovery Protocol',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C2B1E),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        isArabic
-                            ? 'أيام الراحة أساسية لبناء الألياف العضلية. ركز على النوم 8 ساعات وترطيب الجسم وشرب الماء.'
-                            : 'Rest days are when muscles repair and grow stronger. Focus on 8 hours of sleep, drinking 2.5L+ water, and meeting your protein target.',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          height: 1.45,
-                          color: const Color(0xFF5A6E5D),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ] else if (detail.isToday && isSkipped) ...[
-                // Today's Skipped Session Banner
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8EE),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFFD166).withOpacity(0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.do_not_disturb_on_rounded, color: Colors.white, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isArabic ? 'جلسة اليوم متخطاة' : "Today's Session is Skipped",
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1E3A2B),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isArabic
-                                  ? 'تم تحديد هذا اليوم كراحة مقصودة. يمكنك استئناف الجلسة أو استبدالها في أي وقت.'
-                                  : 'Marked as an intentional rest day for recovery. You can resume or swap anytime.',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: const Color(0xFF5A6E5D),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ] else if (detail.isToday) ...[
-                // Today's Ready Session UI
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF5EE),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF235A42).withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF235A42),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.fitness_center_rounded, color: Colors.white, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isArabic ? 'جلسة اليوم جاهزة للانطلاق' : "Today's Session is Ready",
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF1C2B1E),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isArabic
-                                  ? 'تم إعداد خطة التمارين ومجموعات التدريب. ابدأ تمرينك الآن!'
-                                  : 'Target exercises and progression goals are loaded. Let\'s get to work!',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: const Color(0xFF5A6E5D),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Planned Exercises List
-                if (_getEffectiveExercises().isNotEmpty) ...[
-                  Text(
-                    isArabic ? 'التمارين المخططة لليوم' : 'PLANNED EXERCISES',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF7A8B7B),
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _getEffectiveExercises().length.clamp(0, 5),
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, idx) {
-                        final ex = _getEffectiveExercises()[idx];
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF7FAF8),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFE2EBE4), width: 1),
-                          ),
-                          child: Row(
+                          Row(
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  margin: const EdgeInsets.only(right: 10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F6F2),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFDDE6DF)),
-                                  ),
-                                  child: CachedNetworkImage(
-                                    imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name) ?? '',
-                                    fit: BoxFit.cover,
-                                    placeholder: (c, u) => const Center(
-                                      child: SizedBox(
-                                        width: 12,
-                                        height: 12,
-                                        child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF235A42)),
-                                      ),
-                                    ),
-                                    errorWidget: (c, u, e) => const Center(
-                                      child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 18),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      ex.name,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: const Color(0xFF1C2B1E),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      isArabic ? '${ex.targetSets} مجموعات مستهدفة' : '${ex.targetSets} target sets',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w500,
-                                        color: const Color(0xFF5A6E5D),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEAF5EE),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  ex.muscleGroup.toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF235A42),
-                                  ),
+                              const Icon(Icons.calendar_today_rounded, color: Color(0xFF235A42), size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                isArabic ? 'خطة هذا اليوم' : 'Scheduled Plan',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1C2B1E),
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-              ] else ...[
-                // Scheduled Upcoming Day UI
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF7FAF8),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2EBE4)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today_rounded, color: Color(0xFF235A42), size: 18),
-                          const SizedBox(width: 8),
+                          const SizedBox(height: 8),
                           Text(
-                            isArabic ? 'خطة هذا اليوم' : 'Scheduled Plan',
+                            isArabic
+                                ? 'جلسة تدريب مجدولة بحسب خطتك الأسبوعية. حافظ على استعدادك وطاقتك!'
+                                : 'Training session scheduled according to your weekly routine split. Prepare your fuel and mindset!',
                             style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF1C2B1E),
+                              fontSize: 13,
+                              height: 1.45,
+                              color: const Color(0xFF5A6E5D),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        isArabic
-                            ? 'جلسة تدريب مجدولة بحسب خطتك الأسبوعية. حافظ على استعدادك وطاقتك!'
-                            : 'Training session scheduled according to your weekly routine split. Prepare your fuel and mindset!',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          height: 1.45,
-                          color: const Color(0xFF5A6E5D),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // Action Buttons
+                  if (detail.isToday && isSkipped) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _showSwapSessionSheet(isArabic);
+                        },
+                        icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+                        label: Text(
+                          isArabic ? 'تغيير أو استئناف الجلسة' : 'Change or Resume Session',
+                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF235A42),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 20),
-
-              // Action Buttons
-              if (detail.isToday && isSkipped) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _showSwapSessionSheet(isArabic);
-                    },
-                    icon: const Icon(Icons.swap_horiz_rounded, size: 20),
-                    label: Text(
-                      isArabic ? 'تغيير أو استئناف الجلسة' : 'Change or Resume Session',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF235A42),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 40,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          isArabic ? 'إغلاق' : 'Close',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF5A6E5D)),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  height: 40,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      isArabic ? 'إغلاق' : 'Close',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF5A6E5D)),
+                  ] else if (detail.isToday && !isCompleted && !isRest) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _startWorkout();
+                        },
+                        icon: const Icon(Icons.play_arrow_rounded, size: 22),
+                        label: Text(
+                          isArabic ? 'ابدأ جلسة التمرين الآن' : 'Start Workout Session',
+                          style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF235A42),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ] else if (detail.isToday && !isCompleted && !isRest) ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      _startWorkout();
-                    },
-                    icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                    label: Text(
-                      isArabic ? 'ابدأ جلسة التمرين الآن' : 'Start Workout Session',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 40,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          isArabic ? 'إغلاق' : 'Close',
+                          style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF5A6E5D)),
+                        ),
+                      ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF235A42),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ] else ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF235A42),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: Text(
+                          isCompleted ? (isArabic ? 'إغلاق' : 'Close Summary') : (isArabic ? 'إغلاق' : 'Close'),
+                          style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  height: 40,
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      isArabic ? 'إغلاق' : 'Close',
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF5A6E5D)),
-                    ),
-                  ),
-                ),
-              ] else ...[
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF235A42),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: Text(
-                      isCompleted ? (isArabic ? 'إغلاق' : 'Close Summary') : (isArabic ? 'إغلاق' : 'Close'),
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+                  ],
+                ],
+              ),
+            );
+          },
         );
       },
     );
