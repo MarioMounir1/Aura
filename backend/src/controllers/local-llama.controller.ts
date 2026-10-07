@@ -163,7 +163,7 @@ export async function scanLocalHandler(req: Request, res: Response): Promise<voi
         success: false,
         error: isPremium 
           ? `Daily ${scanType} scan limit reached (${limit}/day). Scans reset at midnight UTC.`
-          : `Daily free ${scanType} limit reached. Upgrade to Premium for 10 daily scans!`,
+          : `Daily free ${scanType} limit reached. Upgrade to Premium for unlimited scans!`,
         code: "QUOTA_EXCEEDED",
       });
       return;
