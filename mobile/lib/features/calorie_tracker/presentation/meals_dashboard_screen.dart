@@ -27,7 +27,6 @@ import '../../premium/data/services/purchase_service.dart';
 import '../data/services/local_llama_service.dart';
 import '../data/services/barcode_service.dart';
 import 'barcode_confirmation_sheet.dart';
-import 'voice_meal_logging_sheet.dart';
 import 'widgets/ai_coach_briefing_card.dart';
 import '../../../../core/error/error_handler.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -508,16 +507,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
         ? quota.cameraLimit
         : scanType == 'gallery'
             ? quota.galleryLimit
-            : scanType == 'barcode'
-                ? quota.barcodeLimit
-                : quota.voiceLimit;
+            : quota.barcodeLimit;
     final typeLabel = scanType == 'camera'
         ? 'camera'
         : scanType == 'gallery'
             ? 'gallery'
-            : scanType == 'barcode'
-                ? 'barcode'
-                : 'voice logging';
+            : 'barcode';
 
     showDialog(
       context: context,
@@ -531,7 +526,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
         content: Text(
           isPremium 
             ? 'You have reached your daily limit for $typeLabel. Your quota will reset tomorrow at midnight UTC.' 
-            : 'You have used all $limit of your free $typeLabel for today. Upgrade to Premium for unlimited scans and voice meal logging!',
+            : 'You have used all $limit of your free $typeLabel for today. Upgrade to Premium for unlimited scans and AI coaching!',
           style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -839,7 +834,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             ),
             const SizedBox(height: 12),
 
-            // ── 3 Secondary Pills ─────────────────────────────────
+            // ── 2 Secondary Options: Gallery & Barcode ───────────
             Row(
               children: [
                 Expanded(
@@ -850,22 +845,13 @@ class _MealsDashboardState extends State<MealsDashboard> {
                     onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.gallery); },
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
                     icon: Icons.qr_code_scanner_rounded,
                     label: 'Barcode',
                     onTap: () { Navigator.pop(ctx); _scanBarcode(); },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildSheetPill(
-                    ctx: ctx,
-                    icon: Icons.mic_rounded,
-                    label: 'Voice',
-                    onTap: () { Navigator.pop(ctx); _startVoiceLog(); },
                   ),
                 ),
               ],
@@ -1169,28 +1155,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
       _recalcTotals();
     });
     _fetchQuota();
-  }
-
-  Future<void> _startVoiceLog() async {
-    if (_quota != null && _quota!.isVoiceExceeded) {
-      _showUpgradeDialog('voice', _quota!);
-      return;
-    }
-
-    final result = await showModalBottomSheet<MealEntry>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => const VoiceMealLoggingSheet(),
-    );
-
-    if (result != null && mounted) {
-      setState(() {
-        logs.insert(0, result);
-        _recalcTotals();
-      });
-      _fetchQuota();
-    }
   }
 
   Future<BarcodeProduct?> _promptForBarcodeEstimation(
