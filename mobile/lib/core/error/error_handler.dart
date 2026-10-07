@@ -65,7 +65,7 @@ class AppErrorHandler {
 
     if (lower.contains('quota_exceeded') || lower.contains('free limit reached') || lower.contains('premium limit reached')) {
       if (lower.contains('free')) {
-        return 'Daily free scan limit reached. Upgrade to Premium for 10 daily scans!';
+        return 'Daily free scan limit reached. Upgrade to Premium for unlimited scans!';
       }
       return 'Daily scan limit reached. Scans reset at midnight UTC.';
     }
