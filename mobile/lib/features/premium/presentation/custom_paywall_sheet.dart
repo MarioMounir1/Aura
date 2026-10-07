@@ -213,7 +213,7 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Unlimited AI scans, Voice meal logging, AI Coach Chat & 100% ad-free.',
+                      'Unlimited AI scans, Barcode scanning, AI Coach Chat & 100% ad-free.',
                       style: GoogleFonts.inter(
                         color: const Color(0xFF5A6E5D),
                         fontSize: 13.5,
@@ -231,13 +231,6 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     ),
                     const SizedBox(height: 12),
                     _buildFeatureItem(
-                      icon: Icons.mic_rounded,
-                      iconColor: const Color(0xFF235A42),
-                      title: 'Unlimited Voice Meal Logging',
-                      subtitle: 'Speak your meal naturally for instant macro calculation.',
-                    ),
-                    const SizedBox(height: 12),
-                    _buildFeatureItem(
                       icon: Icons.qr_code_scanner_rounded,
                       iconColor: const Color(0xFF235A42),
                       title: 'Unlimited Barcode Scanning',
@@ -247,8 +240,15 @@ class _CustomPaywallSheetState extends State<CustomPaywallSheet> {
                     _buildFeatureItem(
                       icon: Icons.chat_bubble_outline_rounded,
                       iconColor: const Color(0xFF235A42),
-                      title: 'AI Workout Coach & Ad-Free',
-                      subtitle: 'Personalized fitness advice and completely ad-free.',
+                      title: 'Unlimited AI Workout Coach Chat',
+                      subtitle: 'Interactive AI coach & personalized fitness advice.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFeatureItem(
+                      icon: Icons.block_rounded,
+                      iconColor: const Color(0xFF235A42),
+                      title: '100% Ad-Free Experience',
+                      subtitle: 'Zero banner or popup ads for uninterrupted tracking.',
                     ),
                     const SizedBox(height: 24),
                     // Plan Selection Section
