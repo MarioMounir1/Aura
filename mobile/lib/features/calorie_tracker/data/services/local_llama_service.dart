@@ -195,7 +195,7 @@ class LocalLlamaService {
           return LlamaNetworkException(
             errMsg ??
                 (statusCode == 402
-                    ? 'Daily free scan limit reached. Upgrade to Premium for 10 daily scans!'
+                    ? 'Daily free scan limit reached. Upgrade to Premium for unlimited scans!'
                     : 'Daily scan limit reached. Scans reset at midnight UTC.'),
           );
         }
