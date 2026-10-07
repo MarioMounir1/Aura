@@ -155,7 +155,7 @@ export async function scanBarcodeHandler(
           success: false,
           error: isPremium
             ? `Daily barcode scan limit reached (${limit}/day).`
-            : "Free barcode scan limit reached (2/day). Upgrade to Premium for 10 daily scans!",
+            : "Free barcode scan limit reached (2/day). Upgrade to Premium for unlimited scans!",
           code: "QUOTA_EXCEEDED",
         });
         return;
