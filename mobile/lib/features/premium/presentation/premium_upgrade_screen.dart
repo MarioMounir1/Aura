@@ -230,7 +230,7 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                       const SizedBox(height: 12),
                       
                       const Text(
-                        'Get 10 AI scans per day, unlimited AI Workout Coach Chat & an ad-free experience.',
+                        'Unlimited AI scans, Barcode scanning, AI Coach Chat & 100% ad-free.',
                         style: TextStyle(
                           color: Color(0xFF8E929C),
                           fontSize: 15,
@@ -244,20 +244,26 @@ class _PremiumUpgradeScreenState extends State<PremiumUpgradeScreen>
                       // Features List
                       _buildFeatureRow(
                         icon: Icons.auto_awesome,
-                        title: '10 AI Meal Scans Daily',
-                        subtitle: '10 scans/day (2/day on free tier).',
+                        title: 'Unlimited AI Meal Scans',
+                        subtitle: 'Snap photos or upload screenshots anytime without limits.',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildFeatureRow(
+                        icon: Icons.qr_code_scanner_rounded,
+                        title: 'Unlimited Barcode Scanning',
+                        subtitle: 'Instant nutritional facts for packaged foods.',
                       ),
                       const SizedBox(height: 16),
                       _buildFeatureRow(
                         icon: Icons.chat_bubble_outline_rounded,
                         title: 'Unlimited AI Workout Coach Chat',
-                        subtitle: 'Interactive AI coach & routine builder.',
+                        subtitle: 'Interactive AI coach & personalized fitness advice.',
                       ),
                       const SizedBox(height: 16),
                       _buildFeatureRow(
                         icon: Icons.block_rounded,
                         title: '100% Ad-Free Experience',
-                        subtitle: 'Zero banner or popup ads.',
+                        subtitle: 'Zero banner or popup ads for uninterrupted tracking.',
                       ),
                       
                       const SizedBox(height: 32),
