@@ -682,6 +682,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
   Future<void> _finishWorkout() async {
     final currentSessionId = _activeSessionId;
+    final durationSeconds = _sessionElapsedSeconds > 0
+        ? _sessionElapsedSeconds
+        : (_sessionStartTimeMs != null
+            ? ((DateTime.now().millisecondsSinceEpoch - _sessionStartTimeMs!) ~/ 1000).clamp(0, 86400 * 2)
+            : 0);
+
     _sessionTimer?.cancel();
     _restTimer?.cancel();
     await _clearActiveWorkoutPersistedState();
@@ -726,25 +732,31 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
     _activeExerciseSets.clear();
 
+    final routineTitle = _currentSession?.todayDayName ?? _activeRoutine?.name ?? 'Training Session';
+
+    // If user finished workout based on time (e.g. 10+ min session) without checking sets,
+    // ensure session is properly saved and attributed rather than discarded.
     if (loggedSummary.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _state = WorkoutHubState.ready;
-          _restSecondsRemaining = 0;
+      final durationText = _formatDuration(durationSeconds);
+      for (final ex in exercises) {
+        loggedSummary.add({
+          'name': ex.name,
+          'muscle': ex.muscleGroup,
+          'sets': ['Session completed ($durationText)'],
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Session ended. No sets were logged.'),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 2),
-          ),
-        );
       }
-      return;
+      if (loggedSummary.isEmpty) {
+        loggedSummary.add({
+          'name': routineTitle,
+          'muscle': 'Full Body',
+          'sets': ['Session completed ($durationText)'],
+        });
+      }
     }
 
-    final estCal = (totalVol * 0.14).clamp(30, 650).round();
-    final routineTitle = _currentSession?.todayDayName ?? _activeRoutine?.name ?? 'Training Session';
+    final estCal = totalVol > 0
+        ? (totalVol * 0.14).clamp(30, 650).round()
+        : ((durationSeconds / 60) * 6.5).clamp(25, 500).round();
 
     final summaryData = {
       'dateStr': todayStr,
@@ -753,6 +765,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
       'totalSetsCompleted': totalSets,
       'totalRepsCompleted': totalReps,
       'totalVolumeKg': totalVol,
+      'durationSeconds': durationSeconds,
+      'durationFormatted': _formatDuration(durationSeconds),
       'estCalories': estCal,
       'exercises': loggedSummary,
       'completedAt': now.toIso8601String(),
@@ -802,7 +816,10 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         _state = WorkoutHubState.ready;
         _restSecondsRemaining = 0;
       });
-      _showPostWorkoutSummarySheet('Workout successfully completed! Logged $totalSets sets across ${loggedSummary.length} exercise${loggedSummary.length == 1 ? "" : "s"}.');
+      final completionMsg = totalSets > 0
+          ? 'Workout successfully completed! Logged $totalSets sets across ${loggedSummary.length} exercise${loggedSummary.length == 1 ? "" : "s"}.'
+          : 'Workout session completed! Duration: ${_formatDuration(durationSeconds)} ($estCal kcal burned).';
+      _showPostWorkoutSummarySheet(completionMsg);
     }
   }
 
@@ -1233,6 +1250,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     }
 
     final hasLoggedSets = loggedSetsCount > 0;
+    final durationSeconds = _sessionElapsedSeconds > 0
+        ? _sessionElapsedSeconds
+        : (_sessionStartTimeMs != null
+            ? ((DateTime.now().millisecondsSinceEpoch - _sessionStartTimeMs!) ~/ 1000).clamp(0, 86400 * 2)
+            : 0);
+    final durationText = _formatDuration(durationSeconds);
 
     showDialog(
       context: context,
@@ -1240,61 +1263,76 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          hasLoggedSets
-              ? (isArabic ? 'إنهاء التمرين وحفظ التقدم؟' : 'Finish Workout & Save?')
-              : (isArabic ? 'إلغاء التمرين؟' : 'Exit Workout?'),
+          isArabic ? 'جلسة التمرين 🏋️' : 'Workout Session 🏋️',
           style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: const Color(0xFF1C2B1E)),
         ),
         content: Text(
           hasLoggedSets
               ? (isArabic
-                  ? 'لقد أكملت $loggedSetsCount مجموعة في $loggedExercisesCount تمارين. هل تريد حفظ التمارين المسجلة وإنهاء الجلسة؟'
-                  : 'You completed $loggedSetsCount set(s) across $loggedExercisesCount exercise(s). Would you like to save your logged exercises and finish?')
+                  ? 'لقد أكملت $loggedSetsCount مجموعة في $loggedExercisesCount تمارين خلال $durationText. هل تريد حفظ الجلسة الآن، إبقاءها تعمل في الخلفية، أو إلغاءها؟'
+                  : 'You completed $loggedSetsCount set(s) across $loggedExercisesCount exercise(s) in $durationText. Would you like to save & finish, keep it running in the background, or discard?')
               : (isArabic
-                  ? 'لم تقم بتسجيل أي مجموعات بعد. هل تريد الخروج وإلغاء هذه الجلسة؟'
-                  : 'No sets have been logged yet. Exiting will cancel this session.'),
+                  ? 'مدة التمرين الحالية: $durationText. هل تريد حفظ الجلسة وإنهاءها، إبقاءها تعمل في الخلفية، أو إلغاءها؟'
+                  : 'Current workout duration: $durationText. Would you like to save & finish this workout, keep it in the background, or discard?'),
           style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF5A6E5D), height: 1.4),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              isArabic ? 'متابعة' : 'Keep Going',
-              style: GoogleFonts.inter(color: const Color(0xFF235A42), fontWeight: FontWeight.w600),
-            ),
-          ),
-          if (hasLoggedSets)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _exitWorkoutWithoutFinishing();
-              },
-              child: Text(
-                isArabic ? 'تجاهل' : 'Discard',
-                style: GoogleFonts.inter(color: const Color(0xFFEF4444), fontWeight: FontWeight.w600),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _exitWorkoutWithoutFinishing();
+                },
+                child: Text(
+                  isArabic ? 'إلغاء الجلسة' : 'Discard',
+                  style: GoogleFonts.inter(color: const Color(0xFFEF4444), fontWeight: FontWeight.w600, fontSize: 13),
+                ),
               ),
-            ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: hasLoggedSets ? const Color(0xFF235A42) : const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              if (hasLoggedSets) {
-                await _finishWorkout();
-              } else {
-                _exitWorkoutWithoutFinishing();
-              }
-            },
-            child: Text(
-              hasLoggedSets
-                  ? (isArabic ? 'حفظ وإنهاء' : 'Save & Finish')
-                  : (isArabic ? 'إلغاء الجلسة' : 'Cancel Session'),
-              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-            ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _state = WorkoutHubState.ready;
+                  });
+                },
+                child: Text(
+                  isArabic ? 'إبقاء في الخلفية' : 'Keep Active',
+                  style: GoogleFonts.inter(color: const Color(0xFF0284C7), fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(
+                  isArabic ? 'متابعة' : 'Keep Going',
+                  style: GoogleFonts.inter(color: const Color(0xFF5A6E5D), fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF235A42),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await _finishWorkout();
+                },
+                child: Text(
+                  isArabic ? 'حفظ وإنهاء' : 'Save & Finish',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -2662,6 +2700,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     _sessionStartTimeMs = null;
     _activeSessionId = null;
     _activeExerciseSets.clear();
+    try {
+      context.read<WorkoutBloc>().add(const ResetWorkoutEvent());
+    } catch (_) {}
     setState(() {
       _state = WorkoutHubState.ready;
       _restSecondsRemaining = 0;
@@ -5599,43 +5640,62 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                 if (hasActiveSession)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _C.cyan.withValues(alpha: 0.12),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => setState(() => _state = WorkoutHubState.activeWorkout),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: _C.cyan.withValues(alpha: 0.4), width: 1.2),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: _C.cyan.withValues(alpha: 0.18),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.fitness_center_rounded, color: _C.cyan, size: 20),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _C.cyan.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: _C.cyan.withValues(alpha: 0.4), width: 1.2),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isArabic ? 'تمرين قيد التقدّم 🏋️‍♂️' : 'ACTIVE WORKOUT IN PROGRESS 🏋️‍♂️',
-                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: _C.cyan, letterSpacing: 0.5),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: _C.cyan.withValues(alpha: 0.18),
+                                  shape: BoxShape.circle,
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  isArabic
-                                      ? 'لديك تمرين نشط! اضغط على "إنهاء التمرين" لتسجيل نتائجك.'
-                                      : 'You have an active workout in progress! Please finish your workout to log your progress.',
-                                  style: GoogleFonts.inter(fontSize: 12, color: _C.textPri, fontWeight: FontWeight.w500),
+                                child: const Icon(Icons.fitness_center_rounded, color: _C.cyan, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      isArabic ? 'تمرين قيد التقدّم 🏋️‍♂️' : 'ACTIVE WORKOUT IN PROGRESS 🏋️‍♂️',
+                                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: _C.cyan, letterSpacing: 0.5),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      isArabic
+                                          ? 'اضغط هنا لمتابعة الجلسة أو إنهائها وحفظها.'
+                                          : 'Tap here to resume or finish & save your workout.',
+                                      style: GoogleFonts.inter(fontSize: 12, color: _C.textPri, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: _C.cyan,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  isArabic ? 'متابعة' : 'Resume',
+                                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.black),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -5871,16 +5931,24 @@ class _WorkoutScreenState extends State<WorkoutScreen>
 
                         // Start / Finish Workout CTA
                         _AnimatedPressable(
-                          onTap: isRestDay ? null : _startWorkout,
+                          onTap: isRestDay
+                              ? null
+                              : (hasActiveSession
+                                  ? () => setState(() => _state = WorkoutHubState.activeWorkout)
+                                  : _startWorkout),
                           child: AppButton.primary(
-                            onPressed: isRestDay ? null : _startWorkout,
+                            onPressed: isRestDay
+                                ? null
+                                : (hasActiveSession
+                                    ? () => setState(() => _state = WorkoutHubState.activeWorkout)
+                                    : _startWorkout),
                             icon: isRestDay
                                 ? Icons.hotel_rounded
-                                : (hasActiveSession ? Icons.check_circle_rounded : Icons.play_arrow_rounded),
+                                : (hasActiveSession ? Icons.play_arrow_rounded : Icons.play_arrow_rounded),
                             label: isRestDay
                                 ? (isArabic ? 'يوم راحة' : 'Rest Day')
                                 : (hasActiveSession
-                                    ? (isArabic ? 'إنهاء / متابعة التمرين' : 'Finish Workout')
+                                    ? (isArabic ? 'متابعة التمرين الجاري ⚡' : 'Resume Workout ⚡')
                                     : (isArabic ? 'ابدأ التمرين الآن' : 'Start Workout')),
                           ),
                         ),
