@@ -1413,8 +1413,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     children: [
                       Text(
                         isArabic
-                            ? 'تمرين ${_activeExerciseIndex + 1} من ${exercises.length}'
-                            : 'Exercise ${_activeExerciseIndex + 1} of ${exercises.length}',
+                            ? 'تمرين ${exercises.isNotEmpty ? (_activeExerciseIndex + 1).clamp(1, exercises.length) : 0} من ${exercises.length}'
+                            : 'Exercise ${exercises.isNotEmpty ? (_activeExerciseIndex + 1).clamp(1, exercises.length) : 0} of ${exercises.length}',
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -1454,6 +1454,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   Widget _buildExerciseSwitcherPills(List<SessionExercise> exercises, bool isArabic) {
+    if (exercises.isEmpty) return const SizedBox.shrink();
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
@@ -1623,10 +1624,40 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   Widget _buildActiveExerciseTrackerCard(bool isArabic, List<SessionExercise> exercises) {
+    if (exercises.isEmpty) {
+      exercises = _getEffectiveExercises();
+    }
+    if (exercises.isEmpty) {
+      return const SizedBox.shrink();
+    }
     if (_activeExerciseIndex >= exercises.length) {
       _activeExerciseIndex = exercises.length - 1;
     }
+    if (_activeExerciseIndex < 0) {
+      _activeExerciseIndex = 0;
+    }
     final ex = exercises[_activeExerciseIndex];
+    if (!_activeExerciseSets.containsKey(_activeExerciseIndex) ||
+        _activeExerciseSets[_activeExerciseIndex] == null ||
+        _activeExerciseSets[_activeExerciseIndex]!.isEmpty) {
+      final setsCount = ex.targetSets > 0 ? ex.targetSets : 3;
+      final isBw = _isBodyweightExercise(ex.name);
+      final defaultWeight = (ex.lastWeekWeight != null && ex.lastWeekWeight! >= 0)
+          ? ex.lastWeekWeight!
+          : (isBw ? 0.0 : 50.0);
+      final defaultReps = (ex.lastWeekReps != null && ex.lastWeekReps! > 0)
+          ? ex.lastWeekReps!
+          : 10;
+      _activeExerciseSets[_activeExerciseIndex] = List.generate(setsCount, (sIdx) {
+        return _ActiveSetDraft(
+          setIndex: sIdx + 1,
+          label: sIdx == setsCount - 1 ? 'Top Set' : 'Working Set',
+          weight: defaultWeight,
+          reps: defaultReps,
+          workoutExerciseId: ex.workoutExerciseId ?? ex.id,
+        );
+      });
+    }
     final setsList = _activeExerciseSets[_activeExerciseIndex] ?? [];
     final prText = (ex.lastWeekWeight != null && ex.lastWeekWeight! > 0)
         ? 'Last: ${ex.lastWeekWeight!.toStringAsFixed(0)} kg × ${ex.lastWeekReps ?? 10}'
@@ -1697,20 +1728,24 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFDDE6DF)),
                     ),
-                    child: CachedNetworkImage(
-                      imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name) ?? '',
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF235A42)),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => const Center(
-                        child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 24),
-                      ),
-                    ),
+                    child: (ExerciseMediaService.getThumbnailUrl(ex.name)?.isNotEmpty == true)
+                        ? CachedNetworkImage(
+                            imageUrl: ExerciseMediaService.getThumbnailUrl(ex.name)!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF235A42)),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => const Center(
+                              child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 24),
+                            ),
+                          )
+                        : const Center(
+                            child: Icon(Icons.fitness_center_rounded, color: Color(0xFF3B7A5E), size: 24),
+                          ),
                   ),
                 ),
               ),
@@ -2269,8 +2304,8 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     ),
                     Text(
                       isArabic
-                          ? 'التالي: ${exercises[_activeExerciseIndex + 1].name}'
-                          : 'Next: ${exercises[_activeExerciseIndex + 1].name}',
+                          ? 'التالي: ${(_activeExerciseIndex + 1 < exercises.length) ? exercises[_activeExerciseIndex + 1].name : ""}'
+                          : 'Next: ${(_activeExerciseIndex + 1 < exercises.length) ? exercises[_activeExerciseIndex + 1].name : ""}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.inter(
@@ -2324,6 +2359,9 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   }
 
   void _showWorkoutOverviewSheet(bool isArabic, List<SessionExercise> exercises) {
+    if (exercises.isEmpty) {
+      exercises = _getEffectiveExercises();
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -3457,7 +3495,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   // ══════════════════════════════════════════════════════════════
 
   Widget _buildHubView(bool isArabic) {
-    final exercises = _currentSession?.exercises ?? [];
+    final exercises = _getEffectiveExercises();
 
     return Container(
       color: const Color(0xFFF6F8F5),
