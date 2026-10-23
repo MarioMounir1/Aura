@@ -70,6 +70,7 @@ android {
 }
 
 configurations.all {
+    exclude(group = "com.revenuecat.purchases", module = "purchases-store-amazon")
     resolutionStrategy {
         force("com.google.mlkit:barcode-scanning:17.3.0")
         force("androidx.camera:camera-core:1.4.1")
