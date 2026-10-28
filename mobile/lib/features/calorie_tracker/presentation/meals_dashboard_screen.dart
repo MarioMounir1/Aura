@@ -137,17 +137,17 @@ class MealsDashboard extends StatefulWidget {
 
 class _MealsDashboardState extends State<MealsDashboard> {
   // â”€â”€ Macro totals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  late double caloriesConsumed;
-  late double caloriesTarget;
-  late double proteinConsumed;
-  late double proteinTarget;
-  late double carbsConsumed;
-  late double carbsTarget;
-  late double fatsConsumed;
-  late double fatsTarget;
+  double caloriesConsumed = 0.0;
+  double caloriesTarget = 2000.0;
+  double proteinConsumed = 0.0;
+  double proteinTarget = 150.0;
+  double carbsConsumed = 0.0;
+  double carbsTarget = 200.0;
+  double fatsConsumed = 0.0;
+  double fatsTarget = 65.0;
 
   // â”€â”€ Feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  late List<MealEntry> logs;
+  List<MealEntry> logs = [];
 
   // â”€â”€ Scanner State machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   LayoutState _layoutState = LayoutState.idle;
@@ -326,7 +326,8 @@ class _MealsDashboardState extends State<MealsDashboard> {
   }
 
   void _recalcTotals() {
-    final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ?? {};
+    try {
+      final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ?? {};
 
     double? userCalGoal;
     double? userProteinGoal;
@@ -448,6 +449,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
     proteinConsumed  = logs.fold(0.0, (s, m) => s + m.protein);
     carbsConsumed    = logs.fold(0.0, (s, m) => s + m.carbs);
     fatsConsumed     = logs.fold(0.0, (s, m) => s + m.fat);
+    } catch (e) {
+      debugPrint('Error in _recalcTotals: $e');
+    }
   }
 
   // â”€â”€ Image Pick & Upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
