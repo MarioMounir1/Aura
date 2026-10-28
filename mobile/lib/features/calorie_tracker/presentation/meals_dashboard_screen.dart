@@ -2704,7 +2704,16 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          rec.message,
+                          () {
+                            var msg = rec.message;
+                            for (final prefix in ['Aura Coach: ', 'Llama says: ', 'Llama says:', 'Aura Coach:']) {
+                              if (msg.startsWith(prefix)) {
+                                msg = msg.substring(prefix.length).trimLeft();
+                                break;
+                              }
+                            }
+                            return msg;
+                          }(),
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             height: 1.4,
