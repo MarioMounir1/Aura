@@ -21,14 +21,21 @@ const LogWaterSchema = z.object({
   loggedAt: z.string().datetime().optional(),
 });
 
-// ── Helper: day bounds ────────────────────────────────────────
+// ── Helper: day bounds accounting for global timezones ────────
 
 function getDayBounds(dateStr?: string): { start: Date; end: Date } {
-  const base = dateStr ? new Date(dateStr) : new Date();
-  const start = new Date(base);
-  start.setUTCHours(0, 0, 0, 0);
-  const end = new Date(base);
-  end.setUTCHours(23, 59, 59, 999);
+  const base = dateStr ? new Date(`${dateStr.split("T")[0]}T00:00:00.000Z`) : new Date();
+  if (isNaN(base.getTime())) {
+    const fallback = new Date();
+    fallback.setUTCHours(0, 0, 0, 0);
+    return {
+      start: new Date(fallback.getTime() - 14 * 60 * 60 * 1000),
+      end: new Date(fallback.getTime() + (24 + 14) * 60 * 60 * 1000 - 1),
+    };
+  }
+
+  const start = new Date(base.getTime() - 14 * 60 * 60 * 1000);
+  const end = new Date(base.getTime() + (24 + 14) * 60 * 60 * 1000 - 1);
   return { start, end };
 }
 
