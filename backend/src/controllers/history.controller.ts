@@ -36,14 +36,10 @@ export async function getMealHistory(req: Request, res: Response): Promise<void>
   const skip = (page - 1) * limit;
 
   // Build date filter
-  let dateFilter: { gte: Date; lt: Date } | undefined;
+  let dateFilter: { gte: Date; lte: Date } | undefined;
   if (date) {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    if (isNaN(startOfDay.getTime())) {
+    const baseUtc = new Date(`${date}T00:00:00.000Z`);
+    if (isNaN(baseUtc.getTime())) {
       res.status(400).json({
         success: false,
         error: "Invalid date format. Use ISO format: YYYY-MM-DD",
@@ -51,16 +47,27 @@ export async function getMealHistory(req: Request, res: Response): Promise<void>
       return;
     }
 
-    dateFilter = { gte: startOfDay, lt: endOfDay };
+    // Account for global timezones (UTC+14 to UTC-12) so meals logged in late evening
+    // or early morning local hours are never excluded when filtering by local date.
+    const startOfDay = new Date(baseUtc.getTime() - 14 * 60 * 60 * 1000);
+    const endOfDay = new Date(baseUtc.getTime() + (24 + 14) * 60 * 60 * 1000 - 1);
+    dateFilter = { gte: startOfDay, lte: endOfDay };
   }
+
+  const whereClause: any = {
+    userId,
+    ...(dateFilter && {
+      OR: [
+        { createdAt: dateFilter },
+        { loggedAt: dateFilter },
+      ],
+    }),
+  };
 
   try {
     const [logs, total] = await Promise.all([
       prisma.mealLog.findMany({
-        where: {
-          userId,
-          ...(dateFilter && { createdAt: dateFilter }),
-        },
+        where: whereClause,
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
@@ -79,10 +86,7 @@ export async function getMealHistory(req: Request, res: Response): Promise<void>
         },
       }),
       prisma.mealLog.count({
-        where: {
-          userId,
-          ...(dateFilter && { createdAt: dateFilter }),
-        },
+        where: whereClause,
       }),
     ]);
 
