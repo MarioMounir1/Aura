@@ -217,7 +217,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
           }).toList();
 
           setState(() {
-            logs = fetchedEntries;
+            if (logs.isEmpty) {
+              logs = fetchedEntries;
+            } else {
+              _mergeIntoLogs(fetchedEntries);
+            }
             _recalcTotals();
           });
         }
@@ -225,6 +229,35 @@ class _MealsDashboardState extends State<MealsDashboard> {
     } catch (e) {
       debugPrint('Failed to sync today meals: $e');
     }
+  }
+
+  void _mergeIntoLogs(List<MealEntry> incoming) {
+    if (incoming.isEmpty) return;
+    final Map<String, MealEntry> map = {};
+
+    // 1. Prioritize incoming server-confirmed entries
+    for (final inc in incoming) {
+      final key = inc.id.isNotEmpty ? inc.id : '${inc.foodName}_${inc.createdAt.millisecondsSinceEpoch}';
+      map[key] = inc;
+    }
+
+    // 2. Preserve locally logged meals that haven't been confirmed yet
+    for (final loc in logs) {
+      final key = loc.id.isNotEmpty ? loc.id : '${loc.foodName}_${loc.createdAt.millisecondsSinceEpoch}';
+      if (!map.containsKey(key)) {
+        final alreadyMerged = map.values.any((item) =>
+            item.foodName.toLowerCase().trim() == loc.foodName.toLowerCase().trim() &&
+            (item.calories - loc.calories).abs() < 2.0 &&
+            item.createdAt.difference(loc.createdAt).abs().inMinutes < 5);
+        if (!alreadyMerged) {
+          map[key] = loc;
+        }
+      }
+    }
+
+    final mergedList = map.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    logs = mergedList;
   }
 
   Future<void> _fetchQuota() async {
@@ -248,13 +281,13 @@ class _MealsDashboardState extends State<MealsDashboard> {
     }
   }
 
-  // â”€â”€ Data initialization (preserved from original) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Data initialization (preserved from original) ─────────
 
   void _initData() {
     if (widget.mealLogs != null && widget.mealLogs!.isNotEmpty) {
       final sortedEntities = List<MealLogEntity>.from(widget.mealLogs!)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      logs = sortedEntities.map((entity) {
+      final incoming = sortedEntities.map((entity) {
         final isNutritious = entity.protein > 25 && entity.calories < 400;
         final List<MealWarning> warnings = [];
         if (entity.carbs > 80)     warnings.add(const MealWarning(warningText: 'High carb load detected', isSevere: false));
@@ -276,8 +309,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
           ingredientsBreakdown: entity.ingredientsBreakdown,
         );
       }).toList();
-    } else {
-      logs = [];
+
+      if (logs.isEmpty) {
+        logs = incoming;
+      } else {
+        _mergeIntoLogs(incoming);
+      }
     }
     _recalcTotals();
   }
@@ -1154,6 +1191,10 @@ class _MealsDashboardState extends State<MealsDashboard> {
       logs.insert(0, entry);
       _recalcTotals();
     });
+    try {
+      context.read<DashboardBloc>().add(const RefreshDashboard());
+    } catch (_) {}
+    _fetchTodayMeals();
     _fetchQuota();
   }
 
