@@ -20,8 +20,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../data/models/barcode_product.dart';
 import '../data/services/barcode_service.dart';
 
-typedef _C = AppColors;
-
 class BarcodeConfirmationSheet extends StatefulWidget {
   final BarcodeProduct product;
   final BarcodeService service;
@@ -59,6 +57,21 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
     }
   }
 
+  int _calculateHealthScore(double cal, double prot, double carb, double fat) {
+    if (cal <= 0) return 80;
+    final pCal = (prot * 4) / cal;
+    final cCal = (carb * 4) / cal;
+    final fCal = (fat * 9) / cal;
+
+    double score = 50.0;
+    score += (pCal * 100).clamp(0, 30);
+    if (cCal >= 0.3 && cCal <= 0.6) score += 15;
+    if (fCal >= 0.15 && fCal <= 0.35) score += 15;
+    if (cal < 650) score += 10;
+
+    return score.round().clamp(20, 98);
+  }
+
   Future<void> _log() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isLogging) return;
@@ -77,16 +90,16 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
-            backgroundColor: const Color(0xFF1F1F1F),
+            backgroundColor: const Color(0xFF1E3A2B),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             content: Row(
               children: [
-                const Icon(Icons.error_outline, color: _C.red, size: 18),
+                const Icon(Icons.error_outline, color: Color(0xFFEF4444), size: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     cleanMsg,
-                    style: GoogleFonts.inter(fontSize: 12, color: _C.textPri),
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.white),
                   ),
                 ),
               ],
@@ -99,12 +112,26 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.auraTheme;
     final serving = _currentServing;
+    final healthScore = _calculateHealthScore(
+      serving.calories,
+      serving.protein,
+      serving.carbs,
+      serving.fats,
+    );
 
     return Container(
-      decoration: const BoxDecoration(
-        color: _C.card,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: theme.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       padding: EdgeInsets.only(
         left: 24,
@@ -124,7 +151,7 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: _C.track,
+                  color: theme.borderMid,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -137,10 +164,10 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _C.amber.withValues(alpha: 0.12),
+                    color: theme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.barcode_reader, color: _C.amber, size: 22),
+                  child: Icon(Icons.qr_code_scanner_rounded, color: theme.primary, size: 22),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -152,27 +179,31 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.outfit(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: _C.textPri,
+                          color: theme.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           Icon(
                             widget.product.dataSource == 'ai-estimated'
                                 ? Icons.auto_awesome
                                 : Icons.verified_outlined,
-                            size: 11,
-                            color: _C.amber,
+                            size: 13,
+                            color: theme.primary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             widget.product.dataSource == 'ai-estimated'
                                 ? 'AI Estimated · per 100g'
                                 : 'Open Food Facts · per 100g',
-                            style: GoogleFonts.inter(fontSize: 11, color: _C.textMuted),
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: theme.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -182,10 +213,11 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
               ],
             ),
 
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
             // ── Serving input ────────────────────────────────
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: Column(
@@ -196,7 +228,7 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                         style: GoogleFonts.outfit(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: _C.textSec,
+                          color: theme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -216,24 +248,32 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                         style: GoogleFonts.outfit(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
-                          color: _C.textPri,
+                          color: theme.textPrimary,
                         ),
                         decoration: InputDecoration(
                           suffixText: 'g',
-                          suffixStyle: GoogleFonts.inter(fontSize: 14, color: _C.textSec),
+                          suffixStyle: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: theme.textSecondary,
+                          ),
                           filled: true,
-                          fillColor: _C.surface,
+                          fillColor: theme.surface,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
+                            borderSide: BorderSide(color: theme.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: theme.border),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: _C.amber, width: 1.5),
+                            borderSide: BorderSide(color: theme.primary, width: 1.5),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(color: _C.red, width: 1.5),
+                            borderSide: BorderSide(color: theme.error, width: 1.5),
                           ),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         ),
@@ -241,29 +281,27 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 // Quick-pick buttons
                 Column(
                   children: [
-                    Text('', style: GoogleFonts.outfit(fontSize: 13)),
-                    const SizedBox(height: 8),
-                    _quickPick(30),
+                    _quickPick(30, theme),
                     const SizedBox(height: 6),
-                    _quickPick(100),
+                    _quickPick(100, theme),
                   ],
                 ),
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
-            // ── Live macro grid ──────────────────────────────
+            // ── Live macro grid (matching Camera Scan result card) ──
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: _C.surface,
+                color: theme.surface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: _C.amber.withValues(alpha: 0.2)),
+                border: Border.all(color: theme.border),
               ),
               child: Column(
                 children: [
@@ -275,39 +313,136 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                         style: GoogleFonts.outfit(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: _C.textMuted,
+                          color: theme.textSecondary,
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _C.amber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
+                          color: theme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           'Live update',
-                          style: GoogleFonts.inter(fontSize: 10, color: _C.amber, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: theme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      _macroChip('🔥', serving.calories.round().toString(), 'kcal', _C.lime),
-                      const SizedBox(width: 8),
-                      _macroChip('💪', serving.protein.toStringAsFixed(1), 'g P', _C.emerald),
-                      const SizedBox(width: 8),
-                      _macroChip('🌾', serving.carbs.toStringAsFixed(1), 'g C', _C.blue),
-                      const SizedBox(width: 8),
-                      _macroChip('🫙', serving.fats.toStringAsFixed(1), 'g F', _C.red),
+                      Expanded(
+                        child: _macroCard(
+                          title: 'Calories',
+                          value: '${serving.calories.round()} kcal',
+                          icon: Icons.local_fire_department_rounded,
+                          iconColor: theme.success,
+                          theme: theme,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _macroCard(
+                          title: 'Carbs',
+                          value: '${serving.carbs.toStringAsFixed(1)}g',
+                          icon: Icons.grain_rounded,
+                          iconColor: theme.carbs,
+                          theme: theme,
+                        ),
+                      ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _macroCard(
+                          title: 'Protein',
+                          value: '${serving.protein.toStringAsFixed(1)}g',
+                          icon: Icons.fitness_center_rounded,
+                          iconColor: theme.protein,
+                          theme: theme,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _macroCard(
+                          title: 'Fats',
+                          value: '${serving.fats.toStringAsFixed(1)}g',
+                          icon: Icons.opacity_rounded,
+                          iconColor: theme.fats,
+                          theme: theme,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Health Score bar matching Camera Scan result card
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.card,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.border),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.favorite_rounded, size: 15, color: theme.success),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Health Score',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '$healthScore / 100',
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: healthScore >= 70
+                                    ? theme.success
+                                    : (healthScore >= 50 ? theme.warning : theme.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: (healthScore / 100).clamp(0.0, 1.0),
+                            minHeight: 5,
+                            backgroundColor: theme.border,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              healthScore >= 70
+                                  ? theme.success
+                                  : (healthScore >= 50 ? theme.warning : theme.error),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
             // ── Actions ──────────────────────────────────────
             Row(
@@ -319,19 +454,20 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : const Icon(Icons.add_rounded, size: 18),
+                        : const Icon(Icons.check_circle_rounded, size: 18),
                     label: Text(
                       _isLogging ? 'Logging...' : 'Log Meal',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _C.amber,
-                      foregroundColor: Colors.black,
-                      disabledBackgroundColor: _C.amber.withValues(alpha: 0.5),
+                      backgroundColor: theme.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: theme.primary.withValues(alpha: 0.5),
+                      disabledForegroundColor: Colors.white70,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
@@ -340,9 +476,10 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
                 OutlinedButton(
                   onPressed: _isLogging ? null : () => Navigator.of(context).pop(null),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: _C.textSec,
-                    side: const BorderSide(color: _C.track),
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                    backgroundColor: theme.surface,
+                    foregroundColor: theme.textSecondary,
+                    side: BorderSide(color: theme.borderMid),
+                    padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 18),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: Text('Cancel', style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14)),
@@ -355,7 +492,7 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
     );
   }
 
-  Widget _quickPick(int grams) {
+  Widget _quickPick(int grams, AuraThemeExtension theme) {
     final isActive = _servingGrams == grams.toDouble();
     return GestureDetector(
       onTap: () {
@@ -364,53 +501,77 @@ class _BarcodeConfirmationSheetState extends State<BarcodeConfirmationSheet> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: isActive ? _C.amber.withValues(alpha: 0.2) : _C.surface,
+          color: isActive ? theme.primary.withValues(alpha: 0.12) : theme.surface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive ? _C.amber : _C.track,
+            color: isActive ? theme.primary : theme.border,
+            width: isActive ? 1.5 : 1.0,
           ),
         ),
         child: Text(
           '${grams}g',
           style: GoogleFonts.inter(
-            fontSize: 11,
+            fontSize: 11.5,
             fontWeight: FontWeight.w700,
-            color: isActive ? _C.amber : _C.textMuted,
+            color: isActive ? theme.primary : theme.textSecondary,
           ),
         ),
       ),
     );
   }
 
-  Widget _macroChip(String emoji, String value, String label, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.07),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 13)),
-            const SizedBox(height: 3),
-            Text(
-              value,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                color: _C.textPri,
-              ),
+  Widget _macroCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+    required AuraThemeExtension theme,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(9),
             ),
-            Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 9, color: _C.textSec),
+            child: Icon(icon, color: iconColor, size: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 10.5,
+                    color: theme.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: theme.textPrimary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
