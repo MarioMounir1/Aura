@@ -18,7 +18,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../domain/entities/meal_log_entity.dart';
 import '../data/models/llama_meal_response.dart';
 import '../data/models/ai_usage_quota.dart';
@@ -62,6 +64,79 @@ class MealWarning {
   Map<String, dynamic> toJson() => {'warningText': warningText, 'isSevere': isSevere};
 }
 
+class MealCategoryHelper {
+  static const List<Map<String, String>> categoryOptions = [
+    {'label': 'Coffee', 'icon': '☕'},
+    {'label': 'Breakfast', 'icon': '🥐'},
+    {'label': 'Lunch', 'icon': '🥗'},
+    {'label': 'Dinner', 'icon': '🍲'},
+    {'label': 'Snack', 'icon': '🥪'},
+    {'label': 'Beverage', 'icon': '🥤'},
+  ];
+
+  static bool isCoffee(String name) {
+    final lower = name.toLowerCase();
+    const keywords = [
+      'coffee', 'iced coffee', 'latte', 'cappuccino', 'espresso', 'cold brew',
+      'macchiato', 'mocha', 'americano', 'frappe', 'second cup'
+    ];
+    return keywords.any((k) => lower.contains(k));
+  }
+
+  static bool isBeverageOrCoffee(String name) {
+    if (isCoffee(name)) return true;
+    final lower = name.toLowerCase();
+    const keywords = [
+      'tea', 'matcha', 'chai', 'smoothie', 'juice', 'beverage', 'drink',
+      'shake', 'protein shake', 'boba', 'lemonade', 'soda', 'coke', 'pepsi',
+      'water', 'kombucha'
+    ];
+    return keywords.any((k) => lower.contains(k));
+  }
+
+  static String detectCategory(String foodName, DateTime time) {
+    final lower = foodName.toLowerCase().trim();
+    if (isCoffee(lower)) return 'Coffee';
+    if (isBeverageOrCoffee(lower)) return 'Beverage';
+
+    final hour = time.hour;
+    if (hour >= 5 && hour < 11) return 'Breakfast';
+    if (hour >= 11 && hour < 15) return 'Lunch';
+    if (hour >= 15 && hour < 18) return 'Snack';
+    if (hour >= 18 && hour < 23) return 'Dinner';
+    return 'Snack';
+  }
+
+  static String detectBadgeText(String foodName, DateTime time) {
+    return detectCategory(foodName, time).toUpperCase();
+  }
+
+  static String getPlaceholderEmoji(String foodName, [String? category]) {
+    final lower = foodName.toLowerCase();
+    if (isCoffee(lower) || (category != null && category.toLowerCase().contains('coffee'))) {
+      return '☕';
+    }
+    if (isBeverageOrCoffee(lower) || (category != null && category.toLowerCase().contains('beverage'))) {
+      return '🥤';
+    }
+    if (lower.contains('burger') || lower.contains('sandwich')) return '🍔';
+    if (lower.contains('pizza')) return '🍕';
+    if (lower.contains('salad')) return '🥗';
+    if (lower.contains('egg') || lower.contains('toast') || lower.contains('pancake')) return '🍳';
+    if (lower.contains('chicken') || lower.contains('meat') || lower.contains('steak')) return '🥩';
+    if (lower.contains('cake') || lower.contains('dessert') || lower.contains('cookie') || lower.contains('chocolate')) return '🍪';
+    if (lower.contains('fruit') || lower.contains('apple') || lower.contains('banana')) return '🍎';
+    if (category != null) {
+      final catLower = category.toLowerCase();
+      if (catLower.contains('breakfast')) return '🥐';
+      if (catLower.contains('lunch')) return '🥪';
+      if (catLower.contains('dinner')) return '🍲';
+      if (catLower.contains('snack')) return '🍎';
+    }
+    return '🥗';
+  }
+}
+
 class MealEntry {
   final String id;
   final String foodName;
@@ -76,6 +151,7 @@ class MealEntry {
   final String source;
   final String? imagePath;
   final List<IngredientBreakdown> ingredientsBreakdown;
+  final String? mealCategory;
 
   const MealEntry({
     required this.id,
@@ -91,9 +167,48 @@ class MealEntry {
     required this.source,
     this.imagePath,
     required this.ingredientsBreakdown,
+    this.mealCategory,
   });
 
-  factory MealEntry.fromLlamaResponse(LlamaMealResponse r, {String? imagePath}) {
+  MealEntry copyWith({
+    String? id,
+    String? foodName,
+    String? restaurantName,
+    double? protein,
+    double? carbs,
+    double? fat,
+    double? calories,
+    List<MealWarning>? warnings,
+    bool? isHighlyNutritious,
+    DateTime? createdAt,
+    String? source,
+    String? imagePath,
+    List<IngredientBreakdown>? ingredientsBreakdown,
+    String? mealCategory,
+  }) {
+    return MealEntry(
+      id: id ?? this.id,
+      foodName: foodName ?? this.foodName,
+      restaurantName: restaurantName ?? this.restaurantName,
+      protein: protein ?? this.protein,
+      carbs: carbs ?? this.carbs,
+      fat: fat ?? this.fat,
+      calories: calories ?? this.calories,
+      warnings: warnings ?? this.warnings,
+      isHighlyNutritious: isHighlyNutritious ?? this.isHighlyNutritious,
+      createdAt: createdAt ?? this.createdAt,
+      source: source ?? this.source,
+      imagePath: imagePath ?? this.imagePath,
+      ingredientsBreakdown: ingredientsBreakdown ?? this.ingredientsBreakdown,
+      mealCategory: mealCategory ?? this.mealCategory,
+    );
+  }
+
+  factory MealEntry.fromLlamaResponse(
+    LlamaMealResponse r, {
+    String? imagePath,
+    String? mealCategory,
+  }) {
     final a = r.mealAnalysis;
     final List<MealWarning> warnings = [];
     if (a.carbs > 70 && a.protein < 30) {
@@ -119,6 +234,7 @@ class MealEntry {
       source: 'image',
       imagePath: imagePath,
       ingredientsBreakdown: const [],
+      mealCategory: mealCategory ?? MealCategoryHelper.detectCategory(a.detectedFood, DateTime.now()),
     );
   }
 }
@@ -189,6 +305,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
       if (data != null && data['success'] == true && data['data'] != null) {
         final rawLogs = data['data']['logs'] as List<dynamic>?;
         if (rawLogs != null && mounted) {
+          final prefs = await SharedPreferences.getInstance();
           final fetchedEntries = rawLogs.map((item) {
             final double cal = (item['calories'] as num?)?.toDouble() ?? 0.0;
             final double p = (item['protein'] as num?)?.toDouble() ?? 0.0;
@@ -199,9 +316,21 @@ class _MealsDashboardState extends State<MealsDashboard> {
             if (c > 80) warnings.add(const MealWarning(warningText: 'High carb load detected', isSevere: false));
             if (f > 20) warnings.add(const MealWarning(warningText: 'High saturated fat warning', isSevere: false));
             if (cal > 700) warnings.add(const MealWarning(warningText: 'Sodium & saturated fat spike detected', isSevere: true));
+
+            final foodName = item['mealName'] as String? ?? 'Meal Log';
+            final id = item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
+            final serverImg = item['imageUrl'] as String?;
+
+            // Restore locally persisted photo and category if server doesn't have it
+            final cleanNameKey = foodName.toLowerCase().trim();
+            final cachedImg = (serverImg != null && serverImg.isNotEmpty)
+                ? serverImg
+                : (prefs.getString('meal_photo_$id') ?? prefs.getString('meal_photo_$cleanNameKey'));
+            final cachedCat = prefs.getString('meal_cat_$id') ?? prefs.getString('meal_cat_$cleanNameKey');
+
             return MealEntry(
-              id: item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-              foodName: item['mealName'] as String? ?? 'Meal Log',
+              id: id,
+              foodName: foodName,
               restaurantName: item['restaurantName'] as String? ?? 'AI Scan',
               protein: p,
               carbs: c,
@@ -211,8 +340,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
               isHighlyNutritious: isNutritious,
               createdAt: DateTime.tryParse(item['createdAt']?.toString() ?? '') ?? DateTime.now(),
               source: item['source'] as String? ?? 'image',
-              imagePath: item['imageUrl'] as String?,
+              imagePath: (cachedImg != null && cachedImg.isNotEmpty) ? cachedImg : null,
               ingredientsBreakdown: const [],
+              mealCategory: cachedCat,
             );
           }).toList();
 
@@ -235,23 +365,39 @@ class _MealsDashboardState extends State<MealsDashboard> {
     if (incoming.isEmpty) return;
     final Map<String, MealEntry> map = {};
 
-    // 1. Prioritize incoming server-confirmed entries
+    // 1. Map incoming server-confirmed entries
     for (final inc in incoming) {
       final key = inc.id.isNotEmpty ? inc.id : '${inc.foodName}_${inc.createdAt.millisecondsSinceEpoch}';
       map[key] = inc;
     }
 
-    // 2. Preserve locally logged meals that haven't been confirmed yet
+    // 2. Reconcile with local entries and preserve local photos & categories
     for (final loc in logs) {
       final key = loc.id.isNotEmpty ? loc.id : '${loc.foodName}_${loc.createdAt.millisecondsSinceEpoch}';
-      if (!map.containsKey(key)) {
-        final alreadyMerged = map.values.any((item) =>
-            item.foodName.toLowerCase().trim() == loc.foodName.toLowerCase().trim() &&
-            (item.calories - loc.calories).abs() < 2.0 &&
-            item.createdAt.difference(loc.createdAt).abs().inMinutes < 5);
-        if (!alreadyMerged) {
-          map[key] = loc;
-        }
+      final matchingKey = map.containsKey(key)
+          ? key
+          : map.keys.firstWhere(
+              (k) {
+                final inc = map[k]!;
+                return inc.foodName.toLowerCase().trim() == loc.foodName.toLowerCase().trim() &&
+                    (inc.calories - loc.calories).abs() < 2.0 &&
+                    inc.createdAt.difference(loc.createdAt).abs().inMinutes < 5;
+              },
+              orElse: () => '',
+            );
+
+      if (matchingKey.isNotEmpty) {
+        final inc = map[matchingKey]!;
+        final resolvedImg = (inc.imagePath != null && inc.imagePath!.isNotEmpty)
+            ? inc.imagePath
+            : loc.imagePath;
+        final resolvedCat = inc.mealCategory ?? loc.mealCategory;
+        map[matchingKey] = inc.copyWith(
+          imagePath: resolvedImg,
+          mealCategory: resolvedCat,
+        );
+      } else {
+        map[key] = loc;
       }
     }
 
@@ -592,10 +738,47 @@ class _MealsDashboardState extends State<MealsDashboard> {
     );
   }
 
-  void _logResultToFeed([LlamaMealResponse? updatedResult]) {
+  Future<void> _logResultToFeed([LlamaMealResponse? updatedResult, String? category]) async {
     final resultToUse = updatedResult ?? _llamaResult;
     if (resultToUse == null) return;
-    final entry = MealEntry.fromLlamaResponse(resultToUse, imagePath: _selectedImage?.path);
+
+    // Persist scanned image to permanent application documents directory
+    String? permanentImagePath;
+    if (_selectedImage != null && _selectedImage!.existsSync()) {
+      try {
+        final docsDir = await getApplicationDocumentsDirectory();
+        final scansDir = Directory('${docsDir.path}/scanned_meals');
+        if (!await scansDir.exists()) {
+          await scansDir.create(recursive: true);
+        }
+        final fileName = 'meal_scan_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedFile = await _selectedImage!.copy('${scansDir.path}/$fileName');
+        permanentImagePath = savedFile.path;
+      } catch (e) {
+        permanentImagePath = _selectedImage!.path;
+      }
+    }
+
+    final resolvedCategory = category ??
+        MealCategoryHelper.detectCategory(resultToUse.mealAnalysis.detectedFood, DateTime.now());
+
+    final entry = MealEntry.fromLlamaResponse(
+      resultToUse,
+      imagePath: permanentImagePath ?? _selectedImage?.path,
+      mealCategory: resolvedCategory,
+    );
+
+    // Save image & category mapping locally so it persists across syncs & launches
+    if (permanentImagePath != null) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('meal_photo_${entry.id}', permanentImagePath);
+        await prefs.setString('meal_photo_${entry.foodName.toLowerCase().trim()}', permanentImagePath);
+        await prefs.setString('meal_cat_${entry.id}', resolvedCategory);
+        await prefs.setString('meal_cat_${entry.foodName.toLowerCase().trim()}', resolvedCategory);
+      } catch (_) {}
+    }
+
     setState(() {
       logs.insert(0, entry);
       _recalcTotals();
@@ -1070,7 +1253,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
           key: const ValueKey('result'),
           llamaResult: _llamaResult!,
           selectedImage: _selectedImage,
-          onLogWithResult: (updated) => _logResultToFeed(updated),
+          onLogWithResult: (updated, [cat]) => _logResultToFeed(updated, cat),
           onLog: _logResultToFeed,
           onDiscard: _discardResult,
         );
@@ -1964,7 +2147,7 @@ class _ScannerReticlePainter extends CustomPainter {
 class _ResultCardWidget extends StatefulWidget {
   final LlamaMealResponse llamaResult;
   final File? selectedImage;
-  final Function(LlamaMealResponse updatedResult)? onLogWithResult;
+  final Function(LlamaMealResponse updatedResult, [String? category])? onLogWithResult;
   final VoidCallback onLog;
   final VoidCallback onDiscard;
 
@@ -1988,6 +2171,7 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
   int? _editedProtein;
   int? _editedCarbs;
   int? _editedFats;
+  String? _selectedCategory;
 
   String get _foodName => _editedFoodName ?? widget.llamaResult.mealAnalysis.detectedFood;
   int get _calories    => _editedCalories ?? widget.llamaResult.mealAnalysis.calories;
@@ -1996,11 +2180,118 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
   int get _fats        => _editedFats     ?? widget.llamaResult.mealAnalysis.fats;
 
   String _getCategoryBadgeText() {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 11) return 'BREAKFAST';
-    if (hour >= 11 && hour < 16) return 'LUNCH';
-    if (hour >= 16 && hour < 22) return 'DINNER';
-    return 'SNACK';
+    if (_selectedCategory != null) {
+      return _selectedCategory!.toUpperCase();
+    }
+    return MealCategoryHelper.detectBadgeText(_foodName, DateTime.now());
+  }
+
+  void _showCategoryPicker(BuildContext context) {
+    final theme = context.auraTheme;
+    final currentCat = _selectedCategory ?? MealCategoryHelper.detectCategory(_foodName, DateTime.now());
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        decoration: BoxDecoration(
+          color: theme.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: theme.borderMid,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    'Select Meal Category',
+                    style: GoogleFonts.outfit(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: theme.textSecondary, size: 20),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: MealCategoryHelper.categoryOptions.map((item) {
+                  final label = item['label']!;
+                  final icon = item['icon']!;
+                  final isSelected = currentCat.toLowerCase() == label.toLowerCase();
+                  return InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = label;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? theme.primary.withValues(alpha: 0.12)
+                            : theme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected ? theme.primary : theme.border,
+                          width: isSelected ? 1.8 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(icon, style: const TextStyle(fontSize: 18)),
+                          const SizedBox(width: 8),
+                          Text(
+                            label,
+                            style: GoogleFonts.outfit(
+                              fontSize: 14,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                              color: isSelected ? theme.primary : theme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   int _calculateHealthScore(int cal, int prot, int carb, int fat) {
@@ -2435,21 +2726,36 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Category Badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: theme.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: theme.primary.withValues(alpha: 0.3)),
-                          ),
-                          child: Text(
-                            categoryText,
-                            style: GoogleFonts.outfit(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                              color: theme.primary,
+                        // Category Badge (Interactive — tap to change)
+                        InkWell(
+                          onTap: () => _showCategoryPicker(context),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: theme.primary.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  categoryText,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.2,
+                                    color: theme.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  size: 14,
+                                  color: theme.primary,
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -2764,8 +3070,10 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                             ),
                             llamaRecommendation: widget.llamaResult.llamaRecommendation,
                           );
+                          final cat = _selectedCategory ??
+                              MealCategoryHelper.detectCategory(_foodName, DateTime.now());
                           if (widget.onLogWithResult != null) {
-                            widget.onLogWithResult!(updatedResponse);
+                            widget.onLogWithResult!(updatedResponse, cat);
                           } else {
                             widget.onLog();
                           }
@@ -4475,7 +4783,9 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
           isHighlyNutritious:  protein > 25 && calories < 400,
           createdAt:           orig.createdAt,
           source:              orig.source,
+          imagePath:           orig.imagePath,
           ingredientsBreakdown: orig.ingredientsBreakdown,
+          mealCategory:        orig.mealCategory,
         );
 
         if (!mounted) return;
@@ -5400,11 +5710,10 @@ class _MealTimelineTile extends StatelessWidget {
   });
 
   String _getMealCategory(DateTime time) {
-    final hour = time.hour;
-    if (hour >= 5 && hour < 11) return 'Breakfast';
-    if (hour >= 11 && hour < 15) return 'Lunch';
-    if (hour >= 15 && hour < 18) return 'Afternoon';
-    return 'Dinner';
+    if (meal.mealCategory != null && meal.mealCategory!.isNotEmpty) {
+      return meal.mealCategory!;
+    }
+    return MealCategoryHelper.detectCategory(meal.foodName, time);
   }
 
   @override
@@ -5591,6 +5900,7 @@ class _MealTimelineTile extends StatelessWidget {
   }
 
   Widget _buildPlaceholderEmoji() {
+    final emoji = MealCategoryHelper.getPlaceholderEmoji(meal.foodName, meal.mealCategory);
     return Container(
       width: 60,
       height: 60,
@@ -5598,8 +5908,8 @@ class _MealTimelineTile extends StatelessWidget {
         color: const Color(0xFFF1F6F2),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: const Center(
-        child: Text('🥗', style: TextStyle(fontSize: 28)),
+      child: Center(
+        child: Text(emoji, style: const TextStyle(fontSize: 28)),
       ),
     );
   }
