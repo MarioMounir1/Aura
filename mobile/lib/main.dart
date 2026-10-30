@@ -410,6 +410,7 @@ class AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<AuthWrapper> {
   ProfileLoaded? _lastProfileLoaded;
   bool _splashCompleted = false;
+  bool _initialDataLoaded = false;
 
   @override
   void initState() {
@@ -424,6 +425,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   void _loadAllUserData(BuildContext context) {
+    _initialDataLoaded = true;
     context.read<ProfileBloc>().add(LoadProfile());
     context.read<DashboardBloc>().add(const LoadDashboard());
     context.read<MealPlanBloc>().add(LoadWeeklyMealPlan());
@@ -432,23 +434,13 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_splashCompleted) {
-      return PreSplashScreen(
-        duration: const Duration(milliseconds: 2600),
-        onCompleted: () {
-          if (mounted) {
-            setState(() => _splashCompleted = true);
-          }
-        },
-      );
-    }
-
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, authState) {
         if (authState is Authenticated) {
           _loadAllUserData(context);
         } else if (authState is Unauthenticated) {
           _lastProfileLoaded = null;
+          _initialDataLoaded = false;
           context.read<ProfileBloc>().add(ResetProfileEvent());
           context.read<DashboardBloc>().add(const ResetDashboardEvent());
           context.read<CalorieTrackerBloc>().add(const ResetCalorieTracker());
@@ -458,42 +450,54 @@ class _AuthWrapperState extends State<AuthWrapper> {
           context.read<WorkoutBloc>().add(const ResetWorkoutEvent());
         }
       },
-      child: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, authState) {
-          if (authState is Authenticated) {
-            final profileState = context.watch<ProfileBloc>().state;
-
-            if (profileState is ProfileLoaded) {
-              _lastProfileLoaded = profileState;
-            }
-
-            if (_lastProfileLoaded != null) {
-              if (_lastProfileLoaded!.isOnboardingCompleted) {
-                return const HomeShellScreen();
-              } else {
-                return const OnboardingScreen();
-              }
-            }
-
-            // Immediately transition to HomeShellScreen upon authentication
-            return const HomeShellScreen();
-          }
-
-          if (authState is AuthInitial) {
-            return PreSplashScreen(
+      child: !_splashCompleted
+          ? PreSplashScreen(
               duration: const Duration(milliseconds: 2600),
               onCompleted: () {
                 if (mounted) {
                   setState(() => _splashCompleted = true);
+                  if (!_initialDataLoaded &&
+                      context.read<AuthBloc>().state is Authenticated) {
+                    _loadAllUserData(context);
+                  }
                 }
               },
-            );
-          }
+            )
+          : BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, authState) {
+                if (authState is Authenticated) {
+                  final profileState = context.watch<ProfileBloc>().state;
 
-          return const LoginScreen();
-        },
-      ),
+                  if (profileState is ProfileLoaded) {
+                    _lastProfileLoaded = profileState;
+                  }
+
+                  if (_lastProfileLoaded != null) {
+                    if (_lastProfileLoaded!.isOnboardingCompleted) {
+                      return const HomeShellScreen();
+                    } else {
+                      return const OnboardingScreen();
+                    }
+                  }
+
+                  // Immediately transition to HomeShellScreen upon authentication
+                  return const HomeShellScreen();
+                }
+
+                if (authState is AuthInitial) {
+                  return PreSplashScreen(
+                    duration: const Duration(milliseconds: 2600),
+                    onCompleted: () {
+                      if (mounted) {
+                        setState(() => _splashCompleted = true);
+                      }
+                    },
+                  );
+                }
+
+                return const LoginScreen();
+              },
+            ),
     );
   }
 }
-
