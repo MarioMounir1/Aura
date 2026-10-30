@@ -10,6 +10,7 @@
 // Data Model: LlamaMealResponse (fully typed)
 // Manual Logging: ManualMealService (Dio JSON POST to /meals/manual)
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ import '../data/services/barcode_service.dart';
 import 'barcode_confirmation_sheet.dart';
 import 'widgets/ai_coach_briefing_card.dart';
 import '../../../../core/error/error_handler.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/constants.dart';
 import '../../../../core/widgets/app_metric_ring.dart';
@@ -39,9 +41,11 @@ import '../../../../core/widgets/app_button.dart';
 import '../../../core/widgets/ad_banner.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../profile/presentation/bloc/profile_bloc.dart';
+import '../../profile/presentation/bloc/profile_event.dart';
 import '../../profile/presentation/bloc/profile_state.dart';
 import 'bloc/dashboard_bloc.dart';
 import 'bloc/dashboard_event.dart';
+import 'bloc/dashboard_state.dart';
 
 // â”€â”€ Layout State Enum â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -208,6 +212,45 @@ class MealEntry {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'foodName': foodName,
+        'restaurantName': restaurantName,
+        'protein': protein,
+        'carbs': carbs,
+        'fat': fat,
+        'calories': calories,
+        'warnings': warnings.map((w) => w.toJson()).toList(),
+        'isHighlyNutritious': isHighlyNutritious,
+        'createdAt': createdAt.toIso8601String(),
+        'source': source,
+        'imagePath': imagePath,
+        'mealCategory': mealCategory,
+      };
+
+  factory MealEntry.fromJson(Map<String, dynamic> json) {
+    final rawWarnings = json['warnings'] as List<dynamic>? ?? const [];
+    return MealEntry(
+      id: json['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      foodName: json['foodName'] as String? ?? 'Meal Log',
+      restaurantName: json['restaurantName'] as String? ?? 'Meal Log',
+      protein: (json['protein'] as num?)?.toDouble() ?? 0.0,
+      carbs: (json['carbs'] as num?)?.toDouble() ?? 0.0,
+      fat: (json['fat'] as num?)?.toDouble() ?? 0.0,
+      calories: (json['calories'] as num?)?.toDouble() ?? 0.0,
+      warnings: rawWarnings
+          .whereType<Map<String, dynamic>>()
+          .map(MealWarning.fromJson)
+          .toList(),
+      isHighlyNutritious: json['isHighlyNutritious'] as bool? ?? false,
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      source: json['source'] as String? ?? 'manual',
+      imagePath: json['imagePath'] as String?,
+      ingredientsBreakdown: const [],
+      mealCategory: json['mealCategory'] as String?,
+    );
+  }
+
   factory MealEntry.fromLlamaResponse(
     LlamaMealResponse r, {
     String? imagePath,
@@ -268,8 +311,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   // â”€â”€ Feed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   List<MealEntry> logs = [];
+  Map<String, dynamic>? _cachedUserProfile;
+  Map<String, dynamic>? _cachedSummaryGoals;
+  Map<String, dynamic>? _cachedSummaryTotals;
+  bool _hasSyncedLogs = false;
 
-  // â”€â”€ Scanner State machine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Scanner State machine ─────────────────────────────────
   LayoutState _layoutState = LayoutState.idle;
   LlamaMealResponse? _llamaResult;
   // ignore: unused_field
@@ -277,40 +324,146 @@ class _MealsDashboardState extends State<MealsDashboard> {
   File? _selectedImage;
   AiUsageQuota? _quota;
 
-  // â”€â”€ Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Services ─────────────────────────────────────────────
   final _llamaService   = LocalLlamaService();
   final _imagePicker    = ImagePicker();
   final _manualService  = ManualMealService();
   final _barcodeService = BarcodeService();
 
+  String _todayDateKey() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  bool _isSameLocalDay(DateTime a, DateTime b) {
+    final la = a.toLocal();
+    final lb = b.toLocal();
+    return la.year == lb.year && la.month == lb.month && la.day == lb.day;
+  }
+
   @override
   void initState() {
     super.initState();
     _initData();
+    _loadLocalCache();
     _fetchQuota();
     _fetchTodayMeals();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final profileBloc = context.read<ProfileBloc>();
+        if (profileBloc.state is! ProfileLoaded) {
+          profileBloc.add(LoadProfile());
+        }
+      } catch (_) {}
+      try {
+        final dashboardBloc = context.read<DashboardBloc>();
+        if (dashboardBloc.state is! DashboardLoaded) {
+          dashboardBloc.add(const LoadDashboard());
+        }
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _loadLocalCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedProfileStr = prefs.getString('cached_user_profile');
+      if (cachedProfileStr != null && cachedProfileStr.isNotEmpty) {
+        final decoded = jsonDecode(cachedProfileStr);
+        if (decoded is Map<String, dynamic>) {
+          _cachedUserProfile = decoded;
+        }
+      }
+
+      final todayKey = _todayDateKey();
+      final cachedMealsStr = prefs.getString('cached_today_meals_$todayKey');
+      if (cachedMealsStr != null && cachedMealsStr.isNotEmpty) {
+        final decodedList = jsonDecode(cachedMealsStr);
+        if (decodedList is List) {
+          final cachedEntries = decodedList
+              .whereType<Map<String, dynamic>>()
+              .map(MealEntry.fromJson)
+              .where((m) => _isSameLocalDay(m.createdAt, DateTime.now()))
+              .toList();
+          if (cachedEntries.isNotEmpty) {
+            if (logs.isEmpty) {
+              logs = cachedEntries;
+            } else {
+              _mergeIntoLogs(cachedEntries);
+            }
+          }
+        }
+      }
+
+      final cachedTotalsStr = prefs.getString('cached_today_totals_$todayKey');
+      if (cachedTotalsStr != null && cachedTotalsStr.isNotEmpty) {
+        final decodedTotals = jsonDecode(cachedTotalsStr);
+        if (decodedTotals is Map<String, dynamic>) {
+          _cachedSummaryTotals = decodedTotals;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _recalcTotals();
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load local dashboard cache: $e');
+    }
+  }
+
+  Future<void> _saveTodayLogsToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final todayKey = _todayDateKey();
+      final todayLogs = logs.where((m) => _isSameLocalDay(m.createdAt, DateTime.now())).toList();
+      await prefs.setString(
+        'cached_today_meals_$todayKey',
+        jsonEncode(todayLogs.map((e) => e.toJson()).toList()),
+      );
+      await prefs.setString(
+        'cached_today_totals_$todayKey',
+        jsonEncode({
+          'calories': caloriesConsumed,
+          'protein': proteinConsumed,
+          'carbs': carbsConsumed,
+          'fats': fatsConsumed,
+        }),
+      );
+    } catch (e) {
+      debugPrint('Failed to save today logs to prefs: $e');
+    }
   }
 
   Future<void> _fetchTodayMeals() async {
     try {
-      final dateStr = DateTime.now().toIso8601String().split('T')[0];
-      final url = '${AppConstants.apiV1}/meals/history?date=$dateStr';
-      final dio = Dio();
-      const storage = FlutterSecureStorage();
-      final token = await storage.read(key: AppConstants.tokenKey);
-      final response = await dio.get<dynamic>(
-        url,
-        options: Options(headers: {
-          'Accept': 'application/json',
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-        }),
-      );
-      final data = response.data;
-      if (data != null && data['success'] == true && data['data'] != null) {
-        final rawLogs = data['data']['logs'] as List<dynamic>?;
-        if (rawLogs != null && mounted) {
-          final prefs = await SharedPreferences.getInstance();
-          final fetchedEntries = rawLogs.map((item) {
+      final dateStr = _todayDateKey();
+      final dio = ApiClient().dio;
+
+      final results = await Future.wait<Response<dynamic>?>([
+        dio.get<dynamic>('/meals/history?date=$dateStr').catchError((_) => Response<dynamic>(requestOptions: RequestOptions(path: ''))),
+        dio.get<dynamic>('/food-logs/today?date=$dateStr').catchError((_) => Response<dynamic>(requestOptions: RequestOptions(path: ''))),
+      ]);
+
+      final historyResp = results[0];
+      final foodResp = results[1];
+      final prefs = await SharedPreferences.getInstance();
+      final List<MealEntry> fetchedEntries = [];
+      bool anyResponseSucceeded = false;
+
+      // 1. Parse /meals/history entries (AI scan, barcode, manual)
+      final historyData = historyResp?.data;
+      if (historyData is Map && historyData['success'] == true && historyData['data'] != null) {
+        anyResponseSucceeded = true;
+        final rawLogs = historyData['data']['logs'] as List<dynamic>?;
+        if (rawLogs != null) {
+          for (final item in rawLogs) {
+            if (item is! Map) continue;
+            final createdAt = DateTime.tryParse(item['createdAt']?.toString() ?? '') ?? DateTime.now();
+            if (!_isSameLocalDay(createdAt, DateTime.now())) continue;
+
             final double cal = (item['calories'] as num?)?.toDouble() ?? 0.0;
             final double p = (item['protein'] as num?)?.toDouble() ?? 0.0;
             final double c = (item['carbs'] as num?)?.toDouble() ?? 0.0;
@@ -332,7 +485,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                 : (prefs.getString('meal_photo_$id') ?? prefs.getString('meal_photo_$cleanNameKey'));
             final cachedCat = prefs.getString('meal_cat_$id') ?? prefs.getString('meal_cat_$cleanNameKey');
 
-            return MealEntry(
+            fetchedEntries.add(MealEntry(
               id: id,
               foodName: foodName,
               restaurantName: item['restaurantName'] as String? ?? 'AI Scan',
@@ -342,23 +495,85 @@ class _MealsDashboardState extends State<MealsDashboard> {
               calories: cal,
               warnings: warnings,
               isHighlyNutritious: isNutritious,
-              createdAt: DateTime.tryParse(item['createdAt']?.toString() ?? '') ?? DateTime.now(),
+              createdAt: createdAt,
               source: item['source'] as String? ?? 'image',
               imagePath: (cachedImg != null && cachedImg.isNotEmpty) ? cachedImg : null,
               ingredientsBreakdown: const [],
               mealCategory: cachedCat,
-            );
-          }).toList();
-
-          setState(() {
-            if (logs.isEmpty) {
-              logs = fetchedEntries;
-            } else {
-              _mergeIntoLogs(fetchedEntries);
-            }
-            _recalcTotals();
-          });
+            ));
+          }
         }
+      }
+
+      // 2. Parse /food-logs/today entries (Food DB search & meal plan items + summary totals/goals)
+      final foodData = foodResp?.data;
+      if (foodData is Map && foodData['success'] == true && foodData['data'] is Map) {
+        anyResponseSucceeded = true;
+        final payload = foodData['data'] as Map<String, dynamic>;
+        if (payload['goals'] is Map<String, dynamic>) {
+          _cachedSummaryGoals = payload['goals'] as Map<String, dynamic>;
+        }
+        if (payload['totals'] is Map<String, dynamic>) {
+          _cachedSummaryTotals = payload['totals'] as Map<String, dynamic>;
+        }
+        final rawFoodLogs = payload['logs'] as List<dynamic>?;
+        if (rawFoodLogs != null) {
+          for (final item in rawFoodLogs) {
+            if (item is! Map) continue;
+            final createdAt = DateTime.tryParse(item['loggedAt']?.toString() ?? '') ?? DateTime.now();
+            if (!_isSameLocalDay(createdAt, DateTime.now())) continue;
+
+            final food = item['food'] as Map<String, dynamic>? ?? {};
+            final double servings = (item['servings'] as num?)?.toDouble() ?? 1.0;
+            final double cal = ((food['calories'] as num?)?.toDouble() ?? 0.0) * servings;
+            final double p = ((food['protein'] as num?)?.toDouble() ?? 0.0) * servings;
+            final double c = ((food['carbs'] as num?)?.toDouble() ?? 0.0) * servings;
+            final double f = ((food['fats'] as num?)?.toDouble() ?? 0.0) * servings;
+            final isNutritious = p > 25 && cal < 400;
+            final List<MealWarning> warnings = [];
+            if (c > 80) warnings.add(const MealWarning(warningText: 'High carb load detected', isSevere: false));
+            if (f > 20) warnings.add(const MealWarning(warningText: 'High saturated fat warning', isSevere: false));
+            if (cal > 700) warnings.add(const MealWarning(warningText: 'Sodium & saturated fat spike detected', isSevere: true));
+
+            final foodName = food['name'] as String? ?? 'Logged Food';
+            final id = item['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString();
+            final cleanNameKey = foodName.toLowerCase().trim();
+            final cachedCat = prefs.getString('meal_cat_$id') ??
+                prefs.getString('meal_cat_$cleanNameKey') ??
+                (item['mealType'] as String?);
+
+            fetchedEntries.add(MealEntry(
+              id: id,
+              foodName: foodName,
+              restaurantName: food['brand'] as String? ?? 'Food Database',
+              protein: p,
+              carbs: c,
+              fat: f,
+              calories: cal,
+              warnings: warnings,
+              isHighlyNutritious: isNutritious,
+              createdAt: createdAt,
+              source: 'food_db',
+              imagePath: null,
+              ingredientsBreakdown: const [],
+              mealCategory: cachedCat,
+            ));
+          }
+        }
+      }
+
+      if (anyResponseSucceeded && mounted) {
+        _hasSyncedLogs = true;
+        setState(() {
+          if (logs.isEmpty) {
+            logs = fetchedEntries
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          } else {
+            _mergeIntoLogs(fetchedEntries);
+          }
+          _recalcTotals();
+        });
+        await _saveTodayLogsToPrefs();
       }
     } catch (e) {
       debugPrint('Failed to sync today meals: $e');
@@ -377,6 +592,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
     // 2. Reconcile with local entries and preserve local photos & categories
     for (final loc in logs) {
+      if (!_isSameLocalDay(loc.createdAt, DateTime.now())) continue;
       final key = loc.id.isNotEmpty ? loc.id : '${loc.foodName}_${loc.createdAt.millisecondsSinceEpoch}';
       final matchingKey = map.containsKey(key)
           ? key
@@ -385,7 +601,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                 final inc = map[k]!;
                 return inc.foodName.toLowerCase().trim() == loc.foodName.toLowerCase().trim() &&
                     (inc.calories - loc.calories).abs() < 2.0 &&
-                    inc.createdAt.difference(loc.createdAt).abs().inMinutes < 5;
+                    inc.createdAt.difference(loc.createdAt).abs().inMinutes < 10;
               },
               orElse: () => '',
             );
@@ -405,7 +621,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
       }
     }
 
-    final mergedList = map.values.toList()
+    final mergedList = map.values
+        .where((m) => _isSameLocalDay(m.createdAt, DateTime.now()))
+        .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     logs = mergedList;
   }
@@ -428,6 +646,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
     super.didUpdateWidget(oldWidget);
     if (widget.mealLogs != oldWidget.mealLogs || widget.foodSummary != oldWidget.foodSummary) {
       _initData();
+      _saveTodayLogsToPrefs();
     }
   }
 
@@ -436,6 +655,8 @@ class _MealsDashboardState extends State<MealsDashboard> {
   void _initData() {
     if (widget.mealLogs != null && widget.mealLogs!.isNotEmpty) {
       final sortedEntities = List<MealLogEntity>.from(widget.mealLogs!)
+          .where((e) => _isSameLocalDay(e.createdAt, DateTime.now()))
+          .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final incoming = sortedEntities.map((entity) {
         final isNutritious = entity.protein > 25 && entity.calories < 400;
@@ -477,19 +698,29 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   void _recalcTotals() {
     try {
-      final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ?? {};
+      final goals = widget.foodSummary?['goals'] as Map<String, dynamic>? ??
+          _cachedSummaryGoals ??
+          {};
 
-    double? userCalGoal;
-    double? userProteinGoal;
-    double? userCarbsGoal;
-    double? userFatsGoal;
+      double? userCalGoal;
+      double? userProteinGoal;
+      double? userCarbsGoal;
+      double? userFatsGoal;
 
-    try {
-      final profileState = context.read<ProfileBloc>().state;
-      if (profileState is ProfileLoaded) {
-        final user = profileState.user;
+      Map<String, dynamic>? userMap;
+      try {
+        final profileState = context.read<ProfileBloc>().state;
+        if (profileState is ProfileLoaded) {
+          userMap = profileState.user;
+          _cachedUserProfile = userMap;
+        }
+      } catch (_) {}
+      userMap ??= _cachedUserProfile;
 
-        // 1. Direct or nested dailyCalorieGoal from user profile (e.g. 3484)
+      if (userMap != null) {
+        final user = userMap;
+
+        // 1. Direct or nested dailyCalorieGoal from user profile (e.g. 2300 or 3484)
         final directCal = user['dailyCalorieGoal'] ?? user['targetCalories'] ?? user['calories'];
         if (directCal != null) {
           final parsed = (directCal is num) ? directCal.toDouble() : double.tryParse(directCal.toString());
@@ -557,48 +788,56 @@ class _MealsDashboardState extends State<MealsDashboard> {
           }
         }
       }
-    } catch (_) {}
 
-    final summaryCal = (goals['calories'] as num?)?.toDouble();
-    caloriesTarget = userCalGoal ?? ((summaryCal != null && summaryCal > 0) ? summaryCal : 2000.0);
+      final summaryCal = (goals['calories'] as num?)?.toDouble();
+      caloriesTarget = userCalGoal ?? ((summaryCal != null && summaryCal > 0) ? summaryCal : 2000.0);
 
-    final summaryProtein = (goals['protein'] as num?)?.toDouble();
-    proteinTarget  = userProteinGoal ?? ((summaryProtein != null && summaryProtein > 0) ? summaryProtein : 150.0);
+      final summaryProtein = (goals['protein'] as num?)?.toDouble();
+      proteinTarget = userProteinGoal ?? ((summaryProtein != null && summaryProtein > 0) ? summaryProtein : 150.0);
 
-    // If proteinTarget is default 150.0 but calories are high or user has biometrics, calculate accurate target
-    if (proteinTarget <= 150.0 && caloriesTarget > 2400) {
-      try {
-        final profileState = context.read<ProfileBloc>().state;
-        if (profileState is ProfileLoaded) {
-          final w = double.tryParse((profileState.user['weightKg'] ?? '').toString());
-          if (w != null && w > 0) {
-            final pWeight = (w * 2.0).roundToDouble();
-            final pCal = ((caloriesTarget * 0.25) / 4.0).roundToDouble();
-            proteinTarget = (pWeight > pCal ? pWeight : pCal).clamp(80.0, 250.0);
-          } else {
-            proteinTarget = (((caloriesTarget * 0.25) / 4.0).roundToDouble()).clamp(80.0, 250.0);
-          }
+      // If proteinTarget is default 150.0 but calories are high or user has biometrics, calculate accurate target
+      if (proteinTarget <= 150.0 && caloriesTarget > 2400) {
+        final w = userMap != null ? double.tryParse((userMap['weightKg'] ?? '').toString()) : null;
+        if (w != null && w > 0) {
+          final pWeight = (w * 2.0).roundToDouble();
+          final pCal = ((caloriesTarget * 0.25) / 4.0).roundToDouble();
+          proteinTarget = (pWeight > pCal ? pWeight : pCal).clamp(80.0, 250.0);
+        } else {
+          proteinTarget = (((caloriesTarget * 0.25) / 4.0).roundToDouble()).clamp(80.0, 250.0);
         }
-      } catch (_) {}
-    }
+      }
 
-    final summaryCarbs = (goals['carbs'] as num?)?.toDouble();
-    carbsTarget    = userCarbsGoal ?? ((summaryCarbs != null && summaryCarbs > 0) ? summaryCarbs : 200.0);
-    if (carbsTarget <= 200.0 && caloriesTarget > 2400) {
-      final f = ((caloriesTarget * 0.25) / 9.0).roundToDouble();
-      carbsTarget = (((caloriesTarget - (proteinTarget * 4.0 + f * 9.0)) / 4.0).roundToDouble()).clamp(50.0, 700.0);
-    }
+      final summaryCarbs = (goals['carbs'] as num?)?.toDouble();
+      carbsTarget = userCarbsGoal ?? ((summaryCarbs != null && summaryCarbs > 0) ? summaryCarbs : 200.0);
+      if (carbsTarget <= 200.0 && caloriesTarget > 2400) {
+        final f = ((caloriesTarget * 0.25) / 9.0).roundToDouble();
+        carbsTarget = (((caloriesTarget - (proteinTarget * 4.0 + f * 9.0)) / 4.0).roundToDouble()).clamp(50.0, 700.0);
+      }
 
-    final summaryFats = (goals['fats'] as num?)?.toDouble();
-    fatsTarget     = userFatsGoal ?? ((summaryFats != null && summaryFats > 0) ? summaryFats : 65.0);
-    if (fatsTarget <= 65.0 && caloriesTarget > 2400) {
-      fatsTarget = ((caloriesTarget * 0.25) / 9.0).roundToDouble();
-    }
+      final summaryFats = (goals['fats'] as num?)?.toDouble();
+      fatsTarget = userFatsGoal ?? ((summaryFats != null && summaryFats > 0) ? summaryFats : 65.0);
+      if (fatsTarget <= 65.0 && caloriesTarget > 2400) {
+        fatsTarget = ((caloriesTarget * 0.25) / 9.0).roundToDouble();
+      }
 
-    caloriesConsumed = logs.fold(0.0, (s, m) => s + m.calories);
-    proteinConsumed  = logs.fold(0.0, (s, m) => s + m.protein);
-    carbsConsumed    = logs.fold(0.0, (s, m) => s + m.carbs);
-    fatsConsumed     = logs.fold(0.0, (s, m) => s + m.fat);
+      final todayLogs = logs.where((m) => _isSameLocalDay(m.createdAt, DateTime.now())).toList();
+      if (todayLogs.isNotEmpty) {
+        caloriesConsumed = todayLogs.fold(0.0, (s, m) => s + m.calories);
+        proteinConsumed  = todayLogs.fold(0.0, (s, m) => s + m.protein);
+        carbsConsumed    = todayLogs.fold(0.0, (s, m) => s + m.carbs);
+        fatsConsumed     = todayLogs.fold(0.0, (s, m) => s + m.fat);
+      } else if (!_hasSyncedLogs) {
+        final totals = widget.foodSummary?['totals'] as Map<String, dynamic>? ?? _cachedSummaryTotals;
+        caloriesConsumed = (totals?['calories'] as num?)?.toDouble() ?? 0.0;
+        proteinConsumed  = (totals?['protein'] as num?)?.toDouble() ?? 0.0;
+        carbsConsumed    = (totals?['carbs'] as num?)?.toDouble() ?? 0.0;
+        fatsConsumed     = (totals?['fats'] as num?)?.toDouble() ?? 0.0;
+      } else {
+        caloriesConsumed = 0.0;
+        proteinConsumed  = 0.0;
+        carbsConsumed    = 0.0;
+        fatsConsumed     = 0.0;
+      }
     } catch (e) {
       debugPrint('Error in _recalcTotals: $e');
     }
@@ -743,6 +982,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
   }
 
   Future<void> _logResultToFeed([LlamaMealResponse? updatedResult, String? category]) async {
+    final originalScan = _llamaResult;
     final resultToUse = updatedResult ?? _llamaResult;
     if (resultToUse == null) return;
 
@@ -773,15 +1013,15 @@ class _MealsDashboardState extends State<MealsDashboard> {
     );
 
     // Save image & category mapping locally so it persists across syncs & launches
-    if (permanentImagePath != null) {
-      try {
-        final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (permanentImagePath != null) {
         await prefs.setString('meal_photo_${entry.id}', permanentImagePath);
         await prefs.setString('meal_photo_${entry.foodName.toLowerCase().trim()}', permanentImagePath);
-        await prefs.setString('meal_cat_${entry.id}', resolvedCategory);
-        await prefs.setString('meal_cat_${entry.foodName.toLowerCase().trim()}', resolvedCategory);
-      } catch (_) {}
-    }
+      }
+      await prefs.setString('meal_cat_${entry.id}', resolvedCategory);
+      await prefs.setString('meal_cat_${entry.foodName.toLowerCase().trim()}', resolvedCategory);
+    } catch (_) {}
 
     setState(() {
       logs.insert(0, entry);
@@ -790,18 +1030,102 @@ class _MealsDashboardState extends State<MealsDashboard> {
       _llamaResult  = null;
       _selectedImage = null;
     });
+    await _saveTodayLogsToPrefs();
+
+    // If user customized the meal name, macros, or serving multiplier before tapping Done,
+    // update the backend MealLog row created during /ai/scan-meal so server & local match.
+    if (originalScan != null && updatedResult != null) {
+      final origA = originalScan.mealAnalysis;
+      final newA = updatedResult.mealAnalysis;
+      final wasEdited = origA.detectedFood != newA.detectedFood ||
+          origA.calories != newA.calories ||
+          origA.protein != newA.protein ||
+          origA.carbs != newA.carbs ||
+          origA.fats != newA.fats;
+      if (wasEdited) {
+        try {
+          final dateStr = _todayDateKey();
+          final resp = await ApiClient().dio.get<dynamic>('/meals/history?date=$dateStr');
+          final rawLogs = resp.data?['data']?['logs'] as List<dynamic>?;
+          if (rawLogs != null) {
+            for (final item in rawLogs) {
+              if (item is! Map) continue;
+              final itemName = (item['mealName'] as String? ?? '').toLowerCase().trim();
+              final itemCal = (item['calories'] as num?)?.toInt() ?? 0;
+              final itemId = item['id']?.toString() ?? '';
+              if (itemId.isNotEmpty &&
+                  itemName == origA.detectedFood.toLowerCase().trim() &&
+                  (itemCal - origA.calories).abs() <= 2) {
+                await _manualService.updateMealLog(
+                  itemId,
+                  mealName: newA.detectedFood,
+                  calories: newA.calories.toDouble(),
+                  protein: newA.protein.toDouble(),
+                  carbs: newA.carbs.toDouble(),
+                  fats: newA.fats.toDouble(),
+                );
+                final prefs = await SharedPreferences.getInstance();
+                if (permanentImagePath != null) {
+                  await prefs.setString('meal_photo_$itemId', permanentImagePath);
+                }
+                await prefs.setString('meal_cat_$itemId', resolvedCategory);
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Failed to sync edited scan result to server: $e');
+        }
+      }
+    }
+
     try {
-      context.read<DashboardBloc>().add(const RefreshDashboard());
+      if (mounted) {
+        context.read<DashboardBloc>().add(const RefreshDashboard());
+      }
     } catch (_) {}
-    _fetchTodayMeals();
+    await _fetchTodayMeals();
   }
 
-  void _discardResult() {
+  Future<void> _discardResult() async {
+    final discardedScan = _llamaResult;
     setState(() {
       _layoutState   = LayoutState.idle;
       _llamaResult   = null;
       _selectedImage = null;
     });
+
+    // Remove the auto-saved scan entry from backend so Weekly Insights & Dashboard stay in sync
+    if (discardedScan != null) {
+      try {
+        final origA = discardedScan.mealAnalysis;
+        final dateStr = _todayDateKey();
+        final resp = await ApiClient().dio.get<dynamic>('/meals/history?date=$dateStr');
+        final rawLogs = resp.data?['data']?['logs'] as List<dynamic>?;
+        if (rawLogs != null) {
+          for (final item in rawLogs) {
+            if (item is! Map) continue;
+            final itemName = (item['mealName'] as String? ?? '').toLowerCase().trim();
+            final itemCal = (item['calories'] as num?)?.toInt() ?? 0;
+            final itemId = item['id']?.toString() ?? '';
+            final createdAt = DateTime.tryParse(item['createdAt']?.toString() ?? '');
+            final isRecent = createdAt == null || DateTime.now().difference(createdAt).abs().inMinutes < 15;
+            if (itemId.isNotEmpty &&
+                isRecent &&
+                itemName == origA.detectedFood.toLowerCase().trim() &&
+                (itemCal - origA.calories).abs() <= 2) {
+              await _manualService.deleteMealLog(itemId);
+              break;
+            }
+          }
+        }
+        if (mounted) {
+          context.read<DashboardBloc>().add(const RefreshDashboard());
+        }
+      } catch (e) {
+        debugPrint('Failed to clean up discarded scan on server: $e');
+      }
+    }
   }
 
   // â”€â”€ Manual Macro Log Bottom Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -817,6 +1141,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             logs.insert(0, entry);
             _recalcTotals();
           });
+          _saveTodayLogsToPrefs();
           try {
             context.read<DashboardBloc>().add(const RefreshDashboard());
           } catch (_) {}
@@ -845,6 +1170,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
             }
             _recalcTotals();
           });
+          _saveTodayLogsToPrefs();
+          try {
+            context.read<DashboardBloc>().add(const RefreshDashboard());
+          } catch (_) {}
+          _fetchTodayMeals();
         },
         service: _manualService,
         onError: _showErrorSnackbar,
@@ -855,9 +1185,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
   Future<void> _handleDeleteEntry(MealEntry meal, int idx) async {
     // 1. Optimistic remove
     setState(() {
+      _hasSyncedLogs = true;
       logs.removeAt(idx);
       _recalcTotals();
     });
+    _saveTodayLogsToPrefs();
 
     bool undone = false;
 
@@ -890,6 +1222,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
               logs.insert(insertAt, meal);
               _recalcTotals();
             });
+            _saveTodayLogsToPrefs();
           },
         ),
       ),
@@ -902,6 +1235,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
         } else {
           await _manualService.deleteMealLog(meal.id);
         }
+        if (mounted) {
+          try {
+            context.read<DashboardBloc>().add(const RefreshDashboard());
+          } catch (_) {}
+        }
       } catch (e) {
         // Re-insert on failure
         if (mounted) {
@@ -910,6 +1248,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
             logs.insert(insertAt, meal);
             _recalcTotals();
           });
+          _saveTodayLogsToPrefs();
           _showErrorSnackbar(AppErrorHandler.getUserMessage(e, 'Unable to delete meal log.'));
         }
       }
@@ -1268,7 +1607,13 @@ class _MealsDashboardState extends State<MealsDashboard> {
           onCamera:  () => _pickAndAnalyze(ImageSource.camera),
           onGallery: () => _pickAndAnalyze(ImageSource.gallery),
           onBarcode: _scanBarcode,
-          onSearch: () => Navigator.of(context).pushNamed('/foods/search'),
+          onSearch: () => Navigator.of(context).pushNamed('/foods/search').then((_) {
+            if (!mounted) return;
+            _fetchTodayMeals();
+            try {
+              context.read<DashboardBloc>().add(const RefreshDashboard());
+            } catch (_) {}
+          }),
         );
     }
   }
@@ -1383,10 +1728,13 @@ class _MealsDashboardState extends State<MealsDashboard> {
       logs.insert(0, entry);
       _recalcTotals();
     });
+    await _saveTodayLogsToPrefs();
     try {
-      context.read<DashboardBloc>().add(const RefreshDashboard());
+      if (mounted) {
+        context.read<DashboardBloc>().add(const RefreshDashboard());
+      }
     } catch (_) {}
-    _fetchTodayMeals();
+    await _fetchTodayMeals();
     _fetchQuota();
   }
 
