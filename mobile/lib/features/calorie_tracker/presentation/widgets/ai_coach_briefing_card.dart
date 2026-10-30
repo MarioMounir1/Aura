@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_state.dart';
+import '../bloc/dashboard_bloc.dart';
+import '../bloc/dashboard_event.dart';
 import 'weekly_insights_sheet.dart';
 
 class AiCoachBriefingCard extends StatefulWidget {
@@ -44,6 +46,11 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
   late String _focusArea;
   Map<String, dynamic>? _yesterdayStats = _cachedYesterday;
   bool _initializedLocal = false;
+
+  String _todayDateKey() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
 
   @override
   void initState() {
@@ -249,6 +256,8 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
   Future<void> _loadFromPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final todayKey = _todayDateKey();
+      final cachedDate = prefs.getString('cached_coach_date');
       var h = prefs.getString('cached_coach_headline');
       final m = prefs.getString('cached_coach_message');
       final f = prefs.getString('cached_coach_focus');
@@ -262,19 +271,36 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
         } catch (_) {}
       }
 
-      // Purge and delete any outdated workout split cache from disk
+      // Purge and delete any outdated workout split cache or stale day cache from disk
       final isOutdatedWorkout = h != null &&
           (h.contains('Split') || h.contains('Day 🔥') || (m != null && m.contains("Today's session is")));
+      final isStaleDay = cachedDate != null && cachedDate != todayKey;
 
-      if (isOutdatedWorkout) {
+      if (isOutdatedWorkout || isStaleDay) {
         await prefs.remove('cached_coach_headline');
         await prefs.remove('cached_coach_message');
         await prefs.remove('cached_coach_focus');
+        await prefs.remove('cached_coach_date');
+        _resolveLocalData();
       } else if (h != null && m != null && mounted) {
         // Remap legacy 'Ready to Progress' from cache
         if (h.contains('Ready to Progress')) {
           h = 'Weekly Insights';
           await prefs.setString('cached_coach_headline', 'Weekly Insights');
+        }
+
+        // Never overwrite with a stale "Remaining" or "Daily Goal Met" headline when caloriesConsumed is 0
+        final double currentConsumed = widget.caloriesConsumed ?? 0.0;
+        if (currentConsumed <= 0 &&
+            (h.contains('Remaining') || h.contains('Daily Goal Met'))) {
+          _resolveLocalData();
+          return;
+        }
+
+        // If caloriesConsumed > 0, _resolveLocalData() computes the exact live remaining figure
+        if (currentConsumed > 0) {
+          _resolveLocalData();
+          return;
         }
 
         final isYesterdayMessage = h.contains('Yesterday') || (f != null && f.contains('Yesterday'));
@@ -338,6 +364,16 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
           } catch (_) {}
         }
 
+        // Check if backend metrics report logged calories today while local dashboard still shows 0:
+        // If so, trigger a dashboard refresh so the main calorie counter & meal timeline sync immediately.
+        final metrics = data['metrics'] as Map<String, dynamic>?;
+        final serverConsumed = (metrics?['caloriesConsumedToday'] as num?)?.toInt() ?? 0;
+        if (serverConsumed > 0 && (widget.caloriesConsumed ?? 0) <= 0 && mounted) {
+          try {
+            context.read<DashboardBloc>().add(const RefreshDashboard());
+          } catch (_) {}
+        }
+
         // Strict guard: Reject any workout split text that may come from an old cloud build or cache
         final isWorkoutText = (newHeadline?.contains('Split') ?? false) ||
             (newHeadline?.contains('Day 🔥') ?? false) ||
@@ -354,6 +390,30 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
 
         if (newMessage != null && newMessage.contains('150g protein') && proteinTarget > 150) {
           newMessage = newMessage.replaceAll('150g protein', '${proteinTarget}g protein');
+        }
+
+        // If local dashboard has active consumed calories, keep headline & message synchronized
+        // with the exact local caloriesConsumed and calorieTarget so the two cards never disagree.
+        final currentLocalConsumed = (widget.caloriesConsumed ?? 0).round();
+        if (currentLocalConsumed > 0) {
+          _resolveLocalData();
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('cached_coach_date', _todayDateKey());
+            await prefs.setString('cached_coach_headline', _headline);
+            await prefs.setString('cached_coach_message', _message);
+            await prefs.setString('cached_coach_focus', _focusArea);
+          } catch (_) {}
+          return;
+        }
+
+        // If both local consumed == 0 and server consumed == 0, never display a "Remaining" headline
+        if (currentLocalConsumed <= 0 &&
+            serverConsumed <= 0 &&
+            newHeadline != null &&
+            newHeadline.contains('Remaining')) {
+          _resolveLocalData();
+          return;
         }
 
         if (newHeadline != null &&
@@ -380,6 +440,7 @@ class _AiCoachBriefingCardState extends State<AiCoachBriefingCard> {
 
           try {
             final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('cached_coach_date', _todayDateKey());
             await prefs.setString('cached_coach_headline', validHeadline);
             await prefs.setString('cached_coach_message', validMessage);
             if (newFocus != null && newFocus.isNotEmpty) {
