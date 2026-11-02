@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/widgets/ad_banner.dart';
 import '../../../profile/presentation/bloc/profile_bloc.dart';
 import '../../../profile/presentation/bloc/profile_event.dart';
 import '../../presentation/custom_paywall_sheet.dart';
@@ -169,15 +170,22 @@ class PurchaseService {
 
   /// Present the custom Flutter Paywall BottomSheet.
   /// If the purchase is successful, syncs to backend and refreshes profile.
-  Future<bool> presentPaywall(BuildContext context) async {
+  /// If the user dismisses the paywall without subscribing (stays on Free Tier),
+  /// displays a full-screen Google AdMob Interstitial Ad.
+  Future<bool> presentPaywall(BuildContext context, {bool showAdOnDismiss = true}) async {
     if (context.mounted) {
+      AdMobInterstitialHelper.preload();
       final isNowPremium = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) => const CustomPaywallSheet(),
       );
-      return isNowPremium ?? false;
+      final subscribed = isNowPremium ?? false;
+      if (!subscribed && showAdOnDismiss) {
+        await AdMobInterstitialHelper.showOnLimitExceeded();
+      }
+      return subscribed;
     }
     return false;
   }
