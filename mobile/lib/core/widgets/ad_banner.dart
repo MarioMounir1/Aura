@@ -10,6 +10,110 @@ import '../../features/premium/data/services/purchase_service.dart';
 import '../../features/profile/presentation/bloc/profile_bloc.dart';
 import '../../features/profile/presentation/bloc/profile_state.dart';
 
+/// Manages preloading and showing full-screen Google AdMob Interstitial Ads
+/// when a Free Tier user reaches their daily scan/usage limit.
+class AdMobInterstitialHelper {
+  AdMobInterstitialHelper._();
+
+  static InterstitialAd? _interstitialAd;
+  static bool _isLoading = false;
+
+  // Official Google AdMob Test Interstitial Unit IDs (with env var overrides)
+  static const _envAndroidInterstitialId = String.fromEnvironment(
+    'ADMOB_ANDROID_INTERSTITIAL_ID',
+    defaultValue: 'ca-app-pub-3940256099942544/1033173712',
+  );
+  static const _envIosInterstitialId = String.fromEnvironment(
+    'ADMOB_IOS_INTERSTITIAL_ID',
+    defaultValue: 'ca-app-pub-3940256099942544/4411468910',
+  );
+
+  static String get _adUnitId {
+    if (kIsWeb) return '';
+    return Platform.isAndroid ? _envAndroidInterstitialId : _envIosInterstitialId;
+  }
+
+  /// Preload an interstitial ad in the background so it displays instantly on limit reached.
+  static void preload() {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return;
+    if (_interstitialAd != null || _isLoading) return;
+
+    _isLoading = true;
+    InterstitialAd.load(
+      adUnitId: _adUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          _isLoading = false;
+          _interstitialAd = ad;
+          debugPrint('✅ AdMob Interstitial Ad preloaded and ready.');
+        },
+        onAdFailedToLoad: (err) {
+          _isLoading = false;
+          _interstitialAd = null;
+          debugPrint('⚠️ AdMob Interstitial failed to preload: ${err.message}');
+        },
+      ),
+    );
+  }
+
+  /// Shows a full-screen Google Interstitial Ad when a Free Tier user exceeds their limit,
+  /// then triggers [onCompleted] after the ad is dismissed (or immediately if unavailable).
+  static Future<void> showOnLimitExceeded({VoidCallback? onCompleted}) async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      onCompleted?.call();
+      return;
+    }
+
+    final ad = _interstitialAd;
+    if (ad != null) {
+      _interstitialAd = null;
+      ad.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          preload(); // Preload next interstitial
+          onCompleted?.call();
+        },
+        onAdFailedToShowFullScreenContent: (ad, err) {
+          debugPrint('⚠️ AdMob Interstitial failed to show: ${err.message}');
+          ad.dispose();
+          preload();
+          onCompleted?.call();
+        },
+      );
+      await ad.show();
+      return;
+    }
+
+    // If not yet preloaded, attempt an immediate load-and-show
+    InterstitialAd.load(
+      adUnitId: _adUnitId,
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (loadedAd) {
+          loadedAd.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+              preload();
+              onCompleted?.call();
+            },
+            onAdFailedToShowFullScreenContent: (ad, err) {
+              ad.dispose();
+              preload();
+              onCompleted?.call();
+            },
+          );
+          loadedAd.show();
+        },
+        onAdFailedToLoad: (err) {
+          debugPrint('⚠️ AdMob Interstitial on-demand load failed: ${err.message}');
+          onCompleted?.call();
+        },
+      ),
+    );
+  }
+}
+
 class AdBanner extends StatefulWidget {
   const AdBanner({super.key});
 
@@ -39,6 +143,7 @@ class _AdBannerState extends State<AdBanner> {
   void initState() {
     super.initState();
     _loadBannerAd();
+    AdMobInterstitialHelper.preload();
   }
 
   void _loadBannerAd() {
