@@ -9,7 +9,7 @@ class FirebaseStorageService {
   FirebaseStorageService._();
   static final FirebaseStorageService instance = FirebaseStorageService._();
 
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  FirebaseStorage get _storage => FirebaseStorage.instance;
 
   // ── Meal Photo Upload ─────────────────────────────────────────
 
