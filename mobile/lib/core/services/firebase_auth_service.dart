@@ -10,7 +10,7 @@ class FirebaseAuthService {
   FirebaseAuthService._();
   static final FirebaseAuthService instance = FirebaseAuthService._();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     serverClientId: '183282015983-a85d4fdna5esice6mrjgvasj5kk7pp1t.apps.googleusercontent.com',
     scopes: ['email', 'profile'],
@@ -35,9 +35,12 @@ class FirebaseAuthService {
         }
       } catch (_) {}
 
-      // Trigger the Google account picker with a 20-second timeout to prevent hanging
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn().timeout(
-        const Duration(seconds: 20),
+      // Try silent sign-in first for existing accounts on device
+      GoogleSignInAccount? googleUser = await _googleSignIn.signInSilently().catchError((_) => null);
+
+      // If no cached silent account, trigger the interactive account picker with 45s timeout
+      googleUser ??= await _googleSignIn.signIn().timeout(
+        const Duration(seconds: 45),
         onTimeout: () {
           throw PlatformException(
             code: 'SIGN_IN_TIMEOUT',
