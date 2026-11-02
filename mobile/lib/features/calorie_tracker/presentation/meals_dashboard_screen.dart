@@ -628,13 +628,27 @@ class _MealsDashboardState extends State<MealsDashboard> {
     logs = mergedList;
   }
 
-  Future<void> _fetchQuota() async {
+  String? _lastCompletedScanType;
+
+  Future<void> _fetchQuota({String? checkLimitForType}) async {
     try {
       final quota = await _llamaService.fetchAiUsage();
       if (mounted) {
         setState(() {
           _quota = quota;
         });
+        if (checkLimitForType != null && !quota.isPremium) {
+          final isNowExceeded = checkLimitForType == 'camera'
+              ? quota.isCameraExceeded
+              : checkLimitForType == 'gallery'
+                  ? quota.isGalleryExceeded
+                  : checkLimitForType == 'barcode'
+                      ? quota.isBarcodeExceeded
+                      : false;
+          if (isNowExceeded) {
+            PurchaseService.instance.presentPaywall(context);
+          }
+        }
       }
     } catch (e) {
       debugPrint('Quota fetch error: $e');
@@ -882,6 +896,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
       final result = await _llamaService.scanMealImage(_selectedImage!, scanType);
 
       if (!mounted) return;
+      _lastCompletedScanType = scanType;
       setState(() {
         _llamaResult = result;
         _layoutState = LayoutState.resultLoaded;
@@ -933,11 +948,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   void _showUpgradeDialog(String scanType, AiUsageQuota quota) {
     final isPremium = quota.isPremium;
-    final limit = scanType == 'camera'
-        ? quota.cameraLimit
-        : scanType == 'gallery'
-            ? quota.galleryLimit
-            : quota.barcodeLimit;
+    if (!isPremium) {
+      PurchaseService.instance.presentPaywall(context);
+      return;
+    }
+
     final typeLabel = scanType == 'camera'
         ? 'camera'
         : scanType == 'gallery'
@@ -950,32 +965,18 @@ class _MealsDashboardState extends State<MealsDashboard> {
         backgroundColor: const Color(0xFF1E2620),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          isPremium ? 'Daily Limit Reached' : 'Upgrade to Premium',
+          'Daily Limit Reached',
           style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          isPremium 
-            ? 'You have reached your daily limit for $typeLabel. Your quota will reset tomorrow at midnight UTC.' 
-            : 'You have used all $limit of your free $typeLabel for today. Upgrade to Premium for unlimited scans and AI coaching!',
+          'You have reached your daily limit for $typeLabel. Your quota will reset tomorrow at midnight UTC.',
           style: GoogleFonts.inter(color: Colors.white70, fontSize: 13, height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(isPremium ? 'Got it' : 'Maybe Later', style: GoogleFonts.inter(color: Colors.white60)),
+            child: Text('Got it', style: GoogleFonts.inter(color: Colors.white60)),
           ),
-          if (!isPremium)
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF235A42),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                PurchaseService.instance.presentPaywall(context);
-              },
-              child: Text('Upgrade Now', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
         ],
       ),
     );
@@ -1085,6 +1086,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
       }
     } catch (_) {}
     await _fetchTodayMeals();
+    await _fetchQuota(checkLimitForType: _lastCompletedScanType);
   }
 
   Future<void> _discardResult() async {
@@ -1682,11 +1684,22 @@ class _MealsDashboardState extends State<MealsDashboard> {
     } on BarcodeNetworkException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (e.message.toLowerCase().contains('limit') || e.message.toLowerCase().contains('upgrade') || e.message.toLowerCase().contains('quota')) {
+        _fetchQuota();
+        PurchaseService.instance.presentPaywall(context);
+        return;
+      }
       _showErrorSnackbar(AppErrorHandler.getUserMessage(e, 'Could not find product details. Please try again.'));
       return;
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('limit') || errStr.contains('upgrade') || errStr.contains('quota') || errStr.contains('402')) {
+        _fetchQuota();
+        PurchaseService.instance.presentPaywall(context);
+        return;
+      }
       _showErrorSnackbar(AppErrorHandler.getUserMessage(e, 'Something went wrong. Please try again.'));
       return;
     }
@@ -1735,7 +1748,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
       }
     } catch (_) {}
     await _fetchTodayMeals();
-    _fetchQuota();
+    await _fetchQuota(checkLimitForType: 'barcode');
   }
 
   Future<BarcodeProduct?> _promptForBarcodeEstimation(
