@@ -86,7 +86,7 @@
 		<string>$(GOOGLE_CLIENT_ID)</string>
 		<!-- ── Google AdMob Application ID ───────────────────────────── -->
 		<key>GADApplicationIdentifier</key>
-		<string>ca-app-pub-3940256099942544~1458002511</string>
+		<string>ca-app-pub-9359621894968645~3666634376</string>
 		<!-- ── Privacy Descriptions (required by App Store) ─────────── -->
 		<key>NSCameraUsageDescription</key>
 		<string>Aura needs camera access to scan and analyze your meals.</string>
