@@ -3381,9 +3381,24 @@ class _ResultCardWidgetState extends State<_ResultCardWidget> {
                         const SizedBox(height: 6),
                         Text(
                           () {
-                            var msg = rec.message;
-                            for (final prefix in ['Aura Coach: ', 'Llama says: ', 'Llama says:', 'Aura Coach:']) {
-                              if (msg.startsWith(prefix)) {
+                            var msg = rec.message.trim();
+                            // Strip any internal model prefixes or legacy notices
+                            final prefixes = [
+                              'Llama Notice: ',
+                              'Llama Notice:',
+                              'Llama notice: ',
+                              'Llama notice:',
+                              'Llama says: ',
+                              'Llama says:',
+                              'Aura Coach: ',
+                              'Aura Coach:',
+                              'Aura notice: ',
+                              'Aura notice:',
+                              'Notice: ',
+                              'Notice:',
+                            ];
+                            for (final prefix in prefixes) {
+                              if (msg.toLowerCase().startsWith(prefix.toLowerCase())) {
                                 msg = msg.substring(prefix.length).trimLeft();
                                 break;
                               }
