@@ -3793,11 +3793,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
                     ],
                   ),
               ),
-              if (!_isPremium) ...[
-                const SizedBox(height: 16),
-                const AdBanner(),
-              ],
-              const SizedBox(height: 32),
+                            const SizedBox(height: 32),
             ],
         ),
       ),
