@@ -1566,13 +1566,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                 onTap: _showQuickLogChoiceSheet,
               ),
 
-              const SizedBox(height: 20),
-
-              // Ads Banner for Free Users
-              if (!isPremium) ...[
-                const AdBanner(),
-                const SizedBox(height: 24),
-              ],
+              const SizedBox(height: 24),
             ],
           ),
         ),
