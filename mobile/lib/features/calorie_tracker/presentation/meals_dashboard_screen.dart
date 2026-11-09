@@ -315,6 +315,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
   Map<String, dynamic>? _cachedSummaryGoals;
   Map<String, dynamic>? _cachedSummaryTotals;
   bool _hasSyncedLogs = false;
+  String _activeDietPlanLabel = 'Balanced';
 
   // ── Scanner State machine ─────────────────────────────────
   LayoutState _layoutState = LayoutState.idle;
@@ -402,6 +403,11 @@ class _MealsDashboardState extends State<MealsDashboard> {
         if (decodedTotals is Map<String, dynamic>) {
           _cachedSummaryTotals = decodedTotals;
         }
+      }
+
+      final savedDietPlan = prefs.getString('active_diet_plan_label');
+      if (savedDietPlan != null && savedDietPlan.isNotEmpty) {
+        _activeDietPlanLabel = savedDietPlan;
       }
 
       if (mounted) {
@@ -1291,7 +1297,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
 
   // ——— BUILD —————————————————————————————————————————————————————
 
-  @override
   void _showNutrientsSheet() {
     showModalBottomSheet(
       context: context,
@@ -1305,6 +1310,112 @@ class _MealsDashboardState extends State<MealsDashboard> {
         carbsTarget: carbsTarget,
         fatsConsumed: fatsConsumed,
         fatsTarget: fatsTarget,
+        onChangeDietPlan: () {
+          Navigator.of(ctx).pop();
+          _showDietPlanSheet();
+        },
+      ),
+    );
+  }
+
+  void _showDietPlanSheet() {
+    Map<String, dynamic>? currentProfile = _cachedUserProfile;
+    try {
+      final profileState = context.read<ProfileBloc>().state;
+      if (profileState is ProfileLoaded) {
+        currentProfile = profileState.user;
+      }
+    } catch (_) {}
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _DietPlanSheet(
+        userProfile: currentProfile,
+        currentCalories: caloriesTarget,
+        currentProtein: proteinTarget,
+        currentCarbs: carbsTarget,
+        currentFats: fatsTarget,
+        currentDietStyle: _activeDietPlanLabel,
+        onApplyPlan: ({
+          required String goal,
+          required String dietStyleLabel,
+          required int calories,
+          required int protein,
+          required int carbs,
+          required int fats,
+        }) async {
+          setState(() {
+            _activeDietPlanLabel = dietStyleLabel;
+            caloriesTarget = calories.toDouble();
+            proteinTarget = protein.toDouble();
+            carbsTarget = carbs.toDouble();
+            fatsTarget = fats.toDouble();
+            if (_cachedUserProfile != null) {
+              _cachedUserProfile = Map<String, dynamic>.from(_cachedUserProfile!)
+                ..['goal'] = goal
+                ..['dailyCalorieGoal'] = calories
+                ..['proteinGoal'] = protein
+                ..['carbsGoal'] = carbs
+                ..['fatsGoal'] = fats;
+            }
+            if (_cachedSummaryGoals != null) {
+              _cachedSummaryGoals = Map<String, dynamic>.from(_cachedSummaryGoals!)
+                ..['calories'] = calories
+                ..['protein'] = protein
+                ..['carbs'] = carbs
+                ..['fats'] = fats;
+            }
+          });
+
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('active_diet_plan_label', dietStyleLabel);
+            if (_cachedUserProfile != null) {
+              await prefs.setString('cached_user_profile', jsonEncode(_cachedUserProfile));
+            }
+          } catch (_) {}
+
+          if (!mounted) return;
+          try {
+            context.read<ProfileBloc>().add(
+                  UpdateProfileEvent(
+                    goal: goal,
+                    dailyCalorieGoal: calories,
+                    dailyProteinGoal: protein,
+                    dailyCarbsGoal: carbs,
+                    dailyFatsGoal: fats,
+                  ),
+                );
+          } catch (_) {}
+
+          try {
+            context.read<DashboardBloc>().add(const RefreshDashboard());
+          } catch (_) {}
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: const Color(0xFF235A42),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Diet plan updated: $calories kcal · ${protein}g P · ${carbs}g C · ${fats}g F',
+                        style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        },
       ),
     );
   }
@@ -1526,7 +1637,9 @@ class _MealsDashboardState extends State<MealsDashboard> {
                 carbsTarget: carbsTarget,
                 fatsConsumed: fatsConsumed,
                 fatsTarget: fatsTarget,
+                dietPlanLabel: _activeDietPlanLabel,
                 onNutrientsTap: _showNutrientsSheet,
+                onDietPlanTap: _showDietPlanSheet,
               ),
               const SizedBox(height: 22),
 
@@ -6000,7 +6113,9 @@ class _DailySummaryBanner extends StatelessWidget {
   final double carbsTarget;
   final double fatsConsumed;
   final double fatsTarget;
+  final String dietPlanLabel;
   final VoidCallback? onNutrientsTap;
+  final VoidCallback? onDietPlanTap;
 
   const _DailySummaryBanner({
     required this.caloriesConsumed,
@@ -6011,7 +6126,9 @@ class _DailySummaryBanner extends StatelessWidget {
     this.carbsTarget = 200.0,
     this.fatsConsumed = 0.0,
     this.fatsTarget = 65.0,
+    this.dietPlanLabel = 'Balanced',
     this.onNutrientsTap,
+    this.onDietPlanTap,
   });
 
   Widget _buildMacroPill({
@@ -6129,14 +6246,63 @@ class _DailySummaryBanner extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'DAILY SUMMARY',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: const Color(0xFF4A6B56),
-                              letterSpacing: 1.0,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                'DAILY SUMMARY',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF4A6B56),
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              if (onDietPlanTap != null) ...[
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: onDietPlanTap,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF235A42),
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Color(0x181E3A2B),
+                                          blurRadius: 6,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.tune_rounded,
+                                          size: 11,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '$dietPlanLabel Plan',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        const Icon(
+                                          Icons.keyboard_arrow_down_rounded,
+                                          size: 13,
+                                          color: Colors.white,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           const SizedBox(height: 6),
                           Text(
@@ -6149,12 +6315,28 @@ class _DailySummaryBanner extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Text(
-                            '$consumedStr of $targetStr kcal logged',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF3B5745),
+                          GestureDetector(
+                            onTap: onDietPlanTap,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '$consumedStr of $targetStr kcal logged',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF3B5745),
+                                  ),
+                                ),
+                                if (onDietPlanTap != null) ...[
+                                  const SizedBox(width: 5),
+                                  const Icon(
+                                    Icons.edit_outlined,
+                                    size: 13,
+                                    color: Color(0xFF235A42),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
@@ -6558,6 +6740,7 @@ class _NutrientsBottomSheet extends StatelessWidget {
   final double carbsTarget;
   final double fatsConsumed;
   final double fatsTarget;
+  final VoidCallback? onChangeDietPlan;
 
   const _NutrientsBottomSheet({
     required this.caloriesConsumed,
@@ -6568,6 +6751,7 @@ class _NutrientsBottomSheet extends StatelessWidget {
     required this.carbsTarget,
     required this.fatsConsumed,
     required this.fatsTarget,
+    this.onChangeDietPlan,
   });
 
   Widget _buildNutrientRow(String label, double consumed, double target, Color accentColor, String unit) {
@@ -6626,9 +6810,32 @@ class _NutrientsBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Text(
-            'Daily Nutrients',
-            style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Daily Nutrients',
+                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w800, color: const Color(0xFF1E3A2B)),
+              ),
+              if (onChangeDietPlan != null)
+                TextButton.icon(
+                  onPressed: onChangeDietPlan,
+                  icon: const Icon(Icons.tune_rounded, size: 16, color: Color(0xFF235A42)),
+                  label: Text(
+                    'Change Diet Plan',
+                    style: GoogleFonts.inter(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF235A42),
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    backgroundColor: const Color(0xFFEAF5EE),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 18),
           _buildNutrientRow('Calories', caloriesConsumed, caloriesTarget, const Color(0xFFE07A5F), 'kcal'),
@@ -6636,6 +6843,695 @@ class _NutrientsBottomSheet extends StatelessWidget {
           _buildNutrientRow('Carbs', carbsConsumed, carbsTarget, const Color(0xFFF59E0B), 'g'),
           _buildNutrientRow('Fats', fatsConsumed, fatsTarget, const Color(0xFF10B981), 'g'),
         ],
+      ),
+    );
+  }
+}
+
+class _DietGoalPreset {
+  final String key;
+  final String backendGoal;
+  final String title;
+  final String subtitle;
+  final String emoji;
+  final int calorieDelta;
+
+  const _DietGoalPreset({
+    required this.key,
+    required this.backendGoal,
+    required this.title,
+    required this.subtitle,
+    required this.emoji,
+    required this.calorieDelta,
+  });
+}
+
+class _DietMacroPreset {
+  final String label;
+  final String subtitle;
+  final String emoji;
+  final double proteinRatio;
+  final double carbsRatio;
+  final double fatsRatio;
+  final bool isCustom;
+
+  const _DietMacroPreset({
+    required this.label,
+    required this.subtitle,
+    required this.emoji,
+    required this.proteinRatio,
+    required this.carbsRatio,
+    required this.fatsRatio,
+    this.isCustom = false,
+  });
+}
+
+class _DietPlanSheet extends StatefulWidget {
+  final Map<String, dynamic>? userProfile;
+  final double currentCalories;
+  final double currentProtein;
+  final double currentCarbs;
+  final double currentFats;
+  final String currentDietStyle;
+  final Future<void> Function({
+    required String goal,
+    required String dietStyleLabel,
+    required int calories,
+    required int protein,
+    required int carbs,
+    required int fats,
+  }) onApplyPlan;
+
+  const _DietPlanSheet({
+    required this.userProfile,
+    required this.currentCalories,
+    required this.currentProtein,
+    required this.currentCarbs,
+    required this.currentFats,
+    required this.currentDietStyle,
+    required this.onApplyPlan,
+  });
+
+  @override
+  State<_DietPlanSheet> createState() => _DietPlanSheetState();
+}
+
+class _DietPlanSheetState extends State<_DietPlanSheet> {
+  static const List<_DietGoalPreset> _goalPresets = [
+    _DietGoalPreset(
+      key: 'lose_fast',
+      backendGoal: 'lose',
+      title: 'Aggressive Cut',
+      subtitle: '-750 kcal deficit · rapid fat loss',
+      emoji: '🔥',
+      calorieDelta: -750,
+    ),
+    _DietGoalPreset(
+      key: 'lose_slow',
+      backendGoal: 'lose',
+      title: 'Sustainable Cut',
+      subtitle: '-300 kcal deficit · steady fat loss',
+      emoji: '🌿',
+      calorieDelta: -300,
+    ),
+    _DietGoalPreset(
+      key: 'maintain',
+      backendGoal: 'maintain',
+      title: 'Maintain Weight',
+      subtitle: 'Stay at your current weight & fuel performance',
+      emoji: '⚖️',
+      calorieDelta: 0,
+    ),
+    _DietGoalPreset(
+      key: 'gain_slow',
+      backendGoal: 'gain',
+      title: 'Lean Bulk',
+      subtitle: '+200 kcal surplus · clean muscle gain',
+      emoji: '💪',
+      calorieDelta: 200,
+    ),
+    _DietGoalPreset(
+      key: 'gain_fast',
+      backendGoal: 'gain',
+      title: 'Power Bulk',
+      subtitle: '+500 kcal surplus · maximum mass & strength',
+      emoji: '🦁',
+      calorieDelta: 500,
+    ),
+  ];
+
+  static const List<_DietMacroPreset> _macroPresets = [
+    _DietMacroPreset(
+      label: 'Balanced',
+      subtitle: '30% P · 45% C · 25% F',
+      emoji: '🥗',
+      proteinRatio: 0.30,
+      carbsRatio: 0.45,
+      fatsRatio: 0.25,
+    ),
+    _DietMacroPreset(
+      label: 'High Protein',
+      subtitle: '35% P · 40% C · 25% F',
+      emoji: '🥩',
+      proteinRatio: 0.35,
+      carbsRatio: 0.40,
+      fatsRatio: 0.25,
+    ),
+    _DietMacroPreset(
+      label: 'Low Carb',
+      subtitle: '35% P · 25% C · 40% F',
+      emoji: '🥑',
+      proteinRatio: 0.35,
+      carbsRatio: 0.25,
+      fatsRatio: 0.40,
+    ),
+    _DietMacroPreset(
+      label: 'Keto',
+      subtitle: '25% P · 5% C · 70% F',
+      emoji: '⚡',
+      proteinRatio: 0.25,
+      carbsRatio: 0.05,
+      fatsRatio: 0.70,
+    ),
+    _DietMacroPreset(
+      label: 'Custom',
+      subtitle: 'Set your own numbers',
+      emoji: '✏️',
+      proteinRatio: 0.30,
+      carbsRatio: 0.45,
+      fatsRatio: 0.25,
+      isCustom: true,
+    ),
+  ];
+
+  late int _selectedGoalIdx;
+  late int _selectedMacroIdx;
+  late int _baseTdee;
+
+  late final TextEditingController _calCtrl;
+  late final TextEditingController _protCtrl;
+  late final TextEditingController _carbCtrl;
+  late final TextEditingController _fatCtrl;
+
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _baseTdee = _computeTdeeFromProfile(widget.userProfile, widget.currentCalories);
+
+    final currentGoal = (widget.userProfile?['goal'] ?? 'maintain').toString();
+    final diff = widget.currentCalories.round() - _baseTdee;
+    if (currentGoal == 'lose') {
+      _selectedGoalIdx = diff <= -550 ? 0 : 1;
+    } else if (currentGoal == 'gain') {
+      _selectedGoalIdx = diff >= 350 ? 4 : 3;
+    } else {
+      _selectedGoalIdx = 2;
+    }
+
+    final foundMacroIdx = _macroPresets.indexWhere(
+      (m) => m.label.toLowerCase() == widget.currentDietStyle.toLowerCase(),
+    );
+    _selectedMacroIdx = foundMacroIdx >= 0 ? foundMacroIdx : 0;
+
+    _calCtrl = TextEditingController(text: widget.currentCalories.round().toString());
+    _protCtrl = TextEditingController(text: widget.currentProtein.round().toString());
+    _carbCtrl = TextEditingController(text: widget.currentCarbs.round().toString());
+    _fatCtrl = TextEditingController(text: widget.currentFats.round().toString());
+  }
+
+  @override
+  void dispose() {
+    _calCtrl.dispose();
+    _protCtrl.dispose();
+    _carbCtrl.dispose();
+    _fatCtrl.dispose();
+    super.dispose();
+  }
+
+  int _computeTdeeFromProfile(Map<String, dynamic>? user, double fallbackCalories) {
+    if (user != null) {
+      final w = double.tryParse((user['weightKg'] ?? '').toString());
+      final h = double.tryParse((user['heightCm'] ?? '').toString());
+      final a = int.tryParse((user['age'] ?? '').toString());
+      final g = (user['gender'] ?? 'male').toString().toLowerCase();
+      final act = (user['activityLevel'] ?? 'moderate').toString();
+
+      if (w != null && w > 0 && h != null && h > 0 && a != null && a > 0) {
+        final double bmr = (10 * w) + (6.25 * h) - (5 * a) + (g == 'male' ? 5 : -161);
+        final double mult = act == 'sedentary'
+            ? 1.2
+            : act == 'lightly_active'
+                ? 1.375
+                : act == 'very_active'
+                    ? 1.725
+                    : 1.55;
+        return (bmr * mult).round().clamp(1400, 4500);
+      }
+    }
+    return fallbackCalories.round().clamp(1400, 4500);
+  }
+
+  void _recalculateFromSelections() {
+    final goalPreset = _goalPresets[_selectedGoalIdx];
+    final macroPreset = _macroPresets[_selectedMacroIdx];
+    if (macroPreset.isCustom) return;
+
+    final int targetCalories = (_baseTdee + goalPreset.calorieDelta).clamp(1200, 5000);
+    final int proteinGrams = ((targetCalories * macroPreset.proteinRatio) / 4.0).round().clamp(40, 350);
+    final int carbsGrams = ((targetCalories * macroPreset.carbsRatio) / 4.0).round().clamp(15, 700);
+    final int fatsGrams = ((targetCalories * macroPreset.fatsRatio) / 9.0).round().clamp(20, 250);
+
+    _calCtrl.text = targetCalories.toString();
+    _protCtrl.text = proteinGrams.toString();
+    _carbCtrl.text = carbsGrams.toString();
+    _fatCtrl.text = fatsGrams.toString();
+  }
+
+  int get _previewCalories => (int.tryParse(_calCtrl.text.trim()) ?? 2000).clamp(1000, 8000);
+  int get _previewProtein => (int.tryParse(_protCtrl.text.trim()) ?? 150).clamp(20, 500);
+  int get _previewCarbs => (int.tryParse(_carbCtrl.text.trim()) ?? 200).clamp(5, 900);
+  int get _previewFats => (int.tryParse(_fatCtrl.text.trim()) ?? 65).clamp(10, 400);
+
+  Future<void> _handleSave() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
+    final goalPreset = _goalPresets[_selectedGoalIdx];
+    final macroPreset = _macroPresets[_selectedMacroIdx];
+
+    await widget.onApplyPlan(
+      goal: goalPreset.backendGoal,
+      dietStyleLabel: macroPreset.label,
+      calories: _previewCalories,
+      protein: _previewProtein,
+      carbs: _previewCarbs,
+      fats: _previewFats,
+    );
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isCustom = _macroPresets[_selectedMacroIdx].isCustom;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD3E4D7),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF5EE),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.restaurant_menu_rounded,
+                    color: Color(0xFF235A42),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Change Diet Plan',
+                        style: GoogleFonts.outfit(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1E3A2B),
+                        ),
+                      ),
+                      Text(
+                        'Customize your calorie pace & macro split',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF6B7C6E),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF7A8B7B)),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE2EBE4)),
+          Flexible(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomInset),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Live Preview Banner ──
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCEEE3),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFB5DBC3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'NEW DAILY TARGETS',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.9,
+                                color: const Color(0xFF3B5745),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${_goalPresets[_selectedGoalIdx].emoji} ${_goalPresets[_selectedGoalIdx].title} · ${_macroPresets[_selectedMacroIdx].label}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1E3A2B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _buildPreviewStat('Calories', '$_previewCalories', 'kcal', const Color(0xFF1E3A2B)),
+                            _buildPreviewStat('Protein', '${_previewProtein}g', 'target', const Color(0xFF2563EB)),
+                            _buildPreviewStat('Carbs', '${_previewCarbs}g', 'target', const Color(0xFFD97706)),
+                            _buildPreviewStat('Fats', '${_previewFats}g', 'target', const Color(0xFF059669)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Step 1: Goal & Pace ──
+                  Text(
+                    '1. SELECT YOUR GOAL & PACE',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: const Color(0xFF5A6E5D),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...List.generate(_goalPresets.length, (idx) {
+                    final preset = _goalPresets[idx];
+                    final isSelected = idx == _selectedGoalIdx;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedGoalIdx = idx;
+                            _recalculateFromSelections();
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFEAF5EE) : const Color(0xFFF8FAF8),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF235A42) : const Color(0xFFE2EBE4),
+                              width: isSelected ? 1.6 : 1.0,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Text(preset.emoji, style: const TextStyle(fontSize: 20)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      preset.title,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF1C2B1E),
+                                      ),
+                                    ),
+                                    Text(
+                                      preset.subtitle,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.5,
+                                        color: const Color(0xFF6B7C6E),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                                color: isSelected ? const Color(0xFF235A42) : const Color(0xFFB5C4B8),
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+
+                  const SizedBox(height: 14),
+
+                  // ── Step 2: Diet Style / Macro Split ──
+                  Text(
+                    '2. CHOOSE DIET STYLE (MACRO SPLIT)',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: const Color(0xFF5A6E5D),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: List.generate(_macroPresets.length, (idx) {
+                      final macro = _macroPresets[idx];
+                      final isSelected = idx == _selectedMacroIdx;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedMacroIdx = idx;
+                            _recalculateFromSelections();
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFF235A42) : const Color(0xFFF6F8F5),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFF235A42) : const Color(0xFFD3E4D7),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(macro.emoji, style: const TextStyle(fontSize: 14)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    macro.label,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSelected ? Colors.white : const Color(0xFF1C2B1E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                macro.subtitle,
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: isSelected ? Colors.white.withOpacity(0.85) : const Color(0xFF6B7C6E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+
+                  if (isCustom) ...[
+                    const SizedBox(height: 18),
+                    Text(
+                      'CUSTOM DAILY TARGETS',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                        color: const Color(0xFF5A6E5D),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildCustomNumberField('Calories (kcal)', _calCtrl),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildCustomNumberField('Protein (g)', _protCtrl),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildCustomNumberField('Carbs (g)', _carbCtrl),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildCustomNumberField('Fats (g)', _fatCtrl),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Color(0xFFE2EBE4))),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _isSaving ? null : _handleSave,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_circle_outline_rounded, size: 20),
+                label: Text(
+                  _isSaving ? 'Updating Plan...' : 'Apply Diet Plan',
+                  style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF235A42),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewStat(String label, String value, String sub, Color color) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF4A6B56),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: GoogleFonts.outfit(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          Text(
+            sub,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: const Color(0xFF5A6E5D),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCustomNumberField(String label, TextEditingController ctrl) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: TextInputType.number,
+      onChanged: (_) => setState(() {}),
+      style: GoogleFonts.outfit(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: const Color(0xFF1C2B1E),
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF5A6E5D)),
+        filled: true,
+        fillColor: const Color(0xFFF6F8F5),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFD3E4D7)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFD3E4D7)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF235A42), width: 1.5),
+        ),
       ),
     );
   }
