@@ -1514,15 +1514,18 @@ class _MealsDashboardState extends State<MealsDashboard> {
             ),
             const SizedBox(height: 12),
 
-            // ── 2 Secondary Options: Gallery & Barcode ───────────
+            // ── 4 Secondary Options: Manual Log, Barcode, Gallery, Search Food ───
             Row(
               children: [
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
-                    icon: Icons.photo_library_outlined,
-                    label: 'Gallery',
-                    onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.gallery); },
+                    icon: Icons.edit_note_rounded,
+                    label: 'Manual Log',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showManualLogSheet();
+                    },
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1531,7 +1534,44 @@ class _MealsDashboardState extends State<MealsDashboard> {
                     ctx: ctx,
                     icon: Icons.qr_code_scanner_rounded,
                     label: 'Barcode',
-                    onTap: () { Navigator.pop(ctx); _scanBarcode(); },
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _scanBarcode();
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSheetPill(
+                    ctx: ctx,
+                    icon: Icons.photo_library_outlined,
+                    label: 'Gallery',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickAndAnalyze(ImageSource.gallery);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSheetPill(
+                    ctx: ctx,
+                    icon: Icons.search_rounded,
+                    label: 'Search Food',
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      Navigator.of(context).pushNamed('/foods/search').then((_) {
+                        if (!mounted) return;
+                        _fetchTodayMeals();
+                        try {
+                          context.read<DashboardBloc>().add(const RefreshDashboard());
+                        } catch (_) {}
+                      });
+                    },
                   ),
                 ),
               ],
@@ -1644,14 +1684,46 @@ class _MealsDashboardState extends State<MealsDashboard> {
               const SizedBox(height: 22),
 
               // 3. Meal Timeline Section Header
-              Text(
-                'MEAL TIMELINE',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF5A6E5D),
-                  letterSpacing: 0.6,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'MEAL TIMELINE',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5A6E5D),
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  InkWell(
+                    onTap: _showManualLogSheet,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEAF5EE),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFB5DBC3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.add_rounded, size: 14, color: Color(0xFF235A42)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Manual Log',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF235A42),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
 
@@ -5372,6 +5444,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
   final _proteinCtrl  = TextEditingController();
   final _carbsCtrl    = TextEditingController();
   final _fatsCtrl     = TextEditingController();
+  String _selectedCategory = 'Breakfast';
   bool _isSaving      = false;
   bool get _isEdit    => widget.initialEntry != null;
 
@@ -5385,6 +5458,9 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
       _proteinCtrl.text  = e.protein.round().toString();
       _carbsCtrl.text    = e.carbs.round().toString();
       _fatsCtrl.text     = e.fat.round().toString();
+      _selectedCategory = e.mealCategory ?? MealCategoryHelper.detectCategory(e.foodName, e.createdAt);
+    } else {
+      _selectedCategory = MealCategoryHelper.detectCategory('', DateTime.now());
     }
   }
 
@@ -5438,8 +5514,16 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
           source:              orig.source,
           imagePath:           orig.imagePath,
           ingredientsBreakdown: orig.ingredientsBreakdown,
-          mealCategory:        orig.mealCategory,
+          mealCategory:        _selectedCategory,
         );
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('meal_cat_${orig.id}', _selectedCategory);
+          if (updatedEntry.foodName.isNotEmpty) {
+            await prefs.setString('meal_cat_${updatedEntry.foodName.toLowerCase().trim()}', _selectedCategory);
+          }
+        } catch (_) {}
 
         if (!mounted) return;
         Navigator.of(context).pop();
@@ -5471,8 +5555,17 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
           isHighlyNutritious:  protein > 25 && calories < 400,
           createdAt:           DateTime.now(),
           source:              'manual',
+          mealCategory:        _selectedCategory,
           ingredientsBreakdown: const [],
         );
+
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('meal_cat_${entry.id}', _selectedCategory);
+          if (entry.foodName.isNotEmpty) {
+            await prefs.setString('meal_cat_${entry.foodName.toLowerCase().trim()}', _selectedCategory);
+          }
+        } catch (_) {}
 
         if (!mounted) return;
         Navigator.of(context).pop();
@@ -5585,7 +5678,59 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
               theme: theme,
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+
+            // ── Meal Category Selector ────────────────────────────
+            Text(
+              'MEAL TYPE',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: theme.textSecondary,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  {'label': 'Breakfast', 'icon': '🥐'},
+                  {'label': 'Lunch', 'icon': '🥗'},
+                  {'label': 'Dinner', 'icon': '🍲'},
+                  {'label': 'Snack', 'icon': '🍎'},
+                ].map((cat) {
+                  final catLabel = cat['label']!;
+                  final isSel = _selectedCategory.toLowerCase() == catLabel.toLowerCase();
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      selected: isSel,
+                      showCheckmark: false,
+                      avatar: Text(cat['icon']!, style: const TextStyle(fontSize: 14)),
+                      label: Text(
+                        catLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                          color: isSel ? Colors.white : theme.textPrimary,
+                        ),
+                      ),
+                      selectedColor: theme.primary,
+                      backgroundColor: theme.card,
+                      side: BorderSide(
+                        color: isSel ? theme.primary : theme.borderMid,
+                      ),
+                      onSelected: (val) {
+                        if (val) setState(() => _selectedCategory = catLabel);
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
+            const SizedBox(height: 14),
 
             // ── Macro fields in 2×2 grid ──────────────────────────
             Row(
