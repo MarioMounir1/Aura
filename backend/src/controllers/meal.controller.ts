@@ -505,3 +505,65 @@ export async function voiceLogMealHandler(
   }
 }
 
+// ── Text Meal Estimate (no persistence) ─────────────────────
+
+const EstimateTextSchema = z.object({
+  description: z
+    .string()
+    .min(2, "Meal description is required")
+    .max(1000)
+    .trim(),
+});
+
+/**
+ * POST /api/v1/meals/estimate-text
+ * Accepts a typed natural-language meal description (e.g. "2 eggs, toast and a latte"),
+ * analyzes it with Gemini and returns estimated calories & macros WITHOUT saving.
+ * Used by the manual log sheet to auto-fill the macro fields; the user reviews
+ * and saves via POST /meals/manual.
+ */
+export async function estimateTextMealHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
+  const parsed = EstimateTextSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: "Meal description is required",
+      details: parsed.error.flatten(),
+    });
+    return;
+  }
+
+  const { description } = parsed.data;
+
+  try {
+    const aiResult = await analyzeMeal({
+      type: "text",
+      restaurantName: "Manual Log",
+      mealDescription: description,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        mealName: aiResult.mealName,
+        calories: aiResult.calories,
+        protein: aiResult.protein,
+        carbs: aiResult.carbs,
+        fats: aiResult.fats,
+        ingredientsBreakdown: aiResult.ingredientsBreakdown,
+      },
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Meal estimation failed";
+    console.error("❌ [EstimateText] Error:", msg);
+    res.status(500).json({
+      success: false,
+      error: "Could not calculate this meal. Please try again or enter macros manually.",
+      code: "TEXT_ESTIMATE_ERROR",
+    });
+  }
+}
+
