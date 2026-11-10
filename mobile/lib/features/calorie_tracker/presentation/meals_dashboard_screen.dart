@@ -1514,12 +1514,16 @@ class _MealsDashboardState extends State<MealsDashboard> {
             ),
             const SizedBox(height: 12),
 
+            // ── 2 Secondary Options: Gallery & Barcode ───────────
             // ── 4 Secondary Options: Manual Log, Barcode, Gallery, Search Food ───
             Row(
               children: [
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
+                    icon: Icons.photo_library_outlined,
+                    label: 'Gallery',
+                    onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.gallery); },
                     icon: Icons.edit_note_rounded,
                     label: 'Manual Log',
                     onTap: () {
@@ -1534,6 +1538,7 @@ class _MealsDashboardState extends State<MealsDashboard> {
                     ctx: ctx,
                     icon: Icons.qr_code_scanner_rounded,
                     label: 'Barcode',
+                    onTap: () { Navigator.pop(ctx); _scanBarcode(); },
                     onTap: () {
                       Navigator.pop(ctx);
                       _scanBarcode();
@@ -1684,6 +1689,14 @@ class _MealsDashboardState extends State<MealsDashboard> {
               const SizedBox(height: 22),
 
               // 3. Meal Timeline Section Header
+              Text(
+                'MEAL TIMELINE',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF5A6E5D),
+                  letterSpacing: 0.6,
+                ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -5415,6 +5428,21 @@ class ManualMealService {
   Future<void> deleteFoodLog(String id) async {
     await _dio.delete<dynamic>('/food-logs/$id');
   }
+
+  // AI estimate from a typed meal description (does NOT save).
+  // Returns a map with mealName, calories, protein, carbs, fats.
+  Future<Map<String, dynamic>> estimateFromText(String description) async {
+    final resp = await _dio.post<dynamic>(
+      '/meals/estimate-text',
+      data: {'description': description},
+      options: Options(receiveTimeout: const Duration(seconds: 60)),
+    );
+    final body = resp.data;
+    if (body is Map && body['success'] == true && body['data'] is Map) {
+      return Map<String, dynamic>.from(body['data'] as Map);
+    }
+    throw Exception('Could not calculate this meal.');
+  }
 }
 
 
@@ -5446,6 +5474,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
   final _fatsCtrl     = TextEditingController();
   String _selectedCategory = 'Breakfast';
   bool _isSaving      = false;
+  bool _isCalculating = false;
   bool get _isEdit    => widget.initialEntry != null;
 
   @override
@@ -5472,6 +5501,36 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
     _carbsCtrl.dispose();
     _fatsCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _calculateWithAi() async {
+    final description = _mealNameCtrl.text.trim();
+    if (description.length < 2) {
+      widget.onError('Type what you ate first, e.g. "2 eggs, toast and a latte".');
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _isCalculating = true);
+    try {
+      final data = await widget.service.estimateFromText(description);
+      if (!mounted) return;
+      String fmt(dynamic v) => ((v as num?) ?? 0).round().toString();
+      setState(() {
+        _caloriesCtrl.text = fmt(data['calories']);
+        _proteinCtrl.text  = fmt(data['protein']);
+        _carbsCtrl.text    = fmt(data['carbs']);
+        _fatsCtrl.text     = fmt(data['fats']);
+        _isCalculating     = false;
+      });
+      _formKey.currentState?.validate();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isCalculating = false);
+      widget.onError(AppErrorHandler.getUserMessage(
+        e,
+        'Could not calculate this meal. Please try again or enter macros manually.',
+      ));
+    }
   }
 
   Future<void> _handleSave() async {
@@ -5646,7 +5705,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
                       Text(
                         _isEdit
                             ? 'Update macros for this entry'
-                            : 'Log a meal by entering macros directly',
+                            : 'Describe your meal & let AI calculate, or enter macros',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: theme.textSecondary,
@@ -5669,7 +5728,7 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
             _MacroField(
               controller: _mealNameCtrl,
               label: 'Meal Name',
-              hint: 'e.g. Grilled Chicken & Rice',
+              hint: 'e.g. 2 eggs, toast with butter & a latte',
               unit: '',
               icon: Icons.restaurant_menu_rounded,
               iconColor: theme.primary,
@@ -5678,6 +5737,45 @@ class _ManualLogSheetState extends State<_ManualLogSheet> {
               theme: theme,
             ),
 
+            const SizedBox(height: 10),
+
+            // ── AI Calculate button (fills macros from the meal text) ──
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: (_isCalculating || _isSaving) ? null : _calculateWithAi,
+                icon: _isCalculating
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: theme.primary),
+                      )
+                    : Icon(Icons.auto_awesome_rounded, size: 18, color: theme.primary),
+                label: Text(
+                  _isCalculating ? 'Calculating...' : 'Calculate with AI',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: theme.primary,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: theme.primary.withValues(alpha: 0.5)),
+                  backgroundColor: theme.primary.withValues(alpha: 0.06),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Just type the meal and tap Calculate. You can still edit the numbers below.',
+              style: GoogleFonts.inter(fontSize: 11, color: theme.textSecondary),
+            ),
+
+            const SizedBox(height: 12),
             const SizedBox(height: 14),
 
             // ── Meal Category Selector ────────────────────────────
