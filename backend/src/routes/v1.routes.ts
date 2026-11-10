@@ -6,7 +6,7 @@
 
 import { Router } from "express";
 import { register, login, getMe, updateGoals, googleLogin, appleLogin, upgradeUser, unsubscribeUser, revenueCatWebhook, forgotPassword, resetPassword } from "../controllers/user.controller";
-import { analyzeMealHandler, manualLogMealHandler, updateMealLog, voiceLogMealHandler } from "../controllers/meal.controller";
+import { analyzeMealHandler, manualLogMealHandler, updateMealLog, voiceLogMealHandler, estimateTextMealHandler } from "../controllers/meal.controller";
 import { getDailyBriefingHandler, getWeeklyInsightsHandler } from "../controllers/coach.controller";
 import { scanLocalHandler, getAiUsageHandler } from "../controllers/local-llama.controller";
 import { scanBarcodeHandler, logBarcodeHandler, estimateBarcodeHandler } from "../controllers/barcode.controller";
@@ -282,6 +282,14 @@ router.get("/meals/usage", requireAuth, getAiUsageHandler);
 router.post("/meals/scan-local", requireAuth, analyzeMealLimiter, scanLocalHandler);
 
 router.post("/meals/manual", requireAuth, manualLogMealHandler);
+
+/**
+ * @route   POST /api/v1/meals/estimate-text
+ * @desc    Estimate calories & macros from a typed meal description (no save)
+ * @access  Private (JWT required)
+ * @body    { description }
+ */
+router.post("/meals/estimate-text", requireAuth, analyzeMealLimiter, estimateTextMealHandler);
 
 /**
  * @route   POST /api/v1/meals/voice-log
