@@ -1514,16 +1514,12 @@ class _MealsDashboardState extends State<MealsDashboard> {
             ),
             const SizedBox(height: 12),
 
-            // ── 2 Secondary Options: Gallery & Barcode ───────────
-            // ── 4 Secondary Options: Manual Log, Barcode, Gallery, Search Food ───
+            // ── 3 Secondary Options: Manual Log, Barcode, Gallery ───
             Row(
               children: [
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
-                    icon: Icons.photo_library_outlined,
-                    label: 'Gallery',
-                    onTap: () { Navigator.pop(ctx); _pickAndAnalyze(ImageSource.gallery); },
                     icon: Icons.edit_note_rounded,
                     label: 'Manual Log',
                     onTap: () {
@@ -1532,24 +1528,19 @@ class _MealsDashboardState extends State<MealsDashboard> {
                     },
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
                     icon: Icons.qr_code_scanner_rounded,
                     label: 'Barcode',
-                    onTap: () { Navigator.pop(ctx); _scanBarcode(); },
                     onTap: () {
                       Navigator.pop(ctx);
                       _scanBarcode();
                     },
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildSheetPill(
                     ctx: ctx,
@@ -1558,24 +1549,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
                     onTap: () {
                       Navigator.pop(ctx);
                       _pickAndAnalyze(ImageSource.gallery);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildSheetPill(
-                    ctx: ctx,
-                    icon: Icons.search_rounded,
-                    label: 'Search Food',
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      Navigator.of(context).pushNamed('/foods/search').then((_) {
-                        if (!mounted) return;
-                        _fetchTodayMeals();
-                        try {
-                          context.read<DashboardBloc>().add(const RefreshDashboard());
-                        } catch (_) {}
-                      });
                     },
                   ),
                 ),
@@ -1689,14 +1662,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
               const SizedBox(height: 22),
 
               // 3. Meal Timeline Section Header
-              Text(
-                'MEAL TIMELINE',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF5A6E5D),
-                  letterSpacing: 0.6,
-                ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1801,13 +1766,6 @@ class _MealsDashboardState extends State<MealsDashboard> {
           onCamera:  () => _pickAndAnalyze(ImageSource.camera),
           onGallery: () => _pickAndAnalyze(ImageSource.gallery),
           onBarcode: _scanBarcode,
-          onSearch: () => Navigator.of(context).pushNamed('/foods/search').then((_) {
-            if (!mounted) return;
-            _fetchTodayMeals();
-            try {
-              context.read<DashboardBloc>().add(const RefreshDashboard());
-            } catch (_) {}
-          }),
         );
     }
   }
@@ -4534,7 +4492,6 @@ class _SmartScannerSection extends StatelessWidget {
   final VoidCallback onCamera;
   final VoidCallback onGallery;
   final VoidCallback onBarcode;
-  final VoidCallback onSearch;
 
   const _SmartScannerSection({
     super.key,
@@ -4542,7 +4499,6 @@ class _SmartScannerSection extends StatelessWidget {
     required this.onCamera,
     required this.onGallery,
     required this.onBarcode,
-    required this.onSearch,
   });
 
   @override
