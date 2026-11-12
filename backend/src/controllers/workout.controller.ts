@@ -1739,10 +1739,26 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
         }
       }
     } else if (interpretation.intent === "swap_exercise") {
-      const queryName = (interpretation.exerciseName ?? "").toLowerCase();
-      const targetEx = currentSession.exercises.find(
-        (e) => queryName && (e.name.toLowerCase().includes(queryName) || e.muscleGroup.toLowerCase().includes(queryName))
-      ) ?? currentSession.exercises[0];
+      const queryName = (interpretation.exerciseName ?? "").toLowerCase().trim();
+      let targetEx = currentSession.exercises.find(
+        (e) => queryName && (e.name.toLowerCase().includes(queryName) || queryName.includes(e.name.toLowerCase()) || e.muscleGroup.toLowerCase().includes(queryName))
+      );
+
+      // Smart fuzzy token matching if no direct substring match
+      if (!targetEx && queryName) {
+        const qTokens = queryName.split(/\s+/).filter((t) => t.length > 2);
+        let bestScore = 0;
+        for (const e of currentSession.exercises) {
+          const eTokens = e.name.toLowerCase().split(/\s+/).concat(e.muscleGroup.toLowerCase().split(/\s+/));
+          const score = qTokens.filter((t) => eTokens.some((et) => et.includes(t) || t.includes(et))).length;
+          if (score > bestScore) {
+            bestScore = score;
+            targetEx = e;
+          }
+        }
+      }
+
+      targetEx = targetEx ?? currentSession.exercises[0];
 
       if (targetEx && targetEx.id) {
         let altName: string | null = interpretation.replacementExercise ?? null;
