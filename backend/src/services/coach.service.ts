@@ -59,6 +59,14 @@ function withTimeout<R>(promise: Promise<R>, timeoutMs: number, operationName: s
   ]);
 }
 
+// ── Candidate Gemini models for robust fallback ─────────────────────────────
+const COACH_MODELS = [
+  resolveGeminiModelName(),
+  "gemini-3.1-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
+].filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
+
 // ── Helper: AI Chat Call with Gemini ──────────────────────────────────────
 
 async function callOllamaChatDetailed(
@@ -70,23 +78,27 @@ async function callOllamaChatDetailed(
   const callerName = options?.callerName ?? "callCoachChat";
   const startTime = Date.now();
   const timeoutMs = options?.timeoutMs ?? 6000;
+  const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
 
-  try {
-    const modelName = resolveGeminiModelName();
-    const model = getGenAI().getGenerativeModel({ model: modelName });
-    const prompt = `${systemPrompt}\n\nUser Question/Context:\n${userPrompt}`;
-    const result = await withTimeout(model.generateContent(prompt), timeoutMs, callerName);
-    const text = result.response.text().trim();
-    const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
-    return {
-      value: cleaned || fallback,
-      source: "model",
-      elapsedMs: Date.now() - startTime,
-    };
-  } catch (err: any) {
-    console.warn(`⚠️ [Gemini Coach Error] '${callerName}' failed: ${err.message}`);
-    return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
+  for (const modelName of COACH_MODELS) {
+    try {
+      const model = getGenAI().getGenerativeModel({ model: modelName });
+      const result = await withTimeout(model.generateContent(prompt), timeoutMs, `${callerName}:${modelName}`);
+      const text = result.response.text().trim();
+      const cleaned = text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").replace(/\s+/g, " ").trim();
+      if (cleaned) {
+        return {
+          value: cleaned,
+          source: "model",
+          elapsedMs: Date.now() - startTime,
+        };
+      }
+    } catch (err: any) {
+      console.warn(`⚠️ [Gemini Coach Model Fail] '${callerName}' on model ${modelName}: ${err.message}`);
+    }
   }
+
+  return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
 }
 
 async function callOllamaChat(
@@ -109,61 +121,46 @@ async function callOllamaJsonChatDetailed<T>(
 ): Promise<OllamaResult<T>> {
   const callerName = options?.callerName ?? "callCoachJsonChat";
   const startTime = Date.now();
-  const timeoutMs = options?.timeoutMs ?? 6000;
+  const timeoutMs = options?.timeoutMs ?? 8000;
 
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey.trim() === "") {
-      console.warn(`⚠️ [Gemini Coach] GEMINI_API_KEY is not set in environment variables!`);
-    }
-    let modelName = resolveGeminiModelName();
-    let model = getGenAI().getGenerativeModel({
-      model: modelName,
-      systemInstruction: systemPrompt,
-    });
-    const generationConfig = {
-      responseMimeType: "application/json",
-      temperature: 0.7,
-    };
-    let text = "";
+  const generationConfig = {
+    responseMimeType: "application/json",
+    temperature: 0.7,
+  };
+
+  for (const modelName of COACH_MODELS) {
     try {
+      const model = getGenAI().getGenerativeModel({
+        model: modelName,
+        systemInstruction: systemPrompt,
+      });
+
       const result = await withTimeout(
         model.generateContent({
           contents: [{ role: "user", parts: [{ text: userPrompt }] }],
           generationConfig,
         }),
         timeoutMs,
-        callerName
+        `${callerName}:${modelName}`
       );
-      text = result.response.text().trim();
-    } catch (geminiErr: any) {
-      console.warn(`⚠️ [Gemini Model Retry] ${modelName} failed (${geminiErr.message}), retrying with gemini-1.5-flash...`);
-      model = getGenAI().getGenerativeModel({
-        model: "gemini-1.5-flash",
-        systemInstruction: systemPrompt,
-      });
-      const result = await withTimeout(
-        model.generateContent({
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig,
-        }),
-        Math.min(timeoutMs, 4000),
-        `${callerName}_retry`
-      );
-      text = result.response.text().trim();
+
+      const text = result.response.text().trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const cleaned = jsonMatch ? jsonMatch[0] : text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").trim();
+      const parsed = JSON.parse(cleaned) as T;
+      if (parsed) {
+        return {
+          value: parsed,
+          source: "model",
+          elapsedMs: Date.now() - startTime,
+        };
+      }
+    } catch (err: any) {
+      console.warn(`⚠️ [Gemini Coach JSON Fail] '${callerName}' on model ${modelName}: ${err.message}`);
     }
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    const cleaned = jsonMatch ? jsonMatch[0] : text.replace(/```[a-z]*|```/g, "").replace(/^["']|["']$/g, "").trim();
-    const parsed = JSON.parse(cleaned) as T;
-    return {
-      value: parsed || fallback,
-      source: "model",
-      elapsedMs: Date.now() - startTime,
-    };
-  } catch (err: any) {
-    console.warn(`⚠️ [Gemini Coach JSON Error] '${callerName}' failed: ${err.message}`);
-    return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
   }
+
+  return { value: fallback, source: "error", elapsedMs: Date.now() - startTime };
 }
 
 async function callOllamaJsonChat<T>(
@@ -540,57 +537,90 @@ Respond ONLY with valid JSON:
   if (detailedRes.source === "timeout" || detailedRes.source === "error") {
     console.warn(`⏱️ [Coach AI Direct Fallback] generating direct Gemini AI chat response...`);
     
-    try {
-      const model = getGenAI().getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-      const promptText = `You are Aura AI, a warm and intelligent AI personal trainer. Answer this user message naturally: "${message}"`;
-      const res = await model.generateContent(promptText);
-      const text = res.response.text().trim();
+    for (const modelName of COACH_MODELS) {
+      try {
+        const model = getGenAI().getGenerativeModel({ model: modelName });
+        const promptText = `You are Aura AI — a warm, friendly, brilliant personal fitness coach and companion. Respond naturally and intelligently to this message from the user: "${message}". If they are asking a fitness question or chatting, answer directly and helpfully. Keep it concise (1–3 sentences).`;
+        const res = await withTimeout(model.generateContent(promptText), 6000, `directChat:${modelName}`);
+        const text = res.response.text().trim();
+        if (text) {
+          const lower = message.toLowerCase().trim();
+          const insteadMatch = lower.match(/(?:want|use|do)?\s*([a-z\s]+?)\s+instead\s+of\s+([a-z\s]+)/i);
+          const swapMatch = lower.match(/(?:swap|replace|change|switch)\s+([a-z\s]+?)\s+(?:for|to|with)\s+([a-z\s]+)/i);
 
-      const numMatch = message.match(/(\d+)/);
-      const isReduce = message.toLowerCase().includes("reduce") || message.toLowerCase().includes("exc") || message.toLowerCase().includes("exercise") || message.toLowerCase().includes("only") || message.toLowerCase().includes("make") || message.toLowerCase().includes("limit") || message.toLowerCase().includes("cut");
-      const targetCount = (numMatch && isReduce) ? parseInt(numMatch[1], 10) : null;
+          if (insteadMatch || swapMatch) {
+            const exName = (insteadMatch ? insteadMatch[2] : swapMatch![1]).trim();
+            const repName = (insteadMatch ? insteadMatch[1] : swapMatch![2]).trim();
+            return {
+              intent: "swap_exercise",
+              exerciseName: exName,
+              replacementExercise: repName,
+              reply: text || `Got it! Swapping ${exName} for ${repName} in your workout.`,
+            };
+          }
 
-      return {
-        intent: targetCount ? "lighter_intensity" : "chat",
-        targetCount,
-        reply: text || "I'm right here with you! Ready to help with your workout or answer any questions.",
-      };
-    } catch (directErr) {
-      const lower = message.toLowerCase().trim();
-      const numMatch = message.match(/(\d+)/);
-      const isReduce = lower.includes("reduce") || lower.includes("exc") || lower.includes("exercise") || lower.includes("only") || lower.includes("make") || lower.includes("limit") || lower.includes("cut");
-      const targetCount = (numMatch && isReduce) ? parseInt(numMatch[1], 10) : null;
+          const numMatch = message.match(/(\d+)/);
+          const isReduce = lower.includes("reduce") || lower.includes("exc") || lower.includes("exercise") || lower.includes("only") || lower.includes("make") || lower.includes("limit") || lower.includes("cut");
+          const targetCount = (numMatch && isReduce) ? parseInt(numMatch[1], 10) : null;
 
-      let replyText = "I'm right here with you! Tell me what's on your mind — whether you want to adjust today's workout, ask a fitness question, or switch your routine.";
-
-      if (targetCount) {
-        replyText = `Got it! Adjusted today's workout to focus on your top ${targetCount} main exercises.`;
-      } else if (lower.includes("name")) {
-        replyText = "I'm Aura AI — your intelligent personal fitness coach & health companion!";
-      } else if (lower.includes("how are you") || lower.includes("how r u") || lower.includes("how's it going")) {
-        replyText = "I'm feeling great and ready to crush today's training session with you! How are you feeling today?";
-      } else if (lower.includes("who are you") || lower.includes("what are you")) {
-        replyText = "I'm your intelligent AI fitness coach. I can adjust your workout routine, answer fitness & nutrition questions, and guide your training!";
-      } else if (lower.includes("protein") || lower.includes("macro") || lower.includes("carbs") || lower.includes("fat") || lower.includes("diet")) {
-        replyText = "For optimal muscle growth and recovery, aim for around 1.6–2.2g of protein per kg of bodyweight daily, paired with complex carbs around your workouts!";
-      } else if (lower.includes("sore") || lower.includes("pain") || lower.includes("hurt") || lower.includes("fatigue") || lower.includes("tired")) {
-        replyText = "If you're feeling overtrained or unusually sore, prioritize light movement, hydration, and extra sleep. Never push through sharp pain — rest is where muscle grows!";
-      } else if (lower.includes("swap") || lower.includes("change") || lower.includes("replace")) {
-        replyText = "You can swap any exercise by opening its details card or letting me know which exercise you'd like to replace!";
-      } else if (lower.includes("cardio") || lower.includes("run") || lower.includes("treadmill")) {
-        replyText = "Adding 15–20 minutes of moderate cardio after strength sessions is great for cardiovascular health without impairing muscle gains.";
-      } else if (lower.includes("joke")) {
-        replyText = "Why did the barbell go to college? To improve its bench strength!";
-      } else if (lower === "hi" || lower === "hello" || lower === "hey" || lower.startsWith("hi ") || lower.startsWith("hello ")) {
-        replyText = "Hey there! Ready to get after it today? Ask me any question or tell me how to adjust your session.";
+          return {
+            intent: targetCount ? "lighter_intensity" : "chat",
+            targetCount,
+            reply: text,
+          };
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ [Coach Direct Fallback Fail] on ${modelName}: ${err.message}`);
       }
+    }
 
+    // Offline heuristic fallback when all cloud AI calls fail
+    const lower = message.toLowerCase().trim();
+    const insteadMatch = lower.match(/(?:want|use|do)?\s*([a-z\s]+?)\s+instead\s+of\s+([a-z\s]+)/i);
+    const swapMatch = lower.match(/(?:swap|replace|change|switch)\s+([a-z\s]+?)\s+(?:for|to|with)\s+([a-z\s]+)/i);
+
+    if (insteadMatch || swapMatch) {
+      const exName = (insteadMatch ? insteadMatch[2] : swapMatch![1]).trim();
+      const repName = (insteadMatch ? insteadMatch[1] : swapMatch![2]).trim();
       return {
-        intent: targetCount ? "lighter_intensity" : "chat",
-        targetCount,
-        reply: replyText,
+        intent: "swap_exercise",
+        exerciseName: exName,
+        replacementExercise: repName,
+        reply: `Got it! Swapped ${exName} for ${repName} in today's workout. Let's get after it!`,
       };
     }
+
+    const numMatch = message.match(/(\d+)/);
+    const isReduce = lower.includes("reduce") || lower.includes("exc") || lower.includes("exercise") || lower.includes("only") || lower.includes("make") || lower.includes("limit") || lower.includes("cut");
+    const targetCount = (numMatch && isReduce) ? parseInt(numMatch[1], 10) : null;
+
+    let replyText = "I'm right here with you! Tell me what's on your mind — whether you want to adjust today's workout, ask a fitness question, or switch your routine.";
+
+    if (targetCount) {
+      replyText = `Got it! Adjusted today's workout to focus on your top ${targetCount} main exercises.`;
+    } else if (lower.includes("name")) {
+      replyText = "I'm Aura AI — your intelligent personal fitness coach & health companion!";
+    } else if (lower.includes("how are you") || lower.includes("how r u") || lower.includes("how's it going")) {
+      replyText = "I'm feeling great and ready to crush today's training session with you! How are you feeling today?";
+    } else if (lower.includes("who are you") || lower.includes("what are you")) {
+      replyText = "I'm your intelligent AI fitness coach. I can adjust your workout routine, answer fitness & nutrition questions, and guide your training!";
+    } else if (lower.includes("protein") || lower.includes("macro") || lower.includes("carbs") || lower.includes("fat") || lower.includes("diet")) {
+      replyText = "For optimal muscle growth and recovery, aim for around 1.6–2.2g of protein per kg of bodyweight daily, paired with complex carbs around your workouts!";
+    } else if (lower.includes("sore") || lower.includes("pain") || lower.includes("hurt") || lower.includes("fatigue") || lower.includes("tired")) {
+      replyText = "If you're feeling overtrained or unusually sore, prioritize light movement, hydration, and extra sleep. Never push through sharp pain — rest is where muscle grows!";
+    } else if (lower.includes("cardio") || lower.includes("run") || lower.includes("treadmill")) {
+      replyText = "Adding 15–20 minutes of moderate cardio after strength sessions is great for cardiovascular health without impairing muscle gains.";
+    } else if (lower.includes("joke")) {
+      replyText = "Why did the barbell go to college? To improve its bench strength!";
+    } else if (lower === "hi" || lower === "hello" || lower === "hey" || lower.startsWith("hi ") || lower.startsWith("hello ")) {
+      replyText = "Hey there! Ready to get after it today? Ask me any question or tell me how to adjust your session.";
+    }
+
+    return {
+      intent: targetCount ? "lighter_intensity" : "chat",
+      targetCount,
+      reply: replyText,
+    };
   }
 
   const res = detailedRes.value;
