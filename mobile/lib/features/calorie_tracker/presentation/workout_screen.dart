@@ -6454,7 +6454,7 @@ class _CoachChatCardState extends State<CoachChatCard> {
         widget.onSessionUpdated(session);
       }
 
-      if ((intent == 'change_plan' || intent == 'setup_routine') && actionExecuted) {
+      if (actionExecuted) {
         widget.onRoutineUpdated();
       }
 
