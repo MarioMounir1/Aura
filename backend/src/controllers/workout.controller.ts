@@ -465,11 +465,41 @@ async function fetchSessionData(
         orderBy: { order: "asc" },
       },
     },
+    orderBy: { startedAt: "desc" },
   });
 
   let rawList: { name: string; targetSets: number; muscleGroup: string; dbId?: string }[] = [];
 
-  if (activeSession && activeSession.exercises.length > 0) {
+  let useActiveSession = false;
+  if (activeSession) {
+    const sessionDateStr = new Date(activeSession.startedAt).toISOString().split("T")[0];
+    const sessionAgeHours = (Date.now() - new Date(activeSession.startedAt).getTime()) / (1000 * 60 * 60);
+    const isStale = sessionAgeHours > 16 || sessionDateStr !== targetDateStr;
+
+    if (isStale) {
+      // Auto-close abandoned stale session from past dates
+      await prisma.workoutSession.update({
+        where: { id: activeSession.id },
+        data: {
+          endedAt: new Date(new Date(activeSession.startedAt).getTime() + 60 * 60 * 1000),
+          notes: "Auto-closed stale past-day session",
+        },
+      }).catch(() => {});
+    } else if (isOverridden || (activeSession.name && activeSession.name !== todayDayName)) {
+      // User swapped the day or session was for another split/day: cancel old unended session
+      await prisma.workoutSession.update({
+        where: { id: activeSession.id },
+        data: {
+          endedAt: new Date(),
+          notes: "Auto-closed due to day change or session swap",
+        },
+      }).catch(() => {});
+    } else if (activeSession.exercises.length > 0) {
+      useActiveSession = true;
+    }
+  }
+
+  if (useActiveSession && activeSession) {
     rawList = activeSession.exercises.map((we) => ({
       name: we.exercise.name,
       targetSets: 3,
@@ -1253,21 +1283,14 @@ export async function overrideSessionType(req: Request, res: Response): Promise<
       return;
     }
 
-    let splitType = "upper_lower";
-    let splitName = "Upper / Lower Split";
-    if (user.activityLevel === "sedentary") {
-      splitType = "full_body";
-      splitName = "Full Body Split";
-    } else if (user.activityLevel === "lightly_active") {
-      splitType = "ppl_1x";
-      splitName = "Push / Pull / Legs";
-    } else if (user.activityLevel === "moderate") {
-      splitType = "upper_lower";
-      splitName = "Upper / Lower Split";
-    } else if (user.activityLevel === "very_active") {
-      splitType = "ul_ppl";
-      splitName = "Hybrid PPL Split";
-    }
+    const splitType = user.workoutSplitType || "upper_lower";
+    const splitName = user.workoutSplitName || user.workoutSplitType || "Upper / Lower Split";
+
+    // Auto-close any unended sessions for this user so today's swapped session starts clean
+    await prisma.workoutSession.updateMany({
+      where: { userId, endedAt: null },
+      data: { endedAt: new Date(), notes: `Closed via swap to ${dayType}` },
+    }).catch(() => {});
 
     await prisma.sessionOverride.upsert({
       where: { userId_date: { userId, date: targetDate } },
