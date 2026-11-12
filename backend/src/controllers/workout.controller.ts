@@ -416,6 +416,12 @@ async function fetchSessionData(
       userId,
       startedAt: { gte: todayStart, lte: todayEnd },
       endedAt: { not: null },
+      notes: { not: { contains: "Auto-closed" } },
+      exercises: {
+        some: {
+          sets: { some: { isCompleted: true } },
+        },
+      },
     },
   });
   const isTodayCompleted = !!completedToday;
@@ -457,7 +463,7 @@ async function fetchSessionData(
     };
   }
 
-  const activeSession = await prisma.workoutSession.findFirst({
+  let activeSession = await prisma.workoutSession.findFirst({
     where: { userId, endedAt: null },
     include: {
       exercises: {
@@ -467,6 +473,38 @@ async function fetchSessionData(
     },
     orderBy: { startedAt: "desc" },
   });
+
+  // Re-open today's customized session if it was auto-closed without completion
+  if (!activeSession) {
+    const todayCandidate = await prisma.workoutSession.findFirst({
+      where: {
+        userId,
+        name: { equals: todayDayName, mode: "insensitive" },
+        startedAt: { gte: todayStart, lte: todayEnd },
+        notes: { contains: "Auto-closed" },
+      },
+      include: {
+        exercises: {
+          include: { exercise: true },
+          orderBy: { order: "asc" },
+        },
+      },
+      orderBy: { startedAt: "desc" },
+    });
+
+    if (todayCandidate && todayCandidate.exercises.length > 0) {
+      activeSession = await prisma.workoutSession.update({
+        where: { id: todayCandidate.id },
+        data: { endedAt: null, notes: null },
+        include: {
+          exercises: {
+            include: { exercise: true },
+            orderBy: { order: "asc" },
+          },
+        },
+      });
+    }
+  }
 
   let rawList: { name: string; targetSets: number; muscleGroup: string; dbId?: string }[] = [];
 
@@ -485,8 +523,8 @@ async function fetchSessionData(
           notes: "Auto-closed stale past-day session",
         },
       }).catch(() => {});
-    } else if (isOverridden || (activeSession.name && activeSession.name !== todayDayName)) {
-      // User swapped the day or session was for another split/day: cancel old unended session
+    } else if (activeSession.name && activeSession.name.toLowerCase() !== todayDayName.toLowerCase()) {
+      // User swapped to another split/day: cancel old unended session
       await prisma.workoutSession.update({
         where: { id: activeSession.id },
         data: {
@@ -1804,29 +1842,50 @@ export async function interpretWorkoutSessionRequest(req: Request, res: Response
           });
 
           if (!activeSession) {
-            const createdSess = await prisma.workoutSession.create({
-              data: {
+            const todayStart = new Date(targetDateStr + "T00:00:00Z");
+            const todayEnd = new Date(targetDateStr + "T23:59:59Z");
+            const recentlyClosed = await prisma.workoutSession.findFirst({
+              where: {
                 userId,
-                name: currentSession.todayDayName,
-                startedAt: new Date(),
+                name: { equals: currentSession.todayDayName, mode: "insensitive" },
+                startedAt: { gte: todayStart, lte: todayEnd },
+                notes: { contains: "Auto-closed" },
               },
-            });
-            for (let i = 0; i < currentSession.exercises.length; i++) {
-              const ex = currentSession.exercises[i];
-              if (ex.id) {
-                await prisma.workoutExercise.create({
-                  data: {
-                    sessionId: createdSess.id,
-                    exerciseId: ex.id,
-                    order: i + 1,
-                  },
-                });
-              }
-            }
-            activeSession = await prisma.workoutSession.findFirst({
-              where: { id: createdSess.id },
               include: { exercises: true },
+              orderBy: { startedAt: "desc" },
             });
+
+            if (recentlyClosed) {
+              activeSession = await prisma.workoutSession.update({
+                where: { id: recentlyClosed.id },
+                data: { endedAt: null, notes: null },
+                include: { exercises: true },
+              });
+            } else {
+              const createdSess = await prisma.workoutSession.create({
+                data: {
+                  userId,
+                  name: currentSession.todayDayName,
+                  startedAt: new Date(),
+                },
+              });
+              for (let i = 0; i < currentSession.exercises.length; i++) {
+                const ex = currentSession.exercises[i];
+                if (ex.id) {
+                  await prisma.workoutExercise.create({
+                    data: {
+                      sessionId: createdSess.id,
+                      exerciseId: ex.id,
+                      order: i + 1,
+                    },
+                  });
+                }
+              }
+              activeSession = await prisma.workoutSession.findFirst({
+                where: { id: createdSess.id },
+                include: { exercises: true },
+              });
+            }
           }
 
           if (activeSession) {
