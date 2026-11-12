@@ -135,6 +135,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
   final Map<int, List<_ActiveSetDraft>> _activeExerciseSets = {};
 
   late final Dio _dio;
+  String _lastLoadedDate = DateTime.now().toIso8601String().split("T")[0];
 
   @override
   void initState() {
@@ -163,6 +164,11 @@ class _WorkoutScreenState extends State<WorkoutScreen>
         _persistActiveWorkoutState();
       }
     } else if (state == AppLifecycleState.resumed) {
+      final currentTodayStr = DateTime.now().toIso8601String().split('T')[0];
+      if (_lastLoadedDate != currentTodayStr) {
+        _lastLoadedDate = currentTodayStr;
+        _loadRoutine(silent: true);
+      }
       if (_state == WorkoutHubState.activeWorkout && _sessionStartTimeMs != null) {
         final nowMs = DateTime.now().millisecondsSinceEpoch;
         setState(() {
@@ -518,6 +524,7 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() => _isRefreshingInPlace = true);
     try {
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      _lastLoadedDate = todayStr;
       final resp = await _dio.get('/workouts/routine?date=$todayStr');
       if (!mounted) return;
       final rootData = resp.data is Map ? resp.data['data'] as Map<String, dynamic>? : null;
@@ -3859,6 +3866,12 @@ class _WorkoutScreenState extends State<WorkoutScreen>
     setState(() => _state = WorkoutHubState.loading);
     try {
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      _lastLoadedDate = todayStr;
+      await _clearActiveWorkoutPersistedState();
+      _activeSessionId = null;
+      _sessionStartTimeMs = null;
+      _activeExerciseIndex = 0;
+      _activeExerciseSets.clear();
       await _dio.post('/workouts/session/override', data: {
         'date': todayStr,
         'dayType': dayType,
