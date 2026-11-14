@@ -41,19 +41,19 @@ export const LookbookCommunity: React.FC = () => {
   ];
 
   return (
-    <section className="py-20 bg-[#0d1410] border-t border-white/10 text-start">
+    <section className="py-20 bg-[#090c15] border-t border-[#222b3f] text-start">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div>
-            <span className="text-xs font-bold text-[#00e599] tracking-wider uppercase">
+            <span className="text-xs font-bold text-[#10b981] tracking-wider uppercase">
               {t.lookbook.tagline}
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-white font-['Space_Grotesk'] mt-1">
+            <h2 className="text-3xl sm:text-4xl font-black text-white font-['Plus_Jakarta_Sans'] mt-1">
               {t.lookbook.title}
             </h2>
-            <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-xl">
+            <p className="text-xs sm:text-sm text-[#8e929c] mt-2 max-w-xl">
               {t.lookbook.subtitle}
             </p>
           </div>
@@ -62,9 +62,9 @@ export const LookbookCommunity: React.FC = () => {
             href="https://instagram.com" 
             target="_blank" 
             rel="noreferrer"
-            className="flex items-center gap-2 text-xs font-bold text-white hover:text-[#00e599] transition-colors"
+            className="flex items-center gap-2 text-xs font-bold text-white hover:text-[#10b981] transition-colors"
           >
-            <InstagramIcon className="w-4 h-4 text-[#00e599]" />
+            <InstagramIcon className="w-4 h-4 text-[#10b981]" />
             <span>@aura.athletics.official</span>
           </a>
         </div>
@@ -74,28 +74,28 @@ export const LookbookCommunity: React.FC = () => {
           {looks.map((item, idx) => (
             <div 
               key={idx}
-              className="group aura-glass-card rounded-2xl overflow-hidden border border-white/10 hover:border-[#00e599]/40 transition-all flex flex-col justify-between"
+              className="group bg-[#121824] rounded-[20px] overflow-hidden border border-[#222b3f] hover:border-[#10b981] transition-all flex flex-col justify-between hover:shadow-xl hover:shadow-[#10b981]/10"
             >
-              <div className="relative aspect-[4/5] bg-black overflow-hidden">
+              <div className="relative aspect-[4/5] bg-[#090c15] overflow-hidden">
                 <img
                   src={item.image}
                   alt={item.handle}
                   className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#121824] via-transparent to-transparent" />
                 <div className="absolute bottom-3 start-3 end-3 flex items-center justify-between text-white text-xs">
                   <span className="font-bold">{item.handle}</span>
-                  <span className="text-[10px] text-[#00e599] font-medium">{item.discipline}</span>
+                  <span className="text-[10px] text-[#10b981] font-semibold">{item.discipline}</span>
                 </div>
               </div>
 
-              <div className="p-4 bg-[#0e1411]">
+              <div className="p-4 bg-[#121824]">
                 <div className="flex items-center gap-1 text-amber-400 mb-2">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-3 h-3 fill-amber-400" />
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
                   ))}
                 </div>
-                <p className="text-xs text-slate-300 italic leading-relaxed">
+                <p className="text-xs text-[#8e929c] italic leading-relaxed">
                   "{item.caption}"
                 </p>
               </div>
