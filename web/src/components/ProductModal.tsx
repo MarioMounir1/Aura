@@ -49,15 +49,15 @@ export const ProductModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-black/80 backdrop-blur-md animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-black/85 backdrop-blur-md animate-in fade-in">
       <div 
-        className="relative w-full max-w-4xl bg-[#0e1411] border border-white/15 rounded-3xl overflow-hidden shadow-2xl my-auto text-start"
+        className="relative w-full max-w-4xl bg-[#121824] border border-[#222b3f] rounded-[24px] overflow-hidden shadow-2xl my-auto text-start"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={() => setActiveQuickView(null)}
-          className="absolute top-4 end-4 z-20 p-2 rounded-full bg-black/60 hover:bg-black/90 text-slate-300 hover:text-white border border-white/20 transition-all"
+          className="absolute top-4 end-4 z-20 p-2 rounded-xl bg-[#1b2232] hover:bg-[#222b3f] text-[#8e929c] hover:text-white border border-[#222b3f] transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -65,15 +65,15 @@ export const ProductModal: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 max-h-[85vh] overflow-y-auto">
           
           {/* Left Column: Image Gallery */}
-          <div className="p-6 bg-[#090d0b] flex flex-col gap-4">
-            <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-black border border-white/10">
+          <div className="p-6 bg-[#090c15] flex flex-col gap-4">
+            <div className="relative aspect-[4/5] rounded-[20px] overflow-hidden bg-[#121824] border border-[#222b3f]">
               <img
                 src={selectedImage}
                 alt={title}
                 className="w-full h-full object-cover"
               />
               <div className="absolute top-3 start-3">
-                <span className="bg-[#00e599] text-black text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
+                <span className="bg-[#1b2232]/90 backdrop-blur-md text-[#10b981] border border-[#222b3f] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                   {product.technologyBadge}
                 </span>
               </div>
@@ -85,8 +85,8 @@ export const ProductModal: React.FC = () => {
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(img)}
-                  className={`w-16 h-20 rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedImage === img ? 'border-[#00e599] scale-105' : 'border-white/20 opacity-70 hover:opacity-100'
+                  className={`w-16 h-20 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                    selectedImage === img ? 'border-[#10b981] scale-105' : 'border-[#222b3f] opacity-70 hover:opacity-100'
                   }`}
                 >
                   <img src={img} alt={`thumb-${idx}`} className="w-full h-full object-cover" />
@@ -95,57 +95,57 @@ export const ProductModal: React.FC = () => {
             </div>
 
             {/* Guarantees */}
-            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/10 text-[11px] text-slate-300">
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#222b3f] text-[11px] text-[#8e929c]">
               <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-[#00e599]" />
+                <Truck className="w-4 h-4 text-[#10b981]" />
                 <span>Express Worldwide Shipping</span>
               </div>
               <div className="flex items-center gap-2">
-                <RotateCcw className="w-4 h-4 text-[#00e599]" />
+                <RotateCcw className="w-4 h-4 text-[#10b981]" />
                 <span>30-Day Free Athletic Trial</span>
               </div>
             </div>
           </div>
 
           {/* Right Column: Specifications & Add to Cart */}
-          <div className="p-6 md:p-8 flex flex-col justify-between gap-5 bg-[#0e1411]">
+          <div className="p-6 md:p-8 flex flex-col justify-between gap-5 bg-[#121824]">
             <div>
               {/* Rating */}
               <div className="flex items-center gap-1.5 text-xs text-amber-400 mb-2">
                 <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
                 <span className="font-bold text-white">{product.rating}</span>
-                <span className="text-slate-400">({product.reviewsCount} {t.product.reviews})</span>
+                <span className="text-[#8e929c]">({product.reviewsCount} {t.product.reviews})</span>
               </div>
 
               {/* Title & Subtitle */}
-              <h2 className="text-2xl font-black text-white font-['Space_Grotesk'] leading-tight">
+              <h2 className="text-2xl font-black text-white font-['Plus_Jakarta_Sans'] leading-tight">
                 {title}
               </h2>
-              <p className="text-xs text-[#00e599] font-semibold mt-1">
+              <p className="text-xs text-[#10b981] font-semibold mt-1">
                 {subtitle}
               </p>
 
               {/* Pricing */}
               <div className="flex items-baseline gap-3 my-4">
-                <span className="text-2xl font-black text-white font-['Space_Grotesk']">
+                <span className="text-2xl font-black text-white font-['Plus_Jakarta_Sans']">
                   {formatPrice(product.priceUSD, product.priceEGP)}
                 </span>
                 {product.originalPriceUSD && (
-                  <span className="text-sm text-slate-500 line-through">
+                  <span className="text-sm text-[#5d616b] line-through">
                     {formatPrice(product.originalPriceUSD, product.originalPriceEGP || 0)}
                   </span>
                 )}
               </div>
 
               {/* Description */}
-              <p className="text-xs text-slate-300 leading-relaxed mb-4">
+              <p className="text-xs text-[#8e929c] leading-relaxed mb-4">
                 {description}
               </p>
 
               {/* Color Picker */}
               <div className="mb-4">
                 <div className="text-xs font-semibold text-slate-200 mb-2 flex items-center justify-between">
-                  <span>{t.product.color}: <strong className="text-[#00e599]">{language === 'ar' ? selectedColor.nameAr : selectedColor.name}</strong></span>
+                  <span>{t.product.color}: <strong className="text-[#10b981]">{language === 'ar' ? selectedColor.nameAr : selectedColor.name}</strong></span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   {product.colors.map((color) => (
@@ -155,9 +155,9 @@ export const ProductModal: React.FC = () => {
                         setSelectedColor(color);
                         if (color.image) setSelectedImage(color.image);
                       }}
-                      className={`w-7 h-7 rounded-full border-2 transition-all ${
+                      className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer ${
                         selectedColor.name === color.name
-                          ? 'border-[#00e599] scale-110 shadow-md shadow-[#00e599]/30'
+                          ? 'border-[#10b981] scale-110 shadow-md shadow-[#10b981]/30'
                           : 'border-white/20 hover:scale-105'
                       }`}
                       style={{ backgroundColor: color.hex }}
@@ -173,7 +173,7 @@ export const ProductModal: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => setShowSizeTable(!showSizeTable)}
-                      className="text-[11px] text-slate-400 hover:text-white underline"
+                      className="text-[11px] text-[#8e929c] hover:text-white underline cursor-pointer"
                     >
                       {t.product.sizeGuideTitle}
                     </button>
@@ -182,7 +182,7 @@ export const ProductModal: React.FC = () => {
                         setActiveQuickView(null);
                         setIsSizeAdvisorOpen(true);
                       }}
-                      className="text-[11px] text-[#00e599] hover:underline flex items-center gap-1"
+                      className="text-[11px] text-[#10b981] hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Ruler className="w-3 h-3" />
                       <span>{t.nav.sizeAdvisor}</span>
@@ -195,10 +195,10 @@ export const ProductModal: React.FC = () => {
                     <button
                       key={sz}
                       onClick={() => setSelectedSize(sz)}
-                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                         selectedSize === sz
-                          ? 'bg-[#00e599] text-black shadow-md'
-                          : 'bg-[#18221c] text-slate-300 hover:text-white border border-white/10'
+                          ? 'aura-btn-primary text-white shadow-md'
+                          : 'bg-[#1b2232] text-[#8e929c] hover:text-white border border-[#222b3f]'
                       }`}
                     >
                       {sz}
@@ -208,21 +208,21 @@ export const ProductModal: React.FC = () => {
 
                 {/* Inline Size Chart Drawer */}
                 {showSizeTable && (
-                  <div className="mt-3 p-3 bg-black/60 rounded-xl border border-white/10 text-[11px] animate-in fade-in">
-                    <table className="w-full text-center text-slate-300">
+                  <div className="mt-3 p-3 bg-[#090c15] rounded-xl border border-[#222b3f] text-[11px] animate-in fade-in">
+                    <table className="w-full text-center text-[#8e929c]">
                       <thead>
-                        <tr className="border-b border-white/10 text-white font-bold">
+                        <tr className="border-b border-[#222b3f] text-white font-bold">
                           <th className="py-1">Size</th>
                           <th>Chest (cm)</th>
                           <th>Waist (cm)</th>
                           <th>Hips (cm)</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
-                        <tr><td className="py-1 font-bold text-[#00e599]">S</td><td>90-95</td><td>75-80</td><td>90-95</td></tr>
-                        <tr><td className="py-1 font-bold text-[#00e599]">M</td><td>96-102</td><td>81-86</td><td>96-101</td></tr>
-                        <tr><td className="py-1 font-bold text-[#00e599]">L</td><td>103-109</td><td>87-93</td><td>102-108</td></tr>
-                        <tr><td className="py-1 font-bold text-[#00e599]">XL</td><td>110-118</td><td>94-102</td><td>109-116</td></tr>
+                      <tbody className="divide-y divide-[#222b3f]/50">
+                        <tr><td className="py-1 font-bold text-[#10b981]">S</td><td>90-95</td><td>75-80</td><td>90-95</td></tr>
+                        <tr><td className="py-1 font-bold text-[#10b981]">M</td><td>96-102</td><td>81-86</td><td>96-101</td></tr>
+                        <tr><td className="py-1 font-bold text-[#10b981]">L</td><td>103-109</td><td>87-93</td><td>102-108</td></tr>
+                        <tr><td className="py-1 font-bold text-[#10b981]">XL</td><td>110-118</td><td>94-102</td><td>109-116</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -231,18 +231,18 @@ export const ProductModal: React.FC = () => {
 
               {/* Quantity */}
               <div className="flex items-center gap-3 mb-5">
-                <span className="text-xs text-slate-400 font-medium">Quantity:</span>
-                <div className="flex items-center border border-white/15 rounded-xl bg-[#141c18] overflow-hidden">
+                <span className="text-xs text-[#8e929c] font-medium">Quantity:</span>
+                <div className="flex items-center border border-[#222b3f] rounded-xl bg-[#1b2232] overflow-hidden">
                   <button
                     onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    className="px-3 py-1.5 text-slate-300 hover:text-white text-xs font-bold"
+                    className="px-3 py-1.5 text-[#8e929c] hover:text-white text-xs font-bold cursor-pointer"
                   >
                     -
                   </button>
                   <span className="px-3 text-xs font-black text-white">{quantity}</span>
                   <button
                     onClick={() => setQuantity((q) => q + 1)}
-                    className="px-3 py-1.5 text-slate-300 hover:text-white text-xs font-bold"
+                    className="px-3 py-1.5 text-[#8e929c] hover:text-white text-xs font-bold cursor-pointer"
                   >
                     +
                   </button>
@@ -250,15 +250,15 @@ export const ProductModal: React.FC = () => {
               </div>
 
               {/* Key Features List */}
-              <div className="p-3 bg-[#131b16] rounded-xl border border-white/10 mb-4">
-                <div className="text-[11px] font-bold text-[#00e599] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <div className="p-3 bg-[#1b2232] rounded-xl border border-[#222b3f] mb-4">
+                <div className="text-[11px] font-bold text-[#10b981] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>{t.product.keyHighlights}</span>
                 </div>
-                <ul className="space-y-1 text-[11px] text-slate-300">
+                <ul className="space-y-1 text-[11px] text-[#8e929c]">
                   {features.map((feat, idx) => (
                     <li key={idx} className="flex items-start gap-1.5">
-                      <span className="text-[#00e599] font-bold">✓</span>
+                      <span className="text-[#10b981] font-bold">✓</span>
                       <span>{feat}</span>
                     </li>
                   ))}
@@ -266,30 +266,30 @@ export const ProductModal: React.FC = () => {
               </div>
 
               {/* Fabric Details */}
-              <div className="text-[11px] text-slate-400">
+              <div className="text-[11px] text-[#8e929c]">
                 <strong className="text-slate-300">{t.product.fabricAndCare}:</strong> {fabric}
               </div>
             </div>
 
             {/* Add to Bag Action */}
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-[#222b3f]">
               <button
                 onClick={handleAdd}
-                className={`w-full py-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+                className={`w-full py-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer ${
                   added
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-[#00e599] hover:bg-[#00c985] text-black shadow-[#00e599]/25 hover:scale-[1.02] active:scale-95'
+                    : 'aura-btn-primary hover:scale-[1.02] active:scale-95'
                 }`}
               >
                 {added ? (
                   <>
-                    <Check className="w-5 h-5" />
-                    <span>{t.product.addedToCart}</span>
+                    <Check className="w-5 h-5 text-white" />
+                    <span className="text-white">{t.product.addedToCart}</span>
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="w-5 h-5" />
-                    <span>{t.product.addToBag} — {formatPrice(product.priceUSD * quantity, product.priceEGP * quantity)}</span>
+                    <ShoppingBag className="w-5 h-5 text-white" />
+                    <span className="text-white">{t.product.addToBag} — {formatPrice(product.priceUSD * quantity, product.priceEGP * quantity)}</span>
                   </>
                 )}
               </button>
