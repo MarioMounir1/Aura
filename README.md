@@ -5,11 +5,14 @@
 </p>
 
 <p align="center">
-  <strong>The Intelligent Nutrition, Calorie & Workout Ecosystem Powered by Dual-Engine AI</strong>
+  <strong>The Intelligent Nutrition, Calorie & Workout Ecosystem Powered by Dual-Engine AI & Aura Athletics Sportswear</strong>
 </p>
 
 <p align="center">
   <a href="https://flutter.dev/"><img src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white" alt="Flutter" /></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.x-61DAFB?logo=react&logoColor=black" alt="React" /></a>
+  <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-8.x-646CFF?logo=vite&logoColor=white" alt="Vite" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/TailwindCSS-4.x-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind" /></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white" alt="Node.js" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://www.prisma.io/"><img src="https://img.shields.io/badge/Prisma-7.x-2D3748?logo=prisma&logoColor=white" alt="Prisma" /></a>
@@ -23,38 +26,36 @@
 
 ## 📖 Overview
 
-**Aura** is a state-of-the-art, full-stack nutrition and fitness platform designed to make daily calorie, macro, and workout tracking effortless, precise, and personalized. Combining the analytical intelligence of **Google Gemini 2.0 Flash** with the privacy and offline reliability of **on-device Ollama Vision**, Aura recognizes complex meals (with rich regional & Egyptian cuisine understanding), scans product barcodes, transcribes voice meal logs, tracks hydration, and builds adaptive workout splits tailored to any schedule.
+**Aura** is a state-of-the-art, full-stack nutrition, fitness, and athletic lifestyle ecosystem designed to make daily calorie, macro, and workout tracking effortless, precise, and personalized. Combining the analytical intelligence of **Google Gemini 2.0 Flash** with the privacy and offline reliability of **on-device Ollama Vision**, Aura recognizes complex meals (with rich regional & Egyptian cuisine understanding), scans product barcodes, transcribes voice meal logs, tracks hydration, and builds adaptive workout splits tailored to any schedule.
+
+Complementing the digital coaching app is **Aura Athletics**, the official bio-mechanical sportswear and activewear brand featuring embedded NFC smart tags that sync physical garments directly with workout routines in the Aura mobile application.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```
-                             ┌──────────────────────────────────────┐
-                             │       Flutter Mobile Client          │
-                             │       (Android / iOS / Tablets)      │
-                             └──────┬────────────┬────────────▲─────┘
-                                    │            │            │
-                         (HTTPS / REST)          │            │
-                    All routes authenticated     │            │
-                    via Bearer JWT token         │            │
-                                    │     (Local Multipart)   │
-                                    │     POST /scan-local    │
-                                    ▼            ▼            │
-               ┌───────────────────────────────────────────────┴─────┐
-               │           Express API Gateway v2 (/api/v1)          │
-               │   (JWT Auth · Social OAuth · Rate Limiting · Log)   │
-               └──────┬───────────────────┬────────────────────┬─────┘
-                      │                   │                    │
-                (Prisma ORM)       (Cloud API Call)    (Local API Call)
-                      │                   │                    │
-                      ▼                   ▼                    ▼
-             ┌──────────────────┐┌──────────────────┐┌──────────────────┐
-             │    PostgreSQL    ││  Google Gemini / ││   Local Ollama   │
-             │  (Users, Meals,  ││ Open Food Facts  ││ (llava / llama3) │
-             │  Water, Weight,  │└──────────────────┘└──────────────────┘
-             │  Workouts, Plans)│
-             └──────────────────┘
+   ┌──────────────────────────────┐              ┌──────────────────────────────┐
+   │    Flutter Mobile Client     │              │    Aura Athletics Web App    │
+   │  (Android / iOS / Tablets)   │              │   (React 19 + Vite + Tailwind)│
+   └──────────────┬───────────────┘              └──────────────┬───────────────┘
+                  │                                             │
+                  │ (HTTPS / REST)                              │ (E-Commerce & Sync)
+                  │ Bearer JWT                                  │ Multi-Currency / i18n
+                  ▼                                             ▼
+   ┌────────────────────────────────────────────────────────────────────────────┐
+   │                      Express API Gateway v2 (/api/v1)                      │
+   │            (JWT Auth · Social OAuth · Rate Limiting · Winston Logs)        │
+   └──────┬───────────────────────┬──────────────────────────────┬──────────────┘
+          │                       │                              │
+    (Prisma ORM)          (Cloud AI Pipeline)            (Local Edge Inference)
+          │                       │                              │
+          ▼                       ▼                              ▼
+ ┌──────────────────┐    ┌──────────────────┐           ┌──────────────────┐
+ │    PostgreSQL    │    │  Google Gemini / │           │   Local Ollama   │
+ │ (Users, Meals,   │    │ Open Food Facts  │           │ (llava / llama3) │
+ │ Water, Workouts) │    └──────────────────┘           └──────────────────┘
+ └──────────────────┘
 ```
 
 ---
@@ -92,9 +93,27 @@
 - **RevenueCat Paywall**: Native in-app subscriptions with custom dark glassmorphic UI (`CustomPaywallSheet`). Verifies entitlements server-side.
 - **Google AdMob Banners**: Non-intrusive banner ads for free-tier users, automatically dismissed for Premium subscribers.
 
-### 🌍 6. Internationalization & Design
-- **Arabic & English Support**: Dynamic RTL layout adaptation with cultural context and custom localized typography.
-- **Aura Green Design System**: Bespoke aesthetic featuring `#235A42` (Aura Deep Forest), `#EAF5EE` (Sage Surface), and `#1E3A2B` (Dark Emerald).
+### 🌍 6. Internationalization & Design System
+- **Arabic & English Support**: Dynamic RTL layout adaptation with cultural context and custom localized typography (**Cairo** & **Plus Jakarta Sans**).
+- **Aura Dark Material 3 Palette**: Exact tokens matched across Mobile and Web:
+  - Background: `#090C15`
+  - Cards: `#121824`
+  - Surfaces / Elevated: `#1B2232`
+  - Borders: `#222B3F`
+  - Primary Action Accent: `#10B981` (Vibrant Emerald)
+  - Primary Brand Green: `#235A42` (Aura Dark Forest)
+
+### ⚡ 7. Aura Athletics — Connected Sportswear Web Platform (`web/`)
+- **Engineered Apparel Lineup**:
+  - *Apex Performance Compression Top*: Localized thoracic compression & laser-cut spinal cooling.
+  - *Sculpt & Define High-Waisted Leggings*: 100% squat-proof seamless contouring with hidden waistband pocket.
+  - *Phantom 2-in-1 Training Shorts 7"*: Anti-groin-chafe compression liner with no-bounce phone pouch.
+  - *Relentless Heavyweight Oversized Hoodie*: 460 GSM organic French Terry pump cover.
+  - *Titan-Grip Silicone Lifting Straps*: 450 kg tensile rating with 5mm neoprene cushioning.
+  - *ThermoMatte™ Insulated Steel Shaker*: Double-wall vacuum 800ml shaker keeping ice cold for 24h.
+- **Connected Activewear**: Embedded NFC tags on garments pair with the Aura App to launch workouts and unlock 3 months of Aura Premium.
+- **Interactive Sizing & Advisor**: Bio-mechanical size advisor based on height, weight, and preferred fit style.
+- **E-Commerce Drawer & Checkout**: Free-shipping progress meter ($75 / 1500 EGP), coupon validation engine (`AURA10`, `FITNESS20`), and mock checkout for Card, Apple Pay, and Cash on Delivery.
 
 ---
 
@@ -108,45 +127,40 @@ Aura/
 │   │   └── seed.ts                       # Egyptian & international food database
 │   ├── src/
 │   │   ├── app.ts                        # Express entry point & middleware
-│   │   ├── routes/
-│   │   │   └── v1.routes.ts              # API v1 endpoint registry
-│   │   ├── controllers/                  # Domain business logic
-│   │   │   ├── user.controller.ts        # Auth, Google/Apple OAuth, Profile
-│   │   │   ├── meal.controller.ts        # Gemini 2.0 Flash nutrition parsing
-│   │   │   ├── local-llama.controller.ts # Local Ollama vision endpoints
-│   │   │   ├── barcode.controller.ts     # Open Food Facts integration
-│   │   │   ├── workout.controller.ts     # Routine, session & workout engine
-│   │   │   ├── coach.service.ts          # AI coaching with fail-safe race
-│   │   │   ├── water.controller.ts       # Hydration tracking
-│   │   │   └── weight.controller.ts      # Weight logs & trends
+│   │   ├── routes/                       # API endpoint registries
+│   │   ├── controllers/                  # Domain business logic (meals, workouts, users)
 │   │   └── middleware/                   # JWT auth, rate limits, validators
 │   ├── Dockerfile                        # Multi-stage production container
 │   ├── docker-compose.yml                # API + PostgreSQL + Redis stack
 │   └── package.json
 │
-└── mobile/                               # 📱 Flutter Application
-    ├── android/                          # Android Native Config & ProGuard
-    ├── ios/                              # iOS Xcode Project & Capabilities
-    ├── assets/                           # Brand emblems, audio, icons
-    ├── lib/
-    │   ├── main.dart                     # App initialization & MultiBlocProvider
-    │   ├── core/
-    │   │   ├── network/                  # Dio client, interceptors & Keystore storage
-    │   │   ├── theme/                    # Color tokens & typography
-    │   │   └── widgets/                  # Ad banners, buttons, cards
-    │   └── features/
-    │       ├── auth/                     # Login, Register, Social Auth BLoCs
-    │       ├── premium/                  # RevenueCat paywalls & subscription state
-    │       ├── profile/                  # Onboarding, TDEE calculator
-    │       └── calorie_tracker/          # Core domain features
-    │           ├── data/                 # Repositories & workout catalogues
-    │           └── presentation/
-    │               ├── meals_dashboard_screen.dart   # High-density dashboard
-    │               ├── workout_screen.dart           # Workout Hub & Split Switcher
-    │               ├── workout_plan_wizard.dart      # 4-Step Material 3 Wizard
-    │               ├── voice_meal_logging_sheet.dart # Speech-to-Text logger
-    │               └── barcode_confirmation_sheet.dart
-    └── pubspec.yaml                      # Dependencies & asset declarations
+├── mobile/                               # 📱 Flutter Application
+│   ├── android/                          # Android Native Config & ProGuard
+│   ├── ios/                              # iOS Xcode Project & Capabilities
+│   ├── assets/                           # Brand emblems, audio, icons
+│   ├── lib/
+│   │   ├── main.dart                     # App initialization & MultiBlocProvider
+│   │   ├── core/                         # Network client, AppTheme, AppColors tokens
+│   │   └── features/                     # Auth, Premium, Meals, Workouts, Profile
+│   └── pubspec.yaml
+│
+└── web/                                  # ⚡ Aura Athletics Sportswear Web Platform
+    ├── public/
+    │   └── aura_logo.png                 # Official Aura brand emblem
+    ├── src/
+    │   ├── components/                   # Navbar, Hero, CategoryFilter, ProductCard,
+    │   │                                 # ProductModal, CartDrawer, SizeAdvisorModal,
+    │   │                                 # CheckoutModal, TechFeatures, Lookbook, Footer
+    │   ├── context/
+    │   │   └── StoreContext.tsx          # Cart, wishlist, i18n, currency, coupons state
+    │   ├── data/
+    │   │   ├── products.ts               # Activewear catalog with tech specs & photos
+    │   │   └── translations.ts           # Comprehensive English & Arabic translations
+    │   ├── types/                        # Product, CartItem, Language, Currency types
+    │   ├── App.tsx                       # Single-page e-commerce layout
+    │   └── index.css                     # Tailwind v4 & Aura App design tokens
+    ├── package.json
+    └── vite.config.ts                    # Vite + React + Tailwind v4 config
 ```
 
 ---
@@ -210,6 +224,28 @@ flutter build appbundle --release
 
 # Build standalone release APK
 flutter build apk --release
+```
+
+---
+
+### 3. Aura Athletics Web Platform Setup
+
+```bash
+# Navigate to web directory
+cd web
+
+# Install dependencies
+npm install
+
+# Start local development server
+npm run dev
+# Live at http://localhost:5173/
+
+# Build for production
+npm run build
+
+# Preview production build locally
+npm run preview
 ```
 
 ---
