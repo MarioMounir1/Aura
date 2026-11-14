@@ -4,10 +4,28 @@
   :root {
     --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
     --font-arabic: 'Cairo', system-ui, sans-serif;
+
+    /* Aura Mobile App Official Design Tokens (from AppColors & AuraThemeExtension) */
+    --aura-bg: #090c15;
+    --aura-card: #121824;
+    --aura-surface: #1b2232;
+    --aura-border: #222b3f;
+    --aura-border-mid: #374151;
+    --aura-text-primary: #ffffff;
+    --aura-text-secondary: #8e929c;
+    --aura-text-muted: #5d616b;
+    --aura-primary: #235a42;
+    --aura-emerald: #10b981;
+    --aura-emerald-dark: #059669;
+    --aura-protein: #10b981;
+    --aura-carbs: #8b5cf6;
+    --aura-fats: #f97316;
   }
 
   html {
     font-family: var(--font-sans);
+    background-color: #090c15;
+    color: #ffffff;
     scroll-behavior: smooth;
   }
 
@@ -15,47 +33,92 @@
     font-family: var(--font-arabic);
   }
 
-  /* Custom Athletic Dark Scrollbar */
+  body {
+    background-color: #090c15;
+    color: #ffffff;
+    min-height: 100vh;
+  }
+
+  /* Custom Aura App Scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
+    width: 7px;
   }
   ::-webkit-scrollbar-track {
-    background: #0b0f0d;
+    background: #090c15;
   }
   ::-webkit-scrollbar-thumb {
-    background: #1e3a2b;
-    border-radius: 4px;
+    background: #222b3f;
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #235a42;
+    background: #374151;
   }
 }
 
-/* Glassmorphism & High-tech Glow Effects */
+/* Aura Mobile App Material 3 Glassmorphism & Elevation */
 .aura-glass {
-  background: rgba(14, 20, 17, 0.75);
+  background: rgba(18, 24, 36, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid #222b3f;
 }
 
-.aura-glass-card {
-  background: linear-gradient(135deg, rgba(20, 28, 24, 0.7) 0%, rgba(12, 16, 14, 0.85) 100%);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+.aura-card {
+  background: #121824;
+  border: 1px solid #222b3f;
+  border-radius: 20px;
 }
 
-.aura-glass-card:hover {
-  border-color: rgba(0, 229, 153, 0.3);
-  box-shadow: 0 10px 30px -10px rgba(0, 229, 153, 0.15);
+.aura-card-gradient {
+  background: linear-gradient(135deg, #121824 0%, #1b2232 100%);
+  border: 1px solid #222b3f;
+  border-radius: 20px;
 }
 
-.aura-glow-green {
-  box-shadow: 0 0 25px rgba(0, 229, 153, 0.35);
+.aura-card-gradient:hover {
+  border-color: #10b981;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.15);
+}
+
+.aura-btn-primary {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.aura-btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
+.aura-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.aura-btn-surface {
+  background: #1b2232;
+  border: 1px solid #222b3f;
+  color: #ffffff;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.aura-btn-surface:hover {
+  background: #222b3f;
+  border-color: #374151;
+}
+
+.aura-badge-emerald {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
 }
 
 .aura-gradient-text {
-  background: linear-gradient(135deg, #ffffff 30%, #00e599 100%);
+  background: linear-gradient(135deg, #ffffff 40%, #10b981 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
