@@ -50,13 +50,13 @@ export const CheckoutModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in">
       <div 
-        className="relative w-full max-w-2xl bg-[#0e1411] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl my-auto text-start"
+        className="relative w-full max-w-2xl bg-[#121824] border border-[#222b3f] rounded-[24px] p-6 sm:p-8 shadow-2xl my-auto text-start"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-5 end-5 p-2 rounded-full bg-black/40 hover:bg-black/80 text-slate-300 hover:text-white border border-white/10"
+          className="absolute top-5 end-5 p-2 rounded-xl bg-[#1b2232] hover:bg-[#222b3f] text-[#8e929c] hover:text-white border border-[#222b3f] transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -64,17 +64,17 @@ export const CheckoutModal: React.FC = () => {
         {orderComplete ? (
           /* Order Confirmation Success State */
           <div className="text-center py-8">
-            <div className="w-20 h-20 bg-[#00e599]/20 rounded-full flex items-center justify-center text-[#00e599] mx-auto mb-6 shadow-xl shadow-[#00e599]/30">
+            <div className="w-20 h-20 bg-[#10b981]/15 rounded-full flex items-center justify-center text-[#10b981] mx-auto mb-6 shadow-xl shadow-[#10b981]/25 border border-[#10b981]/30">
               <CheckCircle className="w-10 h-10" />
             </div>
-            <h3 className="text-2xl sm:text-3xl font-black text-white font-['Space_Grotesk'] mb-2">
+            <h3 className="text-2xl sm:text-3xl font-black text-white font-['Plus_Jakarta_Sans'] mb-2">
               {t.checkout.orderSuccessTitle}
             </h3>
-            <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed mb-6">
+            <p className="text-sm text-[#8e929c] max-w-md mx-auto leading-relaxed mb-6">
               {t.checkout.orderSuccessSub.replace('{orderId}', orderId)}
             </p>
 
-            <div className="p-4 bg-[#14231b] border border-[#00e599]/30 rounded-2xl max-w-sm mx-auto mb-8 text-xs text-slate-300 space-y-1 text-start">
+            <div className="p-4 bg-[#1b2232] border border-[#222b3f] rounded-[18px] max-w-sm mx-auto mb-8 text-xs text-[#8e929c] space-y-1.5 text-start">
               <div className="flex justify-between">
                 <span>Confirmation Email:</span>
                 <strong className="text-white">{email}</strong>
@@ -85,13 +85,13 @@ export const CheckoutModal: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span>NFC Apparel Tag:</span>
-                <strong className="text-[#00e599]">Aura App Auto-Pair Ready</strong>
+                <strong className="text-[#10b981]">Aura App Auto-Pair Ready</strong>
               </div>
             </div>
 
             <button
               onClick={handleClose}
-              className="px-8 py-3.5 bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-sm rounded-xl shadow-lg transition-transform hover:scale-105"
+              className="px-8 py-3.5 aura-btn-primary text-white font-bold text-sm rounded-xl shadow-lg transition-transform hover:scale-105 cursor-pointer"
             >
               {t.checkout.returnToStore}
             </button>
@@ -100,12 +100,12 @@ export const CheckoutModal: React.FC = () => {
           /* Checkout Form */
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <ShieldCheck className="w-5 h-5 text-[#00e599]" />
-              <h2 className="text-xl font-black text-white font-['Space_Grotesk']">
+              <ShieldCheck className="w-5 h-5 text-[#10b981]" />
+              <h2 className="text-xl font-bold text-white font-['Plus_Jakarta_Sans']">
                 {t.checkout.title}
               </h2>
             </div>
-            <p className="text-xs text-slate-400 mb-6">
+            <p className="text-xs text-[#8e929c] mb-6">
               {t.checkout.subtitle}
             </p>
 
@@ -118,34 +118,34 @@ export const CheckoutModal: React.FC = () => {
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">{t.checkout.fullName}</label>
+                    <label className="block text-[11px] text-[#8e929c] mb-1">{t.checkout.fullName}</label>
                     <input
                       type="text"
                       required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full bg-[#141c18] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#00e599]"
+                      className="w-full bg-[#1b2232] border border-[#222b3f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#10b981]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">{t.checkout.email}</label>
+                    <label className="block text-[11px] text-[#8e929c] mb-1">{t.checkout.email}</label>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-[#141c18] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#00e599]"
+                      className="w-full bg-[#1b2232] border border-[#222b3f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#10b981]"
                     />
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="block text-[11px] text-slate-400 mb-1">{t.checkout.phone}</label>
+                  <label className="block text-[11px] text-[#8e929c] mb-1">{t.checkout.phone}</label>
                   <input
                     type="tel"
                     required
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-[#141c18] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#00e599]"
+                    className="w-full bg-[#1b2232] border border-[#222b3f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#10b981]"
                   />
                 </div>
               </div>
@@ -157,37 +157,37 @@ export const CheckoutModal: React.FC = () => {
                 </h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">{t.checkout.street}</label>
+                    <label className="block text-[11px] text-[#8e929c] mb-1">{t.checkout.street}</label>
                     <input
                       type="text"
                       required
                       value={street}
                       onChange={(e) => setStreet(e.target.value)}
-                      className="w-full bg-[#141c18] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#00e599]"
+                      className="w-full bg-[#1b2232] border border-[#222b3f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#10b981]"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">{t.checkout.city}</label>
+                      <label className="block text-[11px] text-[#8e929c] mb-1">{t.checkout.city}</label>
                       <input
                         type="text"
                         required
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        className="w-full bg-[#141c18] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#00e599]"
+                        className="w-full bg-[#1b2232] border border-[#222b3f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#10b981]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-400 mb-1">{t.checkout.country}</label>
+                      <label className="block text-[11px] text-[#8e929c] mb-1">{t.checkout.country}</label>
                       <select
                         value={country}
                         onChange={(e) => setCountry(e.target.value)}
-                        className="w-full bg-[#141c18] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#00e599]"
+                        className="w-full bg-[#1b2232] border border-[#222b3f] rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#10b981] cursor-pointer"
                       >
-                        <option value="Egypt">{t.checkout.egypt}</option>
-                        <option value="United Arab Emirates">{t.checkout.uae}</option>
-                        <option value="Saudi Arabia">{t.checkout.saudi}</option>
-                        <option value="United States">{t.checkout.usa}</option>
+                        <option value="Egypt" className="bg-[#121824]">{t.checkout.egypt}</option>
+                        <option value="United Arab Emirates" className="bg-[#121824]">{t.checkout.uae}</option>
+                        <option value="Saudi Arabia" className="bg-[#121824]">{t.checkout.saudi}</option>
+                        <option value="United States" className="bg-[#121824]">{t.checkout.usa}</option>
                       </select>
                     </div>
                   </div>
@@ -203,51 +203,51 @@ export const CheckoutModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('card')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center ${
+                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
                       paymentMethod === 'card'
-                        ? 'border-[#00e599] bg-[#00e599]/10 text-white font-bold'
-                        : 'border-white/10 bg-[#141c18] text-slate-400 hover:text-white'
+                        ? 'border-[#10b981] bg-[#10b981]/15 text-white font-bold'
+                        : 'border-[#222b3f] bg-[#1b2232] text-[#8e929c] hover:text-white'
                     }`}
                   >
-                    <CreditCard className="w-5 h-5 text-[#00e599]" />
+                    <CreditCard className="w-5 h-5 text-[#10b981]" />
                     <span className="text-xs">{t.checkout.creditCard}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('apple')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center ${
+                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
                       paymentMethod === 'apple'
-                        ? 'border-[#00e599] bg-[#00e599]/10 text-white font-bold'
-                        : 'border-white/10 bg-[#141c18] text-slate-400 hover:text-white'
+                        ? 'border-[#10b981] bg-[#10b981]/15 text-white font-bold'
+                        : 'border-[#222b3f] bg-[#1b2232] text-[#8e929c] hover:text-white'
                     }`}
                   >
-                    <Smartphone className="w-5 h-5 text-[#00e599]" />
+                    <Smartphone className="w-5 h-5 text-[#10b981]" />
                     <span className="text-xs">{t.checkout.applePay}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('cod')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center ${
+                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
                       paymentMethod === 'cod'
-                        ? 'border-[#00e599] bg-[#00e599]/10 text-white font-bold'
-                        : 'border-white/10 bg-[#141c18] text-slate-400 hover:text-white'
+                        ? 'border-[#10b981] bg-[#10b981]/15 text-white font-bold'
+                        : 'border-[#222b3f] bg-[#1b2232] text-[#8e929c] hover:text-white'
                     }`}
                   >
-                    <Banknote className="w-5 h-5 text-[#00e599]" />
+                    <Banknote className="w-5 h-5 text-[#10b981]" />
                     <span className="text-xs">{t.checkout.cashOnDelivery}</span>
                   </button>
                 </div>
               </div>
 
               {/* Submit CTA */}
-              <div className="pt-4 border-t border-white/10">
+              <div className="pt-4 border-t border-[#222b3f]">
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#00e599]/25 hover:scale-[1.01] active:scale-95 transition-all"
+                  className="w-full py-4 rounded-xl aura-btn-primary font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#10b981]/25 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
                 >
-                  <ShoppingBag className="w-4 h-4" />
+                  <ShoppingBag className="w-4 h-4 text-white" />
                   <span>{t.checkout.placeOrder} ({formatPrice(cartTotal, cartTotal)})</span>
                 </button>
               </div>
