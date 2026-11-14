@@ -29,29 +29,29 @@ export const SizeAdvisorModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
       <div 
-        className="relative w-full max-w-lg bg-[#0e1411] border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl text-start"
+        className="relative w-full max-w-lg bg-[#121824] border border-[#222b3f] rounded-[24px] p-6 sm:p-8 shadow-2xl text-start"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={() => setIsSizeAdvisorOpen(false)}
-          className="absolute top-5 end-5 p-2 rounded-full bg-black/40 hover:bg-black/80 text-slate-300 hover:text-white border border-white/10"
+          className="absolute top-5 end-5 p-2 rounded-xl bg-[#1b2232] hover:bg-[#222b3f] text-[#8e929c] hover:text-white border border-[#222b3f] transition-all cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-[#00e599]/20 flex items-center justify-center text-[#00e599]">
+          <div className="w-10 h-10 rounded-xl bg-[#1b2232] border border-[#222b3f] flex items-center justify-center text-[#10b981]">
             <Ruler className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-xl font-black text-white font-['Space_Grotesk']">
+            <h3 className="text-xl font-bold text-white font-['Plus_Jakarta_Sans']">
               {t.sizeAdvisor.title}
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#8e929c]">
               {t.sizeAdvisor.subtitle}
             </p>
           </div>
@@ -64,7 +64,7 @@ export const SizeAdvisorModal: React.FC = () => {
           <div>
             <div className="flex items-center justify-between text-xs font-bold text-slate-200 mb-2">
               <span>{t.sizeAdvisor.height}</span>
-              <span className="text-[#00e599] font-black font-['Space_Grotesk'] text-sm">{height} cm</span>
+              <span className="text-[#10b981] font-bold font-['Plus_Jakarta_Sans'] text-sm">{height} cm</span>
             </div>
             <input
               type="range"
@@ -75,7 +75,7 @@ export const SizeAdvisorModal: React.FC = () => {
                 setHeight(Number(e.target.value));
                 calculateSize();
               }}
-              className="w-full accent-[#00e599] bg-[#1a2620] h-2 rounded-lg cursor-pointer"
+              className="w-full accent-[#10b981] bg-[#1b2232] h-2 rounded-lg cursor-pointer"
             />
           </div>
 
@@ -83,7 +83,7 @@ export const SizeAdvisorModal: React.FC = () => {
           <div>
             <div className="flex items-center justify-between text-xs font-bold text-slate-200 mb-2">
               <span>{t.sizeAdvisor.weight}</span>
-              <span className="text-[#00e599] font-black font-['Space_Grotesk'] text-sm">{weight} kg</span>
+              <span className="text-[#10b981] font-bold font-['Plus_Jakarta_Sans'] text-sm">{weight} kg</span>
             </div>
             <input
               type="range"
@@ -94,7 +94,7 @@ export const SizeAdvisorModal: React.FC = () => {
                 setWeight(Number(e.target.value));
                 calculateSize();
               }}
-              className="w-full accent-[#00e599] bg-[#1a2620] h-2 rounded-lg cursor-pointer"
+              className="w-full accent-[#10b981] bg-[#1b2232] h-2 rounded-lg cursor-pointer"
             />
           </div>
 
@@ -115,10 +115,10 @@ export const SizeAdvisorModal: React.FC = () => {
                     setFit(opt.id as any);
                     calculateSize();
                   }}
-                  className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all border ${
+                  className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                     fit === opt.id
-                      ? 'bg-[#00e599] text-black border-[#00e599] shadow-md shadow-[#00e599]/20'
-                      : 'bg-[#141c18] text-slate-400 hover:text-white border-white/10'
+                      ? 'aura-btn-primary text-white border-transparent shadow-md shadow-[#10b981]/20'
+                      : 'bg-[#1b2232] text-[#8e929c] hover:text-white border-[#222b3f]'
                   }`}
                 >
                   {opt.label}
@@ -130,18 +130,18 @@ export const SizeAdvisorModal: React.FC = () => {
         </div>
 
         {/* Calculation Result Callout */}
-        <div className="p-4 bg-gradient-to-r from-[#14231b] via-[#1a2f23] to-[#14231b] rounded-2xl border border-[#00e599]/30 flex items-center justify-between">
+        <div className="p-4 bg-[#1b2232] rounded-[18px] border border-[#222b3f] flex items-center justify-between">
           <div>
-            <span className="text-xs font-bold text-slate-300 block">
+            <span className="text-xs font-bold text-white block">
               {t.sizeAdvisor.recommendedSize}
             </span>
-            <span className="text-xs text-[#00e599] flex items-center gap-1 mt-0.5">
+            <span className="text-xs text-[#10b981] flex items-center gap-1 mt-0.5 font-medium">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>{t.sizeAdvisor.confidence}</span>
             </span>
           </div>
 
-          <div className="w-14 h-14 rounded-2xl bg-[#00e599] text-black font-black text-2xl flex items-center justify-center font-['Space_Grotesk'] shadow-lg shadow-[#00e599]/30">
+          <div className="w-14 h-14 rounded-2xl aura-btn-primary text-white font-extrabold text-2xl flex items-center justify-center font-['Plus_Jakarta_Sans'] shadow-lg shadow-[#10b981]/25">
             {calculatedSize}
           </div>
         </div>
@@ -150,7 +150,7 @@ export const SizeAdvisorModal: React.FC = () => {
         <div className="mt-6">
           <button
             onClick={() => setIsSizeAdvisorOpen(false)}
-            className="w-full py-3 bg-[#18261e] hover:bg-[#203429] text-white font-bold text-xs rounded-xl border border-white/10 transition-colors"
+            className="w-full py-3 aura-btn-surface text-slate-200 hover:text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
           >
             {t.sizeAdvisor.close}
           </button>
