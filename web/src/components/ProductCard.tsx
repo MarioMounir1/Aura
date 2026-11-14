@@ -37,12 +37,12 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
   return (
     <div 
-      className="group aura-glass-card rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 relative border border-white/10 hover:border-[#00e599]/40"
+      className="group bg-[#121824] rounded-[20px] overflow-hidden flex flex-col justify-between transition-all duration-300 relative border border-[#222b3f] hover:border-[#10b981] hover:shadow-xl hover:shadow-[#10b981]/10"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Top Media Area */}
-      <div className="relative aspect-[4/5] bg-[#0f1412] overflow-hidden cursor-pointer" onClick={() => setActiveQuickView(product)}>
+      <div className="relative aspect-[4/5] bg-[#090c15] overflow-hidden cursor-pointer" onClick={() => setActiveQuickView(product)}>
         <img
           src={displayImage}
           alt={title}
@@ -50,16 +50,16 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         />
 
         {/* Dark subtle gradient at top and bottom */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0e1411] via-transparent to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121824] via-transparent to-[#090c15]/40 pointer-events-none" />
 
         {/* Badges: Top Start */}
         <div className="absolute top-3 start-3 flex flex-col gap-1.5 z-10">
           {badgeLabel && (
-            <span className="bg-[#00e599] text-black text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-md">
+            <span className="aura-btn-primary text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider shadow-md">
               {badgeLabel}
             </span>
           )}
-          <span className="bg-black/60 backdrop-blur-md text-[#a3f3d3] border border-[#00e599]/30 text-[9px] font-bold px-2 py-0.5 rounded-full">
+          <span className="bg-[#1b2232]/90 backdrop-blur-md text-[#10b981] border border-[#222b3f] text-[9px] font-bold px-2.5 py-0.5 rounded-full">
             {product.technologyBadge}
           </span>
         </div>
@@ -70,10 +70,10 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             e.stopPropagation();
             toggleWishlist(product.id);
           }}
-          className={`absolute top-3 end-3 p-2 rounded-full backdrop-blur-md transition-all z-10 ${
+          className={`absolute top-3 end-3 p-2 rounded-xl backdrop-blur-md transition-all z-10 ${
             isFavorited
               ? 'bg-rose-500 text-white'
-              : 'bg-black/40 hover:bg-black/70 text-white hover:text-rose-400 border border-white/10'
+              : 'bg-[#121824]/80 hover:bg-[#1b2232] text-white hover:text-rose-400 border border-[#222b3f]'
           }`}
           title="Wishlist"
         >
@@ -87,35 +87,33 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
               e.stopPropagation();
               setActiveQuickView(product);
             }}
-            className="w-full flex items-center justify-center gap-2 bg-black/80 hover:bg-black text-white text-xs font-bold py-2.5 rounded-xl border border-white/20 backdrop-blur-md shadow-lg"
+            className="w-full flex items-center justify-center gap-2 bg-[#1b2232]/90 hover:bg-[#222b3f] text-white text-xs font-bold py-2.5 rounded-xl border border-[#222b3f] backdrop-blur-md shadow-lg transition-colors cursor-pointer"
           >
-            <Eye className="w-3.5 h-3.5 text-[#00e599]" />
+            <Eye className="w-3.5 h-3.5 text-[#10b981]" />
             <span>{t.product.quickView}</span>
           </button>
         </div>
       </div>
 
       {/* Product Content Details */}
-      <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between gap-3 bg-[#0e1411]">
+      <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between gap-3 bg-[#121824]">
         
         <div>
           {/* Rating */}
           <div className="flex items-center gap-1.5 text-xs text-amber-400 mb-1.5">
-            <div className="flex items-center">
-              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            </div>
-            <span className="font-bold text-slate-200">{product.rating}</span>
-            <span className="text-[11px] text-slate-400">({product.reviewsCount})</span>
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            <span className="font-bold text-white">{product.rating}</span>
+            <span className="text-[11px] text-[#8e929c]">({product.reviewsCount})</span>
           </div>
 
           {/* Title & Subtitle */}
           <h3 
             onClick={() => setActiveQuickView(product)}
-            className="text-sm sm:text-base font-bold text-white group-hover:text-[#00e599] transition-colors cursor-pointer line-clamp-1"
+            className="text-sm sm:text-base font-bold text-white group-hover:text-[#10b981] transition-colors cursor-pointer line-clamp-1"
           >
             {title}
           </h3>
-          <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">
+          <p className="text-xs text-[#8e929c] line-clamp-1 mt-0.5">
             {subtitle}
           </p>
         </div>
@@ -126,16 +124,16 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             <button
               key={color.name}
               onClick={() => setSelectedColor(color)}
-              className={`w-5 h-5 rounded-full border-2 transition-all ${
+              className={`w-5 h-5 rounded-full border-2 transition-all cursor-pointer ${
                 selectedColor.name === color.name
-                  ? 'border-[#00e599] scale-110 shadow-sm shadow-[#00e599]'
+                  ? 'border-[#10b981] scale-110 shadow-sm shadow-[#10b981]'
                   : 'border-white/20 hover:scale-105'
               }`}
               style={{ backgroundColor: color.hex }}
               title={language === 'ar' ? color.nameAr : color.name}
             />
           ))}
-          <span className="text-[11px] text-slate-400 ms-1 font-medium">
+          <span className="text-[11px] text-[#8e929c] ms-1 font-medium">
             {language === 'ar' ? selectedColor.nameAr : selectedColor.name}
           </span>
         </div>
@@ -146,10 +144,10 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
             <button
               key={size}
               onClick={() => setSelectedSize(size)}
-              className={`text-[10px] font-bold px-2 py-1 rounded-md transition-all ${
+              className={`text-[10px] font-bold px-2 py-1 rounded-lg transition-all cursor-pointer ${
                 selectedSize === size
-                  ? 'bg-white text-black font-extrabold shadow-sm'
-                  : 'bg-[#18221c] text-slate-400 hover:text-white border border-white/10'
+                  ? 'bg-white text-[#121824] font-extrabold shadow-sm'
+                  : 'bg-[#1b2232] text-[#8e929c] hover:text-white border border-[#222b3f]'
               }`}
             >
               {size}
@@ -158,13 +156,13 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
         </div>
 
         {/* Price & Add to Bag CTA */}
-        <div className="flex items-center justify-between pt-3 border-t border-white/10 mt-1">
+        <div className="flex items-center justify-between pt-3 border-t border-[#222b3f] mt-1">
           <div>
-            <div className="text-base sm:text-lg font-black text-white font-['Space_Grotesk']">
+            <div className="text-base sm:text-lg font-extrabold text-white font-['Plus_Jakarta_Sans']">
               {formatPrice(product.priceUSD, product.priceEGP)}
             </div>
             {product.originalPriceUSD && (
-              <div className="text-[11px] text-slate-500 line-through">
+              <div className="text-[11px] text-[#5d616b] line-through">
                 {formatPrice(product.originalPriceUSD, product.originalPriceEGP || 0)}
               </div>
             )}
@@ -172,21 +170,21 @@ export const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
 
           <button
             onClick={handleAddToCart}
-            className={`flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-md ${
+            className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer ${
               justAdded
                 ? 'bg-emerald-600 text-white'
-                : 'bg-[#00e599] hover:bg-[#00c985] text-black shadow-[#00e599]/20 hover:scale-105 active:scale-95'
+                : 'aura-btn-primary hover:scale-105 active:scale-95'
             }`}
           >
             {justAdded ? (
               <>
-                <Check className="w-3.5 h-3.5" />
-                <span>{t.product.addedToCart}</span>
+                <Check className="w-3.5 h-3.5 text-white" />
+                <span className="text-white">{t.product.addedToCart}</span>
               </>
             ) : (
               <>
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>{t.product.addToBag}</span>
+                <ShoppingBag className="w-3.5 h-3.5 text-white" />
+                <span className="text-white">{t.product.addToBag}</span>
               </>
             )}
           </button>
