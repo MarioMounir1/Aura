@@ -72,7 +72,7 @@ function StoreMain() {
   }, [selectedCategory, searchQuery, sortBy, currency]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f0d] text-slate-100 selection:bg-[#00e599] selection:text-black">
+    <div className="min-h-screen flex flex-col bg-[#090c15] text-white selection:bg-[#10b981] selection:text-white">
       {/* Sticky Header */}
       <Navbar
         searchQuery={searchQuery}
@@ -96,15 +96,15 @@ function StoreMain() {
           />
 
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-20 aura-glass rounded-3xl border border-white/10 my-8">
-              <h3 className="text-xl font-bold text-white mb-2">No matching sportswear found</h3>
-              <p className="text-xs text-slate-400 mb-6">Try searching for compression, leggings, hoodies, or clear the search query.</p>
+            <div className="text-center py-20 bg-[#121824] rounded-[20px] border border-[#222b3f] my-8">
+              <h3 className="text-xl font-bold text-white mb-2 font-['Plus_Jakarta_Sans']">No matching sportswear found</h3>
+              <p className="text-xs text-[#8e929c] mb-6">Try searching for compression, leggings, hoodies, or clear the search query.</p>
               <button
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedCategory('all');
                 }}
-                className="px-6 py-2.5 bg-[#00e599] text-black font-bold text-xs rounded-xl"
+                className="px-6 py-2.5 aura-btn-primary text-white font-bold text-xs rounded-xl cursor-pointer"
               >
                 Reset Filters
               </button>
