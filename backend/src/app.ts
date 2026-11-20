@@ -34,6 +34,7 @@ try {
   console.warn('⚠️ [DNS] Could not initialize DNS fallback:', dnsErr);
 }
 
+import fs from 'fs';
 import path from 'path';
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
@@ -209,6 +210,19 @@ app.get("/delete-account", (_req: Request, res: Response) => {
 
 // New: Mobile App API (v1)
 app.use("/api/v1", v1Router);
+
+// ── Aura Athletics Web App (Static SPA) ────────────────────
+
+const webDistPath = path.resolve(__dirname, "../../web/dist");
+if (fs.existsSync(webDistPath)) {
+  app.use(express.static(webDistPath));
+  app.get("*", (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+    res.sendFile(path.join(webDistPath, "index.html"));
+  });
+}
 
 // ── 404 Handler ────────────────────────────────────────────
 
